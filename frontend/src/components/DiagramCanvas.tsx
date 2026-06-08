@@ -55,11 +55,12 @@ interface DiagramCanvasProps {
   pendingInterrupt: PendingInterrupt | null;
   isRunning: boolean;
   activeSubagent?: string | null;
+  activity?: string | null;
 }
 
 type Tab = "preview" | "code" | "activity" | "agents";
 
-export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning, activeSubagent }: DiagramCanvasProps) {
+export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning, activeSubagent, activity }: DiagramCanvasProps) {
   const [lightbox, setLightbox] = useState(false);
   const [tab, setTab] = useState<Tab>("preview");
   const { current_step, png_base64, drawio, summary, error, iteration, code, logs, delegations } = agentState;
@@ -250,6 +251,7 @@ export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning,
                     delegations={delegations}
                     activeSubagent={activeSubagent ?? null}
                     isRunning={false}
+                    logs={logs}
                   />
                 </div>
               ) : (
@@ -322,11 +324,15 @@ export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning,
       )}
 
       {/* Live subagent delegation panel */}
-      <SubagentPanel
-        delegations={delegations ?? []}
-        activeSubagent={activeSubagent ?? null}
-        isRunning={isRunning}
-      />
+      <div className="w-full max-w-lg">
+        <SubagentPanel
+          delegations={delegations ?? []}
+          activeSubagent={activeSubagent ?? null}
+          isRunning={isRunning}
+          logs={logs}
+          activity={activity}
+        />
+      </div>
 
       {isRunning && (
         <p className="text-xs text-slate-800">This usually takes 1–3 minutes depending on complexity.</p>

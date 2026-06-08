@@ -10,6 +10,7 @@ interface ChatSidebarProps {
   pendingInterrupt: PendingInterrupt | null;
   isRunning: boolean;
   activity?: string | null;
+  activeSubagent?: string | null;
   error: string | null;
   onSend: (content: string) => void;
   // HITL resolvers
@@ -29,6 +30,7 @@ export default function ChatSidebar({
   pendingInterrupt,
   isRunning,
   activity,
+  activeSubagent,
   error,
   onSend,
   onResolveTechStack,
@@ -39,6 +41,7 @@ export default function ChatSidebar({
   isUploading,
   onUploadFile,
   onClearFiles,
+  activeSubagent,
 }: ChatSidebarProps) {
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -155,11 +158,16 @@ export default function ChatSidebar({
         {/* Running indicator — shows the agent's current action live */}
         {isRunning && !pendingInterrupt && (
           <div className="flex items-center gap-2 text-xs text-slate-500">
-            <svg className="h-3.5 w-3.5 animate-spin text-blue-400" viewBox="0 0 24 24" fill="none">
+            <svg className="h-3.5 w-3.5 animate-spin text-blue-400 flex-shrink-0" viewBox="0 0 24 24" fill="none">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
             </svg>
-            <span>{activity ?? "Thinking…"}</span>
+            {activeSubagent && (
+              <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-300 flex-shrink-0">
+                {activeSubagent}
+              </span>
+            )}
+            <span className="truncate">{activity ?? "Thinking…"}</span>
           </div>
         )}
 

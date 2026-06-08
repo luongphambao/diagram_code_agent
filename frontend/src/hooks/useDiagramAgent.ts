@@ -26,6 +26,7 @@ export interface LogEntry {
   output?: string;
   elapsed_s?: number;
   error?: string;
+  subagent?: string;
 }
 
 export interface TechStackLayer {
@@ -232,7 +233,7 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
                 if (subagent) setActiveSubagent(subagent);
                 setAgentState((prev) => ({
                   ...prev,
-                  logs: [...(prev.logs ?? []), { t: 0, type: "tool_start", tool, input: label }],
+                  logs: [...(prev.logs ?? []), { t: 0, type: "tool_start", tool, input: label, subagent }],
                 }));
               } else if (phase === "end") {
                 // Clear active subagent when its task tool completes.

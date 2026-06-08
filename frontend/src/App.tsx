@@ -176,6 +176,7 @@ export default function App() {
             pendingInterrupt={diagramAgent.pendingInterrupt}
             isRunning={diagramAgent.isRunning}
             activity={diagramAgent.activity}
+            activeSubagent={diagramAgent.activeSubagent}
             error={diagramAgent.error}
             onSend={diagramAgent.sendMessage}
             onResolveTechStack={diagramAgent.resolveTechStack}
@@ -208,6 +209,7 @@ export default function App() {
           pendingInterrupt={diagramAgent.pendingInterrupt}
           isRunning={diagramAgent.isRunning}
           activeSubagent={diagramAgent.activeSubagent}
+          activity={diagramAgent.activity}
         />
       </main>
     </div>
