@@ -1,0 +1,63 @@
+---
+name: critic
+description: Visual quality standards for reviewing rendered architecture diagrams — what a production-quality diagram must have, common defects with concrete symptoms, and a calibrated severity guide. Consult before writing findings.
+---
+
+# critic
+
+You are reviewing a rendered PNG against an approved blueprint. This skill
+documents the quality bar, the defect taxonomy, and what NOT to file.
+
+## What a clean diagram looks like
+
+### Layout
+- **Balanced aspect ratio**: ~1.3–2.0:1 (width:height). Anything above 2.6:1 is
+  too wide — text gets small, labels strand.
+- **Every node inside a cluster**: Client · Edge/Hosting · Application · Data ·
+  AI · Monitoring · CI/CD. Only a single entry actor (User/Browser) may float
+  outside. A bare box outside any cluster is a defect.
+- **No spaghetti**: edges go in one direction; no whole-canvas crossing arrows.
+  Label-bearing edges that span >50% of the canvas will strand — they are a
+  defect when the layout audit flags them.
+- **Sibling tiers**: Data and Application/Compute are separate sibling clusters,
+  never nested. A "data" cluster inside an "application" cluster is a defect.
+- **Collapsed replicas**: N identical services = ONE box labeled "(xN)".
+- **Observability aggregated**: monitoring/secrets on ONE dashed side-channel,
+  not fanned out per service.
+
+### Visual completeness
+- **Every node has a real icon** — no blank/placeholder boxes.
+- **Correct provider icons**: an Azure architecture uses Azure icons; GCP uses
+  GCP icons. No AWS icons in a non-AWS diagram.
+- **Legend present** when the diagram uses mixed edge styles (solid + dashed, or
+  solid + dotted). Missing legend = defect.
+- **No empty visible shapes**: no blank rounded rectangles or spacer boxes.
+
+### pretty-style specific (prettygraph diagrams)
+- Every cluster is tinted (has a colored background).
+- Diagram has a title + subtitle.
+- Nodes have colored boxes (not plain graphviz default).
+- Orchestration diagrams number the primary path: (1), (2), (3)…
+
+## Defect severity
+
+| Severity  | Examples |
+|-----------|---------|
+| `critical` | Render is broken; topology is wrong (edges connect wrong nodes; whole tier missing) |
+| `high`    | Blueprint node/edge missing; blank icon box; visible empty shape; Data nested in Application; orchestration flow not numbered |
+| `medium`  | Crossing or whole-canvas edges; aspect ratio > 2.6:1 (layout audit TOO WIDE); overlapping labels; floating un-clustered nodes; mixed edge styles without Legend; per-service observability lines instead of one aggregated channel |
+| `low`     | Minor misalignment; small inconsistency; negligible impact |
+
+## Do NOT file
+- **Taste / aesthetics**: "would look nicer if…", color preferences, nudging boxes.
+- **Speculation** about what isn't visible in THIS render.
+- **Scope-policing the blueprint**: the blueprint was approved by the user. Set
+  `in_blueprint=false` for out-of-scope observations — they do NOT block finalize.
+- **Duplicates**: N nodes with the same defect → ONE finding listing all nodes.
+- Anything the layout audit did NOT flag and you cannot see in the image.
+
+## Verdict rule
+- Any `medium`+ in-blueprint finding → `VERDICT: REVISE`
+- Only `low` or out-of-blueprint findings → `VERDICT: PASS`
+- Reserve REVISE for defects a careful architect would also send back.
+- Keep findings tight: 3–5 maximum. A wall of nits is noise.
