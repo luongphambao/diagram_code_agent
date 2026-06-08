@@ -64,6 +64,8 @@ export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning,
   const [lightbox, setLightbox] = useState(false);
   const [tab, setTab] = useState<Tab>("preview");
   const { current_step, png_base64, drawio, summary, error, iteration, code, logs, delegations } = agentState;
+  const hasDelegations = !!delegations && delegations.length > 0;
+  const hasLiveAgentWork = isRunning || !!activeSubagent || hasDelegations || !!activity;
 
   // ── Download helpers ──────────────────────────────────────────────────────
   const downloadPng = () => {
@@ -245,21 +247,20 @@ export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning,
 
           {tab === "agents" && (
             <div className="flex flex-1 flex-col overflow-hidden bg-[#0b0e14]">
-              {delegations && delegations.length > 0 ? (
+              {hasLiveAgentWork ? (
                 <div className="flex-1 overflow-y-auto p-4">
                   <SubagentPanel
-                    delegations={delegations}
+                    delegations={delegations ?? []}
                     activeSubagent={activeSubagent ?? null}
-                    isRunning={false}
+                    isRunning={isRunning}
                     logs={logs}
+                    activity={activity}
                   />
                 </div>
               ) : (
                 <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center px-6">
                   <p className="text-sm text-slate-600">No subagent delegations yet</p>
-                  {isRunning && (
-                    <p className="text-xs text-slate-700">Drawer &amp; critic agents appear once the blueprint is approved and rendering begins.</p>
-                  )}
+                  <p className="text-xs text-slate-700">Drawer &amp; critic agents appear once the blueprint is approved and rendering begins.</p>
                 </div>
               )}
             </div>

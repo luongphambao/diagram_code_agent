@@ -74,29 +74,11 @@ Tints are by tier, not by vendor — use them for any cloud.
   (providers: aws, azure, gcp, oci, ibm, alibabacloud, onprem, programming, saas,
   k8s, generic, …). The pack covers the major clouds equally well (Azure ~800,
   AWS ~525, GCP ~120 icons) — there is NO reason to default to AWS.
-- **Always resolve paths with tools before using them — planned, bounded search:**
-  - Make an exact icon plan first: one entry per visible node that truly needs an
-    icon. Exclude legend, spacers, generic notes, and nodes where `icon=` should
-    be omitted. Each entry has `{label, provider, icon_keyword}`.
-  - Generate `icon_keyword` in the icon-pack filename dialect: short product noun,
-    not full marketing label. Examples: `Amazon Aurora PostgreSQL Server` ->
-    `aurora`, `AWS App Runner` -> `app runner`, `CloudFront CDN` -> `cloudfront`,
-    `Azure Container Apps` -> `container apps`, `GCP Cloud Run` -> `run`,
-    `Cloud SQL` -> `sql`, `Cloud Pub/Sub` -> `pubsub`.
-  - `resolve_icons(icons=[...])` declares the plan AND resolves the whole plan in
-    ONE tool call. It records `icon_plan.json` and sets the fallback search budget
-    to `unique planned icons * 3`. Use the returned `icon` relative path for
-    prettygraph, or `path` if absolute is required. NOT_FOUND entries include
-    `tried_keywords` — use a DIFFERENT keyword in `search_icons` to avoid
-    redundant queries.
-  - `search_icons(icon_keyword, provider="<provider>")` is fallback for misses
-    only. Check `tried_keywords` in the NOT_FOUND result first. Never call it
-    more than 3 times for the same icon/query/provider; total fallback search
-    budget is `unique planned icons * 3`.
+- **Always resolve paths with tools before using them:**
+  - `search_icons("<service>", provider="<provider>")` — finds the exact path
+    within a provider subtree (e.g. `search_icons("App Service", provider="azure")`).
   - `fetch_logo("<Product Name>")` — for brand logos not in the pack (Stripe,
-    Twilio, etc.); call ONLY for specific planned services that `resolve_icons`
-    returned as `NOT_FOUND` and fallback `search_icons` also failed, once per
-    missing logo. Do not call it for every service upfront.
+    Twilio, etc.), returns `PATH: <file>` or `NOT_FOUND`.
   - NEVER guess a path — a wrong path silently drops the icon.
 - If no icon exists, omit `icon=` (the box still renders with color) or use a
   generic one (e.g. `onprem/client/users.png`, `generic/database/sql.png`).
@@ -144,12 +126,7 @@ flow in one direction, arrows are short and rarely cross.
 
 ## Workflow
 1. Plan tiers, clusters, the few typed edges.
-2. Make the exact icon plan with `icon_keyword`, then call `resolve_icons(icons=[...])`
-   once for the whole plan — it records the budget (unique_icons × 3) and resolves
-   all paths in a single call. Check `tried_keywords` in any NOT_FOUND result before
-   calling `search_icons`. Use `search_icons` only for misses (different keyword than
-   what was tried). Call `fetch_logo` only if fallback local search also fails; fetch
-   each missing brand logo at most once.
+2. Use `search_icons` / `fetch_logo` to resolve all icon paths before writing code.
 3. Write the complete `prettygraph` script.
 4. Call `render_diagram(code=<complete script>)` — the tool runs the script and
    returns the rendered PNG **plus a layout audit**. On error it returns the
@@ -200,22 +177,15 @@ boxes size to their text and look ragged.
 ```python
 g = Pretty(title, ..., node_width=270, node_height=46, theme="pro")  # uniform pills
 ```
-Keep labels short (≤ ~26 chars) and sublabels shorter (≤ ~24 chars) so they fit.
-If detail is longer, abbreviate, split into another box, or widen boxes; never
-ship clipped text.
-
-For a Legend, do NOT put all entries in one long sublabel such as
-`solid=sync · dashed=obs · dotted=deploy`. Split entries into short lines/nodes
-(`Solid: sync`, `Dashed: obs`, `Dotted: deploy`) or give the legend extra width.
+Keep labels short (≤ ~26 chars) so they fit; push detail into a short `sublabel=`.
 
 ## 2. One icon FAMILY (so logos look consistent)
 Mixing aws + azure + saas + programming logos looks noisy. For an infographic,
 pick ONE family and use it for every box — `azure/general/*` is a clean
 line-style set (file, files, tag, table, cubes, gear, workflow, search-grid,
 versions, counter, support, usericon, log-streaming, dashboard, …). Verify each
-paths with one `resolve_icons(icons=[...])` batch; a wrong path silently drops
-the icon. Use `search_icons` fallback only for misses, and do not search any one
-icon more than 3 times.
+path with `search_icons("<name>", provider="azure")` — a wrong path silently
+drops the icon.
 
 ## 3. Bold flow arrows that go CLUSTER→CLUSTER (the key to aligned clusters)
 If a flow edge connects a node *inside* cluster A to a node *inside* cluster B,

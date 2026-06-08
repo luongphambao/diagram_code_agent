@@ -130,6 +130,8 @@ interface DelegationCardProps {
 
 const RESULT_PREVIEW = 280;
 const MAX_TOOL_CHIPS = 10;
+const DETAIL_TOOLS = new Set(["plan_icons", "resolve_icons", "search_icons", "fetch_logo"]);
+const MAX_TOOL_DETAILS = 8;
 
 function DelegationCard({ d, index, toolLogs }: DelegationCardProps) {
   const [expanded, setExpanded] = useState(false);
@@ -146,6 +148,9 @@ function DelegationCard({ d, index, toolLogs }: DelegationCardProps) {
   }, []);
   const visibleTools = dedupedTools.slice(0, MAX_TOOL_CHIPS);
   const hiddenCount = dedupedTools.length - visibleTools.length;
+  const detailLogs = toolLogs
+    .filter((l) => (l.type === "tool_start" || l.type === "tool_end") && l.tool && DETAIL_TOOLS.has(l.tool) && l.input)
+    .slice(-MAX_TOOL_DETAILS);
 
   return (
     <div className={`overflow-hidden rounded-xl border ${c.card}`}>
@@ -184,6 +189,9 @@ function DelegationCard({ d, index, toolLogs }: DelegationCardProps) {
                   {d.current_label && (
                     <span className="text-slate-600">— {d.current_label}</span>
                   )}
+                  {d.current_detail && (
+                    <span className="truncate text-slate-500">: {d.current_detail}</span>
+                  )}
                 </>
               ) : d.current_label ? (
                 d.current_label + "…"
@@ -204,6 +212,20 @@ function DelegationCard({ d, index, toolLogs }: DelegationCardProps) {
                   +{hiddenCount} more
                 </span>
               )}
+            </div>
+          )}
+
+          {detailLogs.length > 0 && (
+            <div className="space-y-1 rounded-lg border border-white/6 bg-black/10 p-2">
+              {detailLogs.map((l, i) => (
+                <div key={`${l.tool}-${i}`} className="flex gap-2 text-[10.5px] leading-snug">
+                  <span className={l.type === "tool_end" ? "text-emerald-500" : "text-amber-500"}>
+                    {l.type === "tool_end" ? "done" : "run"}
+                  </span>
+                  <span className="shrink-0 font-mono text-slate-600">{l.tool}</span>
+                  <span className="min-w-0 truncate text-slate-400">{l.input}</span>
+                </div>
+              ))}
             </div>
           )}
 

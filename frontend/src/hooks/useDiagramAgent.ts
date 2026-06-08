@@ -18,7 +18,7 @@ function applyOps(
 
 export interface LogEntry {
   t: number;
-  type: "llm" | "tool_start";
+  type: "llm" | "tool_start" | "tool_end";
   model?: string;
   turn?: number;
   tool?: string;
@@ -52,6 +52,7 @@ export interface Delegation {
   result?: string | null;
   current_tool?: string;
   current_label?: string;
+  current_detail?: string;
 }
 
 export interface AgentState {
@@ -227,15 +228,23 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
               const phase = evt.phase as string;
               const tool = evt.tool as string;
               const label = (evt.label as string) || tool;
+              const detail = evt.detail as string | undefined;
               const subagent = evt.subagent as string | undefined;
+              const display = detail ? `${label}: ${detail}` : label;
               if (phase === "start") {
-                setActivity(label);
+                setActivity(display);
                 if (subagent) setActiveSubagent(subagent);
                 setAgentState((prev) => ({
                   ...prev,
-                  logs: [...(prev.logs ?? []), { t: 0, type: "tool_start", tool, input: label, subagent }],
+                  logs: [...(prev.logs ?? []), { t: 0, type: "tool_start", tool, input: detail ?? label, subagent }],
                 }));
               } else if (phase === "end") {
+                if (detail) {
+                  setAgentState((prev) => ({
+                    ...prev,
+                    logs: [...(prev.logs ?? []), { t: 0, type: "tool_end", tool, input: detail, subagent }],
+                  }));
+                }
                 // Clear active subagent when its task tool completes.
                 if (tool === "task") setActiveSubagent(null);
               }

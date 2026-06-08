@@ -16,8 +16,6 @@ from __future__ import annotations
 
 import base64
 import json
-import math
-import re
 import subprocess
 import sys
 from pathlib import Path
@@ -34,12 +32,11 @@ from .findings import DiagramFinding, format_critique, prune
 _TECHSTACK_FILE = WORKSPACE / "tech_stack.json"
 _BLUEPRINT_FILE = WORKSPACE / "blueprint.json"
 _CRITIQUE_FILE = WORKSPACE / "critique.json"
-_ICON_SEARCH_COUNTS_FILE = WORKSPACE / "icon_search_counts.json"
 
 
 def clear_stage_markers() -> None:
     """Reset the staged-flow markers at the start of a fresh run."""
-    for f in (_TECHSTACK_FILE, _BLUEPRINT_FILE, _CRITIQUE_FILE, _ICON_SEARCH_COUNTS_FILE):
+    for f in (_TECHSTACK_FILE, _BLUEPRINT_FILE, _CRITIQUE_FILE):
         if f.exists():
             f.unlink()
 
@@ -75,163 +72,6 @@ def _layout_audit() -> str:
         return audit_layout(str(dot), str(png))
     except Exception:  # noqa: BLE001 — audit is advisory, never fail over it
         return ""
-
-def _strip_html_label(label: str) -> str:
-    text = re.sub(r"<[^>]+>", " ", label or "")
-    return " ".join(text.replace("\\n", " ").split())
-
-
-def _cluster_nesting(dot_text: str) -> dict[str, str | None]:
-    """Best-effort parent map for `subgraph cluster_*` nesting in DOT."""
-    parents: dict[str, str | None] = {}
-    stack: list[str] = []
-    for raw in dot_text.splitlines():
-        line = raw.strip()
-        m = re.match(r"subgraph\s+cluster_([A-Za-z0-9_.:-]+)\s*\{", line)
-        if m:
-            cid = m.group(1)
-            parents[cid] = stack[-1] if stack else None
-            stack.append(cid)
-            continue
-        if line == "}" and stack:
-            stack.pop()
-    return parents
-
-
-def _visual_lint() -> str:
-    """Deterministic presentation lint for production-grade diagrams."""
-    dot = WORKSPACE / "out.dot"
-    sidecar = WORKSPACE / "out.nodes.json"
-    if not dot.exists():
-        return ""
-
-    try:
-        dot_text = dot.read_text(encoding="utf-8", errors="replace")
-        g = json.loads(subprocess.run(
-            ["dot", "-Tjson", str(dot)],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout)
-    except Exception:  # noqa: BLE001
-        return ""
-
-    blockers: list[str] = []
-    warnings: list[str] = []
-
-    try:
-        x0, y0, x1, y1 = (float(v) for v in g["bb"].split(","))
-        width = max(x1 - x0, 1.0)
-        height = max(y1 - y0, 1.0)
-        aspect = width / height
-        if aspect > 2.6:
-            blockers.append(
-                f"layout is too wide ({aspect:.2f}:1); fold tiers into sibling rows/columns"
-            )
-        elif aspect > 2.2:
-            warnings.append(
-                f"layout is wide ({aspect:.2f}:1); target ~1.4:1 to 2.0:1"
-            )
-    except Exception:  # noqa: BLE001
-        width = height = 1.0
-
-    side: dict = {}
-    if sidecar.exists():
-        try:
-            side = json.loads(sidecar.read_text(encoding="utf-8"))
-        except Exception:  # noqa: BLE001
-            side = {}
-
-    for nid, meta in (side.get("nodes") or {}).items():
-        label = " ".join(str(meta.get("label") or "").split())
-        sublabel = " ".join(str(meta.get("sublabel") or "").split())
-        if not label and not sublabel:
-            blockers.append(f"empty visible node '{nid}' appears in the diagram")
-
-    if not side:
-        for obj in g.get("objects", []):
-            name = obj.get("name", "")
-            if name.startswith("cluster"):
-                continue
-            if obj.get("pos") and not _strip_html_label(str(obj.get("label", ""))):
-                blockers.append(f"empty visible node '{name}' appears in the diagram")
-
-    clusters = side.get("clusters") or {}
-    parents = _cluster_nesting(dot_text)
-
-    def _cluster_name(cid: str) -> str:
-        meta = clusters.get(cid, {})
-        return f"{cid} {meta.get('label', '')}".lower()
-
-    for cid in parents:
-        cname = _cluster_name(cid)
-        if not any(term in cname for term in ("data", "database", "db")):
-            continue
-        parent = parents.get(cid)
-        while parent:
-            pname = _cluster_name(parent)
-            if any(term in pname for term in ("application", "app", "compute")):
-                blockers.append(
-                    f"data cluster '{cid}' is nested inside application cluster '{parent}'"
-                )
-                break
-            parent = parents.get(parent)
-
-    pos: dict[int, tuple[float, float]] = {}
-    for obj in g.get("objects", []):
-        if obj.get("pos"):
-            try:
-                x, y = (float(v) for v in obj["pos"].split(","))
-                pos[obj["_gvid"]] = (x, y)
-            except Exception:  # noqa: BLE001
-                pass
-    diag = max((width * width + height * height) ** 0.5, 1.0)
-    long_labels: list[str] = []
-    for edge in g.get("edges", []):
-        label = _strip_html_label(str(edge.get("label", "")))
-        if not label:
-            continue
-        a = pos.get(edge.get("tail"))
-        b = pos.get(edge.get("head"))
-        if not a or not b:
-            continue
-        frac = (((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) ** 0.5) / diag
-        if frac > 0.5:
-            long_labels.append(f'"{label}" spans {frac:.0%} of canvas')
-    if long_labels:
-        warnings.append(
-            "long labeled edges risk spaghetti/stranded labels: "
-            + "; ".join(long_labels[:4])
-        )
-
-    edge_styles = {
-        str(edge.get("style") or "solid")
-        for edge in g.get("edges", [])
-        if str(edge.get("style") or "solid") != "invis"
-    }
-    has_legend = any(
-        "legend" in str(meta.get("label", "")).lower()
-        for meta in (side.get("nodes") or {}).values()
-    ) or "legend" in dot_text.lower()
-    if len(edge_styles) > 1 and not has_legend:
-        warnings.append(
-            "mixed edge styles are used without a Legend explaining solid/dashed/dotted lines"
-        )
-
-    if not blockers and not warnings:
-        return "Visual lint: PASS - no deterministic presentation issues found."
-
-    lines = ["Visual lint:"]
-    if blockers:
-        lines.append("  BLOCKERS:")
-        lines += [f"    - {item}" for item in blockers[:6]]
-    if warnings:
-        lines.append("  WARNINGS:")
-        lines += [f"    - {item}" for item in warnings[:6]]
-    lines.append(
-        "  Fix blockers before finalize; address warnings unless the approved blueprint forces them."
-    )
-    return "\n".join(lines)
 
 
 def _inspection_image_b64(png_path: Path) -> tuple[str, str]:
@@ -313,21 +153,11 @@ def render_diagram(
 
     b64, mime = _inspection_image_b64(png)
     audit = _layout_audit()
-    visual = _visual_lint()
     text = "Rendered out.png successfully. Inspect it and refine if the layout is not clean."
     if audit:
         text += ("\n\n" + audit + "\n\nAct on any audit WARNING before finalizing "
                  "(re-render after fixing). A clean diagram is balanced (~1.3–2:1) "
                  "with every label-bearing edge short.")
-    if visual:
-        text += (
-            "\n\n"
-            + visual
-            + "\n\nProduction presentation rules: remove empty shapes, keep Data "
-            "as a sibling tier (not nested in Application), number orchestration "
-            "flows, aggregate observability lines, and add a Legend when multiple "
-            "edge styles are used."
-        )
     return ToolMessage(
         content_blocks=[
             {"type": "text", "text": text},
@@ -366,285 +196,34 @@ def export_drawio() -> str:
 
 @tool
 def search_icons(query: str, provider: Optional[str] = None) -> str:
-    """Search the bundled icon pack with BM25-ranked product keywords.
+    """Search the bundled icon pack for matching icon paths.
 
     Returns absolute `.png` paths to use in `Custom(label, "<path>")` when no
     built-in `diagrams` node fits. Optionally restrict to one `provider`
     (e.g. "aws", "azure", "gcp", "onprem", "k8s", "programming", "saas").
-    Use icon-pack style keywords, not full marketing labels:
-    "AWS App Runner" -> "app runner", "Amazon Aurora PostgreSQL Server" -> "aurora".
     """
     try:
         manifest = json.loads(Path(LOCAL_MANIFEST).read_text(encoding="utf-8"))
     except Exception as exc:  # noqa: BLE001
         return f"Could not read icon manifest: {exc}"
 
-    canonical = _canonical_icon_keyword(query, provider)
-    count = _record_icon_search(canonical, provider)
-    if count > 3:
-        return (
-            f"SEARCH_LIMIT_REACHED: '{canonical}'"
-            f"{f' provider={provider}' if provider else ''} was searched {count} times. "
-            "Stop searching this icon; use the best prior result, broaden once under a "
-            "different query, or omit icon=."
-        )
-
-    hits = _icon_hits(manifest, query, provider=provider, limit=12)
-    if not hits:
-        return (
-            f"No icons matched '{query}' (keyword tried: '{canonical}'). "
-            "Try a shorter filename-style keyword or fetch_logo()."
-        )
-    return (
-        f"Search attempt {count}/3 for keyword '{canonical}' "
-        f"(from query '{query}').\n"
-        + "\n".join(hits)
-    )
-
-
-def _record_icon_search(query: str, provider: Optional[str]) -> int:
-    """Track repeated searches so one icon cannot consume unbounded tool calls."""
-    WORKSPACE.mkdir(parents=True, exist_ok=True)
-    provider_key = (provider or "*").strip().lower()
-    query_key = " ".join(query.lower().replace("-", " ").replace("_", " ").split())
-    key = f"{provider_key}:{query_key}"
-    try:
-        counts = json.loads(_ICON_SEARCH_COUNTS_FILE.read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001
-        counts = {}
-    counts[key] = int(counts.get(key, 0)) + 1
-    _ICON_SEARCH_COUNTS_FILE.write_text(json.dumps(counts, indent=2), encoding="utf-8")
-    return counts[key]
-
-
-def _icon_hits(
-    manifest: dict,
-    query: str,
-    *,
-    provider: Optional[str] = None,
-    limit: int = 10,
-) -> list[str]:
-    """Return ranked icon paths for one query from an already-loaded manifest."""
-    for terms in _icon_keyword_variants(query, provider):
-        hits = _rank_icon_hits(manifest, terms, provider=provider, limit=limit)
-        if hits:
-            return hits
-    return []
-
-
-_ICON_PROVIDER_TERMS = {
-    "amazon",
-    "aws",
-    "azure",
-    "cloud",
-    "gcp",
-    "google",
-    "microsoft",
-}
-
-_ICON_NOISE_TERMS = {
-    "compatible",
-    "for",
-    "managed",
-    "postgres",
-    "postgresql",
-    "server",
-    "serverless",
-}
-
-_ICON_PHRASE_ALIASES = {
-    "amazon aurora": "aurora",
-    "amazon aurora postgresql server": "aurora",
-    "application load balancer": "elb application load balancer",
-    "app service": "app services",
-    "app services": "app services",
-    "aurora postgresql": "aurora",
-    "aurora postgresql server": "aurora",
-    "cloud load balancing": "load balancing",
-    "cloud pub sub": "pubsub",
-    "cloud run": "run",
-    "cloud sql": "sql",
-    "container app": "container apps",
-    "cosmos db": "cosmos db",
-    "ecs": "elastic container service",
-    "ecs fargate": "fargate",
-    "elastic container service": "elastic container service",
-    "entra id": "entra",
-    "load balancer": "load balancing",
-    "network load balancer": "elb network load balancer",
-    "pub sub": "pubsub",
-    "rds aurora": "aurora",
-    "route53": "route 53",
-}
-
-_ICON_TOKEN_ALIASES = {
-    "apigateway": ["api", "gateway"],
-    "cloudsql": ["sql"],
-    "cloudfront": ["cloudfront"],
-    "dynamodb": ["dynamodb"],
-    "eventbridge": ["eventbridge"],
-    "opensearch": ["opensearch"],
-    "route53": ["route", "53"],
-}
-
-
-def _tokenize_icon_query(query: str) -> list[str]:
-    return [
-        t
-        for t in query.lower().replace("-", " ").replace("_", " ").replace("/", " ").split()
-        if t
-    ]
-
-
-def _terms_from_phrase(phrase: str) -> list[str]:
-    return _tokenize_icon_query(phrase)
-
-
-def _alias_terms(terms: list[str]) -> list[str] | None:
-    phrase = " ".join(terms)
-    if phrase in _ICON_PHRASE_ALIASES:
-        return _terms_from_phrase(_ICON_PHRASE_ALIASES[phrase])
-    if len(terms) == 1 and terms[0] in _ICON_TOKEN_ALIASES:
-        return _ICON_TOKEN_ALIASES[terms[0]]
-    return None
-
-
-def _icon_keyword_variants(query: str, provider: Optional[str]) -> list[list[str]]:
-    raw = _tokenize_icon_query(query)
-    if not raw:
-        return []
-
-    stripped = [t for t in raw if t not in _ICON_PROVIDER_TERMS]
-    relaxed = [t for t in stripped if t not in _ICON_NOISE_TERMS]
-
-    variants: list[list[str]] = []
-    for candidate in (
-        _alias_terms(stripped),
-        _alias_terms(raw),
-        relaxed,
-        stripped,
-        raw,
-    ):
-        if candidate:
-            variants.append(candidate)
-
-    # Provider-specific filename dialects.
-    provider_l = provider.lower() if provider else ""
-    phrase = " ".join(stripped)
-    if provider_l == "aws" and phrase == "load balancer":
-        variants.insert(0, ["elastic", "load", "balancing"])
-    elif provider_l == "azure" and phrase == "load balancer":
-        variants.insert(0, ["load", "balancers"])
-    elif provider_l == "gcp" and phrase == "load balancer":
-        variants.insert(0, ["load", "balancing"])
-
-    deduped: list[list[str]] = []
-    seen: set[tuple[str, ...]] = set()
-    for item in variants:
-        key = tuple(item)
-        if key and key not in seen:
-            seen.add(key)
-            deduped.append(item)
-    return deduped
-
-
-def _canonical_icon_keyword(query: str, provider: Optional[str]) -> str:
-    variants = _icon_keyword_variants(query, provider)
-    if not variants:
-        return " ".join(_tokenize_icon_query(query))
-    return " ".join(variants[0])
-
-
-def _rank_icon_hits(
-    manifest: dict,
-    terms: list[str],
-    *,
-    provider: Optional[str],
-    limit: int,
-) -> list[str]:
+    terms = [t for t in query.lower().replace("-", " ").replace("_", " ").split() if t]
     root = Path(LOCAL_ICONS)
-    provider_l = provider.lower() if provider else None
-    query_terms = [t for t in terms if t]
-    if not query_terms:
-        return []
-
-    docs: list[tuple[str, str, str, list[str], str]] = []
-
+    hits: list[str] = []
     for prov, cats in manifest.get("providers", {}).items():
-        if provider_l and prov.lower() != provider_l:
+        if provider and prov.lower() != provider.lower():
             continue
         for cat, names in cats.items():
             for name in names:
-                sub = name if cat == "_root" else f"{cat}/{name}"
-                path = str(root / prov / f"{sub}.png")
-                name_terms = _tokenize_icon_query(name)
-                cat_terms = _tokenize_icon_query(cat)
-                prov_terms = _tokenize_icon_query(prov)
-                tokens = (name_terms * 4) + (cat_terms * 2) + prov_terms
-                normalized_name = " ".join(name_terms)
-                docs.append((path, normalized_name, cat.lower(), tokens, name))
-
-    if not docs:
-        return []
-
-    n_docs = len(docs)
-    avg_len = sum(len(tokens) for *_prefix, tokens, _name in docs) / max(n_docs, 1)
-    dfs: dict[str, int] = {}
-    for term in query_terms:
-        dfs[term] = sum(1 for *_prefix, tokens, _name in docs if term in set(tokens))
-
-    k1 = 1.4
-    b = 0.75
-    query_phrase = " ".join(query_terms)
-    significant_terms = [
-        term
-        for term in query_terms
-        if term not in _ICON_NOISE_TERMS and term not in _ICON_PROVIDER_TERMS
-    ]
-    scored: list[tuple[float, str]] = []
-
-    for path, normalized_name, cat, tokens, raw_name in docs:
-        token_counts = {t: tokens.count(t) for t in set(tokens)}
-        doc_len = max(len(tokens), 1)
-        score = 0.0
-        matched_terms = 0
-        matched_significant_terms = 0
-
-        for term in query_terms:
-            tf = token_counts.get(term, 0)
-            if tf <= 0:
-                continue
-            matched_terms += 1
-            if term in significant_terms:
-                matched_significant_terms += 1
-            df = max(dfs.get(term, 0), 1)
-            idf = math.log(1 + (n_docs - df + 0.5) / (df + 0.5))
-            denom = tf + k1 * (1 - b + b * doc_len / max(avg_len, 1))
-            score += idf * (tf * (k1 + 1)) / denom
-
-        if matched_terms == 0:
-            continue
-        if significant_terms and matched_significant_terms == 0:
-            continue
-
-        # Deterministic boosts keep exact icon filename matches above broad BM25 hits.
-        if normalized_name == query_phrase:
-            score += 8.0
-        elif all(term in normalized_name.split() for term in query_terms):
-            score += 4.0
-        elif query_phrase in normalized_name:
-            score += 3.0
-        if any(term in cat for term in query_terms):
-            score += 0.8
-        if provider_l:
-            score += 0.5
-
-        scored.append((score, path))
-
-    return [
-        path
-        for _, path in sorted(scored, key=lambda item: (-item[0], item[1]))[:limit]
-    ]
+                hay = f"{prov} {cat} {name}".lower()
+                if all(t in hay for t in terms):
+                    sub = name if cat == "_root" else f"{cat}/{name}"
+                    hits.append(str(root / prov / f"{sub}.png"))
+                    if len(hits) >= 30:
+                        break
+    if not hits:
+        return f"No icons matched '{query}'. Try fewer/broader terms or fetch_logo()."
+    return "\n".join(hits)
 
 
 @tool
@@ -659,7 +238,7 @@ def fetch_logo(name: str) -> str:
         path = get_logo(name, LOCAL_ICONS, str(WORKSPACE))
     except Exception as exc:  # noqa: BLE001
         return f"NOT_FOUND: fetch_logo error: {exc}"
-    return path or f"NOT_FOUND: no verified logo for '{name}'. Use a built-in node or omit icon=."
+    return path or f"NOT_FOUND: no verified logo for '{name}'. Use a built-in node or search_icons()."
 
 
 # ---------------------------------------------------------------------------
@@ -777,12 +356,9 @@ def inspect_diagram(tool_call_id: Annotated[str, InjectedToolCallId]) -> ToolMes
         )
     b64, mime = _inspection_image_b64(png)
     audit = _layout_audit()
-    visual = _visual_lint()
     text = "Here is the rendered diagram to review."
     if audit:
         text += "\n\nObjective layout audit (read this FIRST):\n" + audit
-    if visual:
-        text += "\n\nDeterministic visual lint (read this too):\n" + visual
     return ToolMessage(
         content_blocks=[
             {"type": "text", "text": text},
@@ -821,13 +397,6 @@ def finalize_diagram() -> str:
     """
     if not (WORKSPACE / "out.png").exists():
         return "No rendered diagram yet — call render_diagram (and export_drawio) first."
-    visual = _visual_lint()
-    if "BLOCKERS:" in visual:
-        return (
-            "Visual lint BLOCKED finalize. Send these findings back to the drawer, "
-            "re-render, re-export drawio, and re-run the critic before final review.\n\n"
-            + visual
-        )
     return "Diagram finalized and approved by the user."
 
 
