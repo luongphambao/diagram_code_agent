@@ -105,6 +105,100 @@ When the user rejects a gate, the frontend sends feedback to the server. The ser
 - Diagram generation skills: `diagrams-as-code` and `pro-style`.
 - Runtime workspace: `backend/agent_space/workspace/`.
 
+## LangGraph Details
+
+Deep Agents compiles the agent into a LangGraph graph. The application uses LangGraph for streamed execution, thread-scoped checkpoints, human approval interrupts, and run resumption.
+
+### Graph Runtime
+
+- Agent builder: `create_deep_agent(...)` in `backend/src/diagram_mcp/agent.py`.
+- Compiled graph entrypoint: `AGENT.astream(...)` in `backend/src/diagram_mcp/server.py`.
+- Thread identity: `configurable.thread_id`.
+- Recursion limit: `RECURSION_LIMIT = 160`.
+- Run metadata: `run_name="diagram-agent"`, tag `diagram-agent`, metadata `thread_id` and `run_id`.
+
+Each browser conversation gets its own LangGraph `thread_id`, so checkpointed state, pending approvals, and message history stay isolated per conversation.
+
+### Streaming Modes
+
+The server streams the graph with:
+
+```python
+stream_mode=["messages", "updates", "custom"]
+```
+
+- `messages`: assistant tokens and model messages.
+- `updates`: graph node/tool updates, including tool calls and HITL events.
+- `custom`: subagent activity forwarded through `get_stream_writer()`.
+
+The FastAPI server converts these LangGraph stream events into AG-UI/SSE events consumed by the React frontend.
+
+### Checkpointing and Store
+
+When `DATABASE_URL` is set, LangGraph persistence uses Postgres:
+
+- `AsyncPostgresSaver`: durable checkpointer for graph state and pending interrupts.
+- `AsyncPostgresStore`: durable store for cross-run data.
+- Shared `AsyncConnectionPool`: also reused by the app's conversation metadata table.
+
+When `DATABASE_URL` is not set, local development falls back to:
+
+- `MemorySaver`
+- `InMemoryStore`
+
+In-memory mode is useful for quick testing, but conversations and pending approval state are lost after server restart.
+
+### Human Approval Interrupts
+
+The main graph configures `interrupt_on` for these tools:
+
+```python
+interrupt_on = {
+    "propose_tech_stack": {"allowed_decisions": ["approve", "reject"]},
+    "propose_blueprint": {"allowed_decisions": ["approve", "reject"]},
+    "finalize_diagram": {"allowed_decisions": ["approve", "reject"]},
+}
+```
+
+When one of these tools is reached, LangGraph pauses the run and stores the pending interrupt in the checkpoint. The server reads that pending interrupt with `AGENT.aget_state(config)`, maps it into a frontend approval card, and waits for user input.
+
+### Resume Flow
+
+When the user approves or rejects a card, the frontend sends a tool response back to `/agui`. The server resumes the same LangGraph thread with:
+
+```python
+Command(resume={"decisions": [decision]})
+```
+
+- Approve: graph continues to the next stage.
+- Reject: graph receives user feedback and revises the current proposal or diagram.
+
+Because the resume uses the same `thread_id`, LangGraph continues from the exact paused checkpoint instead of starting a new run.
+
+### Subagent Streaming
+
+Drawer and critic subagents are precompiled Deep Agents. Their internal graph events are wrapped by `_StreamingSubAgentRunnable`, which forwards subagent tool activity to the outer graph stream through `get_stream_writer()`.
+
+This makes nested work visible in the UI, including:
+
+- icon search
+- logo fetch
+- diagram rendering
+- draw.io export
+- critic inspection
+
+### Conversation Metadata
+
+LangGraph owns graph checkpoints and store tables. The app also keeps a separate `conversations` table in `backend/src/diagram_mcp/conversations.py` for UI-friendly metadata:
+
+- conversation name
+- last message
+- chat messages
+- UI state snapshot
+- approval outcomes
+
+This split keeps LangGraph state durable while still allowing the frontend to list, rename, delete, and restore conversations.
+
 ## Repository Layout
 
 ```text
