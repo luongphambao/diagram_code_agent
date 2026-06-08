@@ -150,6 +150,11 @@ flow in one direction, arrows are short and rarely cross.
   the processing service to `Observability` / `Monitoring`.
 - No labeled edge should cross more than half the canvas. If it would, move the
   concern cluster adjacent/stacked, use a cluster-level edge, or omit the label.
+- Never leave a labeled edge floating in blank space or visually pointing at no
+  target. Long data flows into storage/search/analytics should terminate on the
+  target cluster boundary with `ltail` / `lhead` where possible.
+- If a label sits in a dense edge trunk, move it with `taillabel`, shorten the
+  edge, or split the label so other lines do not cut through it.
 - For client-facing diagrams, hide implementation details such as parser library
   names, in-place compaction, client threading modes, and per-file JSON names.
 
@@ -163,6 +168,9 @@ flow in one direction, arrows are short and rarely cross.
   capability boxes.
 - For pipelines, the main path should read left-to-right: External I/O -> Input
   Stream -> Processing Service -> Output/Monitoring.
+- For AWS customer diagrams with app services plus private databases/caches,
+  include a visible VPC boundary with Public Subnet for edge/web ingress and
+  Private Subnet for core services and data stores when it matches the design.
 
 ## Workflow
 1. Plan tiers, clusters, the few typed edges.

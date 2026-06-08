@@ -316,6 +316,16 @@ arrows short and rarely crossing. Apply to Azure/GCP/OCI/IBM exactly as AWS.
   config/calibration file to each internal consumer. Use a `Configuration
   Management` capability and one dashed cluster-level edge into the processing
   service; use one dashed edge from the service to `Observability`.
+- **No floating labeled edges**: labels such as generated reports, semantic
+  index, conflict log, and store scores must sit on an edge that visibly
+  terminates at the target node/cluster. Use cluster-to-cluster arrows with
+  `ltail` / `lhead` for long storage/search/analytics flows.
+- **Avoid label clashes**: do not let dense edge trunks cut through important
+  labels such as candidate/consent/scores. Move the label with `taillabel`, split
+  it, or reroute/shorten the edge.
+- **Security boundary for AWS client diagrams**: when the architecture has public
+  ingress plus private application/data resources, show a VPC boundary with
+  Public Subnet and Private Subnet clusters unless the blueprint says otherwise.
 - **Natural primary flow**: keep the main data path left-to-right for pipelines
   (External I/O -> Input Stream -> Processing Service -> Output/Monitoring).
   Do not route the primary arrow down, up, and back across the canvas.
@@ -480,7 +490,8 @@ _CRITIC_BODY = """\
    from the diagram). Quote what you see / what is missing.
 2. You can name the concrete defect — a blank-icon box, two nodes overlapping,
    a label-bearing edge that crosses the whole canvas, a missing component, a
-   wrong-provider icon, a cramped >3:1 strip.
+   wrong-provider icon, a cramped >3:1 strip, a floating labeled edge, a label
+   clash, or a missing expected VPC/subnet boundary.
 3. It is anchored to a specific node / edge / cluster, or to the page as a whole
    (for an aspect-ratio/audit issue).
 
@@ -492,6 +503,11 @@ _CRITIC_BODY = """\
   dominate the main data flow.
 - File unnatural primary-flow backtracking when the main data path jumps down,
   up, or across the full canvas instead of reading left-to-right/top-to-bottom.
+- File labels that float in blank space or visually point to no visible target.
+- File important labels that are cut through by multiple edge trunks.
+- For AWS client diagrams with public ingress plus private app/data resources,
+  file a missing VPC/Public Subnet/Private Subnet boundary unless explicitly out
+  of scope.
 
 ## Do NOT file
 - **Taste / "would look nicer if…"** — no "use a different color", "nudge this
@@ -513,6 +529,7 @@ _CRITIC_BODY = """\
   mislabeled; a node shows a blank/placeholder icon.
 - `medium` — layout hurts readability: crossing or whole-canvas edges, a cramped
   strip (audit says TOO WIDE), overlapping labels, floating un-clustered nodes,
+  floating labeled edges, label clashes, missing expected VPC/subnet boundary,
   unnatural primary-flow backtracking, per-file config fan-out, per-node metrics
   fan-out, or client-facing code-level clutter.
 - `low` — a small misalignment or minor inconsistency with limited impact.

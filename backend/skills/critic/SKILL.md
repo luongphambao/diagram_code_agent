@@ -19,6 +19,15 @@ documents the quality bar, the defect taxonomy, and what NOT to file.
 - **No spaghetti**: edges go in one direction; no whole-canvas crossing arrows.
   Label-bearing edges that span >50% of the canvas will strand — they are a
   defect when the layout audit flags them.
+- **No floating labeled edges**: labels such as generated reports, semantic
+  index, conflict log, or store scores must clearly attach to the target node or
+  cluster; labels floating in blank space are readability defects.
+- **No label clashes**: important labels must not be cut through by dense edge
+  trunks. If a label like candidate/consent/scores is crossed by multiple lines,
+  file a readability defect.
+- **Security boundary visible when expected**: AWS client diagrams with public
+  ingress plus private app/data resources should show VPC/Public Subnet/Private
+  Subnet boundaries unless the blueprint explicitly says they are out of scope.
 - **Natural main flow**: the primary data path should read in one visual
   direction. A pipeline that jumps down, up, then back across the page is a
   blocking layout defect.
@@ -59,7 +68,7 @@ documents the quality bar, the defect taxonomy, and what NOT to file.
 |-----------|---------|
 | `critical` | Render is broken; topology is wrong (edges connect wrong nodes; whole tier missing) |
 | `high`    | Blueprint node/edge missing; blank icon box; visible empty shape; Data nested in Application; orchestration flow not numbered |
-| `medium`  | Crossing or whole-canvas edges; aspect ratio > 2.6:1 (layout audit TOO WIDE); clipped/truncated text; overlapping labels; floating un-clustered nodes; mixed edge styles without Legend; per-service observability lines instead of one aggregated channel; per-file config fan-out; primary-flow backtracking; client-facing code-level clutter |
+| `medium`  | Crossing or whole-canvas edges; aspect ratio > 2.6:1 (layout audit TOO WIDE); clipped/truncated text; overlapping labels; floating un-clustered nodes; floating labeled edges; missing expected VPC/subnet boundary; mixed edge styles without Legend; per-service observability lines instead of one aggregated channel; per-file config fan-out; primary-flow backtracking; client-facing code-level clutter |
 | `low`     | Minor misalignment; small inconsistency; negligible impact |
 
 ## Do NOT file
