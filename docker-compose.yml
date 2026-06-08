@@ -1,0 +1,57 @@
+name: diagram-agent
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-diagram}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-diagram}
+      POSTGRES_DB: ${POSTGRES_DB:-diagram}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-diagram} -d ${POSTGRES_DB:-diagram}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Expose only if you want to inspect the DB from the host:
+    # ports: ["5432:5432"]
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    # Secrets (OPENAI_API_KEY, LANGSMITH_*) come from backend/.env at RUNTIME —
+    # they are never baked into the image.
+    env_file:
+      - backend/.env
+    environment:
+      # Postgres-backed sessions (checkpointer + store).
+      DATABASE_URL: postgresql://${POSTGRES_USER:-diagram}:${POSTGRES_PASSWORD:-diagram}@postgres:5432/${POSTGRES_DB:-diagram}
+      DIAGRAM_AGENT_PORT: "8001"
+      # Lock CORS to the frontend origin(s) in production.
+      ALLOWED_ORIGINS: "http://localhost:5173"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8001:8001"
+    volumes:
+      # Persist scratch workspace + /memories/AGENTS.md across restarts.
+      - agentspace:/app/backend/agent_space
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        # The URL the BROWSER uses to reach the backend (baked at build time).
+        VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:8001}
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  pgdata:
+  agentspace:

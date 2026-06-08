@@ -1,0 +1,26 @@
+[eval]
+# Maximum number of cases to run concurrently.
+max_concurrency = 2
+
+# Which score modes to run: "all_findings" uses every finding the critic produced;
+# "surfaced_findings" uses only findings after the cap (MAX_FINDINGS = 5).
+score_modes = ["all_findings", "surfaced_findings"]
+
+# Path to the golden dataset directory (relative to this file).
+dataset_dir = "dataset"
+
+# Model to use for the vision-judge (needs vision capability).
+judge_model = "gpt-4.1-mini"
+
+# Diagram style used during target runs ("pretty" or "plain").
+diagram_style = "pretty"
+
+# Whether to run the vision judge (costs extra tokens).
+vision_judge = true
+
+# Output: where to write the results JSON report.
+results_path = "results.json"
+
+[langsmith]
+# Set LANGSMITH_TRACING=true + LANGSMITH_API_KEY to upload results.
+project = "diagram-agent-eval"

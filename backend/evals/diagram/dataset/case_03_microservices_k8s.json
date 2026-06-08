@@ -1,0 +1,21 @@
+{
+  "id": "case_03_microservices_k8s",
+  "prompt": "Design a Kubernetes microservices architecture with an API gateway, three services (user, order, payment), a shared Kafka message bus, individual PostgreSQL databases per service, and a Prometheus/Grafana monitoring stack.",
+  "expected_nodes": [
+    "Ingress", "APIGateway", "UserService", "OrderService", "PaymentService",
+    "Kafka", "PostgreSQL", "Prometheus", "Grafana"
+  ],
+  "expected_edges": [
+    {"from": "Ingress", "to": "APIGateway"},
+    {"from": "APIGateway", "to": "UserService"},
+    {"from": "APIGateway", "to": "OrderService"},
+    {"from": "OrderService", "to": "Kafka"},
+    {"from": "Kafka", "to": "PaymentService"}
+  ],
+  "expected_clusters": [
+    "Edge", "Services", "Messaging", "Data", "Monitoring"
+  ],
+  "min_nodes": 7,
+  "min_edges": 4,
+  "min_clusters": 4
+}

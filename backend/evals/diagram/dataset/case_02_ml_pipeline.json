@@ -1,0 +1,19 @@
+{
+  "id": "case_02_ml_pipeline",
+  "prompt": "Design an AWS ML pipeline for batch inference: data lands in S3, gets pre-processed by Lambda, training jobs run on SageMaker, models are stored in S3, and inference runs via SageMaker endpoints behind API Gateway.",
+  "expected_nodes": [
+    "S3", "Lambda", "SageMaker", "APIGateway", "ECR", "CloudWatch"
+  ],
+  "expected_edges": [
+    {"from": "S3", "to": "Lambda"},
+    {"from": "Lambda", "to": "SageMaker"},
+    {"from": "SageMaker", "to": "S3"},
+    {"from": "APIGateway", "to": "SageMaker"}
+  ],
+  "expected_clusters": [
+    "Ingestion", "Processing", "Training", "Serving"
+  ],
+  "min_nodes": 5,
+  "min_edges": 3,
+  "min_clusters": 3
+}

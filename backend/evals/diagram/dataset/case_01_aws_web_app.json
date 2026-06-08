@@ -1,0 +1,22 @@
+{
+  "id": "case_01_aws_web_app",
+  "prompt": "Design an AWS architecture for a standard web application with a React frontend, Node.js API backend, PostgreSQL database, Redis cache, and S3 for file storage. Include a CDN and load balancer.",
+  "expected_nodes": [
+    "CloudFront", "ALB", "ECS", "RDS", "ElastiCache", "S3",
+    "Route53", "Cognito", "CloudWatch"
+  ],
+  "expected_edges": [
+    {"from": "User", "to": "CloudFront"},
+    {"from": "CloudFront", "to": "ALB"},
+    {"from": "ALB", "to": "ECS"},
+    {"from": "ECS", "to": "RDS"},
+    {"from": "ECS", "to": "ElastiCache"},
+    {"from": "ECS", "to": "S3"}
+  ],
+  "expected_clusters": [
+    "Client", "Edge", "Application", "Data"
+  ],
+  "min_nodes": 6,
+  "min_edges": 4,
+  "min_clusters": 3
+}
