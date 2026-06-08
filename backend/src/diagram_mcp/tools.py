@@ -67,6 +67,29 @@ def _layout_audit() -> str:
     png = WORKSPACE / "out.png"
     if not dot.exists() or not png.exists():
         return ""
+
+
+def _search_icon_hits(query: str, provider: Optional[str] = None, *, limit: int = 30) -> list[str]:
+    try:
+        manifest = json.loads(Path(LOCAL_MANIFEST).read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+    terms = [t for t in query.lower().replace("-", " ").replace("_", " ").split() if t]
+    root = Path(LOCAL_ICONS)
+    hits: list[str] = []
+    for prov, cats in manifest.get("providers", {}).items():
+        if provider and prov.lower() != provider.lower():
+            continue
+        for cat, names in cats.items():
+            for name in names:
+                hay = f"{prov} {cat} {name}".lower()
+                if all(t in hay for t in terms):
+                    sub = name if cat == "_root" else f"{cat}/{name}"
+                    hits.append(str(root / prov / f"{sub}.png"))
+                    if len(hits) >= limit:
+                        return hits
+    return hits
     try:
         from .prettygraph import audit_layout
         return audit_layout(str(dot), str(png))
@@ -202,28 +225,53 @@ def search_icons(query: str, provider: Optional[str] = None) -> str:
     built-in `diagrams` node fits. Optionally restrict to one `provider`
     (e.g. "aws", "azure", "gcp", "onprem", "k8s", "programming", "saas").
     """
-    try:
-        manifest = json.loads(Path(LOCAL_MANIFEST).read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
-        return f"Could not read icon manifest: {exc}"
-
-    terms = [t for t in query.lower().replace("-", " ").replace("_", " ").split() if t]
-    root = Path(LOCAL_ICONS)
-    hits: list[str] = []
-    for prov, cats in manifest.get("providers", {}).items():
-        if provider and prov.lower() != provider.lower():
-            continue
-        for cat, names in cats.items():
-            for name in names:
-                hay = f"{prov} {cat} {name}".lower()
-                if all(t in hay for t in terms):
-                    sub = name if cat == "_root" else f"{cat}/{name}"
-                    hits.append(str(root / prov / f"{sub}.png"))
-                    if len(hits) >= 30:
-                        break
+    hits = _search_icon_hits(query, provider)
     if not hits:
         return f"No icons matched '{query}'. Try fewer/broader terms or fetch_logo()."
     return "\n".join(hits)
+
+
+class IconRequest(BaseModel):
+    """One planned icon lookup for batch resolution."""
+    label: str = Field(description="visible node/component label")
+    provider: str = Field("", description="provider subtree, e.g. aws|azure|gcp|onprem|programming|saas")
+    icon_keyword: str = Field(description="short filename-style search term, e.g. redis|run|sql|pubsub")
+
+
+@tool
+def resolve_icons(icons: list[IconRequest]) -> str:
+    """Resolve a planned batch of icon lookups in one tool call.
+
+    Returns JSON entries with a best matching absolute `path` and prettygraph
+    relative `icon`. Also writes `icon_plan.json` in the workspace so revision
+    tasks can reuse prior choices instead of searching again.
+    """
+    root = Path(LOCAL_ICONS)
+    resolved: list[dict] = []
+    for item in icons:
+        hits = _search_icon_hits(item.icon_keyword, item.provider or None, limit=5)
+        best = hits[0] if hits else ""
+        rel = ""
+        if best:
+            try:
+                rel = str(Path(best).relative_to(root)).replace("\\", "/")
+            except Exception:
+                rel = best
+        resolved.append({
+            "label": item.label,
+            "provider": item.provider,
+            "icon_keyword": item.icon_keyword,
+            "status": "FOUND" if best else "NOT_FOUND",
+            "path": best or None,
+            "icon": rel or None,
+            "alternatives": hits[1:5],
+            "tried_keywords": [item.icon_keyword],
+        })
+    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    (WORKSPACE / "icon_plan.json").write_text(
+        json.dumps(resolved, indent=2), encoding="utf-8"
+    )
+    return json.dumps(resolved, indent=2)
 
 
 @tool
@@ -279,6 +327,18 @@ class BPEdge(BaseModel):
 
 class Blueprint(BaseModel):
     """A structured architecture blueprint."""
+    audience: str = Field(
+        "client",
+        description="target reader for the diagram; default client for customer-facing architecture diagrams",
+    )
+    detail_level: str = Field(
+        "architecture",
+        description="architecture|engineering|code; default architecture hides implementation details",
+    )
+    layout_intent: str = Field(
+        "left_to_right_pipeline",
+        description="intended visual flow, e.g. left_to_right_pipeline or top_down_stack",
+    )
     pattern: str = Field(description="microservices|monolith|serverless|event-driven|hybrid")
     pattern_rationale: str = Field("", description="2-3 sentences: why this architecture pattern fits these requirements")
     key_decisions: list[str] = Field(
@@ -406,6 +466,7 @@ DIAGRAM_TOOLS = [
     render_diagram,
     export_drawio,
     search_icons,
+    resolve_icons,
     fetch_logo,
     inspect_diagram,
     submit_critique,
@@ -416,7 +477,7 @@ DIAGRAM_TOOLS = [
 MAIN_TOOLS = [propose_tech_stack, propose_blueprint, finalize_diagram]
 
 # Drawer subagent tools: everything needed for the render-refine loop.
-DRAWER_TOOLS = [search_icons, fetch_logo, render_diagram, export_drawio]
+DRAWER_TOOLS = [resolve_icons, search_icons, fetch_logo, render_diagram, export_drawio]
 
 # Critic subagent tools: read-only review of the rendered diagram.
 CRITIC_TOOLS = [inspect_diagram, submit_critique]

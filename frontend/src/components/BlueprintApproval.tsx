@@ -36,6 +36,11 @@ export default function BlueprintApproval({ interrupt, onResolve, disabled = fal
   const nodes = blueprint?.nodes ?? [];
   const clusters = blueprint?.clusters ?? [];
   const edges = blueprint?.edges ?? [];
+  const metadata = [
+    blueprint?.audience ? `Audience: ${blueprint.audience}` : null,
+    blueprint?.detail_level ? `Detail: ${blueprint.detail_level}` : null,
+    blueprint?.layout_intent ? `Layout: ${blueprint.layout_intent}` : null,
+  ].filter((m): m is string => Boolean(m));
   const patternClass = PATTERN_COLORS[pattern] ?? PATTERN_COLORS["hybrid"];
 
   const labelOf = (id: string) => nodes.find((n) => n.id === id)?.label ?? id;
@@ -78,6 +83,17 @@ export default function BlueprintApproval({ interrupt, onResolve, disabled = fal
         </div>
       ) : mode === "idle" ? (
         <div className="flex flex-col gap-3.5 px-4 py-3.5">
+          {/* Blueprint metadata */}
+          {metadata.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {metadata.map((m) => (
+                <span key={m} className="rounded-md border border-white/8 bg-black/25 px-2 py-0.5 text-[10px] text-slate-400">
+                  {m}
+                </span>
+              ))}
+            </div>
+          )}
+
           {/* Why this pattern */}
           {patternRationale && (
             <div>

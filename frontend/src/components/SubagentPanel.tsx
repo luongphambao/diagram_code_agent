@@ -130,7 +130,6 @@ interface DelegationCardProps {
 
 const RESULT_PREVIEW = 280;
 const MAX_TOOL_CHIPS = 10;
-const DETAIL_TOOLS = new Set(["plan_icons", "resolve_icons", "search_icons", "fetch_logo"]);
 const MAX_TOOL_DETAILS = 8;
 
 function DelegationCard({ d, index, toolLogs }: DelegationCardProps) {
@@ -149,7 +148,7 @@ function DelegationCard({ d, index, toolLogs }: DelegationCardProps) {
   const visibleTools = dedupedTools.slice(0, MAX_TOOL_CHIPS);
   const hiddenCount = dedupedTools.length - visibleTools.length;
   const detailLogs = toolLogs
-    .filter((l) => (l.type === "tool_start" || l.type === "tool_end") && l.tool && DETAIL_TOOLS.has(l.tool) && l.input)
+    .filter((l) => (l.type === "tool_start" || l.type === "tool_end") && l.tool && (l.input || l.output || l.error))
     .slice(-MAX_TOOL_DETAILS);
 
   return (
@@ -219,11 +218,14 @@ function DelegationCard({ d, index, toolLogs }: DelegationCardProps) {
             <div className="space-y-1 rounded-lg border border-white/6 bg-black/10 p-2">
               {detailLogs.map((l, i) => (
                 <div key={`${l.tool}-${i}`} className="flex gap-2 text-[10.5px] leading-snug">
-                  <span className={l.type === "tool_end" ? "text-emerald-500" : "text-amber-500"}>
-                    {l.type === "tool_end" ? "done" : "run"}
+                  <span className={l.error ? "text-red-500" : l.type === "tool_end" ? "text-emerald-500" : "text-amber-500"}>
+                    {l.error ? "error" : l.type === "tool_end" ? "done" : "run"}
                   </span>
                   <span className="shrink-0 font-mono text-slate-600">{l.tool}</span>
-                  <span className="min-w-0 truncate text-slate-400">{l.input}</span>
+                  {l.elapsed_s !== undefined && (
+                    <span className="shrink-0 text-slate-700">{l.elapsed_s}s</span>
+                  )}
+                  <span className="min-w-0 truncate text-slate-400">{l.error || l.output || l.input}</span>
                 </div>
               ))}
             </div>

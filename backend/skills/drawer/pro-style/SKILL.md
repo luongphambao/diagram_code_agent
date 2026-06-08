@@ -142,6 +142,28 @@ flow in one direction, arrows are short and rarely cross.
 7. **Direction**: `LR` for request flows, `TB` for layered stacks/pipelines.
 8. Keep only components that matter; if it looks busy, MERGE or DROP minor nodes.
 
+### Spaghetti prevention
+- Never draw one dashed line from each config/calibration file to each consumer.
+  Collapse files into `Configuration Management` and draw one dashed edge into
+  the service or service cluster.
+- Never draw one metrics/logs edge per internal module. Draw one dashed edge from
+  the processing service to `Observability` / `Monitoring`.
+- No labeled edge should cross more than half the canvas. If it would, move the
+  concern cluster adjacent/stacked, use a cluster-level edge, or omit the label.
+- For client-facing diagrams, hide implementation details such as parser library
+  names, in-place compaction, client threading modes, and per-file JSON names.
+
+### Whitespace and layout
+- Prefer 4-5 primary columns for client-facing architecture diagrams.
+- Avoid oversized outer clusters with large dead space; size clusters through
+  balanced contents and avoid wrapping the whole page in one giant container.
+- Use cluster-to-cluster flow arrows with `ltail` / `lhead` for major stages so
+  arrows hit block borders instead of weaving through inner boxes.
+- Use uniform `node_width` / `node_height` when a client diagram has comparable
+  capability boxes.
+- For pipelines, the main path should read left-to-right: External I/O -> Input
+  Stream -> Processing Service -> Output/Monitoring.
+
 ## Workflow
 1. Plan tiers, clusters, the few typed edges.
 2. Make the exact icon plan with `icon_keyword`, then call `resolve_icons(icons=[...])`

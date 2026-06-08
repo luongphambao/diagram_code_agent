@@ -85,6 +85,7 @@ _TOOL_LABELS = {
     "propose_blueprint": "Designing the architecture blueprint",
     "render_diagram": "Rendering the diagram",
     "export_drawio": "Exporting the editable .drawio",
+    "resolve_icons": "Resolving icon plan",
     "search_icons": "Searching the icon library",
     "fetch_logo": "Fetching a logo",
     "inspect_diagram": "Reviewing the rendered diagram",
@@ -103,6 +104,7 @@ _TOOL_LABELS = {
 # Maps tool name → which subagent owns it (for activity attribution).
 _TOOL_TO_SUBAGENT: dict[str, str] = {
     "search_icons": "drawer",
+    "resolve_icons": "drawer",
     "fetch_logo": "drawer",
     "render_diagram": "drawer",
     "export_drawio": "drawer",
@@ -113,6 +115,61 @@ _TOOL_TO_SUBAGENT: dict[str, str] = {
 
 def _label(tool: str) -> str:
     return _TOOL_LABELS.get(tool, f"Running {tool}")
+
+
+def _compact_json(value, *, limit: int = 260) -> str:
+    try:
+        text = json.dumps(value, ensure_ascii=False)
+    except Exception:
+        text = str(value)
+    text = " ".join(text.split())
+    return text[:limit] + ("..." if len(text) > limit else "")
+
+
+def _tool_detail(tool: str, args: dict | None, *, limit: int = 260) -> str:
+    """Summarize tool input for UI logs without dumping huge code/prompts."""
+    if not isinstance(args, dict) or not args:
+        return ""
+    if tool == "task":
+        sa = args.get("subagent_type") or args.get("subagent") or args.get("name") or "unknown"
+        desc = " ".join(str(args.get("description") or args.get("instruction") or args.get("prompt") or "").split())
+        return f"{sa}: {desc[:180]}{'...' if len(desc) > 180 else ''}"
+    if tool == "render_diagram":
+        code = str(args.get("code") or "")
+        return f"diagram.py code={len(code)} chars"
+    if tool == "search_icons":
+        provider = args.get("provider")
+        return f"query={args.get('query', '')}" + (f", provider={provider}" if provider else "")
+    if tool == "resolve_icons":
+        icons = args.get("icons") or []
+        if isinstance(icons, list):
+            labels = [str(x.get("label", "")) for x in icons if isinstance(x, dict)]
+            return f"{len(icons)} icons: {', '.join([x for x in labels if x][:8])}"
+    if tool == "fetch_logo":
+        return f"name={args.get('name', '')}"
+    if tool == "propose_blueprint":
+        bp = args.get("blueprint") or {}
+        if isinstance(bp, dict):
+            return (
+                f"{bp.get('audience', 'client')}/{bp.get('detail_level', 'architecture')} "
+                f"pattern={bp.get('pattern', '')}, nodes={len(bp.get('nodes') or [])}, "
+                f"clusters={len(bp.get('clusters') or [])}, edges={len(bp.get('edges') or [])}"
+            )
+    if tool == "propose_tech_stack":
+        stack = args.get("tech_stack") or []
+        if isinstance(stack, list):
+            layers = [str(x.get("layer", "")) for x in stack if isinstance(x, dict)]
+            return f"{len(stack)} layers: {', '.join([x for x in layers if x][:8])}"
+    if tool == "submit_critique":
+        findings = args.get("findings") or []
+        if isinstance(findings, list):
+            return f"{len(findings)} finding(s)"
+    return _compact_json(args, limit=limit)
+
+
+def _tool_output_detail(content, *, limit: int = 320) -> str:
+    text = " ".join(_text_of(content).split())
+    return text[:limit] + ("..." if len(text) > limit else "")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -408,8 +465,14 @@ async def _summary_and_logs(config: dict) -> tuple[str, list]:
             logs.append({"t": 0, "type": "llm", "turn": turn})
             for tc in (m.tool_calls or []):
                 args = tc.get("args", {})
-                inp = next((str(v) for v in args.values() if isinstance(v, str)), "") or json.dumps(args)[:160]
-                entry = {"t": 0, "type": "tool_start", "tool": tc.get("name", "tool"), "input": inp[:160]}
+                name = tc.get("name", "tool")
+                entry = {
+                    "t": 0,
+                    "type": "tool_start",
+                    "tool": name,
+                    "label": _label(name),
+                    "input": _tool_detail(name, args, limit=320),
+                }
                 logs.append(entry)
                 pending[tc.get("id", "")] = entry
             txt = _text_of(m.content).strip()
@@ -419,7 +482,7 @@ async def _summary_and_logs(config: dict) -> tuple[str, list]:
             entry = pending.get(getattr(m, "tool_call_id", ""))
             if entry is not None:
                 out = _text_of(m.content)
-                entry["output"] = (out[:160] + "…") if len(out) > 160 else out
+                entry["output"] = _tool_output_detail(out)
                 if getattr(m, "status", None) == "error":
                     entry["error"] = entry.get("output", "error")
     return summary, logs
@@ -581,18 +644,21 @@ async def agui_endpoint(request: Request):
                                         continue
                                     seen_starts.add(tcid)
                                     name = tc.get("name", "tool")
+                                    args = tc.get("args", {})
+                                    detail = _tool_detail(name, args)
                                     subagent = _TOOL_TO_SUBAGENT.get(name)
                                     if name == "task":
                                         # Subagent delegation — extract name + description.
-                                        args = tc.get("args", {})
                                         sa_name = args.get("subagent_type") or args.get("subagent") or args.get("name") or "unknown"
                                         desc = args.get("description") or args.get("instruction") or args.get("prompt") or ""
                                         record = {"id": tcid, "subagent": sa_name, "description": desc,
-                                                  "status": "running", "result": None}
+                                                  "status": "running", "result": None,
+                                                  "current_detail": detail}
                                         _pending_tasks[tcid] = record
                                         logger.info("→ delegate to %s: %s", sa_name, desc[:80])
                                         yield _sse({"type": "ACTIVITY", "phase": "start", "tool": name,
-                                                    "label": f"Delegating to {sa_name}", "subagent": sa_name})
+                                                    "label": f"Delegating to {sa_name}", "subagent": sa_name,
+                                                    "detail": detail})
                                         # Emit live STATE_DELTA so the UI sees the new delegation immediately.
                                         all_delegations = _completed_delegations + list(_pending_tasks.values())
                                         yield _sse({"type": "STATE_DELTA", "delta": [
@@ -602,7 +668,8 @@ async def agui_endpoint(request: Request):
                                         logger.info("→ %s%s", _label(name),
                                                     f" [{subagent}]" if subagent else "")
                                         evt: dict = {"type": "ACTIVITY", "phase": "start",
-                                                     "tool": name, "label": _label(name)}
+                                                     "tool": name, "label": _label(name),
+                                                     "detail": detail}
                                         if subagent:
                                             evt["subagent"] = subagent
                                         yield _sse(evt)
@@ -628,7 +695,8 @@ async def agui_endpoint(request: Request):
                                     ]})
                                 logger.info("← %s %s%s", name, "ok" if ok else "ERROR",
                                             f" [{subagent}]" if subagent else "")
-                                evt2: dict = {"type": "ACTIVITY", "phase": "end", "tool": name, "ok": ok}
+                                evt2: dict = {"type": "ACTIVITY", "phase": "end", "tool": name,
+                                              "ok": ok, "detail": _tool_output_detail(m.content)}
                                 if subagent:
                                     evt2["subagent"] = subagent
                                 yield _sse(evt2)
@@ -639,11 +707,13 @@ async def agui_endpoint(request: Request):
                     phase = payload.get("phase", "start")
                     tool = payload.get("tool", "tool")
                     ok = payload.get("ok", True)
+                    detail = payload.get("detail", "")
                     label = _label(tool)
                     logger.info("  [%s] %s %s", sa_name, "→" if phase == "start" else "←", label)
                     act_evt: dict = {
                         "type": "ACTIVITY", "phase": phase,
                         "tool": tool, "label": label, "subagent": sa_name,
+                        "detail": detail,
                     }
                     if phase == "end":
                         act_evt["ok"] = ok
@@ -655,6 +725,7 @@ async def agui_endpoint(request: Request):
                             if record.get("subagent") == sa_name:
                                 record["current_tool"] = tool
                                 record["current_label"] = label
+                                record["current_detail"] = detail
                                 yield _sse({"type": "STATE_DELTA", "delta": [
                                     {"op": "replace", "path": "/delegations",
                                      "value": _completed_delegations + list(_pending_tasks.values())}
@@ -665,6 +736,7 @@ async def agui_endpoint(request: Request):
                             if record.get("subagent") == sa_name:
                                 record.pop("current_tool", None)
                                 record.pop("current_label", None)
+                                record.pop("current_detail", None)
                                 break
             if current_id is not None:
                 yield _sse({"type": "TEXT_MESSAGE_END", "messageId": current_id})

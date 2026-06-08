@@ -106,6 +106,31 @@ some legacy. Route new traffic to new services, keep legacy for old paths.
 The blueprint is the spec the drawer renders from. It must be complete enough
 that the drawer can write code without guessing.
 
+### Diagram abstraction level
+Default to a **client-facing architecture diagram** unless the user explicitly
+asks for engineering/code-level internals. A client diagram explains what the
+system does, where data flows, and which operational concerns exist; it should
+not expose parser libraries, local implementation tricks, every config file, or
+every in-process helper module.
+
+Use these defaults in the blueprint metadata:
+- `audience`: `client`
+- `detail_level`: `architecture`
+- `layout_intent`: `left_to_right_pipeline`
+
+For customer-facing diagrams, keep roughly **12-18 visible nodes**. If the
+requirements contain more than that, collapse details into capabilities:
+- `config.json`, `homography_config.json`, `roi_config.json`,
+  `exclusion_zones_config.json`, `undistortion_config.json` ->
+  `Configuration Management`
+- parser/filter/tracker/cache internals -> `Input Processing`,
+  `Spatial Filtering`, `Tracking & Fusion`, `Output Formatting`
+- per-module metrics/logs -> one `Observability` or `Monitoring` capability
+
+Only include code-level details such as `simdjson`, in-place compaction, a
+non-blocking Redis client, or individual JSON files when the user asks for a
+developer implementation diagram.
+
 ### Nodes
 - Use real service names matching the chosen provider.
 - Name the node what it IS: "ALB" not "Load Balancer", "Cloud Run" not "Service".
@@ -122,6 +147,10 @@ Use these canonical tier names so the drawer can map them to prettygraph kinds:
 - Direction matters: write `A → B`, not just "A and B are connected".
 - Label the concern: "HTTPS", "SQL", "gRPC", "event", "dashed: logs".
 - Side-channels (monitoring, secrets): ONE edge from the cluster, not per node.
+- Cross-cutting config/calibration is also ONE side-channel from
+  `Configuration Management` into the service cluster, not one edge per file.
+- For pipelines, state the main path as a natural left-to-right flow, e.g.
+  `External I/O -> Input Stream -> Processing Service -> Output/Monitoring`.
 
 ### Key decisions (required — 3 to 6)
 Cover these dimensions — one concrete sentence each:
@@ -137,5 +166,7 @@ Cover these dimensions — one concrete sentence each:
 - [ ] Every node has a cluster.
 - [ ] Edges cover the main user request path AND side-channels.
 - [ ] Collapsed replicas (no duplicate identical nodes).
+- [ ] Client-facing detail level confirmed; code/file internals collapsed unless requested.
+- [ ] Config, calibration, metrics, logging, and secrets are aggregated side-channels.
 - [ ] Key decisions cover at least data flow, scaling, and security.
 - [ ] Service names match the chosen provider (no AWS names in an Azure design).

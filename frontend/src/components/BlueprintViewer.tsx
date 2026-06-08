@@ -24,8 +24,13 @@ const TIER_COLORS: Record<string, string> = {
 };
 
 export default function BlueprintViewer({ blueprint, blueprintForDiagram, onGenerateDiagram }: BlueprintViewerProps) {
-  const { pattern, pattern_rationale, nodes, clusters, edges } = blueprint;
+  const { pattern, pattern_rationale, nodes, clusters, edges, audience, detail_level, layout_intent } = blueprint;
   const patternClass = PATTERN_COLORS[pattern] ?? PATTERN_COLORS["hybrid"];
+  const metadata = [
+    audience ? `Audience: ${audience}` : null,
+    detail_level ? `Detail: ${detail_level}` : null,
+    layout_intent ? `Layout: ${layout_intent}` : null,
+  ].filter((m): m is string => Boolean(m));
 
   // Group nodes by cluster
   const clusterMap: Record<string, typeof nodes> = {};
@@ -58,6 +63,15 @@ export default function BlueprintViewer({ blueprint, blueprintForDiagram, onGene
         </div>
         {pattern_rationale && (
           <p className="text-xs leading-relaxed text-slate-400">{pattern_rationale}</p>
+        )}
+        {metadata.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {metadata.map((m) => (
+              <span key={m} className="rounded-md border border-white/8 bg-white/4 px-2 py-0.5 text-[10px] text-slate-500">
+                {m}
+              </span>
+            ))}
+          </div>
         )}
       </div>
 

@@ -22,11 +22,13 @@ export interface LogEntry {
   model?: string;
   turn?: number;
   tool?: string;
+  label?: string;
   input?: string;
   output?: string;
   elapsed_s?: number;
   error?: string;
   subagent?: string;
+  ok?: boolean;
 }
 
 export interface TechStackLayer {
@@ -36,6 +38,9 @@ export interface TechStackLayer {
 }
 
 export interface Blueprint {
+  audience?: string;
+  detail_level?: string;
+  layout_intent?: string;
   pattern: string;
   pattern_rationale?: string;
   key_decisions?: string[];
@@ -129,6 +134,7 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
   const wireMessagesRef = useRef<WireMessage[]>([]);
   const threadIdRef = useRef(threadId);
   const lastTcIdRef = useRef<string>("");
+  const toolStartTimesRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     threadIdRef.current = threadId;
@@ -230,21 +236,41 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
               const label = (evt.label as string) || tool;
               const detail = evt.detail as string | undefined;
               const subagent = evt.subagent as string | undefined;
+              const ok = evt.ok as boolean | undefined;
               const display = detail ? `${label}: ${detail}` : label;
+              const key = `${subagent ?? "main"}:${tool}`;
               if (phase === "start") {
+                toolStartTimesRef.current[key] = Date.now();
                 setActivity(display);
                 if (subagent) setActiveSubagent(subagent);
                 setAgentState((prev) => ({
                   ...prev,
-                  logs: [...(prev.logs ?? []), { t: 0, type: "tool_start", tool, input: detail ?? label, subagent }],
+                  logs: [
+                    ...(prev.logs ?? []),
+                    { t: 0, type: "tool_start", tool, label, input: detail ?? "", subagent },
+                  ],
                 }));
               } else if (phase === "end") {
-                if (detail) {
-                  setAgentState((prev) => ({
-                    ...prev,
-                    logs: [...(prev.logs ?? []), { t: 0, type: "tool_end", tool, input: detail, subagent }],
-                  }));
-                }
+                const started = toolStartTimesRef.current[key];
+                const elapsed_s = started ? Number(((Date.now() - started) / 1000).toFixed(1)) : undefined;
+                delete toolStartTimesRef.current[key];
+                setAgentState((prev) => ({
+                  ...prev,
+                  logs: [
+                    ...(prev.logs ?? []),
+                    {
+                      t: 0,
+                      type: "tool_end",
+                      tool,
+                      label,
+                      output: detail ?? "",
+                      error: ok === false ? detail || "Tool returned an error" : undefined,
+                      elapsed_s,
+                      subagent,
+                      ok,
+                    },
+                  ],
+                }));
                 // Clear active subagent when its task tool completes.
                 if (tool === "task") setActiveSubagent(null);
               }

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import os
+import json
 
 from deepagents import create_deep_agent
 from langchain.agents.middleware import (
@@ -47,6 +48,60 @@ from .prompts import (
 from .tools import CRITIC_TOOLS, DRAWER_TOOLS, GATE_TOOL_NAMES, MAIN_TOOLS
 
 logger = logging.getLogger(__name__)
+
+
+def _compact_tool_args(args: dict | None, *, limit: int = 260) -> str:
+    """Human-readable one-line summary of tool args for live UI activity."""
+    if not isinstance(args, dict) or not args:
+        return ""
+    safe = dict(args)
+    if "code" in safe:
+        code = str(safe["code"])
+        safe["code"] = f"{len(code)} chars"
+    if "blueprint" in safe:
+        bp = safe["blueprint"] or {}
+        if isinstance(bp, dict):
+            safe["blueprint"] = {
+                "pattern": bp.get("pattern"),
+                "nodes": len(bp.get("nodes") or []),
+                "clusters": len(bp.get("clusters") or []),
+                "edges": len(bp.get("edges") or []),
+            }
+    if "description" in safe:
+        desc = " ".join(str(safe["description"]).split())
+        safe["description"] = desc[:180] + ("..." if len(desc) > 180 else "")
+    if "icons" in safe and isinstance(safe["icons"], list):
+        labels = [
+            str(x.get("label", ""))
+            for x in safe["icons"]
+            if isinstance(x, dict) and x.get("label")
+        ]
+        safe["icons"] = f"{len(safe['icons'])} icons: {', '.join(labels[:8])}"
+    try:
+        text = json.dumps(safe, ensure_ascii=False)
+    except Exception:
+        text = str(safe)
+    return text[:limit] + ("..." if len(text) > limit else "")
+
+
+def _compact_tool_output(content, *, limit: int = 320) -> str:
+    if isinstance(content, str):
+        text = content
+    elif isinstance(content, list):
+        parts: list[str] = []
+        for p in content:
+            if isinstance(p, str):
+                parts.append(p)
+            elif isinstance(p, dict):
+                if "text" in p:
+                    parts.append(str(p.get("text") or ""))
+                elif p.get("type") == "image":
+                    parts.append("[image preview]")
+        text = " ".join(parts)
+    else:
+        text = ""
+    text = " ".join(text.split())
+    return text[:limit] + ("..." if len(text) > limit else "")
 
 
 class _StreamingSubAgentRunnable:
@@ -99,6 +154,7 @@ class _StreamingSubAgentRunnable:
                                         "subagent": self._name,
                                         "phase": "start",
                                         "tool": tc.get("name", "tool"),
+                                        "detail": _compact_tool_args(tc.get("args")),
                                     })
                             elif isinstance(msg, LCToolMessage):
                                 writer({
@@ -106,6 +162,7 @@ class _StreamingSubAgentRunnable:
                                     "phase": "end",
                                     "tool": getattr(msg, "name", "tool"),
                                     "ok": getattr(msg, "status", None) != "error",
+                                    "detail": _compact_tool_output(getattr(msg, "content", "")),
                                 })
         except Exception:
             # Streaming failed (version mismatch, wrong context, etc.) — fall back
@@ -276,8 +333,8 @@ def build_agent(model: str = DEFAULT_MODEL, *, style: str = DEFAULT_STYLE,
     backend = make_local_backend()
 
     # Pre-compile subagents so their internal steps are visible in the outer stream.
-    # Each gets a fresh MemorySaver (ephemeral — deepagents generates a new thread_id
-    # per task() call, so subagent memory doesn't persist across delegations).
+    # Each task still gets an ephemeral thread, but both subagents load the shared
+    # semantic memory file so learned icon/import/style notes survive delegations.
     drawer_spec = _drawer_subagent(workdir, LOCAL_ICONS, LOCAL_MANIFEST, style)
     critic_spec = _critic_subagent(style)
 
@@ -290,8 +347,10 @@ def build_agent(model: str = DEFAULT_MODEL, *, style: str = DEFAULT_STYLE,
                 tools=drawer_spec["tools"],
                 system_prompt=drawer_spec["system_prompt"],
                 backend=backend,
+                memory=[MEMORY_PATH],
                 skills=drawer_spec.get("skills"),
                 middleware=_middleware(),
+                store=store,
             ),
             "drawer",
         ),
@@ -305,7 +364,9 @@ def build_agent(model: str = DEFAULT_MODEL, *, style: str = DEFAULT_STYLE,
                 tools=critic_spec["tools"],
                 system_prompt=critic_spec["system_prompt"],
                 backend=backend,
+                memory=[MEMORY_PATH],
                 middleware=_middleware(),
+                store=store,
             ),
             "critic",
         ),
