@@ -255,8 +255,11 @@ export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning,
                   />
                 </div>
               ) : (
-                <div className="flex flex-1 items-center justify-center">
-                  <p className="text-sm text-slate-700">No subagent delegations in this run</p>
+                <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center px-6">
+                  <p className="text-sm text-slate-600">No subagent delegations yet</p>
+                  {isRunning && (
+                    <p className="text-xs text-slate-700">Drawer &amp; critic agents appear once the blueprint is approved and rendering begins.</p>
+                  )}
                 </div>
               )}
             </div>

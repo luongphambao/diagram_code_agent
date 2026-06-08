@@ -41,7 +41,6 @@ export default function ChatSidebar({
   isUploading,
   onUploadFile,
   onClearFiles,
-  activeSubagent,
 }: ChatSidebarProps) {
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
