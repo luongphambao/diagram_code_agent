@@ -569,7 +569,11 @@ async def agui_endpoint(request: Request):
                     for _node, upd in (payload or {}).items():
                         if not isinstance(upd, dict):
                             continue
-                        for m in upd.get("messages", []) or []:
+                        msgs_raw = upd.get("messages", []) or []
+                        # LangGraph may wrap values in an Overwrite object; unwrap it.
+                        if not isinstance(msgs_raw, (list, tuple)):
+                            msgs_raw = getattr(msgs_raw, "value", None) or []
+                        for m in msgs_raw:
                             if isinstance(m, AIMessage):
                                 for tc in (m.tool_calls or []):
                                     tcid = tc.get("id") or ""
