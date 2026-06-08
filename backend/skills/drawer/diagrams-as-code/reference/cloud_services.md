@@ -10,8 +10,9 @@ only if it is not listed. Wrong imports crash the render.
   node (or icon) into an Azure/GCP/OCI/IBM diagram.
 - **No built-in class for a service?** Use the bundled icon pack for the SAME
   provider via `Custom`: `Custom("Service", "/icons/<provider>/<category>/<name>.png")`
-  (call `search_icons("<service>", provider="<provider>")` first; never guess a
-  path). Only if the pack has nothing either, use a generic node
+  (call `plan_icons(icons=[...])` to lock the list, then `resolve_icons(icons=[...])`
+  once for the icon plan; use `search_icons` only for misses; never guess a path).
+  Only if the pack has nothing either, use a generic node
   (`diagrams.generic.*`) or an `onprem`/`saas` logo.
 - **OCI** classes come in a colored and a `*White` variant (`VM` vs `VMWhite`).
   Use the plain (colored) name for normal light-background diagrams.

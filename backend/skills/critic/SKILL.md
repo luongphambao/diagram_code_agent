@@ -32,6 +32,10 @@ documents the quality bar, the defect taxonomy, and what NOT to file.
 - **Legend present** when the diagram uses mixed edge styles (solid + dashed, or
   solid + dotted). Missing legend = defect.
 - **No empty visible shapes**: no blank rounded rectangles or spacer boxes.
+- **No clipped/truncated text**: node labels, sublabels, edge labels, and Legend
+  text must fit inside their boxes. If text is visibly cut off at a box edge
+  (for example a long Legend like `solid=... dashed=... dotted=...` on one line),
+  file a readability defect.
 
 ### pretty-style specific (prettygraph diagrams)
 - Every cluster is tinted (has a colored background).
@@ -45,7 +49,7 @@ documents the quality bar, the defect taxonomy, and what NOT to file.
 |-----------|---------|
 | `critical` | Render is broken; topology is wrong (edges connect wrong nodes; whole tier missing) |
 | `high`    | Blueprint node/edge missing; blank icon box; visible empty shape; Data nested in Application; orchestration flow not numbered |
-| `medium`  | Crossing or whole-canvas edges; aspect ratio > 2.6:1 (layout audit TOO WIDE); overlapping labels; floating un-clustered nodes; mixed edge styles without Legend; per-service observability lines instead of one aggregated channel |
+| `medium`  | Crossing or whole-canvas edges; aspect ratio > 2.6:1 (layout audit TOO WIDE); clipped/truncated text; overlapping labels; floating un-clustered nodes; mixed edge styles without Legend; per-service observability lines instead of one aggregated channel |
 | `low`     | Minor misalignment; small inconsistency; negligible impact |
 
 ## Do NOT file
