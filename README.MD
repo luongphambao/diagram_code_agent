@@ -23,6 +23,88 @@ Diagram Code Agent turns plain-English system requirements into architecture dia
 - Storage: Postgres for durable sessions via Docker Compose; in-memory fallback for local dev.
 - Assets: local `resources/icons` icon pack plus generated icon manifests.
 
+## AI Agent Architecture
+
+The backend uses one Deep Agent as the main orchestrator. The agent receives requirements, plans the diagram, calls tools to render/export artifacts, and pauses at human approval gates before moving to the next stage.
+
+```text
+User / Browser
+    |
+    | chat, uploads, approvals
+    v
+Frontend (React + AG-UI client)
+    |
+    | POST /agui over SSE, POST /upload
+    v
+FastAPI Server (backend/src/diagram_mcp/server.py)
+    |
+    | streams events, translates approvals to LangGraph Command(resume=...)
+    v
+Deep Agent (backend/src/diagram_mcp/agent.py)
+    |
+    +-- Main planner
+    |   +-- propose_tech_stack       # HITL approval gate
+    |   +-- propose_blueprint        # HITL approval gate
+    |   +-- finalize_diagram         # HITL review gate
+    |
+    +-- Drawer subagent
+    |   +-- writes diagram.py
+    |   +-- search_icons
+    |   +-- fetch_logo
+    |   +-- render_diagram
+    |   +-- export_drawio
+    |
+    +-- Critic subagent
+    |   +-- inspect_diagram
+    |   +-- submit_critique
+    |
+    +-- Filesystem backend
+    |   +-- backend/agent_space/workspace/
+    |   +-- backend/agent_space/memories/AGENTS.md
+    |
+    +-- Persistence
+        +-- Postgres checkpointer/store when DATABASE_URL is set
+        +-- in-memory fallback for local dev
+```
+
+### Agent Flow
+
+1. User describes system requirements or uploads requirement documents.
+2. Server extracts document text and sends prompt/context to the Deep Agent.
+3. Agent proposes a technology stack with `propose_tech_stack`.
+4. Frontend shows approval card; user approves or rejects with feedback.
+5. Agent proposes architecture blueprint with `propose_blueprint`.
+6. Frontend shows blueprint card; user approves or asks for revisions.
+7. Agent writes diagram code, renders PNG, inspects result, and refines.
+8. Agent exports `.drawio` and calls `finalize_diagram`.
+9. Frontend shows final review card and diagram artifacts.
+
+### Human-in-the-loop Gates
+
+Three tools are configured as approval gates:
+
+- `propose_tech_stack`: confirms stack choices before diagram design.
+- `propose_blueprint`: confirms architecture structure before code generation.
+- `finalize_diagram`: confirms final rendered result before completion.
+
+When the user rejects a gate, the frontend sends feedback to the server. The server resumes the LangGraph run with `Command(resume=...)`, and the agent revises the current step.
+
+### Agent Tools
+
+- `render_diagram`: runs generated Python `diagrams` code and creates PNG/DOT output.
+- `export_drawio`: converts Graphviz DOT output into editable `.drawio`.
+- `search_icons`: searches local icon catalog.
+- `fetch_logo`: resolves vendor logos from local icons, Iconify, or favicon fallback.
+- `inspect_diagram`: lets the critic review rendered image quality.
+- `submit_critique`: records critic feedback for refinement.
+
+### Memory and Skills
+
+- Memory file: `backend/agent_space/memories/AGENTS.md`.
+- Skills directory: `backend/skills/`.
+- Diagram generation skills: `diagrams-as-code` and `pro-style`.
+- Runtime workspace: `backend/agent_space/workspace/`.
+
 ## Repository Layout
 
 ```text
