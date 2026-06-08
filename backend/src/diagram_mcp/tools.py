@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -72,6 +73,163 @@ def _layout_audit() -> str:
         return audit_layout(str(dot), str(png))
     except Exception:  # noqa: BLE001 — audit is advisory, never fail over it
         return ""
+
+def _strip_html_label(label: str) -> str:
+    text = re.sub(r"<[^>]+>", " ", label or "")
+    return " ".join(text.replace("\\n", " ").split())
+
+
+def _cluster_nesting(dot_text: str) -> dict[str, str | None]:
+    """Best-effort parent map for `subgraph cluster_*` nesting in DOT."""
+    parents: dict[str, str | None] = {}
+    stack: list[str] = []
+    for raw in dot_text.splitlines():
+        line = raw.strip()
+        m = re.match(r"subgraph\s+cluster_([A-Za-z0-9_.:-]+)\s*\{", line)
+        if m:
+            cid = m.group(1)
+            parents[cid] = stack[-1] if stack else None
+            stack.append(cid)
+            continue
+        if line == "}" and stack:
+            stack.pop()
+    return parents
+
+
+def _visual_lint() -> str:
+    """Deterministic presentation lint for production-grade diagrams."""
+    dot = WORKSPACE / "out.dot"
+    sidecar = WORKSPACE / "out.nodes.json"
+    if not dot.exists():
+        return ""
+
+    try:
+        dot_text = dot.read_text(encoding="utf-8", errors="replace")
+        g = json.loads(subprocess.run(
+            ["dot", "-Tjson", str(dot)],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout)
+    except Exception:  # noqa: BLE001
+        return ""
+
+    blockers: list[str] = []
+    warnings: list[str] = []
+
+    try:
+        x0, y0, x1, y1 = (float(v) for v in g["bb"].split(","))
+        width = max(x1 - x0, 1.0)
+        height = max(y1 - y0, 1.0)
+        aspect = width / height
+        if aspect > 2.6:
+            blockers.append(
+                f"layout is too wide ({aspect:.2f}:1); fold tiers into sibling rows/columns"
+            )
+        elif aspect > 2.2:
+            warnings.append(
+                f"layout is wide ({aspect:.2f}:1); target ~1.4:1 to 2.0:1"
+            )
+    except Exception:  # noqa: BLE001
+        width = height = 1.0
+
+    side: dict = {}
+    if sidecar.exists():
+        try:
+            side = json.loads(sidecar.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            side = {}
+
+    for nid, meta in (side.get("nodes") or {}).items():
+        label = " ".join(str(meta.get("label") or "").split())
+        sublabel = " ".join(str(meta.get("sublabel") or "").split())
+        if not label and not sublabel:
+            blockers.append(f"empty visible node '{nid}' appears in the diagram")
+
+    if not side:
+        for obj in g.get("objects", []):
+            name = obj.get("name", "")
+            if name.startswith("cluster"):
+                continue
+            if obj.get("pos") and not _strip_html_label(str(obj.get("label", ""))):
+                blockers.append(f"empty visible node '{name}' appears in the diagram")
+
+    clusters = side.get("clusters") or {}
+    parents = _cluster_nesting(dot_text)
+
+    def _cluster_name(cid: str) -> str:
+        meta = clusters.get(cid, {})
+        return f"{cid} {meta.get('label', '')}".lower()
+
+    for cid in parents:
+        cname = _cluster_name(cid)
+        if not any(term in cname for term in ("data", "database", "db")):
+            continue
+        parent = parents.get(cid)
+        while parent:
+            pname = _cluster_name(parent)
+            if any(term in pname for term in ("application", "app", "compute")):
+                blockers.append(
+                    f"data cluster '{cid}' is nested inside application cluster '{parent}'"
+                )
+                break
+            parent = parents.get(parent)
+
+    pos: dict[int, tuple[float, float]] = {}
+    for obj in g.get("objects", []):
+        if obj.get("pos"):
+            try:
+                x, y = (float(v) for v in obj["pos"].split(","))
+                pos[obj["_gvid"]] = (x, y)
+            except Exception:  # noqa: BLE001
+                pass
+    diag = max((width * width + height * height) ** 0.5, 1.0)
+    long_labels: list[str] = []
+    for edge in g.get("edges", []):
+        label = _strip_html_label(str(edge.get("label", "")))
+        if not label:
+            continue
+        a = pos.get(edge.get("tail"))
+        b = pos.get(edge.get("head"))
+        if not a or not b:
+            continue
+        frac = (((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) ** 0.5) / diag
+        if frac > 0.5:
+            long_labels.append(f'"{label}" spans {frac:.0%} of canvas')
+    if long_labels:
+        warnings.append(
+            "long labeled edges risk spaghetti/stranded labels: "
+            + "; ".join(long_labels[:4])
+        )
+
+    edge_styles = {
+        str(edge.get("style") or "solid")
+        for edge in g.get("edges", [])
+        if str(edge.get("style") or "solid") != "invis"
+    }
+    has_legend = any(
+        "legend" in str(meta.get("label", "")).lower()
+        for meta in (side.get("nodes") or {}).values()
+    ) or "legend" in dot_text.lower()
+    if len(edge_styles) > 1 and not has_legend:
+        warnings.append(
+            "mixed edge styles are used without a Legend explaining solid/dashed/dotted lines"
+        )
+
+    if not blockers and not warnings:
+        return "Visual lint: PASS - no deterministic presentation issues found."
+
+    lines = ["Visual lint:"]
+    if blockers:
+        lines.append("  BLOCKERS:")
+        lines += [f"    - {item}" for item in blockers[:6]]
+    if warnings:
+        lines.append("  WARNINGS:")
+        lines += [f"    - {item}" for item in warnings[:6]]
+    lines.append(
+        "  Fix blockers before finalize; address warnings unless the approved blueprint forces them."
+    )
+    return "\n".join(lines)
 
 
 def _inspection_image_b64(png_path: Path) -> tuple[str, str]:
@@ -153,11 +311,21 @@ def render_diagram(
 
     b64, mime = _inspection_image_b64(png)
     audit = _layout_audit()
+    visual = _visual_lint()
     text = "Rendered out.png successfully. Inspect it and refine if the layout is not clean."
     if audit:
         text += ("\n\n" + audit + "\n\nAct on any audit WARNING before finalizing "
                  "(re-render after fixing). A clean diagram is balanced (~1.3–2:1) "
                  "with every label-bearing edge short.")
+    if visual:
+        text += (
+            "\n\n"
+            + visual
+            + "\n\nProduction presentation rules: remove empty shapes, keep Data "
+            "as a sibling tier (not nested in Application), number orchestration "
+            "flows, aggregate observability lines, and add a Legend when multiple "
+            "edge styles are used."
+        )
     return ToolMessage(
         content_blocks=[
             {"type": "text", "text": text},
@@ -224,6 +392,42 @@ def search_icons(query: str, provider: Optional[str] = None) -> str:
     if not hits:
         return f"No icons matched '{query}'. Try fewer/broader terms or fetch_logo()."
     return "\n".join(hits)
+
+
+@tool
+def search_icons_batch(queries: list[str]) -> str:
+    """Search the bundled icon pack for multiple services at once.
+
+    Pass a list of query strings (e.g. ["alb", "ecs fargate", "rds aurora"]).
+    Returns one block per query with up to 10 matching icon paths.
+    Prefer this over multiple `search_icons` calls when you need icons for several services.
+    """
+    try:
+        manifest = json.loads(Path(LOCAL_MANIFEST).read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        return f"Could not read icon manifest: {exc}"
+
+    root = Path(LOCAL_ICONS)
+    results: list[str] = []
+
+    for query in queries:
+        terms = [t for t in query.lower().replace("-", " ").replace("_", " ").split() if t]
+        hits: list[str] = []
+        for prov, cats in manifest.get("providers", {}).items():
+            for cat, names in cats.items():
+                for name in names:
+                    hay = f"{prov} {cat} {name}".lower()
+                    if all(t in hay for t in terms):
+                        sub = name if cat == "_root" else f"{cat}/{name}"
+                        hits.append(str(root / prov / f"{sub}.png"))
+                        if len(hits) >= 10:
+                            break
+        if hits:
+            results.append(f"[{query}]\n" + "\n".join(hits))
+        else:
+            results.append(f"[{query}]\nNo match — try fewer/broader terms or fetch_logo().")
+
+    return "\n\n".join(results) if results else "No queries provided."
 
 
 @tool
@@ -356,9 +560,12 @@ def inspect_diagram(tool_call_id: Annotated[str, InjectedToolCallId]) -> ToolMes
         )
     b64, mime = _inspection_image_b64(png)
     audit = _layout_audit()
+    visual = _visual_lint()
     text = "Here is the rendered diagram to review."
     if audit:
         text += "\n\nObjective layout audit (read this FIRST):\n" + audit
+    if visual:
+        text += "\n\nDeterministic visual lint (read this too):\n" + visual
     return ToolMessage(
         content_blocks=[
             {"type": "text", "text": text},
@@ -397,6 +604,13 @@ def finalize_diagram() -> str:
     """
     if not (WORKSPACE / "out.png").exists():
         return "No rendered diagram yet — call render_diagram (and export_drawio) first."
+    visual = _visual_lint()
+    if "BLOCKERS:" in visual:
+        return (
+            "Visual lint BLOCKED finalize. Send these findings back to the drawer, "
+            "re-render, re-export drawio, and re-run the critic before final review.\n\n"
+            + visual
+        )
     return "Diagram finalized and approved by the user."
 
 
@@ -416,7 +630,7 @@ DIAGRAM_TOOLS = [
 MAIN_TOOLS = [propose_tech_stack, propose_blueprint, finalize_diagram]
 
 # Drawer subagent tools: everything needed for the render-refine loop.
-DRAWER_TOOLS = [search_icons, fetch_logo, render_diagram, export_drawio]
+DRAWER_TOOLS = [search_icons_batch, search_icons, fetch_logo, render_diagram, export_drawio]
 
 # Critic subagent tools: read-only review of the rendered diagram.
 CRITIC_TOOLS = [inspect_diagram, submit_critique]

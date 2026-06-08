@@ -124,10 +124,21 @@ DEFAULT_STYLE    = "pretty"          # "pretty" (prettygraph) or "plain" (raw di
 RECURSION_LIMIT  = 160               # max agent steps per run (used by the server)
 REASONING_EFFORT = "medium"
 
-SKILL_PATHS = [
-    str(SKILLS_DIR / "diagrams-as-code"),
-    str(SKILLS_DIR / "pro-style"),
-]
+# Per-agent skill assignments.
+# Drawer gets rendering libraries matching its style (pro-style owns prettygraph;
+# diagrams-as-code owns the mingrammer node catalog + patterns reference).
+# Critic gets a focused visual-review guide (no rendering details needed).
+# Main agent needs no skills — its system prompt is fully self-contained.
+_SKILL_DIAGRAMS       = str(SKILLS_DIR / "drawer" / "diagrams-as-code")
+_SKILL_PRO_STYLE      = str(SKILLS_DIR / "drawer" / "pro-style")
+_SKILL_CRITIC         = str(SKILLS_DIR / "critic")
+_SKILL_SOL_DESIGN     = str(SKILLS_DIR / "solution-design")
+_SKILL_REQ_ANALYSIS   = str(SKILLS_DIR / "requirement-analysis")
+
+DRAWER_PRETTY_SKILLS = [_SKILL_PRO_STYLE, _SKILL_DIAGRAMS]
+DRAWER_PLAIN_SKILLS  = [_SKILL_DIAGRAMS]
+CRITIC_SKILLS        = [_SKILL_CRITIC]
+MAIN_AGENT_SKILLS    = [_SKILL_SOL_DESIGN, _SKILL_REQ_ANALYSIS]
 
 # Context-management: the conversation is re-sent every turn, so stale tool
 # outputs (read_file of skill docs, repeated search_icons, old render images)
@@ -138,13 +149,13 @@ SKILL_PATHS = [
 # huge → drop every clearable old result, keep only the recent ones) because the
 # agent re-reads anything it still needs from disk. (deepagents already bundles a
 # SummarizationMiddleware as the long-run safety net.)
-CONTEXT_TRIGGER_TOKENS = 30_000   # main context is lean (no images/icons), can be higher
+CONTEXT_TRIGGER_TOKENS = 12_000   # trigger early: clear stale reads before blueprint/task args inflate context
 
 # Critic/refine sub-loop cap: after this many model calls in one run the agent
 # exits cleanly instead of looping forever. Sized to allow full staged flow plus
 # 2 critic+refine rounds with headroom (tech_stack → blueprint → drawer → critic
 # → revise → critic → finalize ≈ ~30 calls for a complex diagram).
-_RUN_CALL_LIMIT = 80
+_RUN_CALL_LIMIT = 100
 
 
 def _middleware():
@@ -233,7 +244,7 @@ def _drawer_subagent(workdir: str, icons_root: str, manifest: str, style: str) -
         ),
         "system_prompt": build_drawer_prompt(workdir, icons_root, manifest, style=style),
         "tools": DRAWER_TOOLS,
-        "skills": SKILL_PATHS,
+        "skills": DRAWER_PRETTY_SKILLS if style == "pretty" else DRAWER_PLAIN_SKILLS,
     }
 
 
@@ -249,6 +260,7 @@ def _critic_subagent(style: str) -> dict:
         ),
         "system_prompt": build_critic_prompt(style=style),
         "tools": CRITIC_TOOLS,
+        "skills": CRITIC_SKILLS,
     }
 
 
@@ -305,6 +317,7 @@ def build_agent(model: str = DEFAULT_MODEL, *, style: str = DEFAULT_STYLE,
                 tools=critic_spec["tools"],
                 system_prompt=critic_spec["system_prompt"],
                 backend=backend,
+                skills=critic_spec.get("skills"),
                 middleware=_middleware(),
             ),
             "critic",
@@ -324,7 +337,7 @@ def build_agent(model: str = DEFAULT_MODEL, *, style: str = DEFAULT_STYLE,
         system_prompt=system_prompt,
         backend=backend,
         memory=[MEMORY_PATH],
-        skills=SKILL_PATHS,
+        skills=MAIN_AGENT_SKILLS,
         subagents=[drawer_compiled, critic_compiled],
         middleware=_middleware(),
         checkpointer=checkpointer,
