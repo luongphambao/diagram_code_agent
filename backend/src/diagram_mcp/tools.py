@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import base64
 import json
+import math
 import re
 import subprocess
 import sys
@@ -33,11 +34,12 @@ from .findings import DiagramFinding, format_critique, prune
 _TECHSTACK_FILE = WORKSPACE / "tech_stack.json"
 _BLUEPRINT_FILE = WORKSPACE / "blueprint.json"
 _CRITIQUE_FILE = WORKSPACE / "critique.json"
+_ICON_SEARCH_COUNTS_FILE = WORKSPACE / "icon_search_counts.json"
 
 
 def clear_stage_markers() -> None:
     """Reset the staged-flow markers at the start of a fresh run."""
-    for f in (_TECHSTACK_FILE, _BLUEPRINT_FILE, _CRITIQUE_FILE):
+    for f in (_TECHSTACK_FILE, _BLUEPRINT_FILE, _CRITIQUE_FILE, _ICON_SEARCH_COUNTS_FILE):
         if f.exists():
             f.unlink()
 
@@ -364,70 +366,285 @@ def export_drawio() -> str:
 
 @tool
 def search_icons(query: str, provider: Optional[str] = None) -> str:
-    """Search the bundled icon pack for matching icon paths.
+    """Search the bundled icon pack with BM25-ranked product keywords.
 
     Returns absolute `.png` paths to use in `Custom(label, "<path>")` when no
     built-in `diagrams` node fits. Optionally restrict to one `provider`
     (e.g. "aws", "azure", "gcp", "onprem", "k8s", "programming", "saas").
+    Use icon-pack style keywords, not full marketing labels:
+    "AWS App Runner" -> "app runner", "Amazon Aurora PostgreSQL Server" -> "aurora".
     """
     try:
         manifest = json.loads(Path(LOCAL_MANIFEST).read_text(encoding="utf-8"))
     except Exception as exc:  # noqa: BLE001
         return f"Could not read icon manifest: {exc}"
 
-    terms = [t for t in query.lower().replace("-", " ").replace("_", " ").split() if t]
+    canonical = _canonical_icon_keyword(query, provider)
+    count = _record_icon_search(canonical, provider)
+    if count > 3:
+        return (
+            f"SEARCH_LIMIT_REACHED: '{canonical}'"
+            f"{f' provider={provider}' if provider else ''} was searched {count} times. "
+            "Stop searching this icon; use the best prior result, broaden once under a "
+            "different query, or omit icon=."
+        )
+
+    hits = _icon_hits(manifest, query, provider=provider, limit=12)
+    if not hits:
+        return (
+            f"No icons matched '{query}' (keyword tried: '{canonical}'). "
+            "Try a shorter filename-style keyword or fetch_logo()."
+        )
+    return (
+        f"Search attempt {count}/3 for keyword '{canonical}' "
+        f"(from query '{query}').\n"
+        + "\n".join(hits)
+    )
+
+
+def _record_icon_search(query: str, provider: Optional[str]) -> int:
+    """Track repeated searches so one icon cannot consume unbounded tool calls."""
+    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    provider_key = (provider or "*").strip().lower()
+    query_key = " ".join(query.lower().replace("-", " ").replace("_", " ").split())
+    key = f"{provider_key}:{query_key}"
+    try:
+        counts = json.loads(_ICON_SEARCH_COUNTS_FILE.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        counts = {}
+    counts[key] = int(counts.get(key, 0)) + 1
+    _ICON_SEARCH_COUNTS_FILE.write_text(json.dumps(counts, indent=2), encoding="utf-8")
+    return counts[key]
+
+
+def _icon_hits(
+    manifest: dict,
+    query: str,
+    *,
+    provider: Optional[str] = None,
+    limit: int = 10,
+) -> list[str]:
+    """Return ranked icon paths for one query from an already-loaded manifest."""
+    for terms in _icon_keyword_variants(query, provider):
+        hits = _rank_icon_hits(manifest, terms, provider=provider, limit=limit)
+        if hits:
+            return hits
+    return []
+
+
+_ICON_PROVIDER_TERMS = {
+    "amazon",
+    "aws",
+    "azure",
+    "cloud",
+    "gcp",
+    "google",
+    "microsoft",
+}
+
+_ICON_NOISE_TERMS = {
+    "compatible",
+    "for",
+    "managed",
+    "postgres",
+    "postgresql",
+    "server",
+    "serverless",
+}
+
+_ICON_PHRASE_ALIASES = {
+    "amazon aurora": "aurora",
+    "amazon aurora postgresql server": "aurora",
+    "application load balancer": "elb application load balancer",
+    "app service": "app services",
+    "app services": "app services",
+    "aurora postgresql": "aurora",
+    "aurora postgresql server": "aurora",
+    "cloud load balancing": "load balancing",
+    "cloud pub sub": "pubsub",
+    "cloud run": "run",
+    "cloud sql": "sql",
+    "container app": "container apps",
+    "cosmos db": "cosmos db",
+    "ecs": "elastic container service",
+    "ecs fargate": "fargate",
+    "elastic container service": "elastic container service",
+    "entra id": "entra",
+    "load balancer": "load balancing",
+    "network load balancer": "elb network load balancer",
+    "pub sub": "pubsub",
+    "rds aurora": "aurora",
+    "route53": "route 53",
+}
+
+_ICON_TOKEN_ALIASES = {
+    "apigateway": ["api", "gateway"],
+    "cloudsql": ["sql"],
+    "cloudfront": ["cloudfront"],
+    "dynamodb": ["dynamodb"],
+    "eventbridge": ["eventbridge"],
+    "opensearch": ["opensearch"],
+    "route53": ["route", "53"],
+}
+
+
+def _tokenize_icon_query(query: str) -> list[str]:
+    return [
+        t
+        for t in query.lower().replace("-", " ").replace("_", " ").replace("/", " ").split()
+        if t
+    ]
+
+
+def _terms_from_phrase(phrase: str) -> list[str]:
+    return _tokenize_icon_query(phrase)
+
+
+def _alias_terms(terms: list[str]) -> list[str] | None:
+    phrase = " ".join(terms)
+    if phrase in _ICON_PHRASE_ALIASES:
+        return _terms_from_phrase(_ICON_PHRASE_ALIASES[phrase])
+    if len(terms) == 1 and terms[0] in _ICON_TOKEN_ALIASES:
+        return _ICON_TOKEN_ALIASES[terms[0]]
+    return None
+
+
+def _icon_keyword_variants(query: str, provider: Optional[str]) -> list[list[str]]:
+    raw = _tokenize_icon_query(query)
+    if not raw:
+        return []
+
+    stripped = [t for t in raw if t not in _ICON_PROVIDER_TERMS]
+    relaxed = [t for t in stripped if t not in _ICON_NOISE_TERMS]
+
+    variants: list[list[str]] = []
+    for candidate in (
+        _alias_terms(stripped),
+        _alias_terms(raw),
+        relaxed,
+        stripped,
+        raw,
+    ):
+        if candidate:
+            variants.append(candidate)
+
+    # Provider-specific filename dialects.
+    provider_l = provider.lower() if provider else ""
+    phrase = " ".join(stripped)
+    if provider_l == "aws" and phrase == "load balancer":
+        variants.insert(0, ["elastic", "load", "balancing"])
+    elif provider_l == "azure" and phrase == "load balancer":
+        variants.insert(0, ["load", "balancers"])
+    elif provider_l == "gcp" and phrase == "load balancer":
+        variants.insert(0, ["load", "balancing"])
+
+    deduped: list[list[str]] = []
+    seen: set[tuple[str, ...]] = set()
+    for item in variants:
+        key = tuple(item)
+        if key and key not in seen:
+            seen.add(key)
+            deduped.append(item)
+    return deduped
+
+
+def _canonical_icon_keyword(query: str, provider: Optional[str]) -> str:
+    variants = _icon_keyword_variants(query, provider)
+    if not variants:
+        return " ".join(_tokenize_icon_query(query))
+    return " ".join(variants[0])
+
+
+def _rank_icon_hits(
+    manifest: dict,
+    terms: list[str],
+    *,
+    provider: Optional[str],
+    limit: int,
+) -> list[str]:
     root = Path(LOCAL_ICONS)
-    hits: list[str] = []
+    provider_l = provider.lower() if provider else None
+    query_terms = [t for t in terms if t]
+    if not query_terms:
+        return []
+
+    docs: list[tuple[str, str, str, list[str], str]] = []
+
     for prov, cats in manifest.get("providers", {}).items():
-        if provider and prov.lower() != provider.lower():
+        if provider_l and prov.lower() != provider_l:
             continue
         for cat, names in cats.items():
             for name in names:
-                hay = f"{prov} {cat} {name}".lower()
-                if all(t in hay for t in terms):
-                    sub = name if cat == "_root" else f"{cat}/{name}"
-                    hits.append(str(root / prov / f"{sub}.png"))
-                    if len(hits) >= 30:
-                        break
-    if not hits:
-        return f"No icons matched '{query}'. Try fewer/broader terms or fetch_logo()."
-    return "\n".join(hits)
+                sub = name if cat == "_root" else f"{cat}/{name}"
+                path = str(root / prov / f"{sub}.png")
+                name_terms = _tokenize_icon_query(name)
+                cat_terms = _tokenize_icon_query(cat)
+                prov_terms = _tokenize_icon_query(prov)
+                tokens = (name_terms * 4) + (cat_terms * 2) + prov_terms
+                normalized_name = " ".join(name_terms)
+                docs.append((path, normalized_name, cat.lower(), tokens, name))
 
+    if not docs:
+        return []
 
-@tool
-def search_icons_batch(queries: list[str]) -> str:
-    """Search the bundled icon pack for multiple services at once.
+    n_docs = len(docs)
+    avg_len = sum(len(tokens) for *_prefix, tokens, _name in docs) / max(n_docs, 1)
+    dfs: dict[str, int] = {}
+    for term in query_terms:
+        dfs[term] = sum(1 for *_prefix, tokens, _name in docs if term in set(tokens))
 
-    Pass a list of query strings (e.g. ["alb", "ecs fargate", "rds aurora"]).
-    Returns one block per query with up to 10 matching icon paths.
-    Prefer this over multiple `search_icons` calls when you need icons for several services.
-    """
-    try:
-        manifest = json.loads(Path(LOCAL_MANIFEST).read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
-        return f"Could not read icon manifest: {exc}"
+    k1 = 1.4
+    b = 0.75
+    query_phrase = " ".join(query_terms)
+    significant_terms = [
+        term
+        for term in query_terms
+        if term not in _ICON_NOISE_TERMS and term not in _ICON_PROVIDER_TERMS
+    ]
+    scored: list[tuple[float, str]] = []
 
-    root = Path(LOCAL_ICONS)
-    results: list[str] = []
+    for path, normalized_name, cat, tokens, raw_name in docs:
+        token_counts = {t: tokens.count(t) for t in set(tokens)}
+        doc_len = max(len(tokens), 1)
+        score = 0.0
+        matched_terms = 0
+        matched_significant_terms = 0
 
-    for query in queries:
-        terms = [t for t in query.lower().replace("-", " ").replace("_", " ").split() if t]
-        hits: list[str] = []
-        for prov, cats in manifest.get("providers", {}).items():
-            for cat, names in cats.items():
-                for name in names:
-                    hay = f"{prov} {cat} {name}".lower()
-                    if all(t in hay for t in terms):
-                        sub = name if cat == "_root" else f"{cat}/{name}"
-                        hits.append(str(root / prov / f"{sub}.png"))
-                        if len(hits) >= 10:
-                            break
-        if hits:
-            results.append(f"[{query}]\n" + "\n".join(hits))
-        else:
-            results.append(f"[{query}]\nNo match — try fewer/broader terms or fetch_logo().")
+        for term in query_terms:
+            tf = token_counts.get(term, 0)
+            if tf <= 0:
+                continue
+            matched_terms += 1
+            if term in significant_terms:
+                matched_significant_terms += 1
+            df = max(dfs.get(term, 0), 1)
+            idf = math.log(1 + (n_docs - df + 0.5) / (df + 0.5))
+            denom = tf + k1 * (1 - b + b * doc_len / max(avg_len, 1))
+            score += idf * (tf * (k1 + 1)) / denom
 
-    return "\n\n".join(results) if results else "No queries provided."
+        if matched_terms == 0:
+            continue
+        if significant_terms and matched_significant_terms == 0:
+            continue
+
+        # Deterministic boosts keep exact icon filename matches above broad BM25 hits.
+        if normalized_name == query_phrase:
+            score += 8.0
+        elif all(term in normalized_name.split() for term in query_terms):
+            score += 4.0
+        elif query_phrase in normalized_name:
+            score += 3.0
+        if any(term in cat for term in query_terms):
+            score += 0.8
+        if provider_l:
+            score += 0.5
+
+        scored.append((score, path))
+
+    return [
+        path
+        for _, path in sorted(scored, key=lambda item: (-item[0], item[1]))[:limit]
+    ]
 
 
 @tool
@@ -442,7 +659,7 @@ def fetch_logo(name: str) -> str:
         path = get_logo(name, LOCAL_ICONS, str(WORKSPACE))
     except Exception as exc:  # noqa: BLE001
         return f"NOT_FOUND: fetch_logo error: {exc}"
-    return path or f"NOT_FOUND: no verified logo for '{name}'. Use a built-in node or search_icons()."
+    return path or f"NOT_FOUND: no verified logo for '{name}'. Use a built-in node or omit icon=."
 
 
 # ---------------------------------------------------------------------------
@@ -630,7 +847,7 @@ DIAGRAM_TOOLS = [
 MAIN_TOOLS = [propose_tech_stack, propose_blueprint, finalize_diagram]
 
 # Drawer subagent tools: everything needed for the render-refine loop.
-DRAWER_TOOLS = [search_icons_batch, search_icons, fetch_logo, render_diagram, export_drawio]
+DRAWER_TOOLS = [search_icons, fetch_logo, render_diagram, export_drawio]
 
 # Critic subagent tools: read-only review of the rendered diagram.
 CRITIC_TOOLS = [inspect_diagram, submit_critique]

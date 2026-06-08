@@ -74,11 +74,21 @@ Tints are by tier, not by vendor — use them for any cloud.
   (providers: aws, azure, gcp, oci, ibm, alibabacloud, onprem, programming, saas,
   k8s, generic, …). The pack covers the major clouds equally well (Azure ~800,
   AWS ~525, GCP ~120 icons) — there is NO reason to default to AWS.
-- **Always resolve paths with tools before using them:**
-  - `search_icons("<service>", provider="<provider>")` — finds the exact path
-    within a provider subtree (e.g. `search_icons("App Service", provider="azure")`).
+- **Always resolve paths with tools before using them — planned, bounded search:**
+  - Make an exact icon plan first: one entry per visible node that truly needs an
+    icon. Exclude legend, spacers, generic notes, and nodes where `icon=` should
+    be omitted. Each entry has `{label, provider, icon_keyword}`.
+  - Generate `icon_keyword` in the icon-pack filename dialect: short product noun,
+    not full marketing label. Examples: `Amazon Aurora PostgreSQL Server` ->
+    `aurora`, `AWS App Runner` -> `app runner`, `CloudFront CDN` -> `cloudfront`,
+    `Azure Container Apps` -> `container apps`, `GCP Cloud Run` -> `run`,
+    `Cloud SQL` -> `sql`, `Cloud Pub/Sub` -> `pubsub`.
+  - `search_icons(icon_keyword, provider="<provider>")` finds the exact path
+    within a provider subtree. Parallel tool calls are fine.
+  - Never call `search_icons` more than 3 times for the same icon/query/provider.
   - `fetch_logo("<Product Name>")` — for brand logos not in the pack (Stripe,
-    Twilio, etc.), returns `PATH: <file>` or `NOT_FOUND`.
+    Twilio, etc.); call ONLY for specific services that returned NOT_FOUND from
+    local icon search, not for every service upfront.
   - NEVER guess a path — a wrong path silently drops the icon.
 - If no icon exists, omit `icon=` (the box still renders with color) or use a
   generic one (e.g. `onprem/client/users.png`, `generic/database/sql.png`).
@@ -126,7 +136,9 @@ flow in one direction, arrows are short and rarely cross.
 
 ## Workflow
 1. Plan tiers, clusters, the few typed edges.
-2. Use `search_icons` / `fetch_logo` to resolve all icon paths before writing code.
+2. Make the exact icon plan with `icon_keyword`, then use
+   `search_icons(icon_keyword, provider="<provider>")` only for those icons; then
+   call `fetch_logo` only for NOT_FOUND brands.
 3. Write the complete `prettygraph` script.
 4. Call `render_diagram(code=<complete script>)` — the tool runs the script and
    returns the rendered PNG **plus a layout audit**. On error it returns the
@@ -184,8 +196,8 @@ Mixing aws + azure + saas + programming logos looks noisy. For an infographic,
 pick ONE family and use it for every box — `azure/general/*` is a clean
 line-style set (file, files, tag, table, cubes, gear, workflow, search-grid,
 versions, counter, support, usericon, log-streaming, dashboard, …). Verify each
-path with `search_icons("<name>", provider="azure")` — a wrong path silently
-drops the icon.
+path with `search_icons("<name>", provider="azure")`; a wrong path silently
+drops the icon. Do not search any one icon more than 3 times.
 
 ## 3. Bold flow arrows that go CLUSTER→CLUSTER (the key to aligned clusters)
 If a flow edge connects a node *inside* cluster A to a node *inside* cluster B,

@@ -44,10 +44,13 @@ with Diagram("Title", filename="/workspace/out", outformat=["png", "dot"],
   pack first, then validates a brand logo, and returns the exact file path.
   Use that path in `Custom("<Product>", "<PATH>")`. On `NOT_FOUND`, fall back
   to a generic built-in node.
-- **Non-AWS cloud service with no built-in class** (common on GCP/OCI/IBM): call
-  `search_icons("<service>", provider="<provider>")` to get the exact icon path,
-  then use `Custom("Service Name", "<PATH>")`. Never fall back to an AWS node or
-  a generic box for a named cloud service.
+- **Non-AWS cloud services with no built-in class** (common on GCP/OCI/IBM): make
+  an exact icon plan with a short `icon_keyword` in the icon-pack filename style
+  (`Cloud Run` -> `run`, `Cloud SQL` -> `sql`, `Cloud Pub/Sub` -> `pubsub`,
+  `Azure Container Apps` -> `container apps`). Then call
+  `search_icons(icon_keyword, provider="<provider>")` for each planned missing
+  service. Never search the same icon/query/provider more than 3 times. Never
+  fall back to an AWS node or a generic box for a named cloud service.
 - MLflow → built-in `from diagrams.onprem.mlops import Mlflow` (do NOT fetch it).
 - NEVER guess paths like `/icons/generic/file.png` — they usually do NOT exist
   and render a blank box. For generic concepts (dataset, file, user, database,
