@@ -19,7 +19,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated, Literal, Optional
 
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import InjectedToolCallId, tool
@@ -47,7 +47,7 @@ RENDER_TIMEOUT_S = 180
 INSPECT_MAX_WIDTH = 800
 
 # out.* artifacts produced by a render, cleaned before each run.
-_OUT_NAMES = ("out.png", "out.dot", "out.drawio", "out.nodes.json")
+_OUT_NAMES = ("out.png", "out.dot", "out.drawio", "out.nodes.json", "out.slide.json")
 
 # prettygraph.py must be importable by the generated diagram.py (pretty style does
 # `from prettygraph import Pretty`). Stage a copy into the workspace.
@@ -66,6 +66,11 @@ def _layout_audit() -> str:
     dot = WORKSPACE / "out.dot"
     png = WORKSPACE / "out.png"
     if not dot.exists() or not png.exists():
+        return ""
+    try:
+        from .prettygraph import audit_layout
+        return audit_layout(str(dot), str(png))
+    except Exception:  # noqa: BLE001 — audit is advisory, never fail over it
         return ""
 
 
@@ -90,11 +95,6 @@ def _search_icon_hits(query: str, provider: Optional[str] = None, *, limit: int 
                     if len(hits) >= limit:
                         return hits
     return hits
-    try:
-        from .prettygraph import audit_layout
-        return audit_layout(str(dot), str(png))
-    except Exception:  # noqa: BLE001 — audit is advisory, never fail over it
-        return ""
 
 
 def _inspection_image_b64(png_path: Path) -> tuple[str, str]:
@@ -201,6 +201,9 @@ def export_drawio() -> str:
     dot = WORKSPACE / "out.dot"
     out = WORKSPACE / "out.drawio"
     sidecar = WORKSPACE / "out.nodes.json"
+    slide = WORKSPACE / "out.slide.json"
+    if slide.exists() and out.exists():
+        return f"Slide drawio already ready ({out.stat().st_size} bytes); not overwriting."
     if not dot.exists():
         return "No out.dot found — call render_diagram first."
     try:
@@ -338,6 +341,26 @@ class Blueprint(BaseModel):
     layout_intent: str = Field(
         "left_to_right_pipeline",
         description="intended visual flow, e.g. left_to_right_pipeline or top_down_stack",
+    )
+    presentation_style: Literal["slide", "diagram"] = Field(
+        "diagram",
+        description="slide for production/presentation output; diagram for body-only output",
+    )
+    slide_title: str = Field(
+        "",
+        description="large slide hero title; default to the system/product name when presentation_style=slide",
+    )
+    slide_kicker: str = Field(
+        "",
+        description="small hero kicker/subtitle above the slide title",
+    )
+    brand: str = Field(
+        "",
+        description="brand text shown in the slide top-right; omit when unknown",
+    )
+    diagram_title: str = Field(
+        "",
+        description="caption above the architecture panel inside a slide",
     )
     pattern: str = Field(description="microservices|monolith|serverless|event-driven|hybrid")
     pattern_rationale: str = Field("", description="2-3 sentences: why this architecture pattern fits these requirements")

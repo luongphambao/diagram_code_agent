@@ -152,6 +152,7 @@ def _tool_detail(tool: str, args: dict | None, *, limit: int = 260) -> str:
         if isinstance(bp, dict):
             return (
                 f"{bp.get('audience', 'client')}/{bp.get('detail_level', 'architecture')} "
+                f"style={bp.get('presentation_style', 'diagram')}, "
                 f"pattern={bp.get('pattern', '')}, nodes={len(bp.get('nodes') or [])}, "
                 f"clusters={len(bp.get('clusters') or [])}, edges={len(bp.get('edges') or [])}"
             )

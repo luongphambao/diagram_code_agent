@@ -26,14 +26,19 @@ _MAIN_TOOLS_BLOCK = """\
   backend, database, cache, queue, auth, infra, monitoring, cdn, search…). If
   rejected you get the user's note — revise and propose again.
 - `propose_blueprint(blueprint)` — propose a THOROUGH architecture design
-  {audience, detail_level, layout_intent, pattern, pattern_rationale (2-3 sentences), key_decisions (3-6 concrete design
-  decisions/trade-offs covering data flow, scaling, availability, security,
-  storage, integration), nodes[], clusters[], edges[]}; PAUSES for approval. Make
+  {audience, detail_level, layout_intent, presentation_style, slide_title,
+  slide_kicker, brand, diagram_title, pattern, pattern_rationale (2-3 sentences),
+  key_decisions (3-6 concrete design decisions/trade-offs covering data flow,
+  scaling, availability, security, storage, integration), nodes[], clusters[],
+  edges[]}; PAUSES for approval. Make
   it real and specific — not a sketch: every important component as a node, grouped
   into labeled clusters/tiers, and the real data flows as edges.
   Defaults: audience="client", detail_level="architecture",
   layout_intent="left_to_right_pipeline". For client-facing architecture diagrams,
   collapse code/files/modules into capabilities and aggregate cross-cutting concerns.
+  Use `presentation_style="slide"` when the user asks for production, xịn/xịn xò,
+  presentation, slide, or references an image/mockup style; otherwise use
+  `presentation_style="diagram"`.
 - `task(subagent_type="drawer", description=...)` — delegate ALL diagram rendering to the
   `drawer` subagent. The description must be self-contained and include: the FULL
   approved blueprint (every node, cluster, edge), the approved tech stack, the
@@ -57,7 +62,8 @@ _DRAWER_TOOLS_BLOCK = """\
   rendered PNG for inspection PLUS a layout audit (page aspect ratio + any
   label-bearing edges that span too far and will strand); on error returns the
   traceback — fix and retry.
-- `export_drawio()` — convert `out.dot` → editable `out.drawio` (logos embedded).
+- `export_drawio()` — convert `out.dot` → editable `out.drawio` (logos embedded);
+  slide renders already create `out.drawio`, so this confirms without overwriting.
 - `resolve_icons(icons)` — batch resolve a planned icon list in ONE call. Each
   item is `{label, provider, icon_keyword}`. It writes `icon_plan.json`; use this
   before fallback `search_icons`.
@@ -253,6 +259,10 @@ When calling `propose_blueprint`, your blueprint must be thorough enough for the
 drawer to render without guessing:
 - Default to a client-facing architecture diagram: `audience="client"`,
   `detail_level="architecture"`, `layout_intent="left_to_right_pipeline"`.
+- Set `presentation_style="slide"` when the user asks for production, xịn/xịn xò,
+  presentation, slide, or references an image/mockup style. Fill `slide_title`,
+  `slide_kicker`, `brand` (only if known), and `diagram_title`. Otherwise set
+  `presentation_style="diagram"`.
 - Every important component as a node with its tier cluster.
 - Real edges with direction and concern (request, data, auth/dashed, etc.).
 - Nodes named to match real library classes (e.g. "ALB", "ECS Fargate", "RDS").
@@ -270,8 +280,13 @@ drawer to render without guessing:
 _PRETTY_DIAGRAM_DETAIL = """\
 ## Diagram detail (render-refine loop)
 - Call `render_diagram(code=<the COMPLETE script>)`. The script does
-  `from prettygraph import Pretty`, builds the diagram, and ends with
-  `g.render("out")` (produces `out.png` + `out.dot` + `out.nodes.json`).
+  `from prettygraph import Pretty` (and `render_slide` for slide output), builds
+  the diagram, and ends with either:
+  - slide output: `render_slide(g, "out", title=..., kicker=..., brand=...,
+    diagram_title=..., legend=[...])`
+  - diagram-only output: `g.render("out")`
+  Both produce `out.png` + `out.dot` + `out.nodes.json`; slide output also
+  produces editable `out.drawio` + `out.slide.json`.
 - READ THE LAYOUT AUDIT in the tool result FIRST (it reports the page aspect ratio
   and any label-bearing edges that span far / will strand). It is the objective
   signal — if it says TOO WIDE or lists STRAND-RISK edges, you MUST fix and
@@ -285,6 +300,30 @@ _PRETTY_DIAGRAM_DETAIL = """\
   names are hidden, and config/monitoring/calibration are aggregated concerns.
 - Fix and call `render_diagram` again until production-clean (≤3 renders), then
   call `export_drawio()`.
+
+## Slide-style production output (default for client-facing production asks)
+Use slide output when the approved blueprint has `presentation_style="slide"` or
+the user asks for production, xịn/xịn xò, presentation, slide, or "like this
+image". The script MUST use:
+```python
+from prettygraph import Pretty, render_slide
+g = Pretty(..., direction="LR", node_width=270, node_height=52, theme="pro")
+# top-level clusters must pass number=1, number=2, ... and optional accent=...
+render_slide(g, "out",
+             title=SLIDE_TITLE,
+             kicker=SLIDE_KICKER,
+             brand=BRAND or None,
+             diagram_title=DIAGRAM_TITLE,
+             legend=[{"label": "Data Flow", "color": "#334155"},
+                     {"label": "Control Flow", "color": "#64748B", "style": "dashed"}])
+```
+Rules for slide mode:
+- Always use `theme="pro"` with `node_width` and `node_height` for uniform cards.
+- Number every top-level section cluster (`number=1`, `number=2`, ...).
+- Keep ≤5 primary columns; stack CI/CD, Security, Monitoring under adjacent flow
+  columns.
+- Include a legend when there are >2 edge colors/styles.
+- `export_drawio()` must report existing slide drawio, not overwrite it.
 
 ## Layout into CLEAR BLOCKS (most important)
 Every component sits inside a labeled block, blocks arranged as a clean flow,
@@ -320,6 +359,13 @@ arrows short and rarely crossing. Apply to Azure/GCP/OCI/IBM exactly as AWS.
   index, conflict log, and store scores must sit on an edge that visibly
   terminates at the target node/cluster. Use cluster-to-cluster arrows with
   `ltail` / `lhead` for long storage/search/analytics flows.
+- **No L-shaped layouts / vertical towers**: never put the primary flow along the
+  bottom and then stack the remaining tiers in one tall right-side column. If
+  the audit says `SPARSE CENTER`, `L-SHAPE WARNING`, or `SIDE-CHANNEL FANOUT`,
+  redesign into a balanced 3x2 or 4x2 grid and collapse side-channel lines.
+- **Collapse side-channel fanout**: Observability, Security, CI/CD, audit, and
+  secrets should have ONE dashed cluster-level edge per concern, not one dashed
+  edge from every service to every monitoring/security node.
 - **Avoid label clashes**: do not let dense edge trunks cut through important
   labels such as candidate/consent/scores. Move the label with `taillabel`, split
   it, or reroute/shorten the edge.
@@ -334,8 +380,8 @@ arrows short and rarely crossing. Apply to Azure/GCP/OCI/IBM exactly as AWS.
   do NOT shrink fonts or compress; just get the BLOCK LAYOUT balanced.
 
 ## Hard rules
-- ALWAYS end the script with `g.render("out")` so `out.png` AND `out.dot` are
-  produced (the .dot + sidecar become the editable .drawio via `export_drawio`).
+- End diagram-only scripts with `g.render("out")`; end slide scripts with
+  `render_slide(g, "out", ...)`. Both must leave `out.png` AND `out.dot`.
 - ALWAYS set a title and a short subtitle on `Pretty(...)`.
 - Pick each node `kind` by MEANING (source/network/compute/data/messaging/
   monitoring/security/neutral) so the color carries information.
@@ -382,6 +428,10 @@ When calling `propose_blueprint`, your blueprint must be thorough enough for the
 drawer to render without guessing:
 - Default to a client-facing architecture diagram: `audience="client"`,
   `detail_level="architecture"`, `layout_intent="left_to_right_pipeline"`.
+- Set `presentation_style="slide"` when the user asks for production, xịn/xịn xò,
+  presentation, slide, or references an image/mockup style. Fill `slide_title`,
+  `slide_kicker`, `brand` (only if known), and `diagram_title`; otherwise use
+  `presentation_style="diagram"`.
 - Every important component as a node with its tier cluster.
 - Real edges with direction and concern (request, data, auth/dashed, etc.).
 - Nodes named to match real library classes or service names (e.g. "ALB", "ECS
@@ -505,6 +555,12 @@ _CRITIC_BODY = """\
   up, or across the full canvas instead of reading left-to-right/top-to-bottom.
 - File labels that float in blank space or visually point to no visible target.
 - File important labels that are cut through by multiple edge trunks.
+- File audit warnings `SPARSE CENTER`, `L-SHAPE WARNING`, or
+  `SIDE-CHANNEL FANOUT` as readability defects.
+- For `presentation_style=slide`, file missing slide hero/title, missing
+  `out.slide.json`, missing legend when >2 edge colors/styles are visible,
+  body diagram that is a cramped strip inside the slide, or top-level clusters
+  that are not visibly numbered.
 - For AWS client diagrams with public ingress plus private app/data resources,
   file a missing VPC/Public Subnet/Private Subnet boundary unless explicitly out
   of scope.
@@ -531,7 +587,9 @@ _CRITIC_BODY = """\
   strip (audit says TOO WIDE), overlapping labels, floating un-clustered nodes,
   floating labeled edges, label clashes, missing expected VPC/subnet boundary,
   unnatural primary-flow backtracking, per-file config fan-out, per-node metrics
-  fan-out, or client-facing code-level clutter.
+  fan-out, sparse center/L-shaped corner packing, excessive dashed side-channel
+  fanout, client-facing code-level clutter, or slide output missing hero/title,
+  legend, numbered sections, or slide marker.
 - `low` — a small misalignment or minor inconsistency with limited impact.
 Naming/color/taste preferences are NOT severities — they are not findings.
 

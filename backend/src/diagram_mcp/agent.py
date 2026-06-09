@@ -63,6 +63,7 @@ def _compact_tool_args(args: dict | None, *, limit: int = 260) -> str:
         if isinstance(bp, dict):
             safe["blueprint"] = {
                 "pattern": bp.get("pattern"),
+                "style": bp.get("presentation_style", "diagram"),
                 "nodes": len(bp.get("nodes") or []),
                 "clusters": len(bp.get("clusters") or []),
                 "edges": len(bp.get("edges") or []),

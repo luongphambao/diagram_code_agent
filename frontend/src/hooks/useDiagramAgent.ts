@@ -41,6 +41,11 @@ export interface Blueprint {
   audience?: string;
   detail_level?: string;
   layout_intent?: string;
+  presentation_style?: "slide" | "diagram";
+  slide_title?: string;
+  slide_kicker?: string;
+  brand?: string;
+  diagram_title?: string;
   pattern: string;
   pattern_rationale?: string;
   key_decisions?: string[];

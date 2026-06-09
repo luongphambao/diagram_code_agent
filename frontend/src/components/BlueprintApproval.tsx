@@ -40,6 +40,8 @@ export default function BlueprintApproval({ interrupt, onResolve, disabled = fal
     blueprint?.audience ? `Audience: ${blueprint.audience}` : null,
     blueprint?.detail_level ? `Detail: ${blueprint.detail_level}` : null,
     blueprint?.layout_intent ? `Layout: ${blueprint.layout_intent}` : null,
+    blueprint?.presentation_style ? `Style: ${blueprint.presentation_style}` : null,
+    blueprint?.brand ? `Brand: ${blueprint.brand}` : null,
   ].filter((m): m is string => Boolean(m));
   const patternClass = PATTERN_COLORS[pattern] ?? PATTERN_COLORS["hybrid"];
 

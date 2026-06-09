@@ -54,6 +54,44 @@ g.render("<workdir>/out")          # -> out.png  (LOOK at this)
 `Pretty.render("<workdir>/out")` writes `out.png`, `out.dot`, `out.nodes.json`.
 A bad ImportError/IMG path raises — read the traceback and fix it.
 
+## Slide-style production output
+For client-facing production asks ("production", "xịn", "xịn xò", "như ảnh
+mẫu", "presentation", "slide") or blueprints with `presentation_style="slide"`,
+use the slide wrapper instead of plain `g.render`. It keeps the body diagram
+auditable/editable and wraps it in a square presentation canvas with editable
+hero text, diagram caption, and legend.
+
+```python
+from prettygraph import Pretty, render_slide
+
+g = Pretty("Document Understanding System Architecture",
+           subtitle="end-to-end architecture", direction="LR",
+           icons_root=ICONS, node_width=270, node_height=52, theme="pro")
+g.cluster("data", "Data Preparation & Model Training", number=1, accent="green")
+g.cluster("registry", "Model Registry & Storage", number=2, accent="violet")
+# ...
+render_slide(
+    g, "out",
+    kicker="Dự án cuối khoá:",
+    title="AI Document Understanding System (End-to-end)",
+    brand=None,
+    diagram_title="DOCUMENT UNDERSTANDING SYSTEM ARCHITECTURE",
+    legend=[
+        {"label": "Data Flow", "color": "#334155"},
+        {"label": "Control Flow", "color": "#64748B", "style": "dashed"},
+    ],
+)
+```
+
+Slide-mode hard rules:
+- `theme="pro"` plus fixed `node_width` / `node_height`.
+- Every top-level cluster has `number=1`, `number=2`, ... and a clear stage label.
+- Include `legend` whenever >2 edge colors/styles appear.
+- Keep ≤5 primary columns; stack CI/CD, Security, Monitoring under adjacent
+  flow columns.
+- Still call `export_drawio()` after `render_diagram`; it will detect
+  `out.slide.json` and keep the slide `.drawio`.
+
 ## Node `kind` -> box color (use the right one for meaning)
 - `source` / `io` — clients, users, inputs (blue)
 - `network` — load balancers, gateways, VPC, DNS (purple)
@@ -133,6 +171,12 @@ flow in one direction, arrows are short and rarely cross.
    g.same_rank(["gemini", "cloud_logging"])     # Monitoring stacks under AI (col3)
    # now decision->secret, decision->logs, artifact->nextjs are all SHORT.
    ```
+3c. **No L-shaped layouts / vertical towers.** Never route the main flow along
+   the bottom and then stack later tiers in one tall right-side column. That
+   creates a huge blank center and a wall of edge labels. If the audit says
+   `SPARSE CENTER`, `L-SHAPE WARNING`, or `SIDE-CHANNEL FANOUT`, rebuild as a
+   balanced 3x2 or 4x2 grid: main flow across the top/middle row, Data/Security/
+   Observability/CI-CD in the row directly beneath the columns they serve.
 4. **Align within a tier:** `g.same_rank([...])` on a cluster's nodes → a neat row
    (LR) / column (TB), like centvra's Fargate grid.
 5. **Collapse replicas.** N identical things → ONE box "(xN)", or two reps with a
@@ -148,6 +192,8 @@ flow in one direction, arrows are short and rarely cross.
   the service or service cluster.
 - Never draw one metrics/logs edge per internal module. Draw one dashed edge from
   the processing service to `Observability` / `Monitoring`.
+- Never draw one security/secrets/audit edge per app node. Collapse it to one
+  dashed cluster-level concern edge (`ltail`/`lhead`) or one representative edge.
 - No labeled edge should cross more than half the canvas. If it would, move the
   concern cluster adjacent/stacked, use a cluster-level edge, or omit the label.
 - Never leave a labeled edge floating in blank space or visually pointing at no
