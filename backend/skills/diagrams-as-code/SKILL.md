@@ -80,6 +80,24 @@ with Diagram("Title", filename="/workspace/out", outformat=["png", "dot"],
 - Side-channels (monitoring, secrets) clutter the main flow — connect ONE
   representative node and use a dashed edge (optionally `constraint="false"`).
 
+## Graphviz limits and edit rules
+- Do not promise exact edge placement. `diagrams` delegates layout to Graphviz;
+  precise "route this edge above that cluster" control is fragile. Prefer moving
+  clusters adjacent, adding explicit anchor nodes, using short edges, `minlen`,
+  `constraint="false"` for side/back edges, or simplifying the path.
+- Avoid `Edge(xlabel=...)` for important labels; it can float away from the
+  visible arrow. Prefer short `label`, `taillabel`, or `headlabel`, and make the
+  edge shorter by changing layout.
+- Large repeated clusters/nodes have unstable ordering. Collapse replicas into
+  one node such as `Worker (x12)`, or show two representatives plus an ellipsis.
+- Use `node_attr` for node label defaults and `edge_attr` for edge label defaults.
+  Graph-level `fontsize` does not reliably control all node/edge labels.
+- To show unhealthy/degraded state, encode status with a red/dashed edge, a small
+  status/alert node, or a red alert side-channel. Built-in nodes are not good
+  targets for custom cross marks or per-node border overlays.
+- Before rendering, call `audit_diagram_code(code=...)` and fix high/medium
+  findings unless they are clearly irrelevant.
+
 ## Recipe for a clean diagram
 1. Pick `direction`. 2. Declare nodes as variables, grouped by `Cluster`.
 3. Connect with chained operators + lists so the code reads like the flow.

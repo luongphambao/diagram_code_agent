@@ -218,6 +218,22 @@ flow in one direction, arrows are short and rarely cross.
   include a visible VPC boundary with Public Subnet for edge/web ingress and
   Private Subnet for core services and data stores when it matches the design.
 
+### Raw `diagrams` pitfalls learned from real issue reports
+- Exact edge positioning is not a stable control surface. If an edge must appear
+  above/below a cluster, redesign the layout: move clusters adjacent, add anchor
+  nodes, shorten the edge, use `minlen`, or mark side/back edges
+  `constraint="false"` instead of relying on `xlabel` or manual coordinates.
+- Large cluster lists reorder unpredictably. Collapse replicas, use one
+  representative node with a count, or switch to prettygraph rows with
+  `same_rank` and invisible spine edges.
+- Global label sizing belongs in `node_attr` and `edge_attr` for raw diagrams.
+  Use per-edge `fontsize` only for exceptions.
+- For health/status overlays, encode state with red/dashed edges, alert nodes,
+  or status side-channels. Do not try to draw custom crosses or borders on
+  built-in nodes.
+- Call `audit_diagram_code(code=...)` before `render_diagram`; fix high/medium
+  findings before rendering unless the finding is clearly irrelevant.
+
 ## Pattern: AWS Multi-Account Production Focus
 Use this when requirements mention AWS Organizations, governance, security
 services, centralized monitoring, CI/CD, EKS/ECS, or multi-account production.
@@ -261,15 +277,16 @@ Simplification:
 3. For raw `diagrams` node imports, call `search_diagrams_nodes` first and use
    only returned import paths; use custom icons only when no built-in node fits.
 4. Write the complete `prettygraph` script.
-4. Call `render_diagram(code=<complete script>)` — the tool runs the script and
+5. Call `audit_diagram_code(code=<complete script>)` and fix high/medium findings.
+6. Call `render_diagram(code=<complete script>)` — the tool runs the script and
    returns the rendered PNG **plus a layout audit**. On error it returns the
    traceback — read and fix.
-5. **Read the LAYOUT AUDIT first** (objective check the eye misses): it reports the
+7. **Read the LAYOUT AUDIT first** (objective check the eye misses): it reports the
    page `aspect` ratio and any label-bearing edges that span too far and will
    STRAND. If it says TOO WIDE → fold cross-cutting tiers into stacked columns
    (rule 3b). If it lists strand-risk edges → move those endpoints into adjacent/
    stacked clusters. Never finalize with an unresolved audit warning.
-6. THEN LOOK at the PNG like a reviewer: title present? every box has its real icon
+8. THEN LOOK at the PNG like a reviewer: title present? every box has its real icon
    (no blanks)? clusters tinted & non-overlapping? edges labeled and not crossing?
    collapse applied? Fix the script and call `render_diagram` again (≤3).
 

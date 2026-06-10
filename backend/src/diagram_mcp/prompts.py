@@ -85,6 +85,9 @@ _DRAWER_TOOLS_BLOCK = """\
   before writing raw imports like `from diagrams.aws.database import RDS`.
 - `search_icons(query, provider=None)` — find exact icon `.png` paths for `Custom`.
 - `fetch_logo(name)` — resolve a brand logo NOT in the pack (path or NOT_FOUND).
+- `audit_diagram_code(code)` — static pre-render audit for known diagrams/
+  Graphviz pitfalls: missing output settings, floating `xlabel`, unstable large
+  clusters, over-specific positioning, and font defaults in the wrong attr bag.
 - Plus `read_file`, `ls`, `glob`, `grep` for reading skill references."""
 
 
@@ -125,6 +128,9 @@ _BEHAVIOR_RULES = """\
   icon path. Use `search_diagrams_nodes(...)` or `grep` on `nodes.md` for raw
   `diagrams` imports, and `resolve_icons(...)` / `search_icons(...)` for Custom
   icons before writing code. A wrong import crashes the render.
+- **Graphviz reality** — do not fight exact edge/node positions. The reliable
+  controls are declaration order, direction, short edges, anchors, same_rank,
+  invisible spine edges, minlen, node_attr/edge_attr, and simplification.
 - **Autonomy** — do not ask for permission mid-task. The only legitimate approval
   pauses are `propose_tech_stack`, `propose_blueprint`, and `finalize_diagram`.
 - **Memory** — use `edit_file("/memories/AGENTS.md")` (NEVER `write_file` — it
@@ -208,6 +214,8 @@ _PLAIN_DIAGRAM_DETAIL = """\
 ## Diagram detail (render-refine loop)
 - Call `render_diagram(code=<the COMPLETE script>)`. The script MUST do
   `Diagram(..., filename="out", outformat=["png","dot"], show=False, graph_attr=...)`.
+- Before rendering, call `audit_diagram_code(code=<the COMPLETE script>)` and fix
+  every high/medium finding unless it is demonstrably irrelevant to this script.
 - LOOK at the returned PNG critically: every node shows a real LOGO (no blank
   boxes); NO overlapping nodes/labels; arrows are orthogonal and DON'T cross or
   double back; no two arrows between the same pair; clusters aligned and labeled;
@@ -227,6 +235,8 @@ and nodes float unaligned. Enforce ALL of the following:
    `graph_attr={{"splines":"ortho", "nodesep":"0.60", "ranksep":"1.0",
    "pad":"0.5", "fontname":"Sans-Serif", "fontsize":"11", "compound":"true",
    "concentrate":"true"}}` (concentrate merges parallel edges → far less clutter).
+   Use `node_attr` for node-label defaults and `edge_attr` for edge-label
+   defaults; do not expect `graph_attr["fontsize"]` alone to size every label.
 3. **One edge per (source,target) pair. NEVER draw two arrows between the same
    two nodes**, and NEVER draw a return/back arrow that crosses the whole diagram.
    Keep the flow going ONE direction.
@@ -238,6 +248,13 @@ and nodes float unaligned. Enforce ALL of the following:
    Nest only when there's real containment.
 6. **Alignment**: declare nodes in flow order; collapse replicas to one
    `Node("name (xN)")`; avoid a single giant node dominating the canvas.
+- **Do not over-position edges.** `Edge(xlabel=...)`, manual `pos`/x/y hints, and
+  cluster-local `orientation` are fragile. Move clusters adjacent, add explicit
+  anchor nodes, use `minlen`, `constraint="false"` for non-ranking side loops,
+  or simplify the edge instead.
+- **Status overlays are not native.** For unhealthy/degraded components, show a
+  red/dashed edge, a small `Status: degraded` node, or a red alert side-channel
+  rather than trying to draw a cross/border on a built-in node.
 
 ## Hard rules
 - ALWAYS `Diagram(..., filename="out", outformat=["png","dot"], show=False,
@@ -334,6 +351,8 @@ _PRETTY_DIAGRAM_DETAIL = """\
   - diagram-only output: `g.render("out")`
   Both produce `out.png` + `out.dot` + `out.nodes.json`; slide output also
   produces editable `out.drawio` + `out.slide.json`.
+- Before rendering, call `audit_diagram_code(code=<the COMPLETE script>)` and fix
+  every high/medium finding unless it is demonstrably irrelevant to this script.
 - READ THE LAYOUT AUDIT in the tool result FIRST (it reports the page aspect ratio
   and any label-bearing edges that span far / will strand). It is the objective
   signal — if it says TOO WIDE or lists STRAND-RISK edges, you MUST fix and
@@ -437,6 +456,13 @@ arrows short and rarely crossing. Apply to Azure/GCP/OCI/IBM exactly as AWS.
 - Verify every resolved icon before writing code; never guess icon paths. For raw
   diagrams fallbacks, verify import paths too. Known correction: Argo CD is
   `from diagrams.onprem.gitops import ArgoCD`.
+- Use `node_attr`/`edge_attr` for global label defaults in raw `diagrams`
+  fallbacks; use explicit `fontsize` on individual `Edge(...)` only when needed.
+  Do not rely on graph-level `fontsize` to control all labels.
+- Avoid fragile manual positioning: `xlabel`, `pos`, cluster-local `orientation`,
+  and declaration-order hacks for large lists are last resorts. Prefer
+  same_rank/invisible spine edges, short adjacent clusters, anchors, collapsed
+  replicas, and one representative side-channel edge.
 - Pick each node `kind` by MEANING (source/network/compute/data/messaging/
   monitoring/security/neutral) so the color carries information.
 - Resolve every icon path with `search_icons("<service>", provider="<provider>")`
@@ -562,10 +588,12 @@ from a senior solutions architect and produce a production-quality diagram.
    custom icons. Use `search_icons` only for NOT_FOUND misses, and `fetch_logo`
    only after local icon search fails.
 5. Write or update the complete diagram script.
-6. Call `render_diagram(code=<complete script>)`, inspect the returned PNG,
+6. Call `audit_diagram_code(code=<complete script>)` and fix every high/medium
+   finding before rendering.
+7. Call `render_diagram(code=<complete script>)`, inspect the returned PNG,
    refine until clean (≤3 renders total).
-7. Call `export_drawio()`.
-8. **Return ONLY a short summary** — one paragraph, no images, no step-by-step
+8. Call `export_drawio()`.
+9. **Return ONLY a short summary** — one paragraph, no images, no step-by-step
    log: confirm `out.png` + `out.drawio` are ready and list the main icons used.
    Example: "Done. out.png + out.drawio ready. Icons: ALB, ECS, RDS Aurora,
    Cognito, CloudFront (all resolved)."

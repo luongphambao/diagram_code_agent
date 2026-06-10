@@ -91,6 +91,7 @@ _TOOL_LABELS = {
     "search_diagrams_nodes": "Searching built-in diagram nodes",
     "search_icons": "Searching the icon library",
     "fetch_logo": "Fetching a logo",
+    "audit_diagram_code": "Auditing diagram code",
     "inspect_diagram": "Reviewing the rendered diagram",
     "submit_critique": "Recording the diagram review",
     "finalize_diagram": "Finalizing the diagram",
@@ -110,6 +111,7 @@ _TOOL_TO_SUBAGENT: dict[str, str] = {
     "search_icons": "drawer",
     "resolve_icons": "drawer",
     "fetch_logo": "drawer",
+    "audit_diagram_code": "drawer",
     "render_diagram": "drawer",
     "export_drawio": "drawer",
     "inspect_diagram": "critic",
@@ -139,6 +141,9 @@ def _tool_detail(tool: str, args: dict | None, *, limit: int = 260) -> str:
         desc = " ".join(str(args.get("description") or args.get("instruction") or args.get("prompt") or "").split())
         return f"{sa}: {desc[:180]}{'...' if len(desc) > 180 else ''}"
     if tool == "render_diagram":
+        code = str(args.get("code") or "")
+        return f"diagram.py code={len(code)} chars"
+    if tool == "audit_diagram_code":
         code = str(args.get("code") or "")
         return f"diagram.py code={len(code)} chars"
     if tool == "search_icons":

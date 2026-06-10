@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -172,6 +173,120 @@ def _inspection_image_b64(png_path: Path) -> tuple[str, str]:
         return base64.standard_b64encode(buf.getvalue()).decode("ascii"), "image/jpeg"
     except Exception:  # noqa: BLE001 — never fail a render over the preview copy
         return base64.standard_b64encode(png_path.read_bytes()).decode("ascii"), "image/png"
+
+
+def _audit_add(findings: list[dict], severity: str, rule: str, detail: str, suggestion: str) -> None:
+    findings.append({
+        "severity": severity,
+        "rule": rule,
+        "detail": detail,
+        "suggestion": suggestion,
+    })
+
+
+@tool
+def audit_diagram_code(code: str) -> str:
+    """Statically audit a diagram script for known `diagrams`/Graphviz pitfalls.
+
+    Call this before `render_diagram` and after substantial edits. It does not
+    execute code or write files; it catches common layout traps such as missing
+    `out` render settings, over-specific edge positioning, unstable large
+    clusters, floating `xlabel`s, and global font settings in the wrong attr bag.
+    """
+    findings: list[dict] = []
+    raw_diagram = "Diagram(" in code
+    pretty = "Pretty(" in code or "render_slide(" in code
+
+    if raw_diagram:
+        if "filename=\"out\"" not in code and "filename='out'" not in code and "filename=\"/workspace/out\"" not in code and "filename='/workspace/out'" not in code:
+            _audit_add(
+                findings, "high", "output_filename",
+                "Raw Diagram(...) code does not visibly set filename=\"out\".",
+                "Use Diagram(..., filename=\"out\", outformat=[\"png\", \"dot\"], show=False).",
+            )
+        if "outformat" not in code:
+            _audit_add(
+                findings, "high", "output_format",
+                "Raw Diagram(...) code does not set outformat.",
+                "Set outformat=[\"png\", \"dot\"] so PNG and DOT are produced for draw.io export.",
+            )
+        if "show=False" not in code:
+            _audit_add(
+                findings, "medium", "show_false",
+                "Raw Diagram(...) code does not visibly set show=False.",
+                "Use show=False to avoid opening a viewer during automated rendering.",
+            )
+
+    if pretty and not re.search(r"\.render\(\s*[\"'](?:/workspace/)?out[\"']", code) and "render_slide(" not in code:
+        _audit_add(
+            findings, "high", "pretty_output",
+            "Pretty code does not visibly render to out.",
+            "End diagram-only scripts with g.render(\"out\") or slide scripts with render_slide(g, \"out\", ...).",
+        )
+
+    if re.search(r"graph_attr\s*=.*fontsize", code, re.DOTALL) and "edge_attr" not in code and "node_attr" not in code:
+        _audit_add(
+            findings, "medium", "font_defaults",
+            "fontsize appears only in graph_attr; that does not reliably size all node/edge labels.",
+            "Use node_attr for node label defaults, edge_attr for edge label defaults, or Edge(fontsize=...) for an explicit edge.",
+        )
+
+    if "xlabel=" in code:
+        _audit_add(
+            findings, "medium", "floating_xlabel",
+            "Edge(xlabel=...) can float in open space and detach visually from the arrow.",
+            "Prefer short Edge(label=...), taillabel/headlabel for endpoint labels, or move/stack clusters so the edge is short.",
+        )
+
+    if re.search(r"\b(pos|x|y)\s*=", code):
+        _audit_add(
+            findings, "medium", "manual_positioning",
+            "Manual pos/x/y-style positioning is present; Graphviz dot usually ignores fixed positions.",
+            "Control layout through direction, declaration order, same_rank, invisible spine edges, minlen, and simpler clusters.",
+        )
+
+    if re.search(r"Cluster\([^)]*graph_attr\s*=[^)]*orientation", code, re.DOTALL) or "orientation" in code:
+        _audit_add(
+            findings, "low", "cluster_orientation",
+            "Cluster orientation hints are present; cluster-local ordering is often not dependable in diagrams/Graphviz.",
+            "Use main graph direction, declaration order, same_rank/invisible edges, or collapse repeated nodes.",
+        )
+
+    for match in re.finditer(r"range\(([^)]*)\)", code):
+        nums = [int(n) for n in re.findall(r"\d+", match.group(1))]
+        if nums:
+            start = nums[0] if len(nums) > 1 else 0
+            stop = nums[1] if len(nums) > 1 else nums[0]
+            if abs(stop - start) >= 6:
+                _audit_add(
+                    findings, "medium", "large_replicas",
+                    f"Loop {match.group(0)} may create many similar nodes, which often produces unstable cluster ordering.",
+                    "Collapse replicas into one node labeled with the count, or show at most two representatives plus an ellipsis.",
+                )
+                break
+
+    edge_labels = re.findall(r"Edge\([^)]*label\s*=\s*[\"']([^\"']+)[\"']", code)
+    for label in edge_labels:
+        flat = " ".join(label.split())
+        if len(flat) > 28 or "\n" in label:
+            _audit_add(
+                findings, "low", "long_edge_label",
+                f"Long edge label detected: {flat[:60]}",
+                "Keep edge labels short, ideally 1-4 words; move detail into node sublabels or a legend.",
+            )
+            break
+
+    if re.search(r"unhealthy|not healthy|failed|down", code, re.IGNORECASE) and not re.search(r"color\s*=\s*[\"']#?(?:d|c|e|f|red)", code, re.IGNORECASE):
+        _audit_add(
+            findings, "low", "health_status",
+            "Health/status language appears without an obvious red/error visual encoding.",
+            "Show degraded status with a red/dashed edge, a small status node, or a red security/alert concern rather than trying to mutate built-in node borders.",
+        )
+
+    if not findings:
+        return json.dumps({"verdict": "PASS", "findings": []}, indent=2)
+    verdict = "REVISE" if any(f["severity"] in {"high", "medium"} for f in findings) else "PASS_WITH_NOTES"
+    return json.dumps({"verdict": verdict, "findings": findings}, indent=2)
 
 
 @tool
@@ -624,6 +739,7 @@ DIAGRAM_TOOLS = [
     propose_diagram_brief,
     propose_tech_stack,
     propose_blueprint,
+    audit_diagram_code,
     render_diagram,
     export_drawio,
     search_diagrams_nodes,
@@ -645,7 +761,7 @@ MAIN_TOOLS = [
 ]
 
 # Drawer subagent tools: everything needed for the render-refine loop.
-DRAWER_TOOLS = [search_diagrams_nodes, resolve_icons, search_icons, fetch_logo, render_diagram, export_drawio]
+DRAWER_TOOLS = [search_diagrams_nodes, resolve_icons, search_icons, fetch_logo, audit_diagram_code, render_diagram, export_drawio]
 
 # Critic subagent tools: read-only review of the rendered diagram.
 CRITIC_TOOLS = [inspect_diagram, submit_critique]
