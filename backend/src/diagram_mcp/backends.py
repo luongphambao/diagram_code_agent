@@ -34,6 +34,7 @@ SKILLS_DIR     = _BACKEND_ROOT / "skills"
 _RESOURCES     = _REPO_ROOT / "resources"
 LOCAL_ICONS    = str(_RESOURCES / "icons")
 LOCAL_MANIFEST = str(_RESOURCES / "icons_manifest.json")
+LOCAL_NODE_CATALOG = str(_RESOURCES / "node_catalog.json")
 
 # Virtual path prefix the agent uses to read/write persistent memory.
 MEMORY_PATH = "/memories/AGENTS.md"

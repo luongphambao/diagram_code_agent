@@ -25,10 +25,13 @@ from langchain_core.messages import ToolMessage
 from langchain_core.tools import InjectedToolCallId, tool
 from pydantic import BaseModel, ConfigDict, Field
 
-from .backends import LOCAL_ICONS, LOCAL_MANIFEST, WORKSPACE
+from .architecture_advisor import analyze_requirements
+from .backends import LOCAL_ICONS, LOCAL_MANIFEST, LOCAL_NODE_CATALOG, WORKSPACE
 from .findings import DiagramFinding, format_critique, prune
 
 # Stage markers written under WORKSPACE so the staged tools can enforce order.
+_ARCH_ANALYSIS_FILE = WORKSPACE / "architecture_analysis.json"
+_BRIEF_FILE = WORKSPACE / "diagram_brief.json"
 _TECHSTACK_FILE = WORKSPACE / "tech_stack.json"
 _BLUEPRINT_FILE = WORKSPACE / "blueprint.json"
 _CRITIQUE_FILE = WORKSPACE / "critique.json"
@@ -36,7 +39,7 @@ _CRITIQUE_FILE = WORKSPACE / "critique.json"
 
 def clear_stage_markers() -> None:
     """Reset the staged-flow markers at the start of a fresh run."""
-    for f in (_TECHSTACK_FILE, _BLUEPRINT_FILE, _CRITIQUE_FILE):
+    for f in (_ARCH_ANALYSIS_FILE, _BRIEF_FILE, _TECHSTACK_FILE, _BLUEPRINT_FILE, _CRITIQUE_FILE):
         if f.exists():
             f.unlink()
 
@@ -95,6 +98,59 @@ def _search_icon_hits(query: str, provider: Optional[str] = None, *, limit: int 
                     if len(hits) >= limit:
                         return hits
     return hits
+
+
+def _tokens(text: str) -> list[str]:
+    return [t for t in text.lower().replace("-", " ").replace("_", " ").split() if t]
+
+
+def _node_search_hits(query: str, provider: str = "", category: str = "", *, limit: int = 10) -> list[dict]:
+    try:
+        catalog = json.loads(Path(LOCAL_NODE_CATALOG).read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    terms = _tokens(query)
+    if not terms:
+        return []
+    provider_filter = provider.strip().lower()
+    category_filter = category.strip().lower()
+    scored: list[dict] = []
+    for prov, cats in catalog.items():
+        if provider_filter and provider_filter != str(prov).lower():
+            continue
+        if not isinstance(cats, dict):
+            continue
+        for cat, classes in cats.items():
+            if category_filter and category_filter != str(cat).lower():
+                continue
+            for class_name in classes or []:
+                hay = f"{prov} {cat} {class_name}".lower()
+                class_lower = str(class_name).lower()
+                if not all(term in hay for term in terms):
+                    continue
+                score = 0
+                query_flat = "".join(terms)
+                class_flat = class_lower.replace("_", "").replace("-", "")
+                if class_lower == query.lower():
+                    score += 100
+                elif class_flat == query_flat:
+                    score += 90
+                elif class_lower.startswith(query.lower()):
+                    score += 55
+                score += sum(10 for term in terms if term in class_lower)
+                if provider_filter and provider_filter == str(prov).lower():
+                    score += 8
+                if category_filter and category_filter == str(cat).lower():
+                    score += 5
+                scored.append({
+                    "provider": prov,
+                    "category": cat,
+                    "class_name": class_name,
+                    "import_path": f"diagrams.{prov}.{cat}.{class_name}",
+                    "score": score,
+                })
+    scored.sort(key=lambda item: (-item["score"], item["provider"], item["category"], item["class_name"]))
+    return scored[: max(1, min(limit, 50))]
 
 
 def _inspection_image_b64(png_path: Path) -> tuple[str, str]:
@@ -234,6 +290,18 @@ def search_icons(query: str, provider: Optional[str] = None) -> str:
     return "\n".join(hits)
 
 
+@tool
+def search_diagrams_nodes(query: str, provider: str = "", category: str = "", limit: int = 10) -> str:
+    """Search built-in `diagrams` node classes using the local node catalog.
+
+    Use this before writing raw `from diagrams.<provider>.<category> import X`
+    imports. It returns verified import paths from `resources/node_catalog.json`.
+    Use `resolve_icons` / `search_icons` only when no built-in node fits.
+    """
+    hits = _node_search_hits(query, provider, category, limit=limit)
+    return json.dumps(hits, indent=2)
+
+
 class IconRequest(BaseModel):
     """One planned icon lookup for batch resolution."""
     label: str = Field(description="visible node/component label")
@@ -292,11 +360,60 @@ def fetch_logo(name: str) -> str:
     return path or f"NOT_FOUND: no verified logo for '{name}'. Use a built-in node or search_icons()."
 
 
+@tool
+def analyze_architecture_requirements(requirements: str, provider_preference: str = "") -> str:
+    """Analyze architecture requirements into deterministic planning signals.
+
+    This is not a human-approval gate. Use it after reading the user prompt and
+    attached requirement docs, before `propose_diagram_brief`. It writes
+    `architecture_analysis.json` so the brief, tech stack, blueprint, and critic
+    can stay aligned on pattern, scale, security, provider, and scope signals.
+    """
+    analysis = analyze_requirements(requirements, provider_preference)
+    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    _ARCH_ANALYSIS_FILE.write_text(json.dumps(analysis, indent=2), encoding="utf-8")
+    return json.dumps(analysis, indent=2)
+
+
 # ---------------------------------------------------------------------------
 # Staged Human-in-the-loop tools (gated via interrupt_on in agent.py)
 # Each call PAUSES for human review before it executes; the structured args
 # become the card the frontend renders.
 # ---------------------------------------------------------------------------
+
+class DiagramBrief(BaseModel):
+    """Requirements-derived diagram brief used before tech stack and blueprint."""
+
+    objective: str = Field(description="one concise sentence describing what the diagram must communicate")
+    application_type: str = Field("", description="application type from architecture analysis, e.g. web_application|api_service|data_analytics")
+    scale_level: str = Field("", description="scale signal from architecture analysis: small|medium|large|enterprise")
+    security_level: str = Field("", description="security signal from architecture analysis: basic|standard|high|critical")
+    provider_preference: str = Field("", description="cloud/provider signal, e.g. aws|azure|gcp|oci|onprem")
+    analysis_signals: list[str] = Field(
+        default_factory=list,
+        description="short copied signals from architecture_analysis.json: capabilities, constraints, selected pattern hints",
+    )
+    stakeholders: list[str] = Field(
+        default_factory=list,
+        description="intended readers/reviewers, e.g. cloud/devops, security, developers, management",
+    )
+    functional_requirements: list[str] = Field(
+        default_factory=list,
+        description="architecture capabilities that must appear or be represented in the diagram",
+    )
+    non_functional_requirements: list[str] = Field(
+        default_factory=list,
+        description="quality constraints such as scalability, availability, security, governance, maintainability",
+    )
+    layout_constraints: list[str] = Field(
+        default_factory=list,
+        description="visual/layout constraints and simplification choices for the diagram",
+    )
+    assumptions: list[str] = Field(
+        default_factory=list,
+        description="explicit assumptions made when the prompt/docs do not fully specify details",
+    )
+
 
 class TechChoice(BaseModel):
     """One layer of the recommended technology stack."""
@@ -375,6 +492,23 @@ class Blueprint(BaseModel):
 
 
 @tool
+def propose_diagram_brief(brief: DiagramBrief) -> str:
+    """Record the diagram requirements brief before recommending a tech stack.
+
+    This is not a human-approval gate. Use it after reading the user's prompt and
+    any attached documents, before propose_tech_stack. It captures objective,
+    stakeholders, requirements, constraints, and assumptions so later blueprint
+    and rendering decisions stay grounded and simplification choices are explicit.
+    """
+    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    _BRIEF_FILE.write_text(brief.model_dump_json(indent=2), encoding="utf-8")
+    return (
+        "Diagram brief recorded. Next: propose the technology stack with "
+        "propose_tech_stack."
+    )
+
+
+@tool
 def propose_tech_stack(tech_stack: list[TechChoice]) -> str:
     """Propose the technology stack for the user to review and approve.
 
@@ -384,6 +518,8 @@ def propose_tech_stack(tech_stack: list[TechChoice]) -> str:
     search…). This PAUSES for human approval — only call it once you have
     analysed the requirements.
     """
+    if not _BRIEF_FILE.exists():
+        return "Create the diagram brief first by calling propose_diagram_brief."
     WORKSPACE.mkdir(parents=True, exist_ok=True)
     as_dict = {
         t.layer: {"choice": t.choice, "rationale": t.rationale, "alternatives": t.alternatives}
@@ -484,10 +620,13 @@ def finalize_diagram() -> str:
 
 
 DIAGRAM_TOOLS = [
+    analyze_architecture_requirements,
+    propose_diagram_brief,
     propose_tech_stack,
     propose_blueprint,
     render_diagram,
     export_drawio,
+    search_diagrams_nodes,
     search_icons,
     resolve_icons,
     fetch_logo,
@@ -497,10 +636,16 @@ DIAGRAM_TOOLS = [
 ]
 
 # Main agent tools: gate/planning only — no rendering or icon search.
-MAIN_TOOLS = [propose_tech_stack, propose_blueprint, finalize_diagram]
+MAIN_TOOLS = [
+    analyze_architecture_requirements,
+    propose_diagram_brief,
+    propose_tech_stack,
+    propose_blueprint,
+    finalize_diagram,
+]
 
 # Drawer subagent tools: everything needed for the render-refine loop.
-DRAWER_TOOLS = [resolve_icons, search_icons, fetch_logo, render_diagram, export_drawio]
+DRAWER_TOOLS = [search_diagrams_nodes, resolve_icons, search_icons, fetch_logo, render_diagram, export_drawio]
 
 # Critic subagent tools: read-only review of the rendered diagram.
 CRITIC_TOOLS = [inspect_diagram, submit_critique]

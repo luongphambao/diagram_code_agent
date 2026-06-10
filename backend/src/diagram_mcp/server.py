@@ -81,11 +81,14 @@ UPLOADS_DIR = AGENT_SPACE / "uploads"
 
 # Human-friendly labels for what the agent is doing (server log + UI activity).
 _TOOL_LABELS = {
+    "analyze_architecture_requirements": "Analyzing architecture requirements",
+    "propose_diagram_brief": "Preparing the diagram brief",
     "propose_tech_stack": "Proposing the technology stack",
     "propose_blueprint": "Designing the architecture blueprint",
     "render_diagram": "Rendering the diagram",
     "export_drawio": "Exporting the editable .drawio",
     "resolve_icons": "Resolving icon plan",
+    "search_diagrams_nodes": "Searching built-in diagram nodes",
     "search_icons": "Searching the icon library",
     "fetch_logo": "Fetching a logo",
     "inspect_diagram": "Reviewing the rendered diagram",
@@ -103,6 +106,7 @@ _TOOL_LABELS = {
 
 # Maps tool name → which subagent owns it (for activity attribution).
 _TOOL_TO_SUBAGENT: dict[str, str] = {
+    "search_diagrams_nodes": "drawer",
     "search_icons": "drawer",
     "resolve_icons": "drawer",
     "fetch_logo": "drawer",
@@ -140,6 +144,20 @@ def _tool_detail(tool: str, args: dict | None, *, limit: int = 260) -> str:
     if tool == "search_icons":
         provider = args.get("provider")
         return f"query={args.get('query', '')}" + (f", provider={provider}" if provider else "")
+    if tool == "search_diagrams_nodes":
+        provider = args.get("provider")
+        category = args.get("category")
+        bits = [f"query={args.get('query', '')}"]
+        if provider:
+            bits.append(f"provider={provider}")
+        if category:
+            bits.append(f"category={category}")
+        return ", ".join(bits)
+    if tool == "analyze_architecture_requirements":
+        req = " ".join(str(args.get("requirements", "")).split())
+        provider = args.get("provider_preference")
+        suffix = f", provider={provider}" if provider else ""
+        return f"requirements={req[:160]}{'...' if len(req) > 160 else ''}{suffix}"
     if tool == "resolve_icons":
         icons = args.get("icons") or []
         if isinstance(icons, list):
@@ -155,6 +173,15 @@ def _tool_detail(tool: str, args: dict | None, *, limit: int = 260) -> str:
                 f"style={bp.get('presentation_style', 'diagram')}, "
                 f"pattern={bp.get('pattern', '')}, nodes={len(bp.get('nodes') or [])}, "
                 f"clusters={len(bp.get('clusters') or [])}, edges={len(bp.get('edges') or [])}"
+            )
+    if tool == "propose_diagram_brief":
+        brief = args.get("brief") or {}
+        if isinstance(brief, dict):
+            return (
+                f"objective={str(brief.get('objective', ''))[:80]}, "
+                f"functional={len(brief.get('functional_requirements') or [])}, "
+                f"nonfunctional={len(brief.get('non_functional_requirements') or [])}, "
+                f"layout={len(brief.get('layout_constraints') or [])}"
             )
     if tool == "propose_tech_stack":
         stack = args.get("tech_stack") or []
@@ -504,6 +531,24 @@ def _artifacts() -> dict:
     return out
 
 
+def _stage_artifacts() -> dict:
+    """Read structured planning artifacts currently in the workspace."""
+    out: dict = {}
+    analysis = _read_json(WORKSPACE / "architecture_analysis.json")
+    brief = _read_json(WORKSPACE / "diagram_brief.json")
+    ts = _read_json(WORKSPACE / "tech_stack.json")
+    bp = _read_json(WORKSPACE / "blueprint.json")
+    if analysis:
+        out["architecture_analysis"] = analysis
+    if brief:
+        out["diagram_brief"] = brief
+    if ts:
+        out["tech_stack"] = ts
+    if bp:
+        out["blueprint"] = bp
+    return out
+
+
 def _sse(event: dict) -> str:
     return f"data: {json.dumps(event)}\n\n"
 
@@ -751,6 +796,8 @@ async def agui_endpoint(request: Request):
                 if card is not None:
                     logger.info("PAUSED at gate: %s", card["type"])
                     state_delta = [{"op": "replace", "path": "/current_step", "value": step}]
+                    for k, v in _stage_artifacts().items():
+                        state_delta.append({"op": "replace", "path": f"/{k}", "value": v})
                     for k, v in delta.items():
                         state_delta.append({"op": "replace", "path": f"/{k}", "value": v})
                     # At the final review gate the diagram is already rendered — send
@@ -766,7 +813,7 @@ async def agui_endpoint(request: Request):
                         request.app.state.pool,
                         thread_id=thread_id,
                         messages=messages,
-                        state={"current_step": step, **delta, **_artifacts()},
+                        state={"current_step": step, **_stage_artifacts(), **delta, **_artifacts()},
                         last_msg=_last_user_text(messages),
                         auto_name=(_last_user_text(messages) or "Untitled")[:50],
                     )
@@ -783,13 +830,8 @@ async def agui_endpoint(request: Request):
             if png.exists():
                 logger.info("run finished — diagram ready")
                 snapshot = {"current_step": "done", "summary": summary, "logs": logs}
+                snapshot.update(_stage_artifacts())
                 snapshot.update(_artifacts())
-                ts = _read_json(WORKSPACE / "tech_stack.json")
-                bp = _read_json(WORKSPACE / "blueprint.json")
-                if ts:
-                    snapshot["tech_stack"] = ts
-                if bp:
-                    snapshot["blueprint"] = bp
                 if all_delegations:
                     snapshot["delegations"] = all_delegations
                 _upsert_snap = snapshot
@@ -798,12 +840,7 @@ async def agui_endpoint(request: Request):
                 # Mid-flow turn (e.g. the agent asked a clarifying question). The
                 # chat text already carries it — just sync any structured state.
                 snap: dict = {"logs": logs}
-                ts = _read_json(WORKSPACE / "tech_stack.json")
-                bp = _read_json(WORKSPACE / "blueprint.json")
-                if ts:
-                    snap["tech_stack"] = ts
-                if bp:
-                    snap["blueprint"] = bp
+                snap.update(_stage_artifacts())
                 if all_delegations:
                     snap["delegations"] = all_delegations
                 _upsert_snap = snap

@@ -218,6 +218,38 @@ flow in one direction, arrows are short and rarely cross.
   include a visible VPC boundary with Public Subnet for edge/web ingress and
   Private Subnet for core services and data stores when it matches the design.
 
+## Pattern: AWS Multi-Account Production Focus
+Use this when requirements mention AWS Organizations, governance, security
+services, centralized monitoring, CI/CD, EKS/ECS, or multi-account production.
+The goal is a production-readable architecture, not a full org inventory.
+
+Layout:
+- Keep external actors outside account clusters: End Users, Admin/DevOps, GitHub,
+  third-party monitoring.
+- Put `Management Account` or `Security/Shared Services Account` in a separate
+  top/right-side block with Organizations/IAM Identity Center, CloudTrail,
+  GuardDuty/Security Hub, Config, CloudWatch, and Secrets Manager grouped by
+  capability.
+- Put `Production Account` on the main path. Inside it, use:
+  `Static Frontend Hosting` (CloudFront + S3), `VPC`, `Public Subnets`
+  (ALB/NAT/IGW), `Private Subnets` (EKS/ECS + VPC endpoints), and `Data`
+  (RDS/Aurora/PostgreSQL).
+- Put CI/CD as a side lane: GitHub/GitHub Actions -> registry -> deployment
+  controller such as ArgoCD -> compute cluster.
+- Put Monitoring/Security as side-channel clusters adjacent to the resources
+  they observe. Use one dashed/dotted representative edge per concern instead of
+  fanning out to every node.
+
+Simplification:
+- If Dev/Staging accounts exist but the brief is production-focused, collapse
+  them into one `Non-Production Accounts` summary box or omit them.
+- If a cluster needs external account-level links, create an explicit anchor
+  node inside it (`Account`, `VPC`, `Security Hub`, `Observability`) and connect
+  edges to that node. Do not connect to a cluster boundary as if it were a node.
+- Keep concern colors limited: user/API blue, CI/CD slate/brown, management teal,
+  security red/dotted, monitoring blue-gray/dashed. Edge labels stay under two
+  short lines.
+
 ## Workflow
 1. Plan tiers, clusters, the few typed edges.
 2. Make the exact icon plan with `icon_keyword`, then call `resolve_icons(icons=[...])`
@@ -226,7 +258,9 @@ flow in one direction, arrows are short and rarely cross.
    calling `search_icons`. Use `search_icons` only for misses (different keyword than
    what was tried). Call `fetch_logo` only if fallback local search also fails; fetch
    each missing brand logo at most once.
-3. Write the complete `prettygraph` script.
+3. For raw `diagrams` node imports, call `search_diagrams_nodes` first and use
+   only returned import paths; use custom icons only when no built-in node fits.
+4. Write the complete `prettygraph` script.
 4. Call `render_diagram(code=<complete script>)` — the tool runs the script and
    returns the rendered PNG **plus a layout audit**. On error it returns the
    traceback — read and fix.

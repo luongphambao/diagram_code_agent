@@ -37,6 +37,36 @@ export interface TechStackLayer {
   alternatives: string[];
 }
 
+export interface DiagramBrief {
+  objective: string;
+  application_type?: string;
+  scale_level?: string;
+  security_level?: string;
+  provider_preference?: string;
+  analysis_signals?: string[];
+  stakeholders?: string[];
+  functional_requirements?: string[];
+  non_functional_requirements?: string[];
+  layout_constraints?: string[];
+  assumptions?: string[];
+}
+
+export interface ArchitectureAnalysis {
+  application_type: string;
+  scale_level: string;
+  security_level: string;
+  provider_preference?: string;
+  detected_capabilities: string[];
+  constraints: string[];
+  suggested_patterns: Array<{
+    pattern: string;
+    fit: "high" | "medium" | "low";
+    score: number;
+    reasons: string[];
+  }>;
+  concerns: string[];
+}
+
 export interface Blueprint {
   audience?: string;
   detail_level?: string;
@@ -74,6 +104,8 @@ export interface AgentState {
   summary?: string;
   error?: string;
   logs?: LogEntry[];
+  architecture_analysis?: ArchitectureAnalysis;
+  diagram_brief?: DiagramBrief;
   tech_stack?: Record<string, TechStackLayer>;
   blueprint?: Blueprint;
   delegations?: Delegation[];
