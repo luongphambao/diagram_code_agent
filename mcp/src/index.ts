@@ -32,7 +32,6 @@ class XMLSerializerPolyfill {
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js"
-import { randomUUID } from "node:crypto"
 import open from "open"
 import { z } from "zod"
 import http from "node:http"
@@ -904,14 +903,16 @@ async function main() {
     await startHttpServer(config.port)
     log.info(`REST API available at http://localhost:${config.port}/api/rest/`)
 
-    // MCP Streamable HTTP transport — one stateful transport handles all sessions.
-    // Exposed at POST/GET /mcp for the Python backend (langchain-mcp-adapters).
-    const headlessMcp = makeHeadlessMcpServer()
-    const mcpHttpTransport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => randomUUID(),
+    // MCP Streamable HTTP — stateless mode, one fresh transport+server per request.
+    // langchain-mcp-adapters opens a new HTTP session for every get_tools() / tool
+    // call.  Stateful mode rejects the second initialize with 400; stateless mode
+    // requires a brand-new transport instance per request (SDK throws if reused).
+    registerRawHandler("/mcp", async (req, res) => {
+        const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
+        const srv = makeHeadlessMcpServer()
+        await srv.connect(transport)
+        await transport.handleRequest(req, res)
     })
-    await headlessMcp.connect(mcpHttpTransport)
-    registerRawHandler("/mcp", (req, res) => mcpHttpTransport.handleRequest(req, res))
     log.info(`MCP Streamable HTTP endpoint at http://localhost:${config.port}/mcp`)
 
     // Start MCP stdio transport (for Claude Desktop / Cursor).

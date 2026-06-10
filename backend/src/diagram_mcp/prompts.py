@@ -58,17 +58,20 @@ _MAIN_TOOLS_BLOCK = """\
 
 _DRAWER_TOOLS_BLOCK = """\
 ## Tools available
-- `render_diagram(code)` — write & RUN the full diagram script; returns the
-  rendered PNG for inspection PLUS a layout audit (page aspect ratio + any
-  label-bearing edges that span too far and will strand); on error returns the
-  traceback — fix and retry.
-- `export_drawio()` — convert `out.dot` → editable `out.drawio` (logos embedded);
-  slide renders already create `out.drawio`, so this confirms without overwriting.
-- `resolve_icons(icons)` — batch resolve a planned icon list in ONE call. Each
-  item is `{label, provider, icon_keyword}`. It writes `icon_plan.json`; use this
-  before fallback `search_icons`.
-- `search_icons(query, provider=None)` — find exact icon `.png` paths for `Custom`.
-- `fetch_logo(name)` — resolve a brand logo NOT in the pack (path or NOT_FOUND).
+- `resolve_drawio_stencil(provider, keyword)` — get the native draw.io stencil
+  style string for a cloud service icon. Returns the `style=...` value to paste
+  directly into an mxCell, or `NOT_FOUND: ...` if unavailable. Call this for
+  EVERY node before writing XML — never guess a style string.
+- `search_drawio_stencils(query, provider=None)` — fuzzy-search the stencil
+  catalog when `resolve_drawio_stencil` returns NOT_FOUND. Returns up to 10 matches.
+- `embed_logo(name)` — fetch a brand logo not in the stencil catalog. Returns
+  `data:image/png;base64,...` to use as `image=<result>` in an mxCell image style.
+  Returns NOT_FOUND if unavailable.
+- `render_xml_preview(xml)` — render the mxGraphModel XML via the draw.io MCP
+  service; writes `out.png` + `out_draft.xml` and returns the PNG for inspection.
+  Fix and re-call if layout is off (≤3 total).
+- `save_drawio(xml)` — validate + write `out.drawio` + re-render final `out.png`.
+  Call ONCE after the inspect loop confirms the diagram is clean.
 - Plus `read_file`, `ls`, `glob`, `grep` for reading skill references."""
 
 
@@ -86,17 +89,13 @@ _CONTEXT_RULES = """\
 
 _DRAWER_CONTEXT_RULES = """\
 ## Keep your context small (IMPORTANT)
-- If revising an existing diagram, read `diagram.py` and optionally
-  `icon_plan.json` / `out.nodes.json` directly. Do NOT list the root workspace
-  or search the filesystem to rediscover them.
-- Do NOT list or scan skill directories. Read only the named `SKILL.md` that is
-  relevant to the current style.
-- NEVER `read_file` a large reference file in full. The skill's `reference/*.md`
-  (esp. `nodes.md`) and the icon manifest are thousands of lines — use `grep` to
-  find ONLY the specific class/name you need (e.g. `grep "Fargate" …nodes.md`).
-- To find icons use `resolve_icons` once for the planned list, then `search_icons`
-  only for misses — do NOT `read_file` the icon manifest.
-- Read a whole file only when it is small (a SKILL.md, your own `diagram.py`)."""
+- If revising an existing diagram, read `out_draft.xml` directly to see the current
+  XML. Do NOT list the workspace root or search the filesystem to rediscover it.
+- Do NOT list or scan skill directories. Read only the `drawio-xml` SKILL.md.
+- Read the SKILL.md once at the start — do NOT re-read it every turn.
+- When resolving stencils, call `resolve_drawio_stencil` — do NOT guess style strings.
+- For logos, call `embed_logo` — do NOT `read_file` the icon manifest.
+- Read a whole file only when it is small (`SKILL.md`, `out_draft.xml`)."""
 
 
 _BEHAVIOR_RULES = """\
@@ -159,9 +158,9 @@ You design the solution step by step; the user reviews and approves each stage.
    - `VERDICT: PASS` → proceed to finalize.
    - `VERDICT: REVISE` → forward the listed findings to the drawer via another
      `task(subagent_type="drawer", ...)` to fix them, then re-run the critic.
-     The revision task MUST say: read and edit the existing `diagram.py`, reuse
-     `icon_plan.json` / `out.nodes.json` icon paths, do not re-search icons unless
-     a new node has no existing icon, and do not redesign from scratch. Repeat at
+     The revision task MUST say: read `out_draft.xml` first and make the smallest
+     fix — do not redesign from scratch; reuse stencil styles already in the XML;
+     only call `resolve_drawio_stencil` again if adding a brand-new node. Repeat at
      most TWICE; if findings remain after that, proceed to finalize anyway and
      mention the residual findings to the user.
 6. **Finalize.** Call `finalize_diagram()` and WAIT for the final review. If the
@@ -182,7 +181,8 @@ _PLAIN_DIAGRAM_DETAIL = """\
   double back; no two arrows between the same pair; clusters aligned and labeled;
   edge colors consistent by concern.
 - Fix and call `render_diagram` again until production-clean (≤3 renders), then
-  call `export_drawio()`.
+  call `export_drawio()`, then call `validate_drawio_output()` to confirm the
+  exported XML is structurally valid via the MCP service.
 
 ## Professional style guide
 A diagram looks amateur when edges curve and cross, arrows go back-and-forth,
@@ -299,7 +299,8 @@ _PRETTY_DIAGRAM_DETAIL = """\
   12-18 visible nodes is the usual upper bound, implementation libraries/file
   names are hidden, and config/monitoring/calibration are aggregated concerns.
 - Fix and call `render_diagram` again until production-clean (≤3 renders), then
-  call `export_drawio()`.
+  call `export_drawio()`, then call `validate_drawio_output()` to confirm the
+  exported XML is structurally valid via the MCP service.
 
 ## Slide-style production output (default for client-facing production asks)
 Use slide output when the approved blueprint has `presentation_style="slide"` or
@@ -454,73 +455,62 @@ def build_drawer_prompt(
     manifest: str = "/icons_manifest.json",
     style: str = "pretty",
 ) -> str:
-    """System prompt for the drawer subagent (owns rendering, icon search, export)."""
-    if style == "pretty":
-        env_note = (
-            f"`prettygraph` is importable as `from prettygraph import Pretty` "
-            f"inside the diagram script (already on the path).\n"
-            f"`graphviz` (`dot`) + icon pack at `{icons_root}` "
-            f"(indexed by `{manifest}`, structured `<provider>/<category>/<name>.png`)."
-        )
-        skill_note = (
-            "Read the **`pro-style`** skill FIRST — it documents the `prettygraph` "
-            "API, color palette, and layout discipline. Use **`diagrams-as-code`** "
-            "`reference/nodes.md` and `reference/cloud_services.md` ONLY to discover "
-            "icon class names (grep for the specific name you need)."
-        )
-        diagram_detail = _PRETTY_DIAGRAM_DETAIL
-    else:
-        env_note = (
-            f"`graphviz` + `diagrams` (mingrammer) are installed. "
-            f"Icon pack at `{icons_root}` (indexed by `{manifest}`)."
-        )
-        skill_note = (
-            "Consult the **`diagrams-as-code`** skill: `reference/nodes.md` for "
-            "EXACT importable class names (NEVER guess an import — wrong imports "
-            "crash the render), `reference/cloud_services.md` for non-AWS clouds, "
-            "and `reference/patterns.md` for idiomatic layout patterns."
-        )
-        diagram_detail = _PLAIN_DIAGRAM_DETAIL
-
+    """System prompt for the drawer subagent (owns XML generation, MCP render, export)."""
     return f"""\
 You are a diagram renderer subagent. You receive a complete architecture spec
-from a senior solutions architect and produce a production-quality diagram.
+from a senior solutions architect and produce a production-quality draw.io diagram
+by generating mxGraphModel XML and rendering it via the MCP draw.io service.
 
 ## Your job (execute in order)
-1. Read the relevant skill(s) to understand the API and icon rules.
-2. If this is a critic revision and `diagram.py` already exists, read the existing
-   script first and make the smallest layout/content fix requested. Reuse icon
-   paths already present in `diagram.py`, `icon_plan.json`, or `out.nodes.json`.
-   Do NOT search icons again unless you add a brand-new visible node with no icon.
-3. For an initial render, make one exact icon plan and call `resolve_icons(...)`
-   once for all required custom icons. Use `search_icons` only for NOT_FOUND
-   misses, and `fetch_logo` only after local icon search fails.
-4. Write or update the complete diagram script.
-5. Call `render_diagram(code=<complete script>)`, inspect the returned PNG,
-   refine until clean (≤3 renders total).
-6. Call `export_drawio()`.
-7. **Return ONLY a short summary** — one paragraph, no images, no step-by-step
-   log: confirm `out.png` + `out.drawio` are ready and list the main icons used.
-   Example: "Done. out.png + out.drawio ready. Icons: ALB, ECS, RDS Aurora,
-   Cognito, CloudFront (all resolved)."
+1. Read the **`drawio-xml`** SKILL.md to understand the XML format and grid layout.
+   If this is a critic revision and `out_draft.xml` already exists, read it first
+   and make the smallest fix requested — do not redesign from scratch.
+2. Resolve stencils: call `resolve_drawio_stencil(provider, keyword)` for EACH
+   node in the blueprint. Plan all nodes first, then call the tool per service.
+   For NOT_FOUND results, try `search_drawio_stencils(query, provider)`.
+   For still-missing logos, call `embed_logo(name)` to get a base64 data URI.
+3. Generate the complete mxGraphModel XML using the stencil style strings and
+   the grid recipe from the skill. Compute x/y coordinates explicitly.
+4. Call `render_xml_preview(xml)` with the complete XML. Inspect the returned PNG.
+   Fix positions or wrong stencil styles and re-call if needed (≤3 renders total).
+5. Call `save_drawio(xml)` with the final XML to validate, write `out.drawio`,
+   and update `out.png`.
+6. **Return ONLY a short summary** — one paragraph, no images, no step-by-step log:
+   confirm `out.png` + `out.drawio` are ready and list the main stencils/logos used.
+   Example: "Done. out.png + out.drawio ready. Stencils: ALB, ECS, RDS, Cognito.
+   Logo (embed_logo): Datadog."
 
 ## Environment
-{env_note}
+The draw.io MCP service is available at the configured MCP_URL. You generate
+mxGraphModel XML directly and render it via the MCP tools. There is NO Python
+`diagrams` library. There is NO Graphviz. Layout is MANUAL — use the grid recipe
+in the `drawio-xml` skill.
 
 ## Shared memory
 You receive the shared memory file `/memories/AGENTS.md` in context. Use it as
-read-only guidance for learned icon paths, exact import names, and style
-preferences before calling filesystem/icon tools. Do NOT edit memory from the
-drawer; the main architect owns durable memory writes.
+read-only guidance for known stencil/style preferences before calling tools.
+Do NOT edit memory from the drawer; the main architect owns durable memory writes.
 
 ## Skills (IMPORTANT — use these, do NOT read raw reference files in full)
-{skill_note}
+Read the **`drawio-xml`** skill FIRST — it documents the mxCell format, stencil
+style parsing, logo embedding, and the grid layout recipe.
+Use **`pro-style`** for tier cluster names and color palette (they carry over to
+draw.io XML swimlane colors and edge stroke colors).
 
 {_DRAWER_TOOLS_BLOCK}
 
 {_DRAWER_CONTEXT_RULES}
 
-{diagram_detail}
+## Diagram quality checklist (verify before calling save_drawio)
+- Every node shows its real icon (stencil or embedded logo). No blank boxes.
+- No nodes overlap (check coordinates against the grid recipe).
+- One edge per (source, target) pair — no duplicate arrows.
+- Edges flow in one direction (left-to-right or top-to-bottom). No back-arrows
+  crossing the whole canvas.
+- Edge labels are ≤ 3 words and 10px font.
+- Every node sits inside a container (swimlane) — no floating nodes.
+- Container geometry is large enough to contain all its children.
+- IDs are unique across the entire document.
 """
 
 

@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .backends import LOCAL_ICONS, LOCAL_MANIFEST, WORKSPACE
 from .findings import DiagramFinding, format_critique, prune
+from .quality_logger import get_current_run
 
 # Stage markers written under WORKSPACE so the staged tools can enforce order.
 _TECHSTACK_FILE = WORKSPACE / "tech_stack.json"
@@ -148,6 +149,9 @@ def render_diagram(
             p.unlink()
     (WORKSPACE / "diagram.py").write_text(code, encoding="utf-8")
 
+    _qrun = get_current_run()
+    _attempt = len(_qrun._renders) + 1 if _qrun else 1
+
     try:
         proc = subprocess.run(
             [sys.executable, "diagram.py"],
@@ -157,8 +161,11 @@ def render_diagram(
             timeout=RENDER_TIMEOUT_S,
         )
     except subprocess.TimeoutExpired:
+        err_msg = f"Render TIMED OUT after {RENDER_TIMEOUT_S}s. Simplify the diagram or fix infinite work."
+        if _qrun:
+            _qrun.render_attempt(_attempt, success=False, error="TIMEOUT")
         return ToolMessage(
-            content=f"Render TIMED OUT after {RENDER_TIMEOUT_S}s. Simplify the diagram or fix infinite work.",
+            content=err_msg,
             name="render_diagram",
             tool_call_id=tool_call_id,
             status="error",
@@ -167,6 +174,8 @@ def render_diagram(
     png = WORKSPACE / "out.png"
     if proc.returncode != 0 or not png.exists():
         err = (proc.stderr or proc.stdout or "").strip()
+        if _qrun:
+            _qrun.render_attempt(_attempt, success=False, error=err[-400:])
         return ToolMessage(
             content=f"Render FAILED (exit {proc.returncode}). Fix the code and retry.\n\n{err[-3000:]}",
             name="render_diagram",
@@ -174,6 +183,8 @@ def render_diagram(
             status="error",
         )
 
+    if _qrun:
+        _qrun.render_attempt(_attempt, success=True)
     b64, mime = _inspection_image_b64(png)
     audit = _layout_audit()
     text = "Rendered out.png successfully. Inspect it and refine if the layout is not clean."
@@ -206,6 +217,9 @@ def export_drawio() -> str:
         return f"Slide drawio already ready ({out.stat().st_size} bytes); not overwriting."
     if not dot.exists():
         return "No out.dot found — call render_diagram first."
+    _qrun = get_current_run()
+    if _qrun:
+        _qrun.mcp_not_used("export_drawio")
     try:
         if sidecar.exists():
             from .prettygraph import dot_to_drawio
@@ -218,6 +232,47 @@ def export_drawio() -> str:
     if not out.exists():
         return "export_drawio produced no file."
     return f"Wrote out.drawio ({out.stat().st_size} bytes)."
+
+
+@tool
+async def validate_drawio_output() -> str:
+    """Validate the exported out.drawio XML via the draw.io MCP service.
+
+    Call this AFTER export_drawio() succeeds. The MCP service checks the XML
+    for structural errors and returns a validation report. Requires the MCP
+    server to be running (MCP_URL env var, default http://localhost:6002/mcp).
+    If the server is unreachable the tool degrades gracefully and returns a
+    warning — do NOT block the workflow on MCP unavailability.
+    """
+    out = WORKSPACE / "out.drawio"
+    if not out.exists():
+        return "No out.drawio found — call export_drawio first."
+    xml = out.read_text(encoding="utf-8", errors="replace")
+    _qrun = get_current_run()
+    try:
+        from .mcp_client import mcp_tools
+        async with mcp_tools() as tools:
+            validator = next((t for t in tools if "validate" in t.name.lower()), None)
+            if validator is None:
+                tool_names = [t.name for t in tools]
+                if _qrun:
+                    _qrun.mark_mcp_used(tool_names)
+                return (
+                    f"MCP connected (tools: {tool_names}) but no validate_drawio tool found. "
+                    "Skipping validation."
+                )
+            result = await validator.ainvoke({"xml": xml})
+            result_text = str(result)
+            if _qrun:
+                _qrun.mark_mcp_used([validator.name])
+            return f"MCP validation result:\n{result_text}"
+    except Exception as exc:
+        if _qrun:
+            _qrun.mcp_not_used("validate_drawio_output")
+        return (
+            f"MCP server unavailable ({exc.__class__.__name__}: {exc}) — "
+            "skipping validation. The drawio file was produced by the local converter."
+        )
 
 
 @tool
@@ -290,6 +345,210 @@ def fetch_logo(name: str) -> str:
     except Exception as exc:  # noqa: BLE001
         return f"NOT_FOUND: fetch_logo error: {exc}"
     return path or f"NOT_FOUND: no verified logo for '{name}'. Use a built-in node or search_icons()."
+
+
+# ---------------------------------------------------------------------------
+# MCP-based draw.io XML tools (new flow: generate XML → MCP render → out.drawio)
+# ---------------------------------------------------------------------------
+
+@tool
+async def resolve_drawio_stencil(provider: str, keyword: str) -> str:
+    """Resolve a native draw.io stencil style string for a cloud service icon.
+
+    Returns the style string (e.g. 'shape=mxgraph.aws4.resourceIcon;resIcon=...')
+    ready to paste into an mxCell style attribute, or 'NOT_FOUND: ...' if unavailable.
+    provider: 'aws'|'azure'|'gcp'|'k8s'|'alibabacloud'|'ibm'|'network'|'cisco'
+    keyword: short service name, e.g. 'ecs', 'load balancer', 'sql database'.
+    """
+    try:
+        from .mcp_client import mcp_tools
+        async with mcp_tools() as tools:
+            t = next((x for x in tools if "resolve_stencil" in x.name.lower()), None)
+            if t is None:
+                return "NOT_FOUND: resolve_stencil tool unavailable on MCP server"
+            result = str(await t.ainvoke({"provider": provider, "keyword": keyword}))
+            for line in result.splitlines():
+                if line.strip().startswith("style:"):
+                    return line.split("style:", 1)[1].strip()
+            if "no stencil found" in result.lower() or "not found" in result.lower():
+                return f"NOT_FOUND: {result[:120]}"
+            return result
+    except Exception as exc:
+        return f"NOT_FOUND: MCP unavailable ({exc.__class__.__name__}: {exc})"
+
+
+@tool
+async def search_drawio_stencils(query: str, provider: Optional[str] = None) -> str:
+    """Fuzzy-search the stencil catalog for draw.io icon style strings.
+
+    Use when resolve_drawio_stencil returns NOT_FOUND, or to discover available
+    stencil names for a service area. Returns up to 10 matches.
+    provider optionally restricts: 'aws', 'azure', 'gcp', 'k8s', etc.
+    """
+    try:
+        from .mcp_client import mcp_tools
+        async with mcp_tools() as tools:
+            t = next((x for x in tools if "search_stencils" in x.name.lower()), None)
+            if t is None:
+                return "search_stencils tool unavailable on MCP server"
+            args: dict = {"query": query, "limit": 10}
+            if provider:
+                args["provider"] = provider
+            return str(await t.ainvoke(args))
+    except Exception as exc:
+        return f"MCP unavailable ({exc.__class__.__name__}: {exc})"
+
+
+@tool
+def embed_logo(name: str) -> str:
+    """Fetch a brand logo and return it as a data URI for embedding in draw.io XML.
+
+    Use for logos NOT in the stencil catalog (resolve_drawio_stencil returned NOT_FOUND).
+    Returns 'data:image/png;base64,<b64>' — paste this directly into the mxCell style:
+        style='shape=image;image=data:image/png;base64,<b64>;verticalLabelPosition=bottom;...'
+    Returns NOT_FOUND if no logo is available.
+    """
+    try:
+        from .logo_fetch import get_logo
+        path = get_logo(name, LOCAL_ICONS, str(WORKSPACE))
+    except Exception as exc:
+        return f"NOT_FOUND: {exc}"
+    if not path or path.startswith("NOT_FOUND"):
+        return f"NOT_FOUND: no verified logo for '{name}'"
+    b64 = base64.standard_b64encode(Path(path).read_bytes()).decode("ascii")
+    return f"data:image/png;base64,{b64}"
+
+
+@tool
+async def render_xml_preview(
+    xml: str,
+    tool_call_id: Annotated[str, InjectedToolCallId],
+) -> ToolMessage:
+    """Render mxGraphModel XML to PNG via the draw.io MCP service.
+
+    Pass the COMPLETE mxGraphModel XML string. Writes out.png and out_draft.xml,
+    then returns the PNG for inspection. Fix and re-call if layout is off (≤3 total).
+    Call save_drawio(xml) once the diagram looks good — do NOT call it every render.
+    """
+    if not _BLUEPRINT_FILE.exists():
+        return ToolMessage(
+            content="Get the architecture approved first: call propose_tech_stack, "
+                    "then propose_blueprint, before rendering.",
+            name="render_xml_preview",
+            tool_call_id=tool_call_id,
+            status="error",
+        )
+    _qrun = get_current_run()
+    _attempt = len(_qrun._renders) + 1 if _qrun else 1
+    WORKSPACE.mkdir(parents=True, exist_ok=True)
+
+    try:
+        from .mcp_client import mcp_tools
+        async with mcp_tools() as tools:
+            renderer = next((x for x in tools if "render_drawio_png" in x.name.lower()), None)
+            if renderer is None:
+                if _qrun:
+                    _qrun.render_attempt(_attempt, success=False, error="render_drawio_png tool not found")
+                return ToolMessage(
+                    content="render_drawio_png MCP tool not available.",
+                    name="render_xml_preview",
+                    tool_call_id=tool_call_id,
+                    status="error",
+                )
+            result = str(await renderer.ainvoke({"xml": xml}))
+
+        marker = "base64: data:image/png;base64,"
+        if marker not in result:
+            if _qrun:
+                _qrun.render_attempt(_attempt, success=False, error=result[:200])
+            return ToolMessage(
+                content=f"Render FAILED:\n{result[:3000]}",
+                name="render_xml_preview",
+                tool_call_id=tool_call_id,
+                status="error",
+            )
+
+        b64_data = result.split(marker, 1)[1].strip()
+        png_bytes = base64.b64decode(b64_data)
+        (WORKSPACE / "out.png").write_bytes(png_bytes)
+        (WORKSPACE / "out_draft.xml").write_text(xml, encoding="utf-8")
+
+        if _qrun:
+            _qrun.render_attempt(_attempt, success=True)
+
+        b64_inspect, mime = _inspection_image_b64(WORKSPACE / "out.png")
+        return ToolMessage(
+            content_blocks=[
+                {"type": "text", "text": (
+                    "Rendered out.png successfully. Inspect the image. "
+                    "Refine the XML and call render_xml_preview again if needed (≤3 total), "
+                    "then call save_drawio(xml) to finalize."
+                )},
+                {"type": "image", "base64": b64_inspect, "mime_type": mime},
+            ],
+            name="render_xml_preview",
+            tool_call_id=tool_call_id,
+            status="success",
+        )
+    except Exception as exc:
+        if _qrun:
+            _qrun.render_attempt(_attempt, success=False, error=str(exc)[:200])
+        return ToolMessage(
+            content=f"Render FAILED ({exc.__class__.__name__}): {exc}",
+            name="render_xml_preview",
+            tool_call_id=tool_call_id,
+            status="error",
+        )
+
+
+@tool
+async def save_drawio(xml: str) -> str:
+    """Validate and save the final mxGraphModel XML as out.drawio + final out.png.
+
+    Call this ONCE after render_xml_preview confirms the diagram looks good.
+    Validates XML via MCP (auto-fixes minor issues), writes out.drawio, and
+    re-renders out.png from the validated XML. Degrades gracefully if MCP is down.
+    """
+    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    _qrun = get_current_run()
+    final_xml = xml
+
+    try:
+        from .mcp_client import mcp_tools
+        async with mcp_tools() as tools:
+            validator = next((x for x in tools if "validate_drawio" in x.name.lower()), None)
+            fix_report = "OK"
+            if validator:
+                val_text = str(await validator.ainvoke({"xml": xml}))
+                if _qrun:
+                    _qrun.mark_mcp_used([validator.name])
+                if "Fixed XML:" in val_text:
+                    final_xml = val_text.split("Fixed XML:", 1)[1].strip()
+                    fix_report = val_text.split("Fixed XML:")[0].strip() or "auto-fixed"
+                else:
+                    fix_report = val_text.split("\n")[0][:80]
+
+            (WORKSPACE / "out.drawio").write_text(final_xml, encoding="utf-8")
+
+            renderer = next((x for x in tools if "render_drawio_png" in x.name.lower()), None)
+            if renderer:
+                render_text = str(await renderer.ainvoke({"xml": final_xml}))
+                marker = "base64: data:image/png;base64,"
+                if marker in render_text:
+                    (WORKSPACE / "out.png").write_bytes(
+                        base64.b64decode(render_text.split(marker, 1)[1].strip())
+                    )
+
+        size = (WORKSPACE / "out.drawio").stat().st_size
+        return f"Saved out.drawio ({size} bytes) and updated out.png.\nValidation: {fix_report}"
+
+    except Exception as exc:
+        (WORKSPACE / "out.drawio").write_text(final_xml, encoding="utf-8")
+        size = (WORKSPACE / "out.drawio").stat().st_size
+        return (
+            f"MCP unavailable ({exc.__class__.__name__}: {exc}) — "
+            f"wrote out.drawio ({size} bytes) without validation."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -439,6 +698,9 @@ def inspect_diagram(tool_call_id: Annotated[str, InjectedToolCallId]) -> ToolMes
         )
     b64, mime = _inspection_image_b64(png)
     audit = _layout_audit()
+    _qrun = get_current_run()
+    if _qrun:
+        _qrun.inspect_called(audit)
     text = "Here is the rendered diagram to review."
     if audit:
         text += "\n\nObjective layout audit (read this FIRST):\n" + audit
@@ -468,7 +730,11 @@ def submit_critique(findings: list[DiagramFinding]) -> str:
     _CRITIQUE_FILE.write_text(
         json.dumps([f.model_dump() for f in kept], indent=2), encoding="utf-8"
     )
-    return format_critique(findings)
+    result = format_critique(findings)
+    _qrun = get_current_run()
+    if _qrun:
+        _qrun.critique_submitted(findings, result)
+    return result
 
 
 @tool
@@ -486,11 +752,11 @@ def finalize_diagram() -> str:
 DIAGRAM_TOOLS = [
     propose_tech_stack,
     propose_blueprint,
-    render_diagram,
-    export_drawio,
-    search_icons,
-    resolve_icons,
-    fetch_logo,
+    resolve_drawio_stencil,
+    search_drawio_stencils,
+    embed_logo,
+    render_xml_preview,
+    save_drawio,
     inspect_diagram,
     submit_critique,
     finalize_diagram,
@@ -499,8 +765,9 @@ DIAGRAM_TOOLS = [
 # Main agent tools: gate/planning only — no rendering or icon search.
 MAIN_TOOLS = [propose_tech_stack, propose_blueprint, finalize_diagram]
 
-# Drawer subagent tools: everything needed for the render-refine loop.
-DRAWER_TOOLS = [resolve_icons, search_icons, fetch_logo, render_diagram, export_drawio]
+# Drawer subagent tools: MCP-based XML generation flow.
+DRAWER_TOOLS = [resolve_drawio_stencil, search_drawio_stencils, embed_logo,
+                render_xml_preview, save_drawio]
 
 # Critic subagent tools: read-only review of the rendered diagram.
 CRITIC_TOOLS = [inspect_diagram, submit_critique]

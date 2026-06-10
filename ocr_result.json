@@ -1,0 +1,422 @@
+{
+	"templates_data": [
+		{
+			"template": "SET1_CG01_CTVO01-Custom-T2207|CG01_CTVO01-AIG-TableVision-Invoice (General)fixPONo",
+			"templateId": "2207",
+			"data": {
+				"fields": [
+					{
+						"k": "Seller",
+						"v": "QINHUANGDAO LIHUA STARCH CO., LTD.",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.8999999999999999,
+						"page_number": 1
+					},
+					{
+						"k": "Seller Address",
+						"v": "NO.89 LIHUA STREET, FUNING DISTRICT, QINHUANGDAO CITY, HEBEI PROVINCE, CHINA",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.8999999999999999,
+						"page_number": 1
+					},
+					{
+						"k": "Exporter",
+						"v": "QINHUANGDAO LIHUA STARCH CO., LTD.",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.8999999999999999,
+						"page_number": 1
+					},
+					{
+						"k": "Exporter Address",
+						"v": "NO.89 LIHUA STREET, FUNING DISTRICT, QINHUANGDAO CITY, HEBEI PROVINCE, CHINA",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.8999999999999999,
+						"page_number": 1
+					},
+					{
+						"k": "Shipper",
+						"v": "",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.51,
+						"page_number": 1
+					},
+					{
+						"k": "Shipper Address",
+						"v": "",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.51,
+						"page_number": 1
+					},
+					{
+						"k": "Buyer",
+						"v": "ASIA CHEMICAL CORPORATION",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.88,
+						"page_number": 1
+					},
+					{
+						"k": "Buyer Address",
+						"v": "LOT K4B, LE MINH XUAN INDUSTRIAL ZONE, ROAD NO.4, BINH LOI COMMUNE, HO CHI MINH CITY, VIETNAM.",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.88,
+						"page_number": 1
+					},
+					{
+						"k": "Consignee",
+						"v": "ASIA CHEMICAL CORPORATION",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.88,
+						"page_number": 1
+					},
+					{
+						"k": "Consignee Address",
+						"v": "LOT K4B, LE MINH XUAN INDUSTRIAL ZONE, ROAD NO.4, BINH LOI COMMUNE, HO CHI MINH CITY, VIETNAM.",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.88,
+						"page_number": 1
+					},
+					{
+						"k": "Importer",
+						"v": "",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.51,
+						"page_number": 1
+					},
+					{
+						"k": "Importer address",
+						"v": "",
+						"c": 0.51,
+						"c_llm": 0.0,
+						"match_w": null,
+						"page_number": 1
+					},
+					{
+						"k": "Consignee Tax ID",
+						"v": "",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.51,
+						"page_number": 1
+					},
+					{
+						"k": "Bill No",
+						"v": "",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.51,
+						"page_number": 1
+					},
+					{
+						"k": "INV No",
+						"v": "LH262926",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.7999999999999999,
+						"page_number": 1
+					},
+					{
+						"k": "INV Date",
+						"v": "20/05/2026",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.7999999999999999,
+						"page_number": 1
+					},
+					{
+						"k": "PO No",
+						"v": "26040868, 26040869, 26040870, 26040871",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.85,
+						"page_number": 1
+					},
+					{
+						"k": "Cont No",
+						"v": "",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.51,
+						"page_number": 1
+					},
+					{
+						"k": "Seal No",
+						"v": "",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.51,
+						"page_number": 1
+					},
+					{
+						"k": "Incoterms",
+						"v": "CIF HO CHI MINH, VIETNAM",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.85,
+						"page_number": 1
+					},
+					{
+						"k": "Total Amount",
+						"v": "USD 114,400.00",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.85,
+						"page_number": 1
+					},
+					{
+						"k": "Term of Payment",
+						"v": "TT30 DAYS FROM B/L DATE",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.85,
+						"page_number": 1
+					},
+					{
+						"k": "Total Net Weight",
+						"v": "220 MTS",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.85,
+						"page_number": 1
+					},
+					{
+						"k": "Port of Loading",
+						"v": "JINGTANG PORT, CHINA",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.85,
+						"page_number": 1
+					},
+					{
+						"k": "Port of receipt",
+						"v": "",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.51,
+						"page_number": 1
+					},
+					{
+						"k": "Port of Discharge",
+						"v": "HO CHI MINH, VIETNAM",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.85,
+						"page_number": 1
+					},
+					{
+						"k": "Place of Delivery",
+						"v": "HO CHI MINH, VIETNAM",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.85,
+						"page_number": 1
+					},
+					{
+						"k": "Terminal",
+						"v": "",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.51,
+						"page_number": 1
+					},
+					{
+						"k": "Payment Information",
+						"v": "DRAWER: INDUSTRIAL AND COMMERCIAL BANK OF CHINA QINHUANGDAO BRANCH FUNING SUB-BRANCH SWIFT : ICBKCNBJQHD BENEFICIARY: QINHUANGDAO LIHUA STARCH CO., LTD. BENEFICIARY' ADD. : NO. 89 LIHUA STREET, FUNING DISTRICT, QINHUANGDAO CITY, CHINA BENEFICIARY ACCOUNT: 0404012009300047288",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.8999999999999999,
+						"page_number": 1
+					},
+					{
+						"k": "Payment Instruction",
+						"v": "",
+						"c_llm": 0.0,
+						"match_w": null,
+						"c": 0.51,
+						"page_number": 1
+					},
+					{
+						"k": "check_total_amount",
+						"v": "pass",
+						"c": 1.0,
+						"c_llm": 0,
+						"match_w": null,
+						"page_number": null
+					},
+					{
+						"k": "check_total_net_weight",
+						"v": "pass",
+						"c": 1.0,
+						"c_llm": 0,
+						"match_w": null,
+						"page_number": null
+					}
+				],
+				"tables": [
+					{
+						"name": "Table 1",
+						"description": "Đây là bảng mô tả thông tin chi tiết hàng hóa trong tài liệu Invoice.thường lấy trong các vùng:Goods Description/ Description of Goods/ Description of Goods & Packages/ Kind of Packages; Description of goods/ attachment chi tiết hàng hóa. Mỗi dòng/item phải trích xuất đủ cả Product Name và HS Code.<Important Note>Không được suy diễn/bịa HS Code hoặc Product Name từ thông tin khác hoặc dòng khác Phải lấy đầy đủ thông tin, không được tự ý bỏ thông tin nhé </Important Note>.Các dòng không chứa 'DRUM'/'Pallets'/'Bag',... không phải là các mặt hàng mới mà là nội dung của sản phẩm phía trước. Tuyệt đối không bỏ sót data, kể cả khi các dòng mô tả giống nhau hoàn toàn.",
+						"data": [
+							[
+								"row_id",
+								"Product Name",
+								"Origin",
+								"Unit price",
+								"Currency",
+								"Net Weight",
+								"Amount",
+								"UOM",
+								"Order Number",
+								"Item Code",
+								"Artical Code",
+								"Batch No",
+								"HS Code",
+								"Best Before",
+								"Origin Criteria",
+								"Manufacturer",
+								"Manufacturing Date",
+								"Manufacturing Address",
+								"Page"
+							],
+							[
+								"1",
+								"DEXTROSE MONOHYDRATE",
+								"CHINA",
+								"520 USD/MT",
+								"USD",
+								"220 MTS",
+								"114,400.00 USD",
+								"MT",
+								"26040868&26040869&26040870&26040871",
+								"",
+								"",
+								"",
+								"",
+								"",
+								"",
+								"QINHUANGDAO LIHUA STARCH CO., LTD.",
+								"",
+								"NO. 89 LIHUA STREET, FUNING DISTRICT, QINHUANGDAO CITY, CHINA",
+								"1"
+							]
+						],
+						"confidence_du": [
+							[
+								100,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0
+							],
+							[
+								100,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0,
+								0
+							]
+						],
+						"confidence_ocr": [
+							[
+								100,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								1.0
+							],
+							[
+								100,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								1.0,
+								0.95,
+								0.95,
+								0.95,
+								0.95,
+								0.95,
+								0.95,
+								1.0,
+								0.95,
+								1.0
+							]
+						]
+					}
+				],
+				"confidence": 86.23,
+				"confidence_standalone": 73.43333333333337
+			},
+			"additional_fields": {
+				"page_range": [
+					1,
+					1
+				]
+			}
+		}
+	],
+	"minioPath": "4161208f-5fba-4c47-bd60-eecc8731a8fa.pdf",
+	"minioBucket": "idp-gateway-bucket",
+	"refRequestId": "20527",
+	"refPartnerId": "71",
+	"refTenantId": "190",
+	"errorMessage": null,
+	"errorCode": null,
+	"processingTime": 44.41
+}

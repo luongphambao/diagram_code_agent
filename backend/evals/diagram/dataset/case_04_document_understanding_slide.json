@@ -1,0 +1,50 @@
+{
+  "id": "case_04_document_understanding_slide",
+  "prompt": "Create a production slide-style architecture diagram like a polished final-project presentation for an AI Document Understanding System end to end. Show datasets and annotation, layout/OCR/KIE model training, MLflow registry and object model storage, CI/CD, dual serving pipelines with FastAPI, OCR and VLM paths, output/evaluation, monitoring, and users. The result should use presentation_style=slide with numbered sections, a hero title, and a legend.",
+  "expected_nodes": [
+    "Datasets",
+    "Annotation",
+    "Layout Detection Training",
+    "OCR Training",
+    "KIE Training",
+    "MLflow Model Registry",
+    "Model Storage",
+    "CI/CD Pipeline",
+    "FastAPI Gateway",
+    "Document Classifier",
+    "OCR Pipeline",
+    "VLM Pipeline",
+    "Structured Output",
+    "Output & Evaluation",
+    "Monitoring",
+    "Users"
+  ],
+  "expected_edges": [
+    {"from": "Datasets", "to": "Annotation"},
+    {"from": "Annotation", "to": "Layout Detection Training"},
+    {"from": "Layout Detection Training", "to": "OCR Training"},
+    {"from": "OCR Training", "to": "KIE Training"},
+    {"from": "KIE Training", "to": "MLflow Model Registry"},
+    {"from": "MLflow Model Registry", "to": "Model Storage"},
+    {"from": "Model Storage", "to": "FastAPI Gateway"},
+    {"from": "FastAPI Gateway", "to": "Document Classifier"},
+    {"from": "Document Classifier", "to": "OCR Pipeline"},
+    {"from": "Document Classifier", "to": "VLM Pipeline"},
+    {"from": "OCR Pipeline", "to": "Structured Output"},
+    {"from": "VLM Pipeline", "to": "Structured Output"},
+    {"from": "Structured Output", "to": "Output & Evaluation"},
+    {"from": "Users", "to": "FastAPI Gateway"},
+    {"from": "Monitoring", "to": "FastAPI Gateway"}
+  ],
+  "expected_clusters": [
+    "Data Preparation & Model Training",
+    "Model Registry & Storage",
+    "CI/CD Pipeline",
+    "Serving & Inference",
+    "Monitoring & Observability",
+    "Users & Clients"
+  ],
+  "min_nodes": 14,
+  "min_edges": 10,
+  "min_clusters": 5
+}

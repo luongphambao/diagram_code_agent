@@ -50,12 +50,21 @@ AGENT = None
 from .backends import AGENT_SPACE, WORKSPACE
 from .requirements_reader import IMAGE_EXT, parse_file
 from .tools import GATE_TOOL_NAMES, clear_stage_markers
+from .quality_logger import QualityRun, get_current_run, set_current_run, setup_file_logging
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("diagram-agent")
 # Silence the noisy HTTP client logs — we log the agent's real actions instead.
 for _noisy in ("httpx", "httpcore", "openai", "urllib3"):
     logging.getLogger(_noisy).setLevel(logging.WARNING)
+
+# File-based logging — writes to backend/logs/diagram-agent.log (rotating).
+setup_file_logging()
+logger.warning(
+    "MCP drawio tools (validate_drawio / render_drawio_png / resolve_stencil) are "
+    "NOT integrated into the pipeline — mcp_client.py exists but is never called. "
+    "Export uses local gv_to_drawio / prettygraph instead."
+)
 
 
 def _configure_tracing() -> bool:
@@ -562,6 +571,9 @@ async def agui_endpoint(request: Request):
                 desc = _last_user_text(messages)
                 attached = _attached_text(file_ids)
                 image_blocks = _attached_images(file_ids)
+                # Start quality run tracking for this fresh run.
+                _qrun = QualityRun(run_id=run_id, style="pretty", description=desc or "")
+                set_current_run(_qrun)
                 req_file = WORKSPACE / "requirements.md"
                 if attached:
                     # Save the (potentially large) docs to a file the agent reads
@@ -782,6 +794,9 @@ async def agui_endpoint(request: Request):
             png = WORKSPACE / "out.png"
             if png.exists():
                 logger.info("run finished — diagram ready")
+                _qr = get_current_run()
+                if _qr:
+                    _qr.run_end("DONE")
                 snapshot = {"current_step": "done", "summary": summary, "logs": logs}
                 snapshot.update(_artifacts())
                 ts = _read_json(WORKSPACE / "tech_stack.json")
@@ -811,6 +826,9 @@ async def agui_endpoint(request: Request):
 
         except Exception as exc:  # noqa: BLE001
             logger.exception("agent run failed: %s", exc)
+            _qr = get_current_run()
+            if _qr:
+                _qr.run_end("ERROR")
             yield _sse({"type": "RUN_ERROR", "message": str(exc), "code": "internal_error"})
 
         if _upsert_snap:

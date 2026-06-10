@@ -1,0 +1,46 @@
+{
+  "inputs": {
+    "input": {
+      "goto": [],
+      "graph": null,
+      "resume": {
+        "decisions": [
+          {
+            "message": "tôi muốn nó căng ở giữa hơn hiện tại nó hơi lệch về phía dưới, nhìn ko có đẹp",
+            "type": "reject"
+          }
+        ]
+      },
+      "update": null
+    }
+  },
+  "outputs": null,
+  "error": null,
+  "metadata": {
+    "LANGSMITH_ENDPOINT": "https://api.smith.langchain.com",
+    "LANGSMITH_PROJECT": "diagram-agent",
+    "LANGSMITH_TRACING": "true",
+    "lc_agent_name": null,
+    "ls_integration": "deepagents",
+    "ls_run_depth": 0,
+    "run_id": "run-1780900870780",
+    "thread_id": "thread-mq4t2zmm-1xw0n",
+    "versions": {
+      "deepagents": "0.6.8"
+    }
+  },
+  "langsmith": {
+    "organization": {
+      "name": "Personal",
+      "id": "2b612a7a-3ee3-42f3-be95-0aab57e1ad1e"
+    },
+    "workspace": {
+      "name": "Personal",
+      "id": "0e128024-1887-50b9-93cd-93fa63456b31"
+    },
+    "tracing_project": {
+      "id": "08f3d52e-8f5e-41e0-bd18-1cd9e38e79cd",
+      "name": "diagram-agent"
+    }
+  }
+}
