@@ -95,6 +95,7 @@ _TOOL_LABELS = {
     "inspect_diagram": "Reviewing the rendered diagram",
     "submit_critique": "Recording the diagram review",
     "finalize_diagram": "Finalizing the diagram",
+    "generate_pdf_report": "Generating the PDF report",
     "write_todos": "Planning the steps",
     "task": "Delegating to subagent",
     "ls": "Listing files",
@@ -193,6 +194,9 @@ def _tool_detail(tool: str, args: dict | None, *, limit: int = 260) -> str:
         if isinstance(stack, list):
             layers = [str(x.get("layer", "")) for x in stack if isinstance(x, dict)]
             return f"{len(stack)} layers: {', '.join([x for x in layers if x][:8])}"
+    if tool == "generate_pdf_report":
+        sections = args.get("include_sections") or ["cover", "solution", "techstack", "blueprint", "diagram"]
+        return f"sections={', '.join(map(str, sections))}"
     if tool == "submit_critique":
         findings = args.get("findings") or []
         if isinstance(findings, list):
@@ -379,8 +383,30 @@ def _last_user_text(messages: list[dict]) -> str:
 
 
 def _last_tool_msg(messages: list[dict]) -> dict | None:
-    tools = [m for m in messages if m.get("role") == "tool"]
-    return tools[-1] if tools else None
+    """Return the last message only when the client is resolving a HITL gate."""
+    if messages and messages[-1].get("role") == "tool":
+        return messages[-1]
+    return None
+
+
+def _is_pdf_followup(text: str) -> bool:
+    """Detect a follow-up asking to package the current diagram as a PDF report."""
+    normalized = " ".join(str(text or "").lower().split())
+    return any(
+        phrase in normalized
+        for phrase in (
+            "pdf",
+            "report",
+            "document",
+            "doc",
+            "tạo pdf",
+            "tao pdf",
+            "xuất pdf",
+            "xuat pdf",
+            "tạo báo cáo",
+            "tao bao cao",
+        )
+    )
 
 
 def _read_json(path: Path):
@@ -467,6 +493,26 @@ def _card_for(val, summary: str):
              "question": "Is the diagram good? Approve to finish, or describe the changes you want."},
             "reviewing", {},
         )
+    if name == "generate_pdf_report":
+        sections = args.get("include_sections") or [
+            "cover",
+            "solution",
+            "techstack",
+            "blueprint",
+            "diagram",
+        ]
+        return (
+            {
+                "type": "pdf_report_approval",
+                "question": "Generate the PDF report with these settings?",
+                "title": args.get("title", ""),
+                "subtitle": args.get("subtitle", ""),
+                "brand": args.get("brand", ""),
+                "include_sections": sections,
+            },
+            "awaiting_pdf_report",
+            {},
+        )
     return None, None, {}
 
 
@@ -533,6 +579,9 @@ def _artifacts() -> dict:
     code = WORKSPACE / "diagram.py"
     if code.exists():
         out["code"] = code.read_text(encoding="utf-8", errors="replace")
+    pdf = WORKSPACE / "out.pdf"
+    if pdf.exists():
+        out["pdf_base64"] = base64.b64encode(pdf.read_bytes()).decode("ascii")
     return out
 
 
@@ -626,8 +675,20 @@ async def agui_endpoint(request: Request):
                 )
             else:
                 # Fresh run.
-                clear_stage_markers()
                 desc = _last_user_text(messages)
+                preserve_artifacts = _is_pdf_followup(desc) and (WORKSPACE / "out.png").exists()
+                if not preserve_artifacts:
+                    clear_stage_markers()
+                else:
+                    desc = (
+                        (desc + "\n\n" if desc else "")
+                        + "IMPORTANT: A rendered diagram already exists in the workspace "
+                        "(`out.png`, `out.drawio`, `diagram.py`) with approved planning "
+                        "artifacts. The user is asking for a PDF/report/document. Do NOT "
+                        "redesign or re-render the diagram. Call `generate_pdf_report({})` "
+                        "now so the PDF approval gate is shown, then complete after `out.pdf` "
+                        "is created."
+                    )
                 attached = _attached_text(file_ids)
                 image_blocks = _attached_images(file_ids)
                 req_file = WORKSPACE / "requirements.md"
@@ -647,7 +708,7 @@ async def agui_endpoint(request: Request):
                         "`requirements.md` in your working directory — read that file "
                         "first for the full requirements."
                     )
-                elif req_file.exists():
+                elif req_file.exists() and not preserve_artifacts:
                     req_file.unlink()  # don't let a previous run's docs leak in
 
                 # Build the HumanMessage. When reference images are attached,
@@ -769,6 +830,13 @@ async def agui_endpoint(request: Request):
                                 if subagent:
                                     evt2["subagent"] = subagent
                                 yield _sse(evt2)
+                                if name == "generate_pdf_report" and ok:
+                                    artifact_delta = [
+                                        {"op": "replace", "path": f"/{k}", "value": v}
+                                        for k, v in _artifacts().items()
+                                    ]
+                                    artifact_delta.append({"op": "replace", "path": "/current_step", "value": "done"})
+                                    yield _sse({"type": "STATE_DELTA", "delta": artifact_delta})
                 elif mode == "custom":
                     # Live per-step activity from within a running subagent.
                     # Emitted by _StreamingSubAgentRunnable via get_stream_writer().

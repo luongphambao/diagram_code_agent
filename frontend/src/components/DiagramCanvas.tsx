@@ -70,14 +70,17 @@ interface DiagramCanvasProps {
   activity?: string | null;
 }
 
-type Tab = "preview" | "code" | "activity" | "agents";
+type Tab = "preview" | "pdf" | "code" | "activity" | "agents";
 
 export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning, activeSubagent, activity }: DiagramCanvasProps) {
   const [lightbox, setLightbox] = useState(false);
   const [tab, setTab] = useState<Tab>("preview");
-  const { current_step, png_base64, drawio, summary, error, iteration, code, logs, delegations } = agentState;
+  const { current_step, png_base64, pdf_base64, drawio, summary, error, iteration, code, logs, delegations } = agentState;
   const hasDelegations = !!delegations && delegations.length > 0;
   const hasLiveAgentWork = isRunning || !!activeSubagent || hasDelegations || !!activity;
+  const tabs: Tab[] = pdf_base64
+    ? ["preview", "pdf", "code", "activity", "agents"]
+    : ["preview", "code", "activity", "agents"];
 
   // ── Download helpers ──────────────────────────────────────────────────────
   const downloadPng = () => {
@@ -95,6 +98,18 @@ export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning,
     const a = document.createElement("a");
     a.href = url;
     a.download = `diagram${iteration && iteration > 1 ? `_v${iteration}` : ""}.drawio`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadPdf = () => {
+    if (!pdf_base64) return;
+    const bytes = Uint8Array.from(atob(pdf_base64), (char) => char.charCodeAt(0));
+    const blob = new Blob([bytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `architecture_report${iteration && iteration > 1 ? `_v${iteration}` : ""}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -145,7 +160,7 @@ export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning,
 
             {/* Tabs */}
             <div className="flex items-center rounded-lg border border-white/8 bg-white/4 p-0.5">
-              {(["preview", "code", "activity", "agents"] as Tab[]).map((t) => (
+              {tabs.map((t) => (
                 <button
                   key={t}
                   onClick={() => setTab(t)}
@@ -159,6 +174,8 @@ export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning,
                     ? `Activity (${logs.filter((e) => e.type === "tool_start").length})`
                     : t === "agents" && delegations && delegations.length > 0
                     ? `Agents (${delegations.length})`
+                    : t === "pdf"
+                    ? "PDF"
                     : t === "code" && code
                     ? "Code"
                     : t.charAt(0).toUpperCase() + t.slice(1)}
@@ -186,6 +203,16 @@ export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning,
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
                 .drawio
+              </button>
+              <button
+                onClick={downloadPdf}
+                disabled={!pdf_base64}
+                className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/4 px-3 py-1.5 text-xs font-medium text-slate-400 transition-colors hover:bg-white/8 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30"
+              >
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                PDF
               </button>
               <button
                 onClick={openInDrawio}
@@ -236,6 +263,36 @@ export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning,
               ) : (
                 <div className="flex flex-1 items-center justify-center">
                   <p className="text-sm text-slate-700">No code available</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {tab === "pdf" && (
+            <div className="flex flex-1 flex-col overflow-hidden bg-[#0b0e14]">
+              {pdf_base64 ? (
+                <>
+                  <div className="flex items-center justify-between border-b border-white/8 px-4 py-2">
+                    <span className="text-xs font-medium text-slate-400">PDF report preview</span>
+                    <button
+                      onClick={downloadPdf}
+                      className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/4 px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-white/8"
+                    >
+                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Download
+                    </button>
+                  </div>
+                  <iframe
+                    title="PDF report preview"
+                    src={`data:application/pdf;base64,${pdf_base64}`}
+                    className="h-full w-full flex-1 border-0 bg-white"
+                  />
+                </>
+              ) : (
+                <div className="flex flex-1 items-center justify-center">
+                  <p className="text-sm text-slate-700">No PDF report available</p>
                 </div>
               )}
             </div>
@@ -315,6 +372,14 @@ export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning,
                     ↗ Draw.io
                   </button>
                 </>
+              )}
+              {pdf_base64 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); downloadPdf(); }}
+                  className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs font-medium text-white hover:bg-white/20"
+                >
+                  PDF
+                </button>
               )}
             </div>
             <img

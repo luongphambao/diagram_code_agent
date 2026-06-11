@@ -73,7 +73,8 @@ _MAIN_TOOLS_BLOCK = """\
 - `generate_pdf_report({})` — compose a multi-page PDF report (cover +
   solution + tech stack + blueprint + diagram) from approved workspace
   artifacts. Call after `finalize_diagram` is approved if the user asks for a
-  report/document. Returns the path to `out.pdf`.
+  report/document. PAUSES for approval before creating the PDF, then returns
+  the path to `out.pdf`.
 - Plus `read_file`, `write_file`, `edit_file`, `ls`, `glob`, `grep`, `write_todos`."""
 
 _DRAWER_TOOLS_BLOCK = """\
@@ -147,9 +148,11 @@ _DRAWER_CONTEXT_RULES = """\
 _BEHAVIOR_RULES = """\
 ## Core behavior (always active)
 - **Every response must include at least one tool call** — the session does not
-  advance otherwise. If there is nothing left to do, call `finalize_diagram()`.
+  advance otherwise. If the user asked for a PDF/report/document and the
+  diagram is already approved, call `generate_pdf_report({})`; otherwise, if
+  there is nothing left to do, call `finalize_diagram()`.
 - **Persistence** — keep working until the task is fully resolved. Do not stop
-  or ask "should I proceed?" mid-flow. Only pause at the three explicit gates.
+  or ask "should I proceed?" mid-flow. Only pause at explicit HITL gates.
 - **Accuracy over speed** — never guess a library class name, import path, or
   icon path. Use `search_diagrams_nodes(...)` or `grep` on `nodes.md` for raw
   `diagrams` imports, and `resolve_icons(...)` / `search_icons(...)` for Custom
@@ -158,7 +161,12 @@ _BEHAVIOR_RULES = """\
   controls are declaration order, direction, short edges, anchors, same_rank,
   invisible spine edges, minlen, node_attr/edge_attr, and simplification.
 - **Autonomy** — do not ask for permission mid-task. The only legitimate approval
-  pauses are `propose_tech_stack`, `propose_blueprint`, and `finalize_diagram`.
+  pauses are `propose_tech_stack`, `propose_blueprint`, `finalize_diagram`, and
+  `generate_pdf_report`.
+- **PDF/report requests** â€” if the user asks for a PDF, report, or document in
+  the current task, the task is NOT complete at `finalize_diagram`. After
+  `finalize_diagram` is approved, call `generate_pdf_report({})`. Do not stop
+  after drawing the diagram.
 - **Memory** — use `edit_file("/memories/AGENTS.md")` (NEVER `write_file` — it
   overwrites everything). Append to the right section using the section header
   as the anchor string:
@@ -232,8 +240,8 @@ You design the solution step by step; the user reviews and approves the gated st
    then call `finalize_diagram` again.
 9. **PDF report** (optional — generate if the user asks or the output clearly
    warrants a document): call `generate_pdf_report({})` to compose cover +
-   solution + tech stack + blueprint + diagram into `out.pdf`. Return the path
-   to the user.
+   solution + tech stack + blueprint + diagram into `out.pdf`. This is a HITL
+   gate: wait for approval before the tool runs, then return the path to the user.
 Do NOT skip ahead (e.g. don't propose tech stack before the diagram brief, don't
 render before the blueprint is approved, don't finalize before the critic passes).
 Once a gate tool returns "APPROVED", do NOT call that same tool again — move on to

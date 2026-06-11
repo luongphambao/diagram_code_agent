@@ -1271,6 +1271,9 @@ def generate_pdf_report(
     saves to out.pdf. Call this AFTER finalize_diagram is approved.
     """
     from PIL import Image, ImageDraw
+    import PIL.JpegImagePlugin  # noqa: F401 - registers JPEG save handler for Pillow PDF output.
+
+    Image.init()
 
     from .prettygraph import _draw_centered_text, _font, _gradient
 
@@ -1639,4 +1642,9 @@ DRAWER_TOOLS = [search_diagrams_nodes, resolve_icons, search_icons, fetch_logo, 
 CRITIC_TOOLS = [inspect_diagram, submit_critique]
 
 # Tools that require human approval before they run (interrupt_on in agent.py).
-GATE_TOOL_NAMES = ["propose_tech_stack", "propose_blueprint", "finalize_diagram"]
+GATE_TOOL_NAMES = [
+    "propose_tech_stack",
+    "propose_blueprint",
+    "finalize_diagram",
+    "generate_pdf_report",
+]

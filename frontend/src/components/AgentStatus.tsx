@@ -21,6 +21,7 @@ const LABELS: Record<string, string> = {
   awaiting_techstack: "Waiting for tech stack approval...",
   designing: "Designing architecture blueprint...",
   awaiting_blueprint: "Waiting for blueprint approval...",
+  awaiting_pdf_report: "Waiting for PDF report approval...",
   synthesizing: "Finalizing architecture...",
 };
 

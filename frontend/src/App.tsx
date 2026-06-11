@@ -175,6 +175,7 @@ export default function App() {
             messages={diagramAgent.chatMessages}
             pendingInterrupt={diagramAgent.pendingInterrupt}
             isRunning={diagramAgent.isRunning}
+            pdfBase64={diagramAgent.agentState.pdf_base64}
             activity={diagramAgent.activity}
             activeSubagent={diagramAgent.activeSubagent}
             error={diagramAgent.error}
@@ -182,6 +183,7 @@ export default function App() {
             onResolveTechStack={diagramAgent.resolveTechStack}
             onResolveBlueprint={diagramAgent.resolveBlueprint}
             onResolveResult={diagramAgent.resolveResultReview}
+            onResolvePdfReport={diagramAgent.resolvePdfReport}
             iteration={diagramAgent.agentState.iteration}
             uploadedFiles={diagramAgent.uploadedFiles}
             isUploading={diagramAgent.isUploading}

@@ -99,6 +99,7 @@ export interface AgentState {
   current_step?: string;
   iteration?: number;
   png_base64?: string;
+  pdf_base64?: string;
   drawio?: string;
   code?: string;
   summary?: string;
@@ -115,7 +116,8 @@ export interface AgentState {
 export type InterruptType =
   | "techstack_approval"
   | "blueprint_approval"
-  | "result_review";
+  | "result_review"
+  | "pdf_report_approval";
 
 export interface PendingInterrupt {
   toolCallId: string;
@@ -129,6 +131,11 @@ export interface PendingInterrupt {
     // result_review
     summary?: string;
     iteration?: number;
+    // pdf_report_approval
+    title?: string;
+    subtitle?: string;
+    brand?: string;
+    include_sections?: string[];
   };
 }
 
@@ -391,6 +398,13 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
     [_resolveWithPayload]
   );
 
+  const resolvePdfReport = useCallback(
+    async (approved: boolean, modifications?: string) => {
+      await _resolveWithPayload({ approved, modifications: modifications?.trim() || null });
+    },
+    [_resolveWithPayload]
+  );
+
   const uploadFile = useCallback(async (file: File) => {
     setIsUploading(true);
     setError(null);
@@ -452,6 +466,7 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
     resolveTechStack,
     resolveBlueprint,
     resolveResultReview,
+    resolvePdfReport,
     uploadFile,
     clearFiles,
     restore,

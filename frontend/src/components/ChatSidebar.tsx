@@ -3,12 +3,14 @@ import type { ChatMessage, PendingInterrupt, UploadedFile } from "../hooks/useDi
 import TechStackApproval from "./TechStackApproval";
 import BlueprintApproval from "./BlueprintApproval";
 import DiagramFeedback from "./DiagramFeedback";
+import PdfReportApproval from "./PdfReportApproval";
 import FileUpload from "./FileUpload";
 
 interface ChatSidebarProps {
   messages: ChatMessage[];
   pendingInterrupt: PendingInterrupt | null;
   isRunning: boolean;
+  pdfBase64?: string;
   activity?: string | null;
   activeSubagent?: string | null;
   error: string | null;
@@ -17,6 +19,7 @@ interface ChatSidebarProps {
   onResolveTechStack: (approved: boolean, modifications?: string) => void;
   onResolveBlueprint: (approved: boolean, modifications?: string) => void;
   onResolveResult: (satisfied: boolean, feedback?: string) => void;
+  onResolvePdfReport: (approved: boolean, modifications?: string) => void;
   iteration?: number;
   // File upload
   uploadedFiles: UploadedFile[];
@@ -29,6 +32,7 @@ export default function ChatSidebar({
   messages,
   pendingInterrupt,
   isRunning,
+  pdfBase64,
   activity,
   activeSubagent,
   error,
@@ -36,6 +40,7 @@ export default function ChatSidebar({
   onResolveTechStack,
   onResolveBlueprint,
   onResolveResult,
+  onResolvePdfReport,
   iteration,
   uploadedFiles,
   isUploading,
@@ -48,7 +53,7 @@ export default function ChatSidebar({
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, error, pendingInterrupt]);
+  }, [messages, error, pendingInterrupt, pdfBase64]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setDraft(e.target.value);
@@ -69,6 +74,29 @@ export default function ChatSidebar({
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const createPdfUrl = () => {
+    if (!pdfBase64) return null;
+    const bytes = Uint8Array.from(atob(pdfBase64), (char) => char.charCodeAt(0));
+    return URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  };
+
+  const previewPdf = () => {
+    const url = createPdfUrl();
+    if (!url) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  };
+
+  const downloadPdf = () => {
+    const url = createPdfUrl();
+    if (!url) return;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "architecture_report.pdf";
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -151,6 +179,46 @@ export default function ChatSidebar({
               disabled={isRunning}
               iteration={iteration ?? pendingInterrupt.data.iteration ?? 1}
             />
+          </div>
+        )}
+        {pendingInterrupt?.data.type === "pdf_report_approval" && (
+          <div className="mt-1">
+            <PdfReportApproval
+              interrupt={pendingInterrupt}
+              onResolve={onResolvePdfReport}
+              disabled={isRunning}
+            />
+          </div>
+        )}
+
+        {pdfBase64 && (
+          <div className="ml-9 max-w-[82%] rounded-2xl rounded-tl-sm border border-cyan-500/20 bg-cyan-950/20 px-4 py-3">
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-cyan-500/15">
+                <svg className="h-4 w-4 text-cyan-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 3h7l5 5v13H7z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 3v5h5M9 13h8M9 17h5" />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-white">PDF report ready</p>
+                <p className="mt-1 text-xs text-slate-500">Preview it in a new tab or download the file.</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    onClick={previewPdf}
+                    className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-200 transition-colors hover:bg-cyan-500/20"
+                  >
+                    Preview PDF
+                  </button>
+                  <button
+                    onClick={downloadPdf}
+                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200 transition-colors hover:bg-white/10"
+                  >
+                    Download PDF
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

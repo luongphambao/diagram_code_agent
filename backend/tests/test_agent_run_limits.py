@@ -22,8 +22,9 @@ def _use_workspace(monkeypatch, tmp_path: Path) -> None:
 
 
 def test_drawer_uses_drawer_skill_paths():
-    assert any("/drawer/pro-style" in path for path in DRAWER_SKILL_PATHS)
-    assert any("/drawer/diagrams-as-code" in path for path in DRAWER_SKILL_PATHS)
+    normalized = [Path(path).as_posix() for path in DRAWER_SKILL_PATHS]
+    assert any("/drawer/pro-style" in path for path in normalized)
+    assert any("/drawer/diagrams-as-code" in path for path in normalized)
 
 
 def test_search_icons_reuses_cached_result(monkeypatch, tmp_path):
