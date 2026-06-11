@@ -38,11 +38,39 @@ _BLUEPRINT_FILE = WORKSPACE / "blueprint.json"
 _CRITIQUE_FILE = WORKSPACE / "critique.json"
 
 
+_RENDER_COUNT_FILE = WORKSPACE / "render_count.json"
+# Per-round render budget: soft nudge at 3 (finalize with what you have), hard
+# refusal at 6 (the #1 cause of "run limit 80/80" was an endless fix->render
+# loop chasing audit warnings that cannot be fully resolved).
+RENDER_SOFT_CAP = 3
+RENDER_HARD_CAP = 6
+
+
+def _render_count() -> int:
+    try:
+        return int(json.loads(_RENDER_COUNT_FILE.read_text(encoding="utf-8"))["count"])
+    except Exception:  # noqa: BLE001
+        return 0
+
+
+def _bump_render_count() -> int:
+    n = _render_count() + 1
+    _RENDER_COUNT_FILE.write_text(json.dumps({"count": n}), encoding="utf-8")
+    return n
+
+
+def reset_render_count() -> None:
+    """New design / new revision round -> fresh render budget."""
+    if _RENDER_COUNT_FILE.exists():
+        _RENDER_COUNT_FILE.unlink()
+
+
 def clear_stage_markers() -> None:
     """Reset the staged-flow markers at the start of a fresh run."""
     for f in (_ARCH_ANALYSIS_FILE, _BRIEF_FILE, _TECHSTACK_FILE, _BLUEPRINT_FILE, _CRITIQUE_FILE):
         if f.exists():
             f.unlink()
+    reset_render_count()
 
 RENDER_TIMEOUT_S = 180
 # Max width of the image handed BACK to the model to inspect. The full-resolution
@@ -312,6 +340,16 @@ def render_diagram(
             tool_call_id=tool_call_id,
             status="error",
         )
+    if _render_count() >= RENDER_HARD_CAP and (WORKSPACE / "out.png").exists():
+        return ToolMessage(
+            content=f"RENDER BUDGET EXHAUSTED ({RENDER_HARD_CAP} renders this round). "
+                    "Keep the existing out.png: call export_drawio(), then return "
+                    "your summary listing any residual audit warnings. Do NOT keep "
+                    "re-rendering to chase warnings.",
+            name="render_diagram",
+            tool_call_id=tool_call_id,
+            status="error",
+        )
     _stage_helpers()
     for n in _OUT_NAMES:
         p = WORKSPACE / n
@@ -347,11 +385,22 @@ def render_diagram(
 
     b64, mime = _inspection_image_b64(png)
     audit = _layout_audit()
-    text = "Rendered out.png successfully. Inspect it and refine if the layout is not clean."
+    n = _bump_render_count()
+    text = (f"Rendered out.png successfully (render #{n} of "
+            f"{RENDER_HARD_CAP} this round). Inspect it and refine if the "
+            "layout is not clean.")
     if audit:
-        text += ("\n\n" + audit + "\n\nAct on any audit WARNING before finalizing "
-                 "(re-render after fixing). A clean diagram is balanced (~1.3–2:1) "
-                 "with every label-bearing edge short.")
+        text += "\n\n" + audit
+        if n < RENDER_SOFT_CAP:
+            text += ("\n\nAct on any audit WARNING before finalizing "
+                     "(re-render after fixing). A clean diagram is balanced "
+                     "(~1.3–2:1) with every label-bearing edge short.")
+        else:
+            text += (f"\n\nRender budget nearly spent ({n}/{RENDER_HARD_CAP}). "
+                     "Re-render ONLY for a defect you know exactly how to fix "
+                     "(e.g. a specific TEXT OVERFLOW label). Otherwise finalize "
+                     "with this image and report residual warnings in your "
+                     "summary — do not chase the same warning again.")
     return ToolMessage(
         content_blocks=[
             {"type": "text", "text": text},
@@ -406,13 +455,21 @@ def search_icons(query: str, provider: Optional[str] = None) -> str:
 
 
 @tool
-def search_diagrams_nodes(query: str, provider: str = "", category: str = "", limit: int = 10) -> str:
+def search_diagrams_nodes(query: str = "", provider: str = "", category: str = "",
+                          limit: int = 10, queries: Optional[list[str]] = None) -> str:
     """Search built-in `diagrams` node classes using the local node catalog.
 
     Use this before writing raw `from diagrams.<provider>.<category> import X`
     imports. It returns verified import paths from `resources/node_catalog.json`.
     Use `resolve_icons` / `search_icons` only when no built-in node fits.
+
+    BATCH: pass `queries=["redis", "cloud run", ...]` to resolve ALL planned
+    imports in ONE call (returns {query: hits}). Do not call once per node.
     """
+    if queries:
+        return json.dumps(
+            {q: _node_search_hits(q, provider, category, limit=limit) for q in queries},
+            indent=2)
     hits = _node_search_hits(query, provider, category, limit=limit)
     return json.dumps(hits, indent=2)
 
@@ -458,6 +515,212 @@ def resolve_icons(icons: list[IconRequest]) -> str:
         json.dumps(resolved, indent=2), encoding="utf-8"
     )
     return json.dumps(resolved, indent=2)
+
+
+@tool
+def plan_style_sizes(
+    node_count: int,
+    longest_label_chars: int = 22,
+    longest_sublabel_chars: int = 26,
+    output: Literal["slide", "diagram"] = "slide",
+) -> str:
+    """Decide icon/text sizes for a prettygraph render BEFORE writing the script.
+
+    Deterministic sizing from diagram density: sparse client-facing diagrams get
+    bigger icons and text (small fixed sizes look diluted inside large cards);
+    dense diagrams get compact cards. Returns JSON with a `sizes` block, a
+    ready-to-paste `pretty_kwargs` string for `Pretty(...)`, and `notes` with any
+    label-length warnings. Re-run after trimming nodes or when the critic flags
+    small/unreadable text.
+
+    Args:
+        node_count: number of VISIBLE boxes planned (after collapsing replicas).
+        longest_label_chars: character count of the longest node title.
+        longest_sublabel_chars: character count of the longest sublabel.
+        output: "slide" (pro slide canvas) or "diagram" (plain render).
+    """
+    import math
+
+    if node_count <= 8:
+        density, node_h, title = "sparse", 66, 17
+    elif node_count <= 14:
+        density, node_h, title = "medium", 60, 16
+    elif node_count <= 22:
+        density, node_h, title = "dense", 54, 14
+    else:
+        density, node_h, title = "packed", 50, 13
+    icon = max(36, min(48, round(node_h * 0.72)))
+    sub = max(11, title - 3)
+    edge = max(11, title - 3)
+    cluster = title + 2
+
+    # Fit the longest text row: lr margins (~32pt) + icon + gap + text width.
+    # Helvetica ~0.60em/char bold title, ~0.52em/char sublabel.
+    text_w = max(0.60 * title * longest_label_chars,
+                 0.52 * sub * longest_sublabel_chars)
+    raw_w = 32 + icon + 10 + text_w
+    node_w = min(380, max(240, math.ceil(raw_w / 10) * 10))
+
+    notes = [
+        "Pass pretty_kwargs verbatim into Pretty(...); sizes apply to the PNG "
+        "and the exported .drawio identically.",
+    ]
+    if raw_w > 380:
+        fit = int((380 - 42 - icon) / (0.60 * title))
+        notes.append(
+            f"Longest label needs ~{raw_w:.0f}pt but cards cap at 380pt — shorten "
+            f"titles to <={fit} chars or move detail into the sublabel."
+        )
+    if node_count > 18 and output == "slide":
+        notes.append("18+ visible nodes on a slide reads cramped — collapse "
+                     "replicas or aggregate side concerns before rendering.")
+
+    sizes = {
+        "node_width": node_w, "node_height": node_h, "icon_size": icon,
+        "title_size": title, "sublabel_size": sub, "edge_label_size": edge,
+        "cluster_label_size": cluster,
+    }
+    plan = {
+        "node_count": node_count,
+        "density": density,
+        "output": output,
+        "sizes": sizes,
+        "pretty_kwargs": ", ".join(f"{k}={v}" for k, v in sizes.items()),
+        "notes": notes,
+    }
+    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    (WORKSPACE / "style_plan.json").write_text(
+        json.dumps(plan, indent=2), encoding="utf-8"
+    )
+    return json.dumps(plan, indent=2)
+
+
+class NodeText(BaseModel):
+    """One node's visible text, to be checked against the planned card size."""
+    label: str = Field(description="node title text")
+    sublabel: str = Field("", description="node sublabel text (may be empty)")
+
+
+# Deterministic, meaning-preserving shortenings tried in order. Vendor prefixes
+# are stripped LAST (the icon already carries the brand).
+_WORD_ABBREVS = [
+    ("PostgreSQL", "Postgres"), ("Kubernetes", "K8s"), ("Database", "DB"),
+    ("Application", "App"), ("Configuration", "Config"),
+    ("Authentication", "Auth"), ("Authorization", "Authz"),
+    ("Management", "Mgmt"), ("Infrastructure", "Infra"),
+    ("Repository", "Repo"), ("Environment", "Env"),
+]
+_VENDOR_PREFIXES = ("Amazon ", "AWS ", "Microsoft ", "Google Cloud ",
+                    "Google ", "Azure ", "Alibaba Cloud ", "Oracle ")
+
+
+def _shorten(text: str, fits) -> tuple[str, str, list[str]]:
+    """Shrink `text` until `fits(text)`; returns (text, moved_detail, steps)."""
+    steps: list[str] = []
+    moved = ""
+    if not fits(text):
+        m = re.match(r"^(.*?)\s*\(([^)]*)\)\s*$", text)
+        if m and m.group(1):
+            text, moved = m.group(1), m.group(2)
+            steps.append("moved parenthetical to sublabel")
+    for full, short in _WORD_ABBREVS:
+        if fits(text):
+            break
+        if full in text:
+            text = text.replace(full, short)
+            steps.append(f"{full} -> {short}")
+    if not fits(text) and (" / " in text or " + " in text):
+        text = text.replace(" / ", "/").replace(" + ", "+")
+        steps.append("tightened separators")
+    if not fits(text):
+        for prefix in _VENDOR_PREFIXES:
+            if text.startswith(prefix) and len(text) > len(prefix):
+                text = text[len(prefix):]
+                steps.append(f"dropped vendor prefix '{prefix.strip()}' (icon shows the brand)")
+                break
+    return text, moved, steps
+
+
+@tool
+def fit_labels(
+    nodes: list[NodeText],
+    edge_labels: Optional[list[str]] = None,
+    node_width: int = 0,
+    icon_size: int = 0,
+    title_size: int = 0,
+    sublabel_size: int = 0,
+) -> str:
+    """Check node/edge text against the planned card size and shorten what overflows.
+
+    Text MUST stay inside its card: cards that outgrow `node_width` get
+    auto-widened at render (breaking uniform width), so fix the text FIRST.
+    Size args default to the last `plan_style_sizes` result (`style_plan.json`).
+    Returns JSON per node: `fits`, char budgets, and a deterministic
+    `suggestion` (parenthetical -> sublabel, standard abbreviations, vendor
+    prefix drop). Entries with `still_too_long: true` need a manual rename.
+    Edge labels longer than ~4 words are flagged with a trimmed suggestion.
+    """
+    plan_sizes: dict = {}
+    plan_file = WORKSPACE / "style_plan.json"
+    if plan_file.exists():
+        try:
+            plan_sizes = json.loads(plan_file.read_text(encoding="utf-8")).get("sizes", {})
+        except Exception:  # noqa: BLE001
+            plan_sizes = {}
+    node_width = node_width or plan_sizes.get("node_width", 270)
+    icon_size = icon_size or plan_sizes.get("icon_size", 36)
+    title_size = title_size or plan_sizes.get("title_size", 13)
+    sublabel_size = sublabel_size or plan_sizes.get("sublabel_size", 11)
+
+    # Same fit model as the renderer: text cell = node_width - icon column - padding.
+    budget = node_width - (icon_size + 10) - 24
+    max_title = int(budget / (0.62 * title_size))
+    max_sub = int(budget / (0.54 * sublabel_size))
+
+    results = []
+    for item in nodes:
+        title_fits = len(item.label) <= max_title
+        sub_fits = len(item.sublabel) <= max_sub
+        entry: dict = {"label": item.label, "fits": title_fits and sub_fits}
+        if not title_fits:
+            new_label, moved, steps = _shorten(item.label,
+                                               lambda t: len(t) <= max_title)
+            if steps:
+                sub = item.sublabel or ""
+                if moved:
+                    sub = f"{moved} · {sub}".strip(" ·") if sub else moved
+                entry["suggestion"] = {"label": new_label, "sublabel": sub,
+                                       "steps": steps}
+            if len(new_label) > max_title:
+                entry["still_too_long"] = True
+                entry["hint"] = (f"rename manually to <= {max_title} chars "
+                                 "(or raise node_width and re-run plan_style_sizes)")
+        if not sub_fits:
+            new_sub, _, steps = _shorten(item.sublabel,
+                                         lambda t: len(t) <= max_sub)
+            entry.setdefault("suggestion", {})["sublabel"] = new_sub
+            entry["sublabel_still_too_long"] = len(new_sub) > max_sub
+        results.append(entry)
+
+    edge_results = []
+    for lbl in edge_labels or []:
+        words = lbl.split()
+        ok = len(words) <= 4 and len(lbl) <= 28
+        item = {"label": lbl, "fits": ok}
+        if not ok:
+            item["suggestion"] = " ".join(words[:4])
+        edge_results.append(item)
+
+    out = {
+        "card": {"node_width": node_width, "icon_size": icon_size,
+                 "title_size": title_size, "sublabel_size": sublabel_size},
+        "max_title_chars": max_title,
+        "max_sublabel_chars": max_sub,
+        "nodes": results,
+        "edges": edge_results,
+        "overflowing": sum(1 for r in results if not r["fits"]),
+    }
+    return json.dumps(out, indent=2, ensure_ascii=False)
 
 
 @tool
@@ -575,8 +838,10 @@ class Blueprint(BaseModel):
         description="intended visual flow, e.g. left_to_right_pipeline or top_down_stack",
     )
     presentation_style: Literal["slide", "diagram"] = Field(
-        "diagram",
-        description="slide for production/presentation output; diagram for body-only output",
+        "slide",
+        description="slide (default): production output with the gradient hero "
+                    "title band + caption + legend; diagram: body-only output, "
+                    "ONLY when the user explicitly asks for a plain/raw diagram",
     )
     slide_title: str = Field(
         "",
@@ -659,6 +924,7 @@ def propose_blueprint(blueprint: Blueprint) -> str:
     _BLUEPRINT_FILE.write_text(
         blueprint.model_dump_json(by_alias=True, indent=2), encoding="utf-8"
     )
+    reset_render_count()
     return (
         "Blueprint APPROVED. Next: write the diagram code, call render_diagram, "
         "look at the PNG and refine, call export_drawio, then finalize_diagram."
@@ -719,6 +985,7 @@ def submit_critique(findings: list[DiagramFinding]) -> str:
     _CRITIQUE_FILE.write_text(
         json.dumps([f.model_dump() for f in kept], indent=2), encoding="utf-8"
     )
+    reset_render_count()  # a revision round gets a fresh render budget
     return format_critique(findings)
 
 
@@ -745,6 +1012,8 @@ DIAGRAM_TOOLS = [
     search_diagrams_nodes,
     search_icons,
     resolve_icons,
+    plan_style_sizes,
+    fit_labels,
     fetch_logo,
     inspect_diagram,
     submit_critique,
@@ -761,7 +1030,7 @@ MAIN_TOOLS = [
 ]
 
 # Drawer subagent tools: everything needed for the render-refine loop.
-DRAWER_TOOLS = [search_diagrams_nodes, resolve_icons, search_icons, fetch_logo, audit_diagram_code, render_diagram, export_drawio]
+DRAWER_TOOLS = [search_diagrams_nodes, resolve_icons, search_icons, fetch_logo, plan_style_sizes, fit_labels, audit_diagram_code, render_diagram, export_drawio]
 
 # Critic subagent tools: read-only review of the rendered diagram.
 CRITIC_TOOLS = [inspect_diagram, submit_critique]

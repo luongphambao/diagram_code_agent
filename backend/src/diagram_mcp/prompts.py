@@ -49,9 +49,9 @@ _MAIN_TOOLS_BLOCK = """\
   Defaults: audience="client", detail_level="architecture",
   layout_intent="left_to_right_pipeline". For client-facing architecture diagrams,
   collapse code/files/modules into capabilities and aggregate cross-cutting concerns.
-  Use `presentation_style="slide"` when the user asks for production, xịn/xịn xò,
-  presentation, slide, or references an image/mockup style; otherwise use
-  `presentation_style="diagram"`.
+  DEFAULT to `presentation_style="slide"` (gradient hero band + caption +
+  legend); use `presentation_style="diagram"` ONLY when the user explicitly
+  asks for a plain/raw/body-only diagram.
 - `task(subagent_type="drawer", description=...)` — delegate ALL diagram rendering to the
   `drawer` subagent. The description must be self-contained and include: the FULL
   approved blueprint (every node, cluster, edge), the approved tech stack, the
@@ -80,11 +80,22 @@ _DRAWER_TOOLS_BLOCK = """\
 - `resolve_icons(icons)` — batch resolve a planned icon list in ONE call. Each
   item is `{label, provider, icon_keyword}`. It writes `icon_plan.json`; use this
   before fallback `search_icons`.
-- `search_diagrams_nodes(query, provider="", category="", limit=10)` — search
-  verified built-in `diagrams` node classes from the local catalog. Use this
-  before writing raw imports like `from diagrams.aws.database import RDS`.
+- `search_diagrams_nodes(queries=[...], provider="")` — search verified
+  built-in `diagrams` node classes from the local catalog. Use this before
+  writing raw imports like `from diagrams.aws.database import RDS`. ALWAYS
+  batch every planned import into ONE call via `queries=[...]` — never call
+  once per node.
 - `search_icons(query, provider=None)` — find exact icon `.png` paths for `Custom`.
 - `fetch_logo(name)` — resolve a brand logo NOT in the pack (path or NOT_FOUND).
+- `plan_style_sizes(node_count, longest_label_chars, longest_sublabel_chars,
+  output)` — decide icon/title/sublabel/edge/cluster sizes from diagram density
+  BEFORE writing prettygraph code. Pass the returned `pretty_kwargs` verbatim
+  into `Pretty(...)`; re-run after trimming nodes or when text reads too small.
+- `fit_labels(nodes, edge_labels)` — check every planned label/sublabel against
+  the card size and get deterministic shortened suggestions. Run it after
+  `plan_style_sizes` (it reads `style_plan.json`) and again whenever the render
+  audit reports TEXT OVERFLOW. Text must fit INSIDE its card — overflowing
+  cards are auto-widened and break the uniform card grid.
 - `audit_diagram_code(code)` — static pre-render audit for known diagrams/
   Graphviz pitfalls: missing output settings, floating `xlabel`, unstable large
   clusters, over-specific positioning, and font defaults in the wrong attr bag.
@@ -318,10 +329,11 @@ drawer to render without guessing:
   or explicit simplification choices.
 - Default to a client-facing architecture diagram: `audience="client"`,
   `detail_level="architecture"`, `layout_intent="left_to_right_pipeline"`.
-- Set `presentation_style="slide"` when the user asks for production, xịn/xịn xò,
-  presentation, slide, or references an image/mockup style. Fill `slide_title`,
-  `slide_kicker`, `brand` (only if known), and `diagram_title`. Otherwise set
-  `presentation_style="diagram"`.
+- DEFAULT to `presentation_style="slide"` — production output with the gradient
+  hero band (kicker + big title), white panel caption, and legend. Always fill
+  `slide_title`, `slide_kicker`, `brand` (only if known), and `diagram_title`.
+  Use `presentation_style="diagram"` ONLY when the user explicitly asks for a
+  plain/raw/body-only diagram (e.g. to embed in a doc).
 - Every important component as a node with its tier cluster.
 - Real edges with direction and concern (request, data, auth/dashed, etc.).
 - Nodes named to match real library classes (e.g. "ALB", "ECS Fargate", "RDS").
@@ -367,13 +379,18 @@ _PRETTY_DIAGRAM_DETAIL = """\
 - Fix and call `render_diagram` again until production-clean (≤3 renders), then
   call `export_drawio()`.
 
-## Slide-style production output (default for client-facing production asks)
-Use slide output when the approved blueprint has `presentation_style="slide"` or
-the user asks for production, xịn/xịn xò, presentation, slide, or "like this
-image". The script MUST use:
+## Slide-style production output (the DEFAULT)
+Use slide output unless the approved blueprint explicitly says
+`presentation_style="diagram"`. Slide output adds the gradient hero band
+(kicker + big title), the white panel with caption, and the legend. The script
+MUST use:
 ```python
 from prettygraph import Pretty, render_slide
-g = Pretty(..., direction="LR", node_width=270, node_height=52, theme="pro")
+# sizes come from plan_style_sizes(node_count=..., longest_label_chars=...) —
+# paste its pretty_kwargs here so icons/text scale with the cards:
+g = Pretty(..., direction="LR", theme="pro",
+           node_width=300, node_height=60, icon_size=44, title_size=16,
+           sublabel_size=13, edge_label_size=13, cluster_label_size=18)
 # top-level clusters must pass number=1, number=2, ... and optional accent=...
 render_slide(g, "out",
              title=SLIDE_TITLE,
@@ -385,6 +402,9 @@ render_slide(g, "out",
 ```
 Rules for slide mode:
 - Always use `theme="pro"` with `node_width` and `node_height` for uniform cards.
+- Always size via `plan_style_sizes` first — do not hand-pick icon/font sizes.
+- Verify text with `fit_labels` before rendering: every label/sublabel must fit
+  INSIDE its card. Fix any TEXT OVERFLOW audit finding before finalizing.
 - Number every top-level section cluster (`number=1`, `number=2`, ...).
 - Keep ≤5 primary columns; stack CI/CD, Security, Monitoring under adjacent flow
   columns.
@@ -512,10 +532,11 @@ drawer to render without guessing:
   or explicit simplification choices.
 - Default to a client-facing architecture diagram: `audience="client"`,
   `detail_level="architecture"`, `layout_intent="left_to_right_pipeline"`.
-- Set `presentation_style="slide"` when the user asks for production, xịn/xịn xò,
-  presentation, slide, or references an image/mockup style. Fill `slide_title`,
-  `slide_kicker`, `brand` (only if known), and `diagram_title`; otherwise use
-  `presentation_style="diagram"`.
+- DEFAULT to `presentation_style="slide"` — production output with the gradient
+  hero band (kicker + big title), white panel caption, and legend. Always fill
+  `slide_title`, `slide_kicker`, `brand` (only if known), and `diagram_title`.
+  Use `presentation_style="diagram"` ONLY when the user explicitly asks for a
+  plain/raw/body-only diagram (e.g. to embed in a doc).
 - Every important component as a node with its tier cluster.
 - Real edges with direction and concern (request, data, auth/dashed, etc.).
 - Nodes named to match real library classes or service names (e.g. "ALB", "ECS
@@ -581,13 +602,17 @@ from a senior solutions architect and produce a production-quality diagram.
    script first and make the smallest layout/content fix requested. Reuse icon
    paths already present in `diagram.py`, `icon_plan.json`, or `out.nodes.json`.
    Do NOT search icons again unless you add a brand-new visible node with no icon.
-3. For an initial render, verify every raw `diagrams` import with
-   `search_diagrams_nodes(...)` before writing code. Prefer verified built-in
-   nodes when they fit.
+3. For an initial render, verify every raw `diagrams` import with ONE batched
+   `search_diagrams_nodes(queries=[...])` call before writing code. Prefer
+   verified built-in nodes when they fit.
 4. Make one exact icon plan and call `resolve_icons(...)` once for all required
    custom icons. Use `search_icons` only for NOT_FOUND misses, and `fetch_logo`
    only after local icon search fails.
-5. Write or update the complete diagram script.
+5. For prettygraph renders, call `plan_style_sizes(node_count=<visible boxes>,
+   longest_label_chars=..., longest_sublabel_chars=...)` once and put its
+   `pretty_kwargs` into `Pretty(...)`. Then run `fit_labels(nodes=[...])` on the
+   planned labels and apply its suggestions so every text fits inside its card.
+   Then write or update the complete diagram script.
 6. Call `audit_diagram_code(code=<complete script>)` and fix every high/medium
    finding before rendering.
 7. Call `render_diagram(code=<complete script>)`, inspect the returned PNG,

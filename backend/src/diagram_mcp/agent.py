@@ -198,14 +198,18 @@ SKILL_PATHS = [
 # SummarizationMiddleware as the long-run safety net.)
 CONTEXT_TRIGGER_TOKENS = 30_000   # main context is lean (no images/icons), can be higher
 
-# Critic/refine sub-loop cap: after this many model calls in one run the agent
-# exits cleanly instead of looping forever. Sized to allow full staged flow plus
-# 2 critic+refine rounds with headroom (tech_stack → blueprint → drawer → critic
-# → revise → critic → finalize ≈ ~30 calls for a complex diagram).
-_RUN_CALL_LIMIT = 80
+# Per-run model-call caps: after this many model calls in one run the agent
+# exits cleanly ("Model call limits exceeded") instead of looping forever.
+# Each agent (main / drawer / critic) is a SEPARATE run with its own budget.
+# A clean drawer pass needs ~12-18 calls; the budget is headroom, and runaway
+# loops are bounded earlier by the render budget (tools.RENDER_HARD_CAP) and
+# the icon-search budget — hitting these caps means something is wrong, so we
+# stop spending. Override via env for experiments.
+_RUN_CALL_LIMIT = int(os.getenv("RUN_CALL_LIMIT", "80"))          # main + drawer
+_CRITIC_CALL_LIMIT = int(os.getenv("CRITIC_CALL_LIMIT", "20"))    # inspect+critique only
 
 
-def _middleware():
+def _middleware(run_limit: int = _RUN_CALL_LIMIT):
     layers = [
         ContextEditingMiddleware(
             edits=[
@@ -218,7 +222,7 @@ def _middleware():
             ],
             token_count_method="approximate",
         ),
-        ModelCallLimitMiddleware(run_limit=_RUN_CALL_LIMIT, exit_behavior="end"),
+        ModelCallLimitMiddleware(run_limit=run_limit, exit_behavior="end"),
     ]
     # Optional model fallback: set FALLBACK_MODEL env var to activate.
     # Format: "provider:model-name" e.g. "anthropic:claude-sonnet-4-5-20250929"
@@ -366,7 +370,7 @@ def build_agent(model: str = DEFAULT_MODEL, *, style: str = DEFAULT_STYLE,
                 system_prompt=critic_spec["system_prompt"],
                 backend=backend,
                 memory=[MEMORY_PATH],
-                middleware=_middleware(),
+                middleware=_middleware(run_limit=_CRITIC_CALL_LIMIT),
                 store=store,
             ),
             "critic",

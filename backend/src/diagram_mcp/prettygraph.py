@@ -102,6 +102,11 @@ SLIDE_MARGIN = 38
 SLIDE_PANEL_PAD = 26
 
 
+def _est_text_w(s: str, size: int, *, bold: bool = False) -> float:
+    """Approx Helvetica text width in pts (~0.62em/char bold, ~0.54em regular)."""
+    return len(s or "") * size * (0.62 if bold else 0.54)
+
+
 def _esc(s: str) -> str:
     """Escape text for an HTML-like Graphviz label."""
     return html.escape(s or "", quote=True)
@@ -158,6 +163,14 @@ class Pretty:
     node_height: float | None = None  # pts; fixed inner box height -> uniform boxes
     theme: str = "default"            # "pro" => premium palette + numbered badges
     dpi: int | None = None            # raster DPI; pro defaults to 160 (crisp)
+    # Style sizes (pts). None keeps the legacy defaults; pass the values from the
+    # `plan_style_sizes` tool so icon/text scale with the card instead of looking
+    # diluted inside large boxes. Applied to BOTH the PNG and the .drawio export.
+    icon_size: int | None = None          # node icon square   (default 36)
+    title_size: int | None = None         # node title font    (default 13)
+    sublabel_size: int | None = None      # node sublabel font (default 11)
+    edge_label_size: int | None = None    # edge label font    (default 12)
+    cluster_label_size: int | None = None  # cluster title font (default 15)
     nodes: dict[str, _Node] = field(default_factory=dict)
     clusters: dict[str, _Cluster] = field(default_factory=dict)
     edges: list[_Edge] = field(default_factory=list)
@@ -236,26 +249,46 @@ class Pretty:
         c = self.clusters[cid]
         return CLUSTER_KINDS.get(c.kind, CLUSTER_KINDS["Neutral"])
 
+    def _sizes(self) -> dict[str, int]:
+        """Effective style sizes (pts) — explicit value or legacy default."""
+        return {
+            "icon": int(self.icon_size or 36),
+            "title": int(self.title_size or 13),
+            "sub": int(self.sublabel_size or 11),
+            "edge": int(self.edge_label_size or 12),
+            "cluster": int(self.cluster_label_size or 15),
+        }
+
+    def _node_margin(self) -> str:
+        # Fixed cards already size themselves via the FIXEDSIZE table — a slim
+        # outer margin keeps them from reading as puffy pillows.
+        if self.node_width is not None:
+            return "0.14,0.08"
+        return "0.22,0.13" if self.theme == "pro" else "0.2,0.12"
+
     def _cluster_label_pro(self, c: _Cluster) -> str:
         """A numbered accent badge + accent title (HTML-like cluster label)."""
         accent = self._accent_map().get(c.id, PRO_ACCENTS["slate"])[1]
+        csize = self._sizes()["cluster"]
         badge = ""
         if c.number is not None:
-            badge = (f'<TD BGCOLOR="{accent}" WIDTH="24" HEIGHT="24" ALIGN="CENTER" '
-                     f'VALIGN="MIDDLE"><FONT COLOR="#FFFFFF" POINT-SIZE="14"><B>'
+            badge = (f'<TD BGCOLOR="{accent}" WIDTH="{csize + 9}" HEIGHT="{csize + 9}" '
+                     f'ALIGN="CENTER" VALIGN="MIDDLE"><FONT COLOR="#FFFFFF" '
+                     f'POINT-SIZE="{csize - 1}"><B>'
                      f'{c.number}</B></FONT></TD><TD WIDTH="8"></TD>')
         return ('<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">'
                 f'<TR>{badge}<TD ALIGN="LEFT"><FONT COLOR="{accent}" '
-                f'POINT-SIZE="15"><B>{_esc(c.label)}</B></FONT></TD></TR></TABLE>')
+                f'POINT-SIZE="{csize}"><B>{_esc(c.label)}</B></FONT></TD></TR></TABLE>')
 
     # ---- DOT generation ---- #
     def _node_dot(self, n: _Node) -> str:
         fill, stroke, title_c, sub_c = self._node_style(n)
         icon = self._icon_path(n.icon)
+        sz = self._sizes()
         label_html = (f'<FONT COLOR="{title_c}"><B>{_esc(n.label)}</B></FONT>'
                       if title_c else f'<B>{_esc(n.label)}</B>')
         if n.sublabel:
-            label_html += (f'<BR/><FONT POINT-SIZE="11" COLOR="{sub_c}">'
+            label_html += (f'<BR/><FONT POINT-SIZE="{sz["sub"]}" COLOR="{sub_c}">'
                            f'{_esc(n.sublabel)}</FONT>')
         # Uniform boxes: when node_width is set, every box is a fixed-size table
         # (icon flush-left, text fills the rest) so all boxes align identically.
@@ -264,20 +297,29 @@ class Pretty:
         if icon:
             cell = (
                 '<TR>'
-                f'<TD FIXEDSIZE="TRUE" WIDTH="36" HEIGHT="36">'
+                f'<TD FIXEDSIZE="TRUE" WIDTH="{sz["icon"]}" HEIGHT="{sz["icon"]}">'
                 f'<IMG SRC="{icon}" SCALE="TRUE"/></TD>'
                 '<TD WIDTH="10"></TD>'
-                f'<TD ALIGN="LEFT" BALIGN="LEFT"><FONT POINT-SIZE="13">'
+                f'<TD ALIGN="LEFT" BALIGN="LEFT"><FONT POINT-SIZE="{sz["title"]}">'
                 f'{label_html}</FONT></TD>'
                 '</TR>'
             )
         else:
             cell = (f'<TR><TD ALIGN="{align}" BALIGN="{align}">'
-                    f'<FONT POINT-SIZE="13">{label_html}</FONT></TD></TR>')
+                    f'<FONT POINT-SIZE="{sz["title"]}">{label_html}</FONT></TD></TR>')
         table_attrs = 'BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2"'
         if fixed:
+            # Text must stay INSIDE the card: a FIXEDSIZE table clips overflow,
+            # so widen this card when its text needs more room than node_width.
+            # The layout audit reports widened cards so labels get shortened.
+            need = max(_est_text_w(n.label, sz["title"], bold=True),
+                       _est_text_w(n.sublabel or "", sz["sub"]))
+            need += (sz["icon"] + 10 if icon else 0) + 24
+            tw = max(self.node_width, need)
             th = self.node_height or self.node_width
-            table_attrs += (f' WIDTH="{self.node_width:.0f}" '
+            if icon:
+                th = max(th, sz["icon"] + 10)
+            table_attrs += (f' WIDTH="{tw:.0f}" '
                             f'HEIGHT="{th:.0f}" FIXEDSIZE="TRUE"')
         table = f'<TABLE {table_attrs}>{cell}</TABLE>'
         return (f'  "{n.id}" [fillcolor="{fill}", color="{stroke}", '
@@ -292,7 +334,7 @@ class Pretty:
             f'{"  " * depth}subgraph cluster_{c.id} {{',
             f'{"  " * depth}  style="rounded,filled"; fillcolor="{fill}"; '
             f'color="{stroke}"; penwidth={"1.6" if pro else "1.2"};',
-            f'{"  " * depth}  labeljust="l"; fontsize="14"; '
+            f'{"  " * depth}  labeljust="l"; fontsize="{self._sizes()["cluster"] - 1}"; '
             f'fontname="{FONT}"; fontcolor="#5a6270";',
             f'{"  " * depth}  label=<{label_html}>;',
         ]
@@ -317,10 +359,12 @@ class Pretty:
             title += (f'<BR/><FONT POINT-SIZE="11" COLOR="{PRO_MUTED if pro else "#8a8a8a"}">'
                       f'{_esc(self.subtitle)}</FONT>')
         dpi = self.dpi or (192 if pro else 168)
-        nodesep, ranksep = ("0.5", "0.95") if pro else ("0.5", "0.9")
+        # Tighter pro spacing — 0.5/0.95 read as puffy clusters with big holes.
+        nodesep, ranksep = ("0.4", "0.8") if pro else ("0.5", "0.9")
         edge_color = PRO_EDGE if pro else EDGE_COLOR
         node_pen = "1.5" if pro else "1.4"
         arrowhead = ' arrowhead="vee"' if pro else ""
+        sz = self._sizes()
         out = [
             "digraph G {",
             f'  rankdir="{self.direction}"; bgcolor="white"; pad="0.5";',
@@ -331,9 +375,9 @@ class Pretty:
             f'  fontname="{FONT}"; splines="{self.splines}"; '
             f'nodesep="{nodesep}"; ranksep="{ranksep}"; compound="true"; newrank="true";',
             f'  node [shape="box", style="rounded,filled", fontname="{FONT}", '
-            f'penwidth="{node_pen}", margin="{"0.22,0.13" if pro else "0.2,0.12"}"];',
+            f'penwidth="{node_pen}", margin="{self._node_margin()}"];',
             f'  edge [color="{edge_color}", fontname="{FONT}", '
-            f'fontsize="12", fontcolor="{EDGE_FONTCOLOR}", arrowsize="0.9", '
+            f'fontsize="{sz["edge"]}", fontcolor="{EDGE_FONTCOLOR}", arrowsize="0.9", '
             f'penwidth="1.6"{arrowhead}];',
         ]
         # clusters (top-level only; nested handled recursively)
@@ -357,7 +401,7 @@ class Pretty:
                 lbl = (
                     '<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" '
                     'CELLPADDING="3" BGCOLOR="white"><TR><TD>'
-                    f'<FONT POINT-SIZE="12" COLOR="{EDGE_FONTCOLOR}">'
+                    f'<FONT POINT-SIZE="{sz["edge"]}" COLOR="{EDGE_FONTCOLOR}">'
                     f'{_esc(e.label)}</FONT></TD></TR></TABLE>>'
                 )
                 attrs.append(f'label={lbl}')
@@ -365,7 +409,7 @@ class Pretty:
                 tlbl = (
                     '<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" '
                     'CELLPADDING="2" BGCOLOR="white"><TR><TD>'
-                    f'<FONT POINT-SIZE="11" COLOR="{EDGE_FONTCOLOR}">'
+                    f'<FONT POINT-SIZE="{sz["edge"] - 1}" COLOR="{EDGE_FONTCOLOR}">'
                     f'{_esc(e.taillabel)}</FONT></TD></TR></TABLE>>'
                 )
                 attrs.append(f'taillabel={tlbl}')
@@ -418,8 +462,14 @@ class Pretty:
             fill, stroke = self._cluster_style(c.id)
             label = c.label if c.number is None else f"{c.number} · {c.label}"
             cluster_meta[c.id] = {"label": label, "fill": fill, "stroke": stroke}
+        style = dict(self._sizes())
+        if self.node_width is not None:
+            style["node_width"] = int(self.node_width)
+        if self.node_height is not None:
+            style["node_height"] = int(self.node_height)
         data = {"title": self.title, "subtitle": self.subtitle,
-                "nodes": node_meta, "clusters": cluster_meta}
+                "nodes": node_meta, "clusters": cluster_meta,
+                "style": style}
         Path(path).write_text(json.dumps(data), encoding="utf-8")
 
     def to_drawio(self, out_basename: str) -> str:
@@ -529,7 +579,38 @@ def audit_layout(dot_path: str, png_path: str | None = None) -> str:
         lines.append(f"  SIDE-CHANNEL FANOUT — {dashed_edges}/{edge_count} edges "
                      "are dashed. Collapse observability/security/control lines "
                      "to one cluster-level dashed edge per concern.")
+    lines += _audit_text_fit(dot_path)
     return "\n".join(lines)
+
+
+def _audit_text_fit(dot_path: str) -> list[str]:
+    """Report cards whose text outgrew node_width (they were auto-widened)."""
+    try:
+        sidecar = Path(dot_path).with_name(
+            Path(dot_path).name.replace(".dot", ".nodes.json"))
+        side = json.loads(sidecar.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001 — sidecar is optional (non-pretty renders)
+        return []
+    st = side.get("style") or {}
+    nw = st.get("node_width")
+    if not nw:
+        return []
+    title_s, sub_s, icon_s = st.get("title", 13), st.get("sub", 11), st.get("icon", 36)
+    over: list[str] = []
+    for meta in side.get("nodes", {}).values():
+        icon_w = (icon_s + 10) if meta.get("icon") else 0
+        need = max(_est_text_w(meta.get("label") or "", title_s, bold=True),
+                   _est_text_w(meta.get("sublabel") or "", sub_s)) + icon_w + 24
+        if need > nw:
+            fits = int((nw - icon_w - 24) / (0.62 * title_s))
+            over.append(f'"{meta.get("label")}" needs ~{need:.0f}pt > '
+                        f'node_width {nw}pt (<= {fits} chars fits)')
+    if not over:
+        return []
+    return (["  TEXT OVERFLOW — these cards were auto-widened so text stays "
+             "inside the box, breaking uniform card width. Shorten the label / "
+             "move detail to the sublabel (use fit_labels), or raise node_width:"]
+            + [f"    - {s}" for s in over[:6]])
 
 
 def dot_to_drawio(dot_path: str, sidecar_path: str, out_path: str) -> str:
@@ -539,6 +620,12 @@ def dot_to_drawio(dot_path: str, sidecar_path: str, out_path: str) -> str:
     g = json.loads(js)
     side = json.loads(Path(sidecar_path).read_text(encoding="utf-8"))
     snodes, sclusters = side.get("nodes", {}), side.get("clusters", {})
+    # Style sizes from the render (older sidecars have none -> legacy defaults).
+    sz = side.get("style") or {}
+    icon_px = int(sz.get("icon", 36)) - 2
+    title_fs = int(sz.get("title", 13))
+    edge_fs = int(sz.get("edge", 12))
+    cluster_fs = max(int(sz.get("cluster", 15)) - 3, 11)
 
     x0, y0, x1, y1 = (float(v) for v in g["bb"].split(","))
     H = y1
@@ -559,7 +646,7 @@ def dot_to_drawio(dot_path: str, sidecar_path: str, out_path: str) -> str:
                 f"rounded=1;arcSize=4;whiteSpace=wrap;html=1;"
                 f"fillColor={meta.get('fill', '#fafafa')};"
                 f"strokeColor={meta.get('stroke', '#cfcfcf')};verticalAlign=top;"
-                "align=left;spacingLeft=10;spacingTop=6;fontSize=12;fontStyle=1;"
+                f"align=left;spacingLeft=10;spacingTop=6;fontSize={cluster_fs};fontStyle=1;"
                 "fontColor=#5a6270;"
             )
             cells.append(
@@ -585,13 +672,13 @@ def dot_to_drawio(dot_path: str, sidecar_path: str, out_path: str) -> str:
             style = (
                 f"shape=label;html=1;rounded=1;arcSize=12;whiteSpace=wrap;"
                 f"image={b64};imageAlign=left;imageVerticalAlign=middle;"
-                f"imageWidth=34;imageHeight=34;spacingLeft=44;align=left;"
-                f"fontSize=13;fontStyle=1;fontColor=#222222;"
+                f"imageWidth={icon_px};imageHeight={icon_px};spacingLeft={icon_px + 10};align=left;"
+                f"fontSize={title_fs};fontStyle=1;fontColor=#222222;"
                 f"fillColor={meta['fill']};strokeColor={meta['stroke']}{shadow};"
             )
         else:
             style = (
-                f"rounded=1;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;"
+                f"rounded=1;whiteSpace=wrap;html=1;fontSize={title_fs};fontStyle=1;"
                 f"fontColor=#222222;fillColor={meta['fill']};"
                 f"strokeColor={meta['stroke']};"
             )
@@ -607,7 +694,7 @@ def dot_to_drawio(dot_path: str, sidecar_path: str, out_path: str) -> str:
             continue
         style = (
             "edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;"
-            f"endFill=1;strokeColor={EDGE_COLOR};fontSize=12;fontColor={EDGE_FONTCOLOR};"
+            f"endFill=1;strokeColor={EDGE_COLOR};fontSize={edge_fs};fontColor={EDGE_FONTCOLOR};"
             "labelBackgroundColor=#FFFFFF;"
         )
         cells.append(

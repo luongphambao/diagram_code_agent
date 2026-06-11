@@ -54,19 +54,23 @@ g.render("<workdir>/out")          # -> out.png  (LOOK at this)
 `Pretty.render("<workdir>/out")` writes `out.png`, `out.dot`, `out.nodes.json`.
 A bad ImportError/IMG path raises — read the traceback and fix it.
 
-## Slide-style production output
-For client-facing production asks ("production", "xịn", "xịn xò", "như ảnh
-mẫu", "presentation", "slide") or blueprints with `presentation_style="slide"`,
-use the slide wrapper instead of plain `g.render`. It keeps the body diagram
-auditable/editable and wraps it in a square presentation canvas with editable
-hero text, diagram caption, and legend.
+## Slide-style production output (the DEFAULT)
+Use the slide wrapper instead of plain `g.render` unless the blueprint
+explicitly says `presentation_style="diagram"` (user asked for a plain/raw
+body-only diagram). The slide adds the gradient hero band (kicker + big
+title), the white panel with caption, and the legend; the body diagram stays
+auditable/editable inside it.
 
 ```python
 from prettygraph import Pretty, render_slide
 
+# sizes from plan_style_sizes(node_count=..., longest_label_chars=...) —
+# paste its pretty_kwargs so icons/text scale with the cards:
 g = Pretty("Document Understanding System Architecture",
            subtitle="end-to-end architecture", direction="LR",
-           icons_root=ICONS, node_width=270, node_height=52, theme="pro")
+           icons_root=ICONS, theme="pro",
+           node_width=300, node_height=60, icon_size=44, title_size=16,
+           sublabel_size=13, edge_label_size=13, cluster_label_size=18)
 g.cluster("data", "Data Preparation & Model Training", number=1, accent="green")
 g.cluster("registry", "Model Registry & Storage", number=2, accent="violet")
 # ...
@@ -85,6 +89,13 @@ render_slide(
 
 Slide-mode hard rules:
 - `theme="pro"` plus fixed `node_width` / `node_height`.
+- Size with the `plan_style_sizes` tool (node_count + longest label/sublabel
+  chars) and pass its `pretty_kwargs` verbatim — do NOT hand-pick icon/font
+  sizes or leave the small legacy defaults on a sparse client-facing diagram.
+- Then verify text with `fit_labels(nodes=[...])` and apply its suggestions:
+  every label/sublabel must fit INSIDE its card. Overflowing cards are
+  auto-widened at render (audit reports TEXT OVERFLOW) and break the uniform
+  card grid — shorten the text, never ship it.
 - Every top-level cluster has `number=1`, `number=2`, ... and a clear stage label.
 - Include `legend` whenever >2 edge colors/styles appear.
 - Keep ≤5 primary columns; stack CI/CD, Security, Monitoring under adjacent
