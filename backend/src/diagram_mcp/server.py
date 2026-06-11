@@ -543,6 +543,7 @@ def _stage_artifacts() -> dict:
     brief = _read_json(WORKSPACE / "diagram_brief.json")
     ts = _read_json(WORKSPACE / "tech_stack.json")
     bp = _read_json(WORKSPACE / "blueprint.json")
+    tool_summary = _read_json(WORKSPACE / "tool_budget_summary.json")
     if analysis:
         out["architecture_analysis"] = analysis
     if brief:
@@ -551,6 +552,23 @@ def _stage_artifacts() -> dict:
         out["tech_stack"] = ts
     if bp:
         out["blueprint"] = bp
+    if tool_summary:
+        out["tool_budget_summary"] = tool_summary
+    return out
+
+def _run_metrics(logs: list[dict]) -> dict:
+    tool_counts: dict[str, int] = {}
+    model_calls = 0
+    for item in logs:
+        if item.get("type") == "llm":
+            model_calls += 1
+        elif item.get("type") == "tool_start":
+            tool = item.get("tool") or "tool"
+            tool_counts[tool] = tool_counts.get(tool, 0) + 1
+    out = {"model_calls": model_calls, "tool_counts": tool_counts}
+    tool_summary = _read_json(WORKSPACE / "tool_budget_summary.json")
+    if tool_summary:
+        out["tool_budget_summary"] = tool_summary
     return out
 
 
@@ -793,6 +811,7 @@ async def agui_endpoint(request: Request):
                 yield _sse({"type": "TEXT_MESSAGE_END", "messageId": current_id})
 
             summary, logs = await _summary_and_logs(config)
+            run_metrics = _run_metrics(logs)
 
             # A gate is pending → emit the approval card.
             val = await _pending_interrupt(config)
@@ -803,6 +822,7 @@ async def agui_endpoint(request: Request):
                     state_delta = [{"op": "replace", "path": "/current_step", "value": step}]
                     for k, v in _stage_artifacts().items():
                         state_delta.append({"op": "replace", "path": f"/{k}", "value": v})
+                    state_delta.append({"op": "replace", "path": "/run_metrics", "value": run_metrics})
                     for k, v in delta.items():
                         state_delta.append({"op": "replace", "path": f"/{k}", "value": v})
                     # At the final review gate the diagram is already rendered — send
@@ -818,7 +838,8 @@ async def agui_endpoint(request: Request):
                         request.app.state.pool,
                         thread_id=thread_id,
                         messages=messages,
-                        state={"current_step": step, **_stage_artifacts(), **delta, **_artifacts()},
+                        state={"current_step": step, **_stage_artifacts(), **delta, **_artifacts(),
+                               "run_metrics": run_metrics},
                         last_msg=_last_user_text(messages),
                         auto_name=(_last_user_text(messages) or "Untitled")[:50],
                     )
@@ -834,7 +855,8 @@ async def agui_endpoint(request: Request):
             png = WORKSPACE / "out.png"
             if png.exists():
                 logger.info("run finished — diagram ready")
-                snapshot = {"current_step": "done", "summary": summary, "logs": logs}
+                snapshot = {"current_step": "done", "summary": summary, "logs": logs,
+                            "run_metrics": run_metrics}
                 snapshot.update(_stage_artifacts())
                 snapshot.update(_artifacts())
                 if all_delegations:
@@ -844,7 +866,7 @@ async def agui_endpoint(request: Request):
             else:
                 # Mid-flow turn (e.g. the agent asked a clarifying question). The
                 # chat text already carries it — just sync any structured state.
-                snap: dict = {"logs": logs}
+                snap: dict = {"logs": logs, "run_metrics": run_metrics}
                 snap.update(_stage_artifacts())
                 if all_delegations:
                     snap["delegations"] = all_delegations

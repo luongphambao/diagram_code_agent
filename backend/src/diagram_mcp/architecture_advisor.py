@@ -243,6 +243,13 @@ def analyze_requirements(requirements: str, provider_preference: str = "") -> di
     patterns = _suggest_patterns(app_type, scale, security, provider, capabilities, constraints)
     concerns = _concerns(scale, security, capabilities, constraints)
 
+    n_capabilities = len(capabilities)
+    recommended_density = (
+        "poster"
+        if (scale in ("enterprise", "large") and n_capabilities >= 5)
+        else "standard"
+    )
+
     return {
         "application_type": app_type,
         "scale_level": scale,
@@ -252,4 +259,10 @@ def analyze_requirements(requirements: str, provider_preference: str = "") -> di
         "constraints": constraints,
         "suggested_patterns": patterns,
         "concerns": concerns,
+        "recommended_density": recommended_density,
+        "recommended_density_reason": (
+            f"scale={scale}, {n_capabilities} detected capabilities → poster grid"
+            if recommended_density == "poster"
+            else f"scale={scale}, {n_capabilities} capabilities → standard slide"
+        ),
     }

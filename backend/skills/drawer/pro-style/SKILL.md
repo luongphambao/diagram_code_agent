@@ -103,6 +103,55 @@ Slide-mode hard rules:
 - Still call `export_drawio()` after `render_diagram`; it will detect
   `out.slide.json` and keep the slide `.drawio`.
 
+## Poster mode (blueprint `density="poster"`)
+Use when the blueprint carries `density="poster"` — a full-stack platform diagram
+with 25-40 nodes that must show every component without aggregation.
+
+**Sizing:** call `plan_style_sizes(node_count=<n>, output="poster")` — it returns
+compact `pretty_kwargs` (cards capped at 260px wide, icon ~33-36px).
+
+**2-row grid layout** — split 6-9 numbered sections into two horizontal bands:
+- Row 1 (top): client-facing tiers — Client → Orchestration/API → Inference → Storage
+- Row 2 (bottom): platform tiers — Ingestion → Parsing → VDB → Observability/Auth
+
+Use **LR direction** with column-pinning across both rows:
+
+```python
+# Row 1 spine — pins 4 columns
+for a, b in [("r1c1_anchor", "r1c2_anchor"), ("r1c2_anchor", "r1c3_anchor"), ("r1c3_anchor", "r1c4_anchor")]:
+    g.link(a, b, style="invis")
+# Row 2 spine — same column count
+for a, b in [("r2c1_anchor", "r2c2_anchor"), ("r2c2_anchor", "r2c3_anchor"), ("r2c3_anchor", "r2c4_anchor")]:
+    g.link(a, b, style="invis")
+# Vertical anchor — connects the two rows at col 1
+g.link("r1c1_anchor", "r2c1_anchor", style="invis")
+```
+
+Where `r1c1_anchor` etc. are real node ids inside the anchor sections of each band.
+
+**Sub-groups encouraged:** nest clusters inside sections for natural groupings
+(model families, storage tiers, KB sources, parser types):
+```python
+g.cluster("inference", "⑤ Inference Layer", number=5, accent="violet")
+g.cluster("llm_models", "LLM Models", kind="Compute", parent="inference")
+g.cluster("embed_models", "Embedding Models", kind="Compute", parent="inference")
+```
+
+**Aspect target:** 1.2–2.2. If layout audit says TOO_WIDE, reduce sections per row
+or switch the second band to a stacked sub-column.
+
+**Icon aliases for AI stack** (common NOT_FOUND entries — use these keywords):
+| Service | `search_icons` keyword | provider |
+|---|---|---|
+| RAGFlow | `ragflow` → fallback `fetch_logo("RAGFlow")` | onprem |
+| vLLM | `vllm` → fallback `fetch_logo("vLLM")` | onprem |
+| MCP server | `mcp` → fallback `generic/compute/server.png` | generic |
+| Docling | `fetch_logo("Docling")` | onprem |
+| MinerU | `fetch_logo("MinerU")` | onprem |
+| DeepDoc | `fetch_logo("DeepDoc")` | onprem |
+| MinIO | `minio` | onprem |
+| Qdrant | `qdrant` | onprem |
+
 ## Node `kind` -> box color (use the right one for meaning)
 - `source` / `io` — clients, users, inputs (blue)
 - `network` — load balancers, gateways, VPC, DNS (purple)

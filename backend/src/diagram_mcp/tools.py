@@ -28,7 +28,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .architecture_advisor import analyze_requirements
 from .backends import LOCAL_ICONS, LOCAL_MANIFEST, LOCAL_NODE_CATALOG, WORKSPACE
-from .findings import DiagramFinding, format_critique, prune
+from .findings import DiagramFinding, format_critique, prune, verdict_for
 
 # Stage markers written under WORKSPACE so the staged tools can enforce order.
 _ARCH_ANALYSIS_FILE = WORKSPACE / "architecture_analysis.json"
@@ -39,11 +39,42 @@ _CRITIQUE_FILE = WORKSPACE / "critique.json"
 
 
 _RENDER_COUNT_FILE = WORKSPACE / "render_count.json"
+_ICON_SEARCH_BUDGET_FILE = WORKSPACE / "icon_search_budget.json"
+_NODE_SEARCH_BUDGET_FILE = WORKSPACE / "node_search_budget.json"
+_REVISION_COUNT_FILE = WORKSPACE / "revision_count.json"
+_TOOL_SUMMARY_FILE = WORKSPACE / "tool_budget_summary.json"
+_ICON_PLAN_FILE = WORKSPACE / "icon_plan.json"
 # Per-round render budget: soft nudge at 3 (finalize with what you have), hard
 # refusal at 6 (the #1 cause of "run limit 80/80" was an endless fix->render
 # loop chasing audit warnings that cannot be fully resolved).
 RENDER_SOFT_CAP = 3
 RENDER_HARD_CAP = 6
+ICON_SEARCH_PER_QUERY_CAP = 3
+ICON_SEARCH_DEFAULT_TOTAL_CAP = 12
+NODE_SINGLE_SEARCH_WARN = 3
+NODE_SINGLE_SEARCH_HARD_CAP = 6
+CRITIC_REVISION_HARD_CAP = 2
+
+def _read_json_file(path: Path, default):
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return default
+
+def _write_json_file(path: Path, value) -> None:
+    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, indent=2), encoding="utf-8")
+
+def _bump_tool_summary(tool_name: str, **extra) -> None:
+    summary = _read_json_file(_TOOL_SUMMARY_FILE, {"tool_counts": {}})
+    counts = summary.setdefault("tool_counts", {})
+    counts[tool_name] = int(counts.get(tool_name, 0)) + 1
+    for key, value in extra.items():
+        if key.endswith("_hits"):
+            summary[key] = int(summary.get(key, 0)) + int(value)
+        else:
+            summary[key] = value
+    _write_json_file(_TOOL_SUMMARY_FILE, summary)
 
 
 def _render_count() -> int:
@@ -56,21 +87,36 @@ def _render_count() -> int:
 def _bump_render_count() -> int:
     n = _render_count() + 1
     _RENDER_COUNT_FILE.write_text(json.dumps({"count": n}), encoding="utf-8")
+    _bump_tool_summary("render_diagram", render_attempts=n)
     return n
+
+
+def _reset_round_budgets() -> None:
+    for f in (_RENDER_COUNT_FILE, _ICON_SEARCH_BUDGET_FILE, _NODE_SEARCH_BUDGET_FILE):
+        if f.exists():
+            f.unlink()
 
 
 def reset_render_count() -> None:
     """New design / new revision round -> fresh render budget."""
-    if _RENDER_COUNT_FILE.exists():
-        _RENDER_COUNT_FILE.unlink()
+    _reset_round_budgets()
+
+
+def _reset_revision_count() -> None:
+    if _REVISION_COUNT_FILE.exists():
+        _REVISION_COUNT_FILE.unlink()
 
 
 def clear_stage_markers() -> None:
     """Reset the staged-flow markers at the start of a fresh run."""
-    for f in (_ARCH_ANALYSIS_FILE, _BRIEF_FILE, _TECHSTACK_FILE, _BLUEPRINT_FILE, _CRITIQUE_FILE):
+    for f in (
+        _ARCH_ANALYSIS_FILE, _BRIEF_FILE, _TECHSTACK_FILE, _BLUEPRINT_FILE,
+        _CRITIQUE_FILE, _REVISION_COUNT_FILE, _TOOL_SUMMARY_FILE,
+        _ICON_SEARCH_BUDGET_FILE, _NODE_SEARCH_BUDGET_FILE,
+    ):
         if f.exists():
             f.unlink()
-    reset_render_count()
+    _reset_round_budgets()
 
 RENDER_TIMEOUT_S = 180
 # Max width of the image handed BACK to the model to inspect. The full-resolution
@@ -127,6 +173,38 @@ def _search_icon_hits(query: str, provider: Optional[str] = None, *, limit: int 
                     if len(hits) >= limit:
                         return hits
     return hits
+
+def _icon_rel(path: str) -> str:
+    try:
+        return str(Path(path).relative_to(Path(LOCAL_ICONS))).replace("\\", "/")
+    except Exception:
+        return path
+
+def _icon_key(query: str, provider: Optional[str]) -> str:
+    prov = (provider or "").strip().lower()
+    q = " ".join((query or "").lower().replace("-", " ").replace("_", " ").split())
+    return f"{prov}:{q}"
+
+def _icon_search_total_cap(state: dict) -> int:
+    planned = state.get("planned_icons")
+    if isinstance(planned, int) and planned > 0:
+        return planned * ICON_SEARCH_PER_QUERY_CAP
+    return ICON_SEARCH_DEFAULT_TOTAL_CAP
+
+def _icon_search_state() -> dict:
+    return _read_json_file(
+        _ICON_SEARCH_BUDGET_FILE,
+        {"counts": {}, "cache": {}, "total_calls": 0, "planned_icons": 0},
+    )
+
+def _save_icon_search_state(state: dict) -> None:
+    _write_json_file(_ICON_SEARCH_BUDGET_FILE, state)
+
+def _node_search_state() -> dict:
+    return _read_json_file(_NODE_SEARCH_BUDGET_FILE, {"single_calls": 0, "batch_calls": 0})
+
+def _save_node_search_state(state: dict) -> None:
+    _write_json_file(_NODE_SEARCH_BUDGET_FILE, state)
 
 
 def _tokens(text: str) -> list[str]:
@@ -311,6 +389,33 @@ def audit_diagram_code(code: str) -> str:
             "Show degraded status with a red/dashed edge, a small status node, or a red security/alert concern rather than trying to mutate built-in node borders.",
         )
 
+    is_slide = "render_slide(" in code
+    cluster_count = code.count("g.cluster(")
+
+    if is_slide and cluster_count >= 6:
+        has_invis_spine = 'style="invis"' in code or "style='invis'" in code
+        has_numbered = "number=" in code
+        has_same_rank = "same_rank(" in code
+
+        if not has_invis_spine:
+            _audit_add(
+                findings, "high", "poster_missing_spine",
+                f"Poster mode ({cluster_count} clusters) has no invisible spine edges.",
+                "Add invisible g.link(a, b, style='invis') edges to pin column alignment across rows.",
+            )
+        if not has_numbered:
+            _audit_add(
+                findings, "high", "poster_missing_numbers",
+                "Poster mode: top-level clusters have no number= argument.",
+                "Add number=1, number=2, ... to every top-level g.cluster() call.",
+            )
+        if not has_same_rank:
+            _audit_add(
+                findings, "medium", "poster_missing_same_rank",
+                "Poster mode has no same_rank() calls — rows may not align across columns.",
+                "Use g.same_rank([anchor_row1, anchor_row2]) to sync row positions.",
+            )
+
     if not findings:
         return json.dumps({"verdict": "PASS", "findings": []}, indent=2)
     verdict = "REVISE" if any(f["severity"] in {"high", "medium"} for f in findings) else "PASS_WITH_NOTES"
@@ -340,19 +445,25 @@ def render_diagram(
             tool_call_id=tool_call_id,
             status="error",
         )
-    if _render_count() >= RENDER_HARD_CAP and (WORKSPACE / "out.png").exists():
+    if _render_count() >= RENDER_HARD_CAP:
+        next_step = (
+            "Keep the existing out.png: call export_drawio(), then return your "
+            "summary listing residual audit warnings."
+            if (WORKSPACE / "out.png").exists()
+            else "No usable out.png remains. Stop rendering and return a short "
+                 "failure summary with the last traceback."
+        )
         return ToolMessage(
             content=f"RENDER BUDGET EXHAUSTED ({RENDER_HARD_CAP} renders this round). "
-                    "Keep the existing out.png: call export_drawio(), then return "
-                    "your summary listing any residual audit warnings. Do NOT keep "
-                    "re-rendering to chase warnings.",
+                    f"{next_step} Do NOT keep re-rendering to chase warnings.",
             name="render_diagram",
             tool_call_id=tool_call_id,
             status="error",
         )
+    attempt = _bump_render_count()
     _stage_helpers()
-    for n in _OUT_NAMES:
-        p = WORKSPACE / n
+    for out_name in _OUT_NAMES:
+        p = WORKSPACE / out_name
         if p.exists():
             p.unlink()
     (WORKSPACE / "diagram.py").write_text(code, encoding="utf-8")
@@ -367,7 +478,8 @@ def render_diagram(
         )
     except subprocess.TimeoutExpired:
         return ToolMessage(
-            content=f"Render TIMED OUT after {RENDER_TIMEOUT_S}s. Simplify the diagram or fix infinite work.",
+            content=f"Render #{attempt}/{RENDER_HARD_CAP} TIMED OUT after {RENDER_TIMEOUT_S}s. "
+                    "Simplify the diagram or fix infinite work.",
             name="render_diagram",
             tool_call_id=tool_call_id,
             status="error",
@@ -377,7 +489,8 @@ def render_diagram(
     if proc.returncode != 0 or not png.exists():
         err = (proc.stderr or proc.stdout or "").strip()
         return ToolMessage(
-            content=f"Render FAILED (exit {proc.returncode}). Fix the code and retry.\n\n{err[-3000:]}",
+            content=f"Render #{attempt}/{RENDER_HARD_CAP} FAILED (exit {proc.returncode}). "
+                    f"Fix the code and retry only if under budget.\n\n{err[-3000:]}",
             name="render_diagram",
             tool_call_id=tool_call_id,
             status="error",
@@ -385,18 +498,17 @@ def render_diagram(
 
     b64, mime = _inspection_image_b64(png)
     audit = _layout_audit()
-    n = _bump_render_count()
-    text = (f"Rendered out.png successfully (render #{n} of "
+    text = (f"Rendered out.png successfully (render #{attempt} of "
             f"{RENDER_HARD_CAP} this round). Inspect it and refine if the "
             "layout is not clean.")
     if audit:
         text += "\n\n" + audit
-        if n < RENDER_SOFT_CAP:
+        if attempt < RENDER_SOFT_CAP:
             text += ("\n\nAct on any audit WARNING before finalizing "
                      "(re-render after fixing). A clean diagram is balanced "
                      "(~1.3–2:1) with every label-bearing edge short.")
         else:
-            text += (f"\n\nRender budget nearly spent ({n}/{RENDER_HARD_CAP}). "
+            text += (f"\n\nRender budget nearly spent ({attempt}/{RENDER_HARD_CAP}). "
                      "Re-render ONLY for a defect you know exactly how to fix "
                      "(e.g. a specific TEXT OVERFLOW label). Otherwise finalize "
                      "with this image and report residual warnings in your "
@@ -448,10 +560,55 @@ def search_icons(query: str, provider: Optional[str] = None) -> str:
     built-in `diagrams` node fits. Optionally restrict to one `provider`
     (e.g. "aws", "azure", "gcp", "onprem", "k8s", "programming", "saas").
     """
-    hits = _search_icon_hits(query, provider)
-    if not hits:
-        return f"No icons matched '{query}'. Try fewer/broader terms or fetch_logo()."
-    return "\n".join(hits)
+    state = _icon_search_state()
+    key = _icon_key(query, provider)
+    cache = state.setdefault("cache", {})
+    if key in cache:
+        cached = cache[key]
+        _bump_tool_summary("search_icons", icon_search_cache_hits=1)
+        return json.dumps({**cached, "cached": True}, indent=2)
+
+    total_cap = _icon_search_total_cap(state)
+    total_calls = int(state.get("total_calls", 0))
+    counts = state.setdefault("counts", {})
+    key_count = int(counts.get(key, 0))
+    if total_calls >= total_cap or key_count >= ICON_SEARCH_PER_QUERY_CAP:
+        result = {
+            "status": "BUDGET_EXHAUSTED",
+            "query": query,
+            "provider": provider,
+            "total_calls": total_calls,
+            "total_cap": total_cap,
+            "query_calls": key_count,
+            "query_cap": ICON_SEARCH_PER_QUERY_CAP,
+            "instruction": (
+                "Stop searching this icon. Use an existing icon_plan.json path, "
+                "omit icon=, or use one generic fallback."
+            ),
+        }
+        _bump_tool_summary("search_icons_budget_exhausted")
+        return json.dumps(result, indent=2)
+
+    counts[key] = key_count + 1
+    state["total_calls"] = total_calls + 1
+    hits = _search_icon_hits(query, provider, limit=5)
+    result = {
+        "status": "FOUND" if hits else "NOT_FOUND",
+        "query": query,
+        "provider": provider,
+        "hits": [{"path": p, "icon": _icon_rel(p)} for p in hits[:5]],
+        "instruction": (
+            "Use one returned icon path. If NOT_FOUND, try at most one broader "
+            "different keyword, then omit icon= or fetch_logo for a brand."
+            if hits
+            else "Try at most one broader different keyword, then omit icon= "
+                 "or fetch_logo for a brand."
+        ),
+    }
+    cache[key] = result
+    _save_icon_search_state(state)
+    _bump_tool_summary("search_icons", icon_search_total_calls=state["total_calls"])
+    return json.dumps(result, indent=2)
 
 
 @tool
@@ -466,12 +623,36 @@ def search_diagrams_nodes(query: str = "", provider: str = "", category: str = "
     BATCH: pass `queries=["redis", "cloud run", ...]` to resolve ALL planned
     imports in ONE call (returns {query: hits}). Do not call once per node.
     """
+    state = _node_search_state()
     if queries:
+        state["batch_calls"] = int(state.get("batch_calls", 0)) + 1
+        _save_node_search_state(state)
+        _bump_tool_summary("search_diagrams_nodes_batch")
         return json.dumps(
             {q: _node_search_hits(q, provider, category, limit=limit) for q in queries},
             indent=2)
+    single_calls = int(state.get("single_calls", 0)) + 1
+    state["single_calls"] = single_calls
+    _save_node_search_state(state)
+    _bump_tool_summary("search_diagrams_nodes_single", node_single_searches=single_calls)
+    if single_calls > NODE_SINGLE_SEARCH_HARD_CAP:
+        return json.dumps({
+            "status": "BUDGET_EXHAUSTED",
+            "query": query,
+            "instruction": (
+                "Stop one-by-one node searches. Batch remaining terms with "
+                "queries=[...] or use already returned imports."
+            ),
+            "single_calls": single_calls,
+            "single_call_cap": NODE_SINGLE_SEARCH_HARD_CAP,
+        }, indent=2)
     hits = _node_search_hits(query, provider, category, limit=limit)
-    return json.dumps(hits, indent=2)
+    payload: dict = {"status": "OK", "query": query, "hits": hits}
+    if single_calls > NODE_SINGLE_SEARCH_WARN:
+        payload["warning"] = (
+            "Too many single node searches. Batch remaining terms with queries=[...]."
+        )
+    return json.dumps(payload, indent=2)
 
 
 class IconRequest(BaseModel):
@@ -489,6 +670,19 @@ def resolve_icons(icons: list[IconRequest]) -> str:
     relative `icon`. Also writes `icon_plan.json` in the workspace so revision
     tasks can reuse prior choices instead of searching again.
     """
+    state = _icon_search_state()
+    if state.get("resolved_this_round") and _ICON_PLAN_FILE.exists():
+        cached = _read_json_file(_ICON_PLAN_FILE, [])
+        _bump_tool_summary("resolve_icons_cached")
+        return json.dumps({
+            "status": "ALREADY_RESOLVED_THIS_ROUND",
+            "instruction": (
+                "Reuse icon_plan.json. Use search_icons only for new NOT_FOUND "
+                "items with a different keyword."
+            ),
+            "icons": cached,
+        }, indent=2)
+
     root = Path(LOCAL_ICONS)
     resolved: list[dict] = []
     for item in icons:
@@ -511,9 +705,16 @@ def resolve_icons(icons: list[IconRequest]) -> str:
             "tried_keywords": [item.icon_keyword],
         })
     WORKSPACE.mkdir(parents=True, exist_ok=True)
-    (WORKSPACE / "icon_plan.json").write_text(
-        json.dumps(resolved, indent=2), encoding="utf-8"
-    )
+    _ICON_PLAN_FILE.write_text(json.dumps(resolved, indent=2), encoding="utf-8")
+    state.update({
+        "resolved_this_round": True,
+        "planned_icons": len({(i.provider.lower(), i.icon_keyword.lower()) for i in icons}),
+        "total_calls": 0,
+        "counts": {},
+        "cache": {},
+    })
+    _save_icon_search_state(state)
+    _bump_tool_summary("resolve_icons", planned_icons=state["planned_icons"])
     return json.dumps(resolved, indent=2)
 
 
@@ -522,7 +723,7 @@ def plan_style_sizes(
     node_count: int,
     longest_label_chars: int = 22,
     longest_sublabel_chars: int = 26,
-    output: Literal["slide", "diagram"] = "slide",
+    output: Literal["slide", "diagram", "poster"] = "slide",
 ) -> str:
     """Decide icon/text sizes for a prettygraph render BEFORE writing the script.
 
@@ -537,7 +738,8 @@ def plan_style_sizes(
         node_count: number of VISIBLE boxes planned (after collapsing replicas).
         longest_label_chars: character count of the longest node title.
         longest_sublabel_chars: character count of the longest sublabel.
-        output: "slide" (pro slide canvas) or "diagram" (plain render).
+        output: "slide" (pro slide canvas), "diagram" (plain render), or
+                "poster" (dense numbered-section grid, 25-40 nodes).
     """
     import math
 
@@ -547,11 +749,13 @@ def plan_style_sizes(
         density, node_h, title = "medium", 60, 16
     elif node_count <= 22:
         density, node_h, title = "dense", 54, 14
+    elif output == "poster":
+        density, node_h, title = "poster", 46, 12
     else:
         density, node_h, title = "packed", 50, 13
-    icon = max(36, min(48, round(node_h * 0.72)))
-    sub = max(11, title - 3)
-    edge = max(11, title - 3)
+    icon = max(32, min(48, round(node_h * 0.72)))
+    sub = max(10, title - 2)
+    edge = max(10, title - 2)
     cluster = title + 2
 
     # Fit the longest text row: lr margins (~32pt) + icon + gap + text width.
@@ -559,21 +763,32 @@ def plan_style_sizes(
     text_w = max(0.60 * title * longest_label_chars,
                  0.52 * sub * longest_sublabel_chars)
     raw_w = 32 + icon + 10 + text_w
-    node_w = min(380, max(240, math.ceil(raw_w / 10) * 10))
+    w_cap = 260 if output == "poster" else 380
+    w_min = 200 if output == "poster" else 240
+    node_w = min(w_cap, max(w_min, math.ceil(raw_w / 10) * 10))
 
     notes = [
         "Pass pretty_kwargs verbatim into Pretty(...); sizes apply to the PNG "
         "and the exported .drawio identically.",
     ]
-    if raw_w > 380:
-        fit = int((380 - 42 - icon) / (0.60 * title))
+    if raw_w > w_cap:
+        fit = int((w_cap - 42 - icon) / (0.60 * title))
         notes.append(
-            f"Longest label needs ~{raw_w:.0f}pt but cards cap at 380pt — shorten "
+            f"Longest label needs ~{raw_w:.0f}pt but cards cap at {w_cap}pt — shorten "
             f"titles to <={fit} chars or move detail into the sublabel."
         )
     if node_count > 18 and output == "slide":
         notes.append("18+ visible nodes on a slide reads cramped — collapse "
-                     "replicas or aggregate side concerns before rendering.")
+                     "replicas/aggregate side concerns, or use output='poster'.")
+    if output == "poster":
+        notes.append(
+            "Poster mode: use a 2-row grid with 6-9 numbered sections. "
+            "Row 1 = client-facing tiers (Client→Orchestration→Inference→Storage), "
+            "Row 2 = platform tiers (Ingestion→Parsing→VDB→Observability/Auth). "
+            "Pin columns with an invisible spine + same_rank across both rows. "
+            "Nested sub-clusters inside sections are encouraged. "
+            "Target aspect 1.2-2.2."
+        )
 
     sizes = {
         "node_width": node_w, "node_height": node_h, "icon_size": icon,
@@ -843,6 +1058,15 @@ class Blueprint(BaseModel):
                     "title band + caption + legend; diagram: body-only output, "
                     "ONLY when the user explicitly asks for a plain/raw diagram",
     )
+    density: Literal["standard", "poster"] = Field(
+        "standard",
+        description="standard (default): client-facing slide with 12-18 nodes, "
+                    "aggregating cross-cutting concerns. "
+                    "poster: 25-40 nodes in 6-9 numbered sections across a 2-row grid — "
+                    "use when the source document describes a large platform (15+ components, "
+                    "5+ tiers) and full component coverage matters more than visual sparseness. "
+                    "Pass density to the drawer so it calls plan_style_sizes(output='poster').",
+    )
     slide_title: str = Field(
         "",
         description="large slide hero title; default to the system/product name when presentation_style=slide",
@@ -925,6 +1149,7 @@ def propose_blueprint(blueprint: Blueprint) -> str:
         blueprint.model_dump_json(by_alias=True, indent=2), encoding="utf-8"
     )
     reset_render_count()
+    _reset_revision_count()
     return (
         "Blueprint APPROVED. Next: write the diagram code, call render_diagram, "
         "look at the PNG and refine, call export_drawio, then finalize_diagram."
@@ -985,8 +1210,23 @@ def submit_critique(findings: list[DiagramFinding]) -> str:
     _CRITIQUE_FILE.write_text(
         json.dumps([f.model_dump() for f in kept], indent=2), encoding="utf-8"
     )
-    reset_render_count()  # a revision round gets a fresh render budget
-    return format_critique(findings)
+    if verdict_for(kept) == "revise":
+        state = _read_json_file(_REVISION_COUNT_FILE, {"count": 0})
+        count = int(state.get("count", 0)) + 1
+        _write_json_file(_REVISION_COUNT_FILE, {"count": count})
+        _bump_tool_summary("submit_critique", critic_revisions=count)
+        if count > CRITIC_REVISION_HARD_CAP:
+            base = format_critique(kept)
+            return (
+                f"VERDICT: PASS (revision limit reached: {CRITIC_REVISION_HARD_CAP} "
+                "drawer revision rounds already used — proceed to finalize and "
+                "mention residual findings)\n"
+                + "\n".join(base.splitlines()[1:])
+            )
+        reset_render_count()  # a revision round gets a fresh render/search budget
+    else:
+        _bump_tool_summary("submit_critique")
+    return format_critique(kept)
 
 
 @tool
@@ -999,6 +1239,88 @@ def finalize_diagram() -> str:
     if not (WORKSPACE / "out.png").exists():
         return "No rendered diagram yet — call render_diagram (and export_drawio) first."
     return "Diagram finalized and approved by the user."
+
+
+class GridSection(BaseModel):
+    """One section (cluster) in a poster-mode grid row."""
+    id: str = Field(description="snake_case id matching the g.cluster() id")
+    label: str = Field(description="section label, e.g. '① Client / Access Layer'")
+    anchor_node_id: str = Field(description="id of one node inside this section used as a spine anchor")
+
+
+@tool
+def declare_poster_grid(
+    row1: list[GridSection],
+    row2: list[GridSection],
+) -> str:
+    """Declare and validate the 2-row grid layout for a poster-mode diagram.
+
+    Call this BEFORE writing prettygraph code when density='poster'.
+    Pass the planned sections for row 1 (client-facing tiers) and row 2
+    (platform tiers). Returns a ready-to-paste code skeleton with invisible
+    spine edges and same_rank anchors.
+
+    Rules enforced:
+    - row1 must have 3-6 sections
+    - row2 must have 2-5 sections
+    - Each section must have a distinct anchor_node_id
+    """
+    errors: list[str] = []
+    if not (3 <= len(row1) <= 6):
+        errors.append(f"row1 has {len(row1)} sections; expected 3-6.")
+    if not (2 <= len(row2) <= 5):
+        errors.append(f"row2 has {len(row2)} sections; expected 2-5.")
+    all_anchors = [s.anchor_node_id for s in row1 + row2]
+    if len(all_anchors) != len(set(all_anchors)):
+        seen: set[str] = set()
+        dups = [a for a in all_anchors if a in seen or seen.add(a)]  # type: ignore[func-returns-value]
+        errors.append(f"Duplicate anchor_node_ids: {dups}. Each section needs a unique anchor.")
+    if errors:
+        return json.dumps({"status": "INVALID", "errors": errors}, indent=2)
+
+    anchors1 = [s.anchor_node_id for s in row1]
+    anchors2 = [s.anchor_node_id for s in row2]
+    n1, n2 = len(anchors1), len(anchors2)
+
+    lines: list[str] = [
+        "# === POSTER GRID SKELETON (paste into script) ===",
+        f"# Row 1 spine ({n1} columns)",
+    ]
+    pairs1 = list(zip(anchors1[:-1], anchors1[1:]))
+    lines.append(f"for a, b in {pairs1!r}:")
+    lines.append('    g.link(a, b, style="invis")')
+    lines.append("")
+    pad_note = f", padded to {n1}" if n2 < n1 else ""
+    lines.append(f"# Row 2 spine ({n2} columns{pad_note})")
+    pairs2 = list(zip(anchors2[:-1], anchors2[1:]))
+    lines.append(f"for a, b in {pairs2!r}:")
+    lines.append('    g.link(a, b, style="invis")')
+    lines.append("")
+    lines.append(f"# Vertical connector (row1 col1 → row2 col1)")
+    lines.append(f'g.link("{anchors1[0]}", "{anchors2[0]}", style="invis")')
+    lines.append("")
+    lines.append("# Column alignment via same_rank")
+    min_cols = min(n1, n2)
+    for i in range(min_cols):
+        col_label = f"col {i + 1}" + (" (approximate)" if i > 0 else "")
+        lines.append(f'g.same_rank(["{anchors1[i]}", "{anchors2[i]}"])  # {col_label}')
+    lines.append("# === END SKELETON ===")
+
+    skeleton = "\n".join(lines)
+
+    sections_info = {
+        "row1": [{"id": s.id, "label": s.label, "anchor": s.anchor_node_id} for s in row1],
+        "row2": [{"id": s.id, "label": s.label, "anchor": s.anchor_node_id} for s in row2],
+    }
+    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    (WORKSPACE / "poster_grid.json").write_text(json.dumps(sections_info, indent=2), encoding="utf-8")
+
+    return json.dumps({
+        "status": "OK",
+        "columns": {"row1": n1, "row2": n2},
+        "skeleton": skeleton,
+        "instruction": "Paste the skeleton into your prettygraph script. Number each top-level g.cluster() with number=1, number=2, ...",
+    }, indent=2)
 
 
 DIAGRAM_TOOLS = [
@@ -1014,6 +1336,7 @@ DIAGRAM_TOOLS = [
     resolve_icons,
     plan_style_sizes,
     fit_labels,
+    declare_poster_grid,
     fetch_logo,
     inspect_diagram,
     submit_critique,
@@ -1030,7 +1353,7 @@ MAIN_TOOLS = [
 ]
 
 # Drawer subagent tools: everything needed for the render-refine loop.
-DRAWER_TOOLS = [search_diagrams_nodes, resolve_icons, search_icons, fetch_logo, plan_style_sizes, fit_labels, audit_diagram_code, render_diagram, export_drawio]
+DRAWER_TOOLS = [search_diagrams_nodes, resolve_icons, search_icons, fetch_logo, plan_style_sizes, fit_labels, declare_poster_grid, audit_diagram_code, render_diagram, export_drawio]
 
 # Critic subagent tools: read-only review of the rendered diagram.
 CRITIC_TOOLS = [inspect_diagram, submit_critique]

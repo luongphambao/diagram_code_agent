@@ -48,9 +48,9 @@ with Diagram("Title", filename="/workspace/out", outformat=["png", "dot"],
 - **Non-AWS cloud services with no built-in class** (common on GCP/OCI/IBM): make
   an exact icon plan with a short `icon_keyword` in the icon-pack filename style
   (`Cloud Run` -> `run`, `Cloud SQL` -> `sql`, `Cloud Pub/Sub` -> `pubsub`,
-  `Azure Container Apps` -> `container apps`). Then call `plan_icons(icons=[...])`
-  to lock the list and call `resolve_icons(icons=[...])` once for all planned
-  missing services. Use `search_icons(icon_keyword, provider="<provider>")` only
+  `Azure Container Apps` -> `container apps`). Then call
+  `resolve_icons(icons=[...])` once to lock and resolve all planned missing
+  services. Use `search_icons(icon_keyword, provider="<provider>")` only
   for misses. Never search the same icon/query/provider more than 3 times; total
   fallback search budget is `unique planned icons * 3`. Never fall back to an AWS
   node or a generic box for a named cloud service.

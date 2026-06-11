@@ -574,6 +574,15 @@ def audit_layout(dot_path: str, png_path: str | None = None) -> str:
         lines.append("  L-SHAPE WARNING — nodes are packed along the bottom and "
                      "right edge with the center empty. Re-layout into a 3x2/4x2 "
                      "grid; do not use a long bottom flow then a vertical tower.")
+    if len(node_pts) >= 6:
+        bottom_frac = sum(1 for _, y in node_pts if (y - y0) / Hh < 0.30) / len(node_pts)
+        right_frac = sum(1 for x, _ in node_pts if (x - x0) / W > 0.65) / len(node_pts)
+        if bottom_frac > 0.50 and right_frac > 0.40:
+            lines.append(
+                f"  L-SHAPE WARNING (density) — "
+                f"{bottom_frac:.0%} of nodes in bottom 30%, {right_frac:.0%} in right 35%. "
+                "Rebuild as a balanced 3x2 or 4x2 grid."
+            )
     edge_count = len(g.get("edges", []))
     if edge_count and dashed_edges > max(4, edge_count * 0.35):
         lines.append(f"  SIDE-CHANNEL FANOUT — {dashed_edges}/{edge_count} edges "

@@ -39,19 +39,22 @@ _MAIN_TOOLS_BLOCK = """\
   backend, database, cache, queue, auth, infra, monitoring, cdn, search…). If
   rejected you get the user's note — revise and propose again.
 - `propose_blueprint(blueprint)` — propose a THOROUGH architecture design
-  {audience, detail_level, layout_intent, presentation_style, slide_title,
-  slide_kicker, brand, diagram_title, pattern, pattern_rationale (2-3 sentences),
-  key_decisions (3-6 concrete design decisions/trade-offs covering data flow,
-  scaling, availability, security, storage, integration), nodes[], clusters[],
-  edges[]}; PAUSES for approval. Make
-  it real and specific — not a sketch: every important component as a node, grouped
-  into labeled clusters/tiers, and the real data flows as edges.
+  {audience, detail_level, layout_intent, presentation_style, density,
+  slide_title, slide_kicker, brand, diagram_title, pattern,
+  pattern_rationale (2-3 sentences), key_decisions (3-6 concrete design
+  decisions/trade-offs covering data flow, scaling, availability, security,
+  storage, integration), nodes[], clusters[], edges[]}; PAUSES for approval.
+  Make it real and specific — not a sketch: every important component as a node,
+  grouped into labeled clusters/tiers, and the real data flows as edges.
   Defaults: audience="client", detail_level="architecture",
   layout_intent="left_to_right_pipeline". For client-facing architecture diagrams,
   collapse code/files/modules into capabilities and aggregate cross-cutting concerns.
   DEFAULT to `presentation_style="slide"` (gradient hero band + caption +
   legend); use `presentation_style="diagram"` ONLY when the user explicitly
   asks for a plain/raw/body-only diagram.
+  Set `density="poster"` when the source document describes a large platform
+  (15+ components, 5+ tiers) and full coverage is more important than sparseness —
+  this unlocks 25-40 nodes in a 2-row numbered-section grid.
 - `task(subagent_type="drawer", description=...)` — delegate ALL diagram rendering to the
   `drawer` subagent. The description must be self-contained and include: the FULL
   approved blueprint (every node, cluster, edge), the approved tech stack, the
@@ -96,9 +99,15 @@ _DRAWER_TOOLS_BLOCK = """\
   `plan_style_sizes` (it reads `style_plan.json`) and again whenever the render
   audit reports TEXT OVERFLOW. Text must fit INSIDE its card — overflowing
   cards are auto-widened and break the uniform card grid.
+- `declare_poster_grid(row1, row2)` — **poster mode only**: call this BEFORE
+  writing prettygraph code when density='poster'. Pass the planned sections for
+  row 1 (client-facing tiers) and row 2 (platform tiers); each section is
+  `{id, label, anchor_node_id}`. Returns a ready-to-paste code skeleton with
+  invisible spine edges and same_rank anchors — paste it into your script.
 - `audit_diagram_code(code)` — static pre-render audit for known diagrams/
   Graphviz pitfalls: missing output settings, floating `xlabel`, unstable large
-  clusters, over-specific positioning, and font defaults in the wrong attr bag.
+  clusters, over-specific positioning, font defaults in the wrong attr bag, and
+  missing poster-mode structure (spine, numbering, same_rank).
 - Plus `read_file`, `ls`, `glob`, `grep` for reading skill references."""
 
 
@@ -373,9 +382,14 @@ _PRETTY_DIAGRAM_DETAIL = """\
   node inside a tier cluster (no floating boxes)? clean one-directional flow with
   connected clusters adjacent and SHORT, non-crossing edges? every box shows its
   REAL icon (no blank)? replicas collapsed? If busy, reorder/drop nodes.
-- For client-facing diagrams, verify the drawing reads at architecture level:
-  12-18 visible nodes is the usual upper bound, implementation libraries/file
-  names are hidden, and config/monitoring/calibration are aggregated concerns.
+- For **standard** client-facing diagrams, 12-18 visible nodes is the usual upper
+  bound; implementation libraries/file names are hidden, config/monitoring/
+  calibration are aggregated concerns.
+- For **poster-mode** diagrams (blueprint `density="poster"`): 25-40 nodes across
+  6-9 numbered sections are allowed. Call `plan_style_sizes(output="poster")`.
+  Layout: 2-row grid — Row 1 client-facing tiers, Row 2 platform tiers. Use an
+  invisible-spine + `same_rank` for column alignment across both rows. Nested
+  sub-clusters inside sections are encouraged (model families, storage tiers, etc.).
 - Fix and call `render_diagram` again until production-clean (≤3 renders), then
   call `export_drawio()`.
 
@@ -406,8 +420,8 @@ Rules for slide mode:
 - Verify text with `fit_labels` before rendering: every label/sublabel must fit
   INSIDE its card. Fix any TEXT OVERFLOW audit finding before finalizing.
 - Number every top-level section cluster (`number=1`, `number=2`, ...).
-- Keep ≤5 primary columns; stack CI/CD, Security, Monitoring under adjacent flow
-  columns.
+- Standard: keep ≤5 primary columns; stack CI/CD, Security, Monitoring under
+  adjacent flow columns. Poster: fold after 4-5 sections per row into a 2-row grid.
 - Include a legend when there are >2 edge colors/styles.
 - `export_drawio()` must report existing slide drawio, not overwrite it.
 
@@ -537,6 +551,11 @@ drawer to render without guessing:
   `slide_title`, `slide_kicker`, `brand` (only if known), and `diagram_title`.
   Use `presentation_style="diagram"` ONLY when the user explicitly asks for a
   plain/raw/body-only diagram (e.g. to embed in a doc).
+- Set `density="poster"` when the source document describes a large platform
+  (15+ components, 5+ tiers — e.g. a RAG stack with ingestion pipeline, multiple
+  AI model endpoints, MCP KB layer, and observability). Standard density will
+  aggregate these to ~15 nodes and lose important detail. Poster unlocks 25-40
+  nodes; the drawer renders them in a 2-row numbered-section grid.
 - Every important component as a node with its tier cluster.
 - Real edges with direction and concern (request, data, auth/dashed, etc.).
 - Nodes named to match real library classes or service names (e.g. "ALB", "ECS

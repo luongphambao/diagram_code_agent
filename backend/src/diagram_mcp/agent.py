@@ -182,9 +182,13 @@ DEFAULT_STYLE    = "pretty"          # "pretty" (prettygraph) or "plain" (raw di
 RECURSION_LIMIT  = 160               # max agent steps per run (used by the server)
 REASONING_EFFORT = "medium"
 
-SKILL_PATHS = [
+MAIN_SKILL_PATHS = [
     str(SKILLS_DIR / "diagrams-as-code"),
     str(SKILLS_DIR / "pro-style"),
+]
+DRAWER_SKILL_PATHS = [
+    str(SKILLS_DIR / "drawer" / "diagrams-as-code"),
+    str(SKILLS_DIR / "drawer" / "pro-style"),
 ]
 
 # Context-management: the conversation is re-sent every turn, so stale tool
@@ -217,7 +221,8 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT):
                     trigger=CONTEXT_TRIGGER_TOKENS,
                     clear_at_least=1_000_000,
                     keep=6,
-                    clear_tool_inputs=False,
+                    clear_tool_inputs=True,
+                    exclude_tools=GATE_TOOL_NAMES,
                 )
             ],
             token_count_method="approximate",
@@ -295,7 +300,7 @@ def _drawer_subagent(workdir: str, icons_root: str, manifest: str, style: str) -
         ),
         "system_prompt": build_drawer_prompt(workdir, icons_root, manifest, style=style),
         "tools": DRAWER_TOOLS,
-        "skills": SKILL_PATHS,
+        "skills": DRAWER_SKILL_PATHS,
     }
 
 
@@ -390,7 +395,7 @@ def build_agent(model: str = DEFAULT_MODEL, *, style: str = DEFAULT_STYLE,
         system_prompt=system_prompt,
         backend=backend,
         memory=[MEMORY_PATH],
-        skills=SKILL_PATHS,
+        skills=MAIN_SKILL_PATHS,
         subagents=[drawer_compiled, critic_compiled],
         middleware=_middleware(),
         checkpointer=checkpointer,
