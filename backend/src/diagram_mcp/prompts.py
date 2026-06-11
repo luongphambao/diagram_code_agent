@@ -102,8 +102,10 @@ _DRAWER_TOOLS_BLOCK = """\
 - `declare_poster_grid(row1, row2)` — **poster mode only**: call this BEFORE
   writing prettygraph code when density='poster'. Pass the planned sections for
   row 1 (client-facing tiers) and row 2 (platform tiers); each section is
-  `{id, label, anchor_node_id}`. Returns a ready-to-paste code skeleton with
-  invisible spine edges and same_rank anchors — paste it into your script.
+  `{id, label, anchor_node_id}`. It validates the rows and returns the exact
+  `g.poster_grid([...],[...])` call to put in your script (one line — Pretty
+  auto-builds the spine, per-column same_rank, and decorative cross-section
+  edges). Do NOT hand-wire spine/same_rank yourself.
 - `audit_diagram_code(code)` — static pre-render audit for known diagrams/
   Graphviz pitfalls: missing output settings, floating `xlabel`, unstable large
   clusters, over-specific positioning, font defaults in the wrong attr bag, and
@@ -387,9 +389,18 @@ _PRETTY_DIAGRAM_DETAIL = """\
   calibration are aggregated concerns.
 - For **poster-mode** diagrams (blueprint `density="poster"`): 25-40 nodes across
   6-9 numbered sections are allowed. Call `plan_style_sizes(output="poster")`.
-  Layout: 2-row grid — Row 1 client-facing tiers, Row 2 platform tiers. Use an
-  invisible-spine + `same_rank` for column alignment across both rows. Nested
-  sub-clusters inside sections are encouraged (model families, storage tiers, etc.).
+  Layout: 2-row grid — Row 1 client-facing tiers, Row 2 platform tiers. DO NOT
+  hand-wire the spine/same_rank. Instead:
+  1. Call `declare_poster_grid(row1=[...], row2=[...])` to validate the rows and
+     pick one anchor node per section.
+  2. In the script, after declaring all clusters/boxes/links, call ONE line:
+     `g.poster_grid([<row1 anchor ids>], [<row2 anchor ids>])`. It auto-generates
+     the invisible per-row spine, makes each section a single vertical column,
+     stacks the two rows into aligned columns, and turns real cross-section edges
+     into decorative (`constraint=false`) so the grid — not the data flow — drives
+     the layout. It also auto-widens column spacing for a ~1.7-2.0 aspect.
+  3. Number every top-level section cluster (`number=1`, `number=2`, ...).
+  Nested sub-clusters inside sections are encouraged (model families, storage tiers).
 - Fix and call `render_diagram` again until production-clean (≤3 renders), then
   call `export_drawio()`.
 
@@ -701,6 +712,15 @@ _CRITIC_BODY = """\
   `out.slide.json`, missing legend when >2 edge colors/styles are visible,
   body diagram that is a cramped strip inside the slide, or top-level clusters
   that are not visibly numbered.
+- For `density=poster`, the body MUST read as a balanced 2-row grid of numbered
+  sections that fills the panel. File a `poster_grid_broken` finding when you see
+  any of: sections stacked into a tall single column / L-shape; one row far taller
+  than the other; large empty quadrant (often bottom-right) with the content
+  crammed to one side; aspect outside ~1.4-2.2; or the panel mostly white with a
+  small off-center body. Fix suggestion: "the drawer must call
+  `g.poster_grid([row1 anchors],[row2 anchors])` after declaring all sections —
+  it builds the spine + per-column same_rank and makes each section one column;
+  do not hand-wire invisible edges." This is a concrete layout defect, not taste.
 - For AWS client diagrams with public ingress plus private app/data resources,
   file a missing VPC/Public Subnet/Private Subnet boundary unless explicitly out
   of scope.

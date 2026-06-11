@@ -175,6 +175,11 @@ class Pretty:
     clusters: dict[str, _Cluster] = field(default_factory=dict)
     edges: list[_Edge] = field(default_factory=list)
     same_ranks: list[list[str]] = field(default_factory=list)
+    # Poster grid: each inner list = ordered anchor node ids (one per section) for
+    # that row. When set, to_dot() auto-emits an invisible per-row spine, per-column
+    # same_rank, and forces real cross-section edges to constraint=false so the grid
+    # — not the data flow — drives the macro layout.
+    grid_rows: list[list[str]] = field(default_factory=list)
 
     # ---- authoring API ---- #
     def cluster(self, id: str, label: str, kind: str = "Neutral",
@@ -200,6 +205,37 @@ class Pretty:
     def same_rank(self, ids: list[str]) -> None:
         """Force nodes onto the same row (clean replica grids)."""
         self.same_ranks.append(list(ids))
+
+    def poster_grid(self, *rows: list[str]) -> None:
+        """Declare a poster grid from per-row anchor node ids (one per section).
+
+        Pass one list per row, each holding the ordered anchor node id of every
+        section in that row, e.g.::
+
+            g.poster_grid(
+                ["client", "api", "rag", "mcp", "vllm"],   # row 1
+                ["ingestion", "storage", "platform"],      # row 2
+            )
+
+        to_dot() then auto-generates the invisible spine (orders columns left→
+        right), per-column same_rank (stacks rows into a grid), a cross-row binder,
+        and relaxes real cross-section edges to constraint=false. The drawer no
+        longer hand-wires spine/same_rank — declaring the rows is enough.
+        """
+        self.grid_rows = [list(r) for r in rows if r]
+
+    def _top_section(self, node_id: str) -> str | None:
+        """Top-level ancestor cluster id of a node (walks the parent chain)."""
+        n = self.nodes.get(node_id)
+        cid = n.parent if n else None
+        seen: set[str] = set()
+        while cid is not None and cid not in seen:
+            seen.add(cid)
+            c = self.clusters.get(cid)
+            if c is None or c.parent is None:
+                return cid
+            cid = c.parent
+        return cid
 
     # ---- icon resolution ---- #
     def _icon_path(self, icon: str | None) -> str | None:
@@ -361,6 +397,10 @@ class Pretty:
         dpi = self.dpi or (192 if pro else 168)
         # Tighter pro spacing — 0.5/0.95 read as puffy clusters with big holes.
         nodesep, ranksep = ("0.4", "0.8") if pro else ("0.5", "0.9")
+        # Poster grid (rankdir=LR): widen column gaps and tighten within-column
+        # stacking so the two bands read wide (target aspect ~1.5) instead of tall.
+        if self.grid_rows:
+            nodesep, ranksep = "0.3", "1.5"
         edge_color = PRO_EDGE if pro else EDGE_COLOR
         node_pen = "1.5" if pro else "1.4"
         arrowhead = ' arrowhead="vee"' if pro else ""
@@ -392,6 +432,33 @@ class Pretty:
         for grp in self.same_ranks:
             ids = " ".join(f'"{i}"' for i in grp)
             out.append(f"  {{rank=same; {ids}}}")
+        # poster grid: invisible per-row spine + per-column same_rank + cross-row binder
+        if self.grid_rows:
+            # 1) Each section is ONE rank: same_rank every node in the anchor's
+            #    section so the whole section stacks into a single vertical column
+            #    (edge-less nodes otherwise collapse onto rank 0 → an L-shape).
+            for row in self.grid_rows:
+                for anchor in row:
+                    sec = self._top_section(anchor)
+                    if sec is None:
+                        continue
+                    members = [nid for nid in self.nodes
+                               if self._top_section(nid) == sec]
+                    if len(members) > 1:
+                        joined = " ".join(f'"{m}"' for m in members)
+                        out.append(f"  {{rank=same; {joined}}}")
+            # 2) Per-row invisible spine orders the section columns left→right.
+            for row in self.grid_rows:
+                for a, b in zip(row[:-1], row[1:]):
+                    out.append(f'  "{a}" -> "{b}" [style="invis"];')
+            # 3) Per-column same_rank merges the row1/row2 sections sharing a column
+            #    into one rank so they stack in the same vertical band of columns.
+            max_cols = max(len(r) for r in self.grid_rows)
+            for col in range(max_cols):
+                ids = [r[col] for r in self.grid_rows if col < len(r)]
+                if len(ids) > 1:
+                    joined = " ".join(f'"{i}"' for i in ids)
+                    out.append(f"  {{rank=same; {joined}}}")
         # edges
         for e in self.edges:
             attrs = []
@@ -424,7 +491,12 @@ class Pretty:
                 attrs.append(f'ltail="{e.ltail}"')
             if e.lhead:
                 attrs.append(f'lhead="{e.lhead}"')
-            if e.constraint is False:
+            relax = e.constraint is False
+            if (e.constraint is None and self.grid_rows):
+                ta, tb = self._top_section(e.a), self._top_section(e.b)
+                if ta is not None and tb is not None and ta != tb:
+                    relax = True  # in a grid, real cross-section flow only decorates
+            if relax:
                 attrs.append("constraint=false")
             a = f" [{', '.join(attrs)}]" if attrs else ""
             out.append(f'  "{e.a}" -> "{e.b}"{a};')
@@ -914,8 +986,9 @@ def _compose_slide_png(body_png: str, out_png: str, *, title: str,
     max_w = panel_w - SLIDE_PANEL_PAD * 2
     max_h = panel_h - 82 - legend_h - SLIDE_PANEL_PAD
     body.thumbnail((max_w, max_h), Image.LANCZOS)
+    area_top = panel_y + 74
     body_x = panel_x + (panel_w - body.width) // 2
-    body_y = panel_y + 74
+    body_y = area_top + max(0, (max_h - body.height) // 2)
     canvas.paste(body, (body_x, body_y), body)
 
     if legend_items:

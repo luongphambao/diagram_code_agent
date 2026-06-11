@@ -393,15 +393,18 @@ def audit_diagram_code(code: str) -> str:
     cluster_count = code.count("g.cluster(")
 
     if is_slide and cluster_count >= 6:
-        has_invis_spine = 'style="invis"' in code or "style='invis'" in code
+        # poster_grid() auto-generates the spine + per-column same_rank, so it
+        # satisfies both structural requirements on its own.
+        has_grid = "poster_grid(" in code
+        has_invis_spine = has_grid or 'style="invis"' in code or "style='invis'" in code
         has_numbered = "number=" in code
-        has_same_rank = "same_rank(" in code
+        has_same_rank = has_grid or "same_rank(" in code
 
         if not has_invis_spine:
             _audit_add(
                 findings, "high", "poster_missing_spine",
-                f"Poster mode ({cluster_count} clusters) has no invisible spine edges.",
-                "Add invisible g.link(a, b, style='invis') edges to pin column alignment across rows.",
+                f"Poster mode ({cluster_count} clusters) has no grid structure.",
+                "Call g.poster_grid([row1 anchors], [row2 anchors]) — it builds the invisible spine for you.",
             )
         if not has_numbered:
             _audit_add(
@@ -412,8 +415,8 @@ def audit_diagram_code(code: str) -> str:
         if not has_same_rank:
             _audit_add(
                 findings, "medium", "poster_missing_same_rank",
-                "Poster mode has no same_rank() calls — rows may not align across columns.",
-                "Use g.same_rank([anchor_row1, anchor_row2]) to sync row positions.",
+                "Poster mode has no column alignment — rows may not align across columns.",
+                "Call g.poster_grid([row1 anchors], [row2 anchors]) to sync row/column positions.",
             )
 
     if not findings:
@@ -1282,31 +1285,9 @@ def declare_poster_grid(
     anchors2 = [s.anchor_node_id for s in row2]
     n1, n2 = len(anchors1), len(anchors2)
 
-    lines: list[str] = [
-        "# === POSTER GRID SKELETON (paste into script) ===",
-        f"# Row 1 spine ({n1} columns)",
-    ]
-    pairs1 = list(zip(anchors1[:-1], anchors1[1:]))
-    lines.append(f"for a, b in {pairs1!r}:")
-    lines.append('    g.link(a, b, style="invis")')
-    lines.append("")
-    pad_note = f", padded to {n1}" if n2 < n1 else ""
-    lines.append(f"# Row 2 spine ({n2} columns{pad_note})")
-    pairs2 = list(zip(anchors2[:-1], anchors2[1:]))
-    lines.append(f"for a, b in {pairs2!r}:")
-    lines.append('    g.link(a, b, style="invis")')
-    lines.append("")
-    lines.append(f"# Vertical connector (row1 col1 → row2 col1)")
-    lines.append(f'g.link("{anchors1[0]}", "{anchors2[0]}", style="invis")')
-    lines.append("")
-    lines.append("# Column alignment via same_rank")
-    min_cols = min(n1, n2)
-    for i in range(min_cols):
-        col_label = f"col {i + 1}" + (" (approximate)" if i > 0 else "")
-        lines.append(f'g.same_rank(["{anchors1[i]}", "{anchors2[i]}"])  # {col_label}')
-    lines.append("# === END SKELETON ===")
-
-    skeleton = "\n".join(lines)
+    # One line for the script: Pretty.poster_grid() builds the spine, per-column
+    # same_rank, and decorative cross-section edges from these anchor rows.
+    call = f"g.poster_grid(\n    {anchors1!r},  # row 1\n    {anchors2!r},  # row 2\n)"
 
     sections_info = {
         "row1": [{"id": s.id, "label": s.label, "anchor": s.anchor_node_id} for s in row1],
@@ -1318,8 +1299,12 @@ def declare_poster_grid(
     return json.dumps({
         "status": "OK",
         "columns": {"row1": n1, "row2": n2},
-        "skeleton": skeleton,
-        "instruction": "Paste the skeleton into your prettygraph script. Number each top-level g.cluster() with number=1, number=2, ...",
+        "poster_grid_call": call,
+        "instruction": (
+            "Put this ONE call in your script AFTER all g.cluster()/g.box()/g.link() "
+            "calls. Do NOT add manual invisible spine or same_rank lines — poster_grid "
+            "generates them. Number each top-level g.cluster() with number=1, 2, ..."
+        ),
     }, indent=2)
 
 
