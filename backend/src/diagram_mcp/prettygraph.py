@@ -35,6 +35,7 @@ import base64
 import html
 import json
 import re
+import shutil
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -952,23 +953,27 @@ def _normal_legend(legend) -> list[dict[str, str]]:
 
 def _compose_slide_png(body_png: str, out_png: str, *, title: str,
                        kicker: str | None, brand: str | None,
-                       diagram_title: str | None, legend) -> dict:
+                       diagram_title: str | None, legend,
+                       include_hero: bool = True) -> dict:
     from PIL import Image, ImageDraw
 
     canvas = Image.new("RGB", (SLIDE_SIZE, SLIDE_SIZE), "white")
-    canvas.paste(_gradient((SLIDE_SIZE, SLIDE_HERO_H)), (0, 0))
+    if include_hero:
+        canvas.paste(_gradient((SLIDE_SIZE, SLIDE_HERO_H)), (0, 0))
     draw = ImageDraw.Draw(canvas)
 
-    if brand:
+    if include_hero and brand:
         draw.text((SLIDE_SIZE - SLIDE_MARGIN, 54), brand, font=_font(58, bold=True),
                   fill="white", anchor="ra")
-    if kicker:
+    if include_hero and kicker:
         _draw_centered_text(draw, (SLIDE_SIZE // 2, 284), kicker, _font(68),
                             (248, 250, 252), 1550)
-    _draw_centered_text(draw, (SLIDE_SIZE // 2, 390), title, _font(78, bold=True),
-                        "white", 1850, line_gap=12)
+    if include_hero:
+        _draw_centered_text(draw, (SLIDE_SIZE // 2, 390), title, _font(78, bold=True),
+                            "white", 1850, line_gap=12)
 
-    panel_x, panel_y = SLIDE_MARGIN, SLIDE_HERO_H + 34
+    panel_x = SLIDE_MARGIN
+    panel_y = SLIDE_HERO_H + 34 if include_hero else SLIDE_MARGIN
     panel_w = SLIDE_SIZE - SLIDE_MARGIN * 2
     panel_h = SLIDE_SIZE - panel_y - SLIDE_MARGIN
     draw.rounded_rectangle((panel_x, panel_y, panel_x + panel_w, panel_y + panel_h),
@@ -1072,7 +1077,7 @@ def _transform_drawio_body(xml: str, *, x: float, y: float, scale: float,
 def _compose_slide_drawio(body_xml: str, out_path: str, *, title: str,
                           kicker: str | None, brand: str | None,
                           diagram_title: str | None, legend, body_box: list[int],
-                          panel: list[int]) -> str:
+                          panel: list[int], include_hero: bool = True) -> str:
     body_w, body_h = _page_dims(body_xml)
     bx, by, bw, bh = body_box
     scale = min(bw / body_w, bh / body_h) if body_w and body_h else 1.0
@@ -1080,20 +1085,22 @@ def _compose_slide_drawio(body_xml: str, out_path: str, *, title: str,
 
     cells: list[str] = [
         _drawio_rect_cell("slide_bg", 0, 0, SLIDE_SIZE, SLIDE_SIZE, fill="#FFFFFF"),
-        _drawio_rect_cell("slide_hero", 0, 0, SLIDE_SIZE, SLIDE_HERO_H,
-                          fill="#075985"),
         _drawio_rect_cell("slide_panel", panel[0], panel[1], panel[2], panel[3],
                           fill="#FFFFFF", stroke="#D7DEE8", rounded=1, shadow=1),
     ]
-    if brand:
+    if include_hero:
+        cells.insert(1, _drawio_rect_cell("slide_hero", 0, 0, SLIDE_SIZE, SLIDE_HERO_H,
+                                          fill="#075985"))
+    if include_hero and brand:
         cells.append(_drawio_text_cell("slide_brand", brand, SLIDE_SIZE - 368, 44,
                                        330, 70, size=36, color="#FFFFFF",
                                        bold=True, align="right"))
-    if kicker:
+    if include_hero and kicker:
         cells.append(_drawio_text_cell("slide_kicker", kicker, 244, 258, 1560, 86,
                                        size=42, color="#F8FAFC"))
-    cells.append(_drawio_text_cell("slide_title", title, 90, 352, 1868, 132,
-                                   size=50, color="#FFFFFF", bold=True))
+    if include_hero:
+        cells.append(_drawio_text_cell("slide_title", title, 90, 352, 1868, 132,
+                                       size=50, color="#FFFFFF", bold=True))
     cells.append(_drawio_text_cell("slide_diagram_title",
                                    diagram_title or "System Architecture",
                                    panel[0] + 30, panel[1] + 18, panel[2] - 60, 48,
@@ -1137,7 +1144,8 @@ def _compose_slide_drawio(body_xml: str, out_path: str, *, title: str,
 
 def render_slide(g: Pretty, out_basename: str, *, title: str,
                  kicker: str | None = None, brand: str | None = None,
-                 diagram_title: str | None = None, legend=None) -> str:
+                 diagram_title: str | None = None, legend=None,
+                 include_hero: bool = True) -> str:
     """Render ``g`` inside a 2048x2048 production slide.
 
     The body diagram remains fully audit/exportable as ``out.dot`` and
@@ -1150,15 +1158,18 @@ def render_slide(g: Pretty, out_basename: str, *, title: str,
     marker_path = f"{out_basename}.slide.json"
 
     body_png = g.render(out_basename)
+    body_copy = f"{out_basename}.body.png"
+    shutil.copy(body_png, body_copy)
     body_xml = g.to_drawio(out_basename)
     layout = _compose_slide_png(
         body_png, png_path, title=title, kicker=kicker, brand=brand,
         diagram_title=diagram_title or g.title, legend=legend,
+        include_hero=include_hero,
     )
     _compose_slide_drawio(
         body_xml, drawio_path, title=title, kicker=kicker, brand=brand,
         diagram_title=diagram_title or g.title, legend=legend,
-        body_box=layout["body"], panel=layout["panel"],
+        body_box=layout["body"], panel=layout["panel"], include_hero=include_hero,
     )
     Path(marker_path).write_text(json.dumps({
         "type": "slide",
@@ -1166,7 +1177,9 @@ def render_slide(g: Pretty, out_basename: str, *, title: str,
         "kicker": kicker,
         "brand": brand,
         "diagram_title": diagram_title or g.title,
+        "include_hero": include_hero,
         "png": str(out.with_suffix(".png")),
+        "body_png": str(out.with_suffix(".body.png")),
         "drawio": str(out.with_suffix(".drawio")),
         "dot": str(out.with_suffix(".dot")),
     }, indent=2), encoding="utf-8")

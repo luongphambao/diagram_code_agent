@@ -70,6 +70,10 @@ _MAIN_TOOLS_BLOCK = """\
   PAUSES. Call AFTER the critic returns `VERDICT: PASS`. If rejected you get
   feedback — instruct the drawer again via `task(...)`, then re-critique and
   `finalize_diagram` again.
+- `generate_pdf_report({})` — compose a multi-page PDF report (cover +
+  solution + tech stack + blueprint + diagram) from approved workspace
+  artifacts. Call after `finalize_diagram` is approved if the user asks for a
+  report/document. Returns the path to `out.pdf`.
 - Plus `read_file`, `write_file`, `edit_file`, `ls`, `glob`, `grep`, `write_todos`."""
 
 _DRAWER_TOOLS_BLOCK = """\
@@ -226,6 +230,10 @@ You design the solution step by step; the user reviews and approves the gated st
 8. **Finalize.** Call `finalize_diagram()` and WAIT for the final review. If the
    user rejects, instruct the drawer to revise via another `task(...)`, re-critique,
    then call `finalize_diagram` again.
+9. **PDF report** (optional — generate if the user asks or the output clearly
+   warrants a document): call `generate_pdf_report({})` to compose cover +
+   solution + tech stack + blueprint + diagram into `out.pdf`. Return the path
+   to the user.
 Do NOT skip ahead (e.g. don't propose tech stack before the diagram brief, don't
 render before the blueprint is approved, don't finalize before the critic passes).
 Once a gate tool returns "APPROVED", do NOT call that same tool again — move on to
@@ -371,9 +379,10 @@ _PRETTY_DIAGRAM_DETAIL = """\
   the diagram, and ends with either:
   - slide output: `render_slide(g, "out", title=..., kicker=..., brand=...,
     diagram_title=..., legend=[...])`
-  - diagram-only output: `g.render("out")`
-  Both produce `out.png` + `out.dot` + `out.nodes.json`; slide output also
-  produces editable `out.drawio` + `out.slide.json`.
+  - diagram-only output: `render_slide(g, "out", title=..., kicker=...,
+    brand=..., diagram_title=..., legend=[...], include_hero=False)`
+  Both produce `out.png` + `out.body.png` + `out.dot` + `out.nodes.json` +
+  editable `out.drawio` + `out.slide.json`.
 - Before rendering, call `audit_diagram_code(code=<the COMPLETE script>)` and fix
   every high/medium finding unless it is demonstrably irrelevant to this script.
 - READ THE LAYOUT AUDIT in the tool result FIRST (it reports the page aspect ratio
@@ -407,8 +416,10 @@ _PRETTY_DIAGRAM_DETAIL = """\
 ## Slide-style production output (the DEFAULT)
 Use slide output unless the approved blueprint explicitly says
 `presentation_style="diagram"`. Slide output adds the gradient hero band
-(kicker + big title), the white panel with caption, and the legend. The script
-MUST use:
+(kicker + big title), the white panel with caption, and the legend. For
+`presentation_style="diagram"`, call the same helper with `include_hero=False`
+so the diagram has no decorative header but keeps the white panel, caption, and
+legend. The script MUST use:
 ```python
 from prettygraph import Pretty, render_slide
 # sizes come from plan_style_sizes(node_count=..., longest_label_chars=...) —
@@ -495,8 +506,9 @@ arrows short and rarely crossing. Apply to Azure/GCP/OCI/IBM exactly as AWS.
   do NOT shrink fonts or compress; just get the BLOCK LAYOUT balanced.
 
 ## Hard rules
-- End diagram-only scripts with `g.render("out")`; end slide scripts with
-  `render_slide(g, "out", ...)`. Both must leave `out.png` AND `out.dot`.
+- End Pretty scripts with `render_slide(g, "out", ...)`; for plain diagram
+  output pass `include_hero=False`. It must leave `out.png`, `out.body.png`,
+  `out.dot`, and `out.nodes.json`.
 - ALWAYS set a title and a short subtitle on `Pretty(...)`.
 - Verify every resolved icon before writing code; never guess icon paths. For raw
   diagrams fallbacks, verify import paths too. Known correction: Argo CD is
