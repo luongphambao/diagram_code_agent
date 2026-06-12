@@ -46,34 +46,38 @@ export default function App() {
     setStoredThreadId(threadId);
   }, [threadId]);
 
+  // Extract stable function refs — these are created with useCallback([]) inside their
+  // respective hooks, so they never change identity across renders.
+  const { resetToNew, restore } = diagramAgent;
+  const { loadHistory, fetchAll } = convStore;
+
   const handleNewConversation = useCallback(() => {
     const tid = newThreadId();
     setThreadId(tid);
-    diagramAgent.resetToNew();
-    // Optimistically add to list; backend will upsert when a message is sent.
-  }, [diagramAgent]);
+    resetToNew();
+  }, [resetToNew]);
 
   const handleSelectConversation = useCallback(async (tid: string) => {
     if (tid === threadId) return;
-    const hist = await convStore.loadHistory(tid);
+    const hist = await loadHistory(tid);
     setThreadId(tid);
     if (hist) {
-      diagramAgent.restore(hist.state, hist.chatMessages, hist.wireMessages as never);
+      restore(hist.state, hist.chatMessages, hist.wireMessages as never);
     } else {
-      diagramAgent.resetToNew();
+      resetToNew();
     }
-  }, [threadId, convStore, diagramAgent]);
+  }, [threadId, loadHistory, restore, resetToNew]);
 
-  // After each agent run finishes (agentState updates), refresh the conversation list
-  // so the sidebar shows the latest name/preview.
+  // After each agent run finishes, refresh the conversation list so the sidebar
+  // shows the latest name/preview. Use the stable `fetchAll` ref to avoid
+  // running this effect on every render (convStore object changes every render).
   const prevRunning = useRef(false);
   useEffect(() => {
     if (prevRunning.current && !diagramAgent.isRunning) {
-      // Run just finished — refresh list from backend
-      convStore.fetchAll();
+      fetchAll();
     }
     prevRunning.current = diagramAgent.isRunning;
-  }, [diagramAgent.isRunning, convStore]);
+  }, [diagramAgent.isRunning, fetchAll]);
 
   const onDragStart = useCallback((e: React.MouseEvent) => {
     dragging.current = true;

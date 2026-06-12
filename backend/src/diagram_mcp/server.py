@@ -441,31 +441,41 @@ def _pending_action_name(val) -> str | None:
 
 
 def _normalize_tech_stack(ts) -> dict:
-    """Normalize the model's tech_stack into {layer: {choice, rationale, alternatives}}.
+    """Normalize the model's tech_stack into {layer: {choice, rationale, alternatives, ...}}.
 
-    The tool schema is a list of {layer, choice, rationale, alternatives}, but be
-    tolerant of a dict (older/variant model output) too.
+    Tolerates:
+    - list of {layer, choice, rationale, ...} (tool call from LLM)
+    - dict keyed by layer (older shape)
+    - wrapped dict {layers: {...}, assumptions: ..., ...} (new shape stored in workspace)
     """
+    _LAYER_FIELDS = ("choice", "rationale", "cost_tier", "decision_criteria", "alternatives",
+                     "estimated_monthly_cost_usd", "capacity_sizing", "performance_target", "risks")
     out: dict = {}
+
+    # Unwrap new wrapped shape from workspace replay
+    if isinstance(ts, dict) and "layers" in ts:
+        ts = ts["layers"]
+
     if isinstance(ts, list):
         for item in ts:
             if isinstance(item, dict) and item.get("layer"):
-                out[item["layer"]] = {
-                    "choice": item.get("choice", ""),
-                    "rationale": item.get("rationale", ""),
-                    "alternatives": item.get("alternatives", []) or [],
-                }
+                layer_data = {f: item.get(f) for f in _LAYER_FIELDS}
+                layer_data["alternatives"] = layer_data.get("alternatives") or []
+                layer_data["risks"] = layer_data.get("risks") or []
+                out[item["layer"]] = layer_data
     elif isinstance(ts, dict):
         for layer, info in ts.items():
             if isinstance(info, dict):
-                out[layer] = {
-                    "choice": info.get("choice", ""),
-                    "rationale": info.get("rationale", ""),
-                    "alternatives": info.get("alternatives", []) or [],
-                }
+                layer_data = {f: info.get(f) for f in _LAYER_FIELDS}
+                layer_data["alternatives"] = layer_data.get("alternatives") or []
+                layer_data["risks"] = layer_data.get("risks") or []
+                out[layer] = layer_data
             else:
                 # flattened/degenerate value (e.g. a bare string) — show it as the choice
-                out[layer] = {"choice": str(info), "rationale": "", "alternatives": []}
+                out[layer] = {"choice": str(info), "rationale": "", "cost_tier": None,
+                              "decision_criteria": None, "alternatives": [],
+                              "estimated_monthly_cost_usd": None, "capacity_sizing": "",
+                              "performance_target": "", "risks": []}
     return out
 
 
@@ -476,11 +486,21 @@ def _card_for(val, summary: str):
     args = ars[0].get("args") or {}
     if name == "propose_tech_stack":
         ts = _normalize_tech_stack(args.get("tech_stack"))
-        return (
-            {"type": "techstack_approval", "tech_stack": ts,
-             "question": "Review the recommended tech stack. Approve, or reject with the changes you want."},
-            "awaiting_techstack", {"tech_stack": ts},
-        )
+        card_data = {
+            "type": "techstack_approval",
+            "tech_stack": ts,
+            "question": "Review the recommended tech stack and its sizing assumptions. Approve, or reject with the changes you want.",
+            "assumptions": args.get("assumptions"),
+            "scaling_roadmap": args.get("scaling_roadmap"),
+            "estimated_total_monthly_cost_usd": args.get("estimated_total_monthly_cost_usd"),
+        }
+        state_delta = {
+            "tech_stack": ts,
+            "tech_assumptions": args.get("assumptions"),
+            "tech_scaling_roadmap": args.get("scaling_roadmap"),
+            "tech_total_cost": args.get("estimated_total_monthly_cost_usd"),
+        }
+        return (card_data, "awaiting_techstack", state_delta)
     if name == "propose_blueprint":
         bp = args.get("blueprint", {})
         return (

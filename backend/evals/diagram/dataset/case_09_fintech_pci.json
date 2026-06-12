@@ -1,0 +1,25 @@
+{
+  "id": "case_09_fintech_pci",
+  "prompt": "Design a PCI DSS-compliant payment processing platform on AWS. Includes a cardholder data environment (CDE) in isolated VPC subnet, tokenization service, Stripe integration, fraud detection with ML, audit logging via CloudTrail, WAF, HSM for key management, and DynamoDB for transaction records. Security level: critical.",
+  "expected_nodes": [
+    "WAF", "ALB", "Tokenization Service", "Payment API", "Stripe",
+    "Fraud Detection", "CloudHSM", "DynamoDB", "CloudTrail", "GuardDuty"
+  ],
+  "expected_edges": [
+    {"from": "Client", "to": "WAF"},
+    {"from": "WAF", "to": "ALB"},
+    {"from": "ALB", "to": "Payment API"},
+    {"from": "Payment API", "to": "Tokenization Service"},
+    {"from": "Payment API", "to": "Stripe"},
+    {"from": "Payment API", "to": "Fraud Detection"},
+    {"from": "Tokenization Service", "to": "CloudHSM"},
+    {"from": "Payment API", "to": "DynamoDB"}
+  ],
+  "expected_clusters": [
+    "Security", "CDE", "Payment", "Fraud", "Audit"
+  ],
+  "min_nodes": 7,
+  "min_edges": 6,
+  "min_clusters": 3,
+  "security_level": "critical"
+}

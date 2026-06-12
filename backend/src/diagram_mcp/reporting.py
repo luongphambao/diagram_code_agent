@@ -20,6 +20,7 @@ DEFAULT_REPORT_SECTIONS = [
     "solution",
     "techstack",
     "architecture_analysis",
+    "well_architected",
     "step_results",
     "risks",
     "diagram",
@@ -34,6 +35,8 @@ SECTION_ALIASES = {
     "steps": "step_results",
     "quality": "step_results",
     "risk": "risks",
+    "waf": "well_architected",
+    "pillars": "well_architected",
 }
 
 REPORT_EVIDENCE_NAME = "report_evidence.json"
@@ -136,13 +139,31 @@ def record_artifact_inventory(workspace: Path) -> list[dict[str, Any]]:
 
 
 def _tech_items(tech_stack: Any) -> list[dict[str, Any]]:
+    # Unwrap new wrapped shape {assumptions, layers, scaling_roadmap, ...}
+    if isinstance(tech_stack, dict) and "layers" in tech_stack:
+        tech_stack = tech_stack["layers"]
+
     if isinstance(tech_stack, list):
         return [item for item in tech_stack if isinstance(item, dict)]
     if isinstance(tech_stack, dict):
-        return [
-            {"layer": layer, **value} if isinstance(value, dict) else {"layer": layer, "choice": value}
-            for layer, value in tech_stack.items()
-        ]
+        items = []
+        for layer, value in tech_stack.items():
+            if isinstance(value, dict):
+                item = {"layer": layer, **value}
+                # Normalize alternatives: list[str] or list[dict]
+                alts = item.get("alternatives", [])
+                item["alternatives_display"] = [
+                    a.get("name", str(a)) if isinstance(a, dict) else str(a)
+                    for a in alts
+                ]
+                item["alternatives_detail"] = [
+                    a if isinstance(a, dict) else {"name": str(a), "why_rejected": ""}
+                    for a in alts
+                ]
+            else:
+                item = {"layer": layer, "choice": value, "alternatives_display": [], "alternatives_detail": []}
+            items.append(item)
+        return items
     return []
 
 
@@ -172,6 +193,17 @@ def _components_by_cluster(blueprint: dict[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
+def _req_soft_match_report(requirement: str, candidates: list[str]) -> list[str]:
+    """Return matched candidate names via substring matching (case-insensitive)."""
+    req_norm = requirement.lower().replace("-", " ").replace("_", " ")
+    matches = []
+    for name in candidates:
+        terms = [t for t in name.lower().replace("/", " ").replace("-", " ").split() if len(t) > 3]
+        if terms and any(t in req_norm for t in terms):
+            matches.append(name)
+    return matches
+
+
 def _traceability(brief: dict[str, Any], blueprint: dict[str, Any]) -> list[dict[str, Any]]:
     requirements = []
     for kind, items in (
@@ -185,21 +217,37 @@ def _traceability(brief: dict[str, Any], blueprint: dict[str, Any]) -> list[dict
     clusters = [c for c in _as_list(blueprint.get("clusters")) if isinstance(c, dict)]
     component_names = [str(n.get("label") or n.get("id") or "") for n in nodes if n]
     cluster_names = [str(c.get("label") or c.get("id") or "") for c in clusters if c]
+    key_decisions = [str(d) for d in _as_list(blueprint.get("key_decisions"))]
+    # Also check nfr_mapping mechanisms for NFR rows
+    nfr_mappings = {
+        m.get("nfr", ""): m.get("mechanism", "")
+        for m in _as_list(blueprint.get("nfr_mapping"))
+        if isinstance(m, dict)
+    }
     fallback = ", ".join([x for x in (cluster_names[:2] + component_names[:3]) if x]) or "Architecture blueprint"
 
+    candidates = component_names + cluster_names + key_decisions
     rows = []
-    for req in requirements[:18]:
-        text = req["requirement"].lower()
-        matches = []
-        for name in component_names + cluster_names:
-            terms = [t for t in name.lower().replace("/", " ").replace("-", " ").split() if len(t) > 3]
-            if terms and any(t in text for t in terms):
-                matches.append(name)
+    for req in requirements[:20]:
+        text = req["requirement"]
+        matches = _req_soft_match_report(text, candidates)
+        # For non-functional, also check nfr_mapping
+        mechanism_match = ""
+        if req["type"] == "Non-functional":
+            for nfr_key, mech in nfr_mappings.items():
+                nfr_norm = nfr_key.lower().replace("-", " ").replace("_", " ")
+                req_norm = text.lower().replace("-", " ").replace("_", " ")
+                if any(t in req_norm for t in nfr_norm.split() if len(t) > 3):
+                    mechanism_match = mech
+                    break
+        mapped_to = ", ".join(dict.fromkeys(matches[:4])) or (mechanism_match or fallback)
+        covered = bool(matches or mechanism_match)
         rows.append(
             {
                 **req,
-                "mapped_to": ", ".join(dict.fromkeys(matches[:4])) or fallback,
-                "coverage": "Addressed in approved blueprint",
+                "mapped_to": mapped_to,
+                "coverage": "✓ Covered" if covered else "✗ Not mapped",
+                "covered": covered,
             }
         )
     return rows
@@ -236,6 +284,37 @@ def _risk_items(
     return risks
 
 
+def _well_architected_items(blueprint: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return a row per WAF pillar with addressed_by, gaps, and status."""
+    pillar_coverage = blueprint.get("pillar_coverage") or {}
+    pillar_names = [
+        ("operational_excellence", "Operational Excellence"),
+        ("security", "Security"),
+        ("reliability", "Reliability"),
+        ("performance_efficiency", "Performance Efficiency"),
+        ("cost_optimization", "Cost Optimization"),
+        ("sustainability", "Sustainability"),
+    ]
+    rows = []
+    for key, label in pillar_names:
+        data = pillar_coverage.get(key, {}) if isinstance(pillar_coverage, dict) else {}
+        addressed = _as_list(data.get("addressed_by", []) if isinstance(data, dict) else [])
+        gaps = _as_list(data.get("gaps", []) if isinstance(data, dict) else [])
+        if addressed:
+            status = "✓ Addressed"
+        elif gaps:
+            status = "⚠ Gap declared"
+        else:
+            status = "✗ Not covered"
+        rows.append({
+            "pillar": label,
+            "addressed_by": ", ".join(str(a) for a in addressed[:6]) or "—",
+            "gaps": "; ".join(str(g) for g in gaps[:3]) or "—",
+            "status": status,
+        })
+    return rows
+
+
 def _executive_points(
     analysis: dict[str, Any],
     brief: dict[str, Any],
@@ -256,10 +335,77 @@ def _executive_points(
     if context:
         points.append(f"Planning signals indicate {context} requirements.")
     if tech_items:
-        points.append(f"The solution stack covers {len(tech_items)} implementation layer(s) with documented rationale and alternatives.")
+        cost_tiers = [t.get("cost_tier", "") for t in tech_items if t.get("cost_tier")]
+        if cost_tiers:
+            high_cost = sum(1 for c in cost_tiers if c == "$$$")
+            low_cost = sum(1 for c in cost_tiers if c == "$")
+            if high_cost > len(cost_tiers) / 2:
+                cost_posture = "high cost posture"
+            elif low_cost > len(cost_tiers) / 2:
+                cost_posture = "low/optimized cost posture"
+            else:
+                cost_posture = "medium cost posture"
+            points.append(
+                f"The solution stack covers {len(tech_items)} implementation layer(s) with documented trade-offs; overall {cost_posture}."
+            )
+        else:
+            points.append(f"The solution stack covers {len(tech_items)} implementation layer(s) with documented rationale and alternatives.")
     decisions = _as_list(blueprint.get("key_decisions"))
     points.extend(str(x) for x in decisions[:3])
     return points[:7] or ["The report packages the approved architecture diagram and planning artifacts for customer review."]
+
+
+_PROVIDER_WAF_NAMES: dict[str, str] = {
+    "aws": "AWS Well-Architected Framework",
+    "azure": "Azure Well-Architected Framework",
+    "gcp": "Google Cloud Architecture Framework",
+    "oci": "Oracle Well-Architected Framework",
+    "onprem": "Well-Architected Design Principles",
+}
+
+
+def _waf_title(analysis: dict[str, Any], brief: dict[str, Any]) -> str:
+    provider = (
+        (analysis.get("provider_preference") or brief.get("provider_preference") or "")
+        .lower()
+        .strip()
+    )
+    return _PROVIDER_WAF_NAMES.get(provider, "Well-Architected Framework Review")
+
+
+def _business_value(brief: dict[str, Any], blueprint: dict[str, Any]) -> str:
+    objective = brief.get("objective") or ""
+    func_reqs = _as_list(brief.get("functional_requirements"))
+    stakeholders = _as_list(brief.get("stakeholders"))
+    parts = []
+    if objective:
+        parts.append(objective)
+    if func_reqs:
+        top = ", ".join(str(r) for r in func_reqs[:3])
+        parts.append(f"Key capabilities delivered: {top}.")
+    if stakeholders:
+        parts.append(f"Designed for {', '.join(str(s) for s in stakeholders[:3])} audiences.")
+    return " ".join(parts) or (
+        "The architecture delivers measurable business capabilities with clear ownership boundaries "
+        "and documented delivery readiness."
+    )
+
+
+def _technical_value(blueprint: dict[str, Any], tech_items: list[dict[str, Any]]) -> str:
+    rationale = blueprint.get("pattern_rationale") or ""
+    decisions = _as_list(blueprint.get("key_decisions"))
+    parts = []
+    if rationale:
+        parts.append(rationale)
+    elif decisions:
+        parts.append(decisions[0])
+    if tech_items:
+        layers = [t.get("layer", "") for t in tech_items if t.get("layer")][:4]
+        parts.append(f"Technology coverage: {', '.join(layers)}.")
+    return " ".join(parts) or (
+        "The approved blueprint documents major components, integration paths, technology choices, "
+        "assumptions, and review outcomes in one traceable package."
+    )
 
 
 def assemble_report_data(
@@ -276,7 +422,6 @@ def assemble_report_data(
     blueprint = read_json_file(workspace / "blueprint.json", {})
     critique = read_json_file(workspace / "critique.json", [])
     evidence = read_json_file(evidence_path(workspace), {"steps": []})
-    tool_summary = read_json_file(workspace / "tool_budget_summary.json", {})
 
     diagram_path = workspace / "out.body.png"
     if not diagram_path.exists():
@@ -285,6 +430,10 @@ def assemble_report_data(
         raise FileNotFoundError("No diagram image found; call render_diagram and finalize_diagram first.")
 
     sections = normalize_sections(include_sections)
+    # Extract new wrapped-shape fields before flattening for display
+    tech_assumptions = tech_stack.get("assumptions") if isinstance(tech_stack, dict) else None
+    tech_scaling_roadmap = tech_stack.get("scaling_roadmap") if isinstance(tech_stack, dict) else None
+    tech_total_cost = tech_stack.get("estimated_total_monthly_cost_usd") if isinstance(tech_stack, dict) else None
     tech = _tech_items(tech_stack)
     artifacts = record_artifact_inventory(workspace)
 
@@ -297,6 +446,9 @@ def assemble_report_data(
     report_subtitle = subtitle or blueprint.get("slide_kicker") or "Client Architecture Report"
     report_brand = brand or blueprint.get("brand") or ""
 
+    traceability_rows = _traceability(brief, blueprint)
+    covered_count = sum(1 for r in traceability_rows if r.get("covered", False))
+    total_count = len(traceability_rows)
     return {
         "sections": sections,
         "title": report_title,
@@ -309,13 +461,23 @@ def assemble_report_data(
         "analysis": analysis,
         "brief": brief,
         "tech_items": tech,
+        "tech_assumptions": tech_assumptions,
+        "tech_scaling_roadmap": tech_scaling_roadmap or [],
+        "tech_total_cost": tech_total_cost,
         "blueprint": blueprint,
         "components_by_cluster": _components_by_cluster(blueprint),
-        "traceability": _traceability(brief, blueprint),
+        "traceability": traceability_rows,
+        "coverage_pct": round(100 * covered_count / total_count) if total_count else 0,
+        "coverage_summary": f"{covered_count}/{total_count} requirements covered" if total_count else "No requirements",
+        "well_architected": _well_architected_items(blueprint),
+        "waf_title": _waf_title(analysis, brief),
+        "nfr_mapping": _as_list(blueprint.get("nfr_mapping")),
         "risks": _risk_items(analysis, brief, blueprint, critique if isinstance(critique, list) else []),
         "executive_points": _executive_points(analysis, brief, blueprint, tech),
+        "business_value": _business_value(brief, blueprint),
+        "technical_value": _technical_value(blueprint, tech),
+        "pattern_rationale": blueprint.get("pattern_rationale") or "",
         "evidence_steps": evidence.get("steps", []) if isinstance(evidence, dict) else [],
-        "tool_summary": tool_summary,
         "artifacts": artifacts,
         "node_count": len(_as_list(blueprint.get("nodes"))),
         "edge_count": len(_as_list(blueprint.get("edges"))),
@@ -425,13 +587,19 @@ REPORT_TEMPLATE = r"""
       <div class="metric"><div class="metric-label">Scale</div><div class="metric-value">{{ report.analysis.scale_level or report.brief.scale_level or "Unspecified" }}</div></div>
       <div class="metric"><div class="metric-label">Security</div><div class="metric-value">{{ report.analysis.security_level or report.brief.security_level or "Standard" }}</div></div>
     </div>
+    {% if report.pattern_rationale %}
+    <div class="card" style="border-left: 3px solid #0f766e; background: #f0fdf9;">
+      <h3 style="margin-top:0">Architecture Rationale</h3>
+      <p>{{ report.pattern_rationale }}</p>
+    </div>
+    {% endif %}
     <div class="card">
       <h3>Key Conclusions</h3>
       <ul>{% for point in report.executive_points %}<li>{{ point }}</li>{% endfor %}</ul>
     </div>
     <div class="grid">
-      <div class="card"><h3>Business Value</h3><p>The architecture separates user access, application services, data persistence, and operational concerns so stakeholders can review capability coverage and delivery readiness.</p></div>
-      <div class="card"><h3>Technical Value</h3><p>The approved blueprint documents major components, integration paths, technology choices, assumptions, and review outcomes in one traceable package.</p></div>
+      <div class="card"><h3>Business Value</h3><p>{{ report.business_value }}</p></div>
+      <div class="card"><h3>Technical Value</h3><p>{{ report.technical_value }}</p></div>
     </div>
     <div class="footer"><span>{{ report.title }}</span><span>Executive Summary</span></div>
   </section>
@@ -463,10 +631,18 @@ REPORT_TEMPLATE = r"""
   <section class="page">
     <div class="section-kicker">Traceability</div>
     <h2>Requirement Coverage</h2>
+    <p class="muted">{{ report.coverage_summary }}</p>
     <table>
       <thead><tr><th>Type</th><th>Requirement</th><th>Mapped Architecture Area</th><th>Status</th></tr></thead>
-      <tbody>{% for row in report.traceability %}<tr><td>{{ row.type }}</td><td>{{ row.requirement }}</td><td>{{ row.mapped_to }}</td><td>{{ row.coverage }}</td></tr>{% else %}<tr><td colspan="4" class="muted">No traceability rows available.</td></tr>{% endfor %}</tbody>
+      <tbody>{% for row in report.traceability %}<tr><td>{{ row.type }}</td><td>{{ row.requirement }}</td><td>{{ row.mapped_to }}</td><td style="{% if row.covered %}color:#0f766e;font-weight:bold{% else %}color:#b91c1c{% endif %}">{{ row.coverage }}</td></tr>{% else %}<tr><td colspan="4" class="muted">No traceability rows available.</td></tr>{% endfor %}</tbody>
     </table>
+    {% if report.nfr_mapping %}
+    <h3>NFR → Mechanism Mapping</h3>
+    <table>
+      <thead><tr><th>Non-Functional Requirement</th><th>Mechanism</th><th>Blueprint Nodes</th></tr></thead>
+      <tbody>{% for m in report.nfr_mapping %}<tr><td>{{ m.nfr }}</td><td>{{ m.mechanism }}</td><td>{{ m.node_ids | join(", ") if m.node_ids else "—" }}</td></tr>{% endfor %}</tbody>
+    </table>
+    {% endif %}
     <div class="footer"><span>{{ report.title }}</span><span>Traceability</span></div>
   </section>
 {% endif %}
@@ -479,7 +655,7 @@ REPORT_TEMPLATE = r"""
     <h3>Primary Flow</h3>
     <table>
       <thead><tr><th>From</th><th>To</th><th>Label</th><th>Protocol</th></tr></thead>
-      <tbody>{% for edge in report.blueprint.edges[:12] or [] %}<tr><td>{{ edge["from"] }}</td><td>{{ edge.to }}</td><td>{{ edge.label }}</td><td>{{ edge.protocol }}</td></tr>{% else %}<tr><td colspan="4" class="muted">No blueprint edges were captured.</td></tr>{% endfor %}</tbody>
+      <tbody>{% for edge in report.blueprint.edges[:12] or [] %}<tr><td>{{ edge.get("from") or edge.get("from_") or "—" }}</td><td>{{ edge.get("to") or "—" }}</td><td>{{ edge.get("label") or "—" }}</td><td>{{ edge.get("protocol") or "—" }}</td></tr>{% else %}<tr><td colspan="4" class="muted">No blueprint edges were captured.</td></tr>{% endfor %}</tbody>
     </table>
     <h3>Layout and Presentation Constraints</h3>
     <ul>{% for item in report.brief.layout_constraints or [] %}<li>{{ item }}</li>{% else %}<li class="muted">No explicit layout constraints were captured.</li>{% endfor %}</ul>
@@ -490,11 +666,82 @@ REPORT_TEMPLATE = r"""
 {% if "techstack" in report.sections %}
   <section class="page">
     <div class="section-kicker">Technology Stack</div>
-    <h2>Implementation Rationale</h2>
+    <h2>Implementation Rationale &amp; Trade-offs</h2>
+    {% if report.tech_assumptions %}
+      {% set a = report.tech_assumptions %}
+      <h3>Sizing Assumptions</h3>
+      <p class="muted" style="font-size:10px">All cost estimates are assumption-based ±40%, infra only.</p>
+      <table style="font-size:10px">
+        <tbody>
+          {% if a.budget_tier or a.monthly_budget_range_usd %}<tr><td><strong>Budget</strong></td><td>{{ a.budget_tier }}{% if a.monthly_budget_range_usd %} — ${{ a.monthly_budget_range_usd.min_usd }}–{{ a.monthly_budget_range_usd.max_usd }}/mo{% endif %}</td></tr>{% endif %}
+          {% if a.project_phase %}<tr><td><strong>Phase</strong></td><td>{{ a.project_phase }}</td></tr>{% endif %}
+          {% if a.users %}
+            {% set u = a.users %}
+            <tr><td><strong>Users</strong></td><td>{% if u.mau %}MAU {{ u.mau | int | string }}{% endif %}{% if u.dau %} / DAU {{ u.dau | int | string }}{% endif %}{% if u.peak_concurrent %} / ~{{ u.peak_concurrent | int | string }} concurrent{% endif %}{% if u.peak_rps %} / ~{{ u.peak_rps | int | string }} RPS peak{% endif %}</td></tr>
+          {% endif %}
+          {% if a.availability_target %}<tr><td><strong>Availability</strong></td><td>{{ a.availability_target }}</td></tr>{% endif %}
+          {% if a.latency_target_p99_ms %}<tr><td><strong>Latency target</strong></td><td>p99 ≤ {{ a.latency_target_p99_ms }}ms</td></tr>{% endif %}
+          {% if a.primary_region %}<tr><td><strong>Region</strong></td><td>{{ a.primary_region }}</td></tr>{% endif %}
+          {% if a.team %}
+            {% set t = a.team %}
+            <tr><td><strong>Team</strong></td><td>{% if t.size %}{{ t.size }} engineers{% endif %}{% if t.skill_level %}, {{ t.skill_level }}{% endif %}{% if t.devops_maturity %}, {{ t.devops_maturity }}{% endif %}</td></tr>
+          {% endif %}
+          {% if a.compliance and a.compliance | length > 0 %}<tr><td><strong>Compliance</strong></td><td>{{ a.compliance | join(", ") }}</td></tr>{% endif %}
+        </tbody>
+      </table>
+      {% if a.confirm_with_customer and a.confirm_with_customer | length > 0 %}
+        <h4 style="color:#d97706;margin-top:0.5em">Confirm with customer</h4>
+        <ul style="font-size:10px">{% for item in a.confirm_with_customer %}<li>{{ item }}</li>{% endfor %}</ul>
+      {% endif %}
+    {% endif %}
     <table>
-      <thead><tr><th>Layer</th><th>Choice</th><th>Rationale</th><th>Alternatives</th></tr></thead>
-      <tbody>{% for item in report.tech_items %}<tr><td>{{ item.layer }}</td><td><strong>{{ item.choice }}</strong></td><td>{{ item.rationale }}</td><td>{{ item.alternatives|join(", ") }}</td></tr>{% else %}<tr><td colspan="4" class="muted">No technology stack was recorded.</td></tr>{% endfor %}</tbody>
+      <thead><tr><th>Layer</th><th>Choice</th><th>Cost</th><th>Est. cost/mo</th><th>Rationale</th><th>Criteria (C/O/S/V/T)</th><th>Alternatives &amp; Why Rejected</th></tr></thead>
+      <tbody>
+      {% for item in report.tech_items %}
+        <tr>
+          <td>{{ item.layer }}</td>
+          <td><strong>{{ item.choice }}</strong></td>
+          <td>{{ item.cost_tier or "$$" }}</td>
+          <td class="muted">
+            {% if item.estimated_monthly_cost_usd %}
+              ${{ item.estimated_monthly_cost_usd.min_usd }}–{{ item.estimated_monthly_cost_usd.max_usd }}/mo
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ item.rationale }}</td>
+          <td class="muted">
+            {% if item.decision_criteria %}
+              {{ item.decision_criteria.cost }}/{{ item.decision_criteria.ops_complexity }}/{{ item.decision_criteria.scalability }}/{{ item.decision_criteria.vendor_lockin }}/{{ item.decision_criteria.team_fit }}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% for alt in item.alternatives_detail or [] %}
+              <span class="pill">{{ alt.name }}{% if alt.why_rejected %}: {{ alt.why_rejected }}{% endif %}</span>
+            {% else %}—{% endfor %}
+          </td>
+        </tr>
+      {% else %}<tr><td colspan="7" class="muted">No technology stack was recorded.</td></tr>{% endfor %}
+      </tbody>
     </table>
+    {% if report.tech_total_cost %}
+      <p style="margin-top:0.5em;font-size:11px"><strong>Estimated total: ${{ report.tech_total_cost.min_usd }}–{{ report.tech_total_cost.max_usd }}/mo</strong> <span class="muted">(assumption-based, infra only)</span></p>
+    {% endif %}
+    <p class="muted" style="font-size:10px">Criteria columns: C=Cost, O=Ops complexity, S=Scalability, V=Vendor lock-in, T=Team fit (1=best, 5=worst)</p>
+    {% if report.tech_scaling_roadmap and report.tech_scaling_roadmap | length > 0 %}
+      <h3>Scaling Roadmap</h3>
+      <table style="font-size:10px">
+        <thead><tr><th>Phase</th><th>Trigger</th><th>Est. cost/mo</th><th>Changes</th></tr></thead>
+        <tbody>
+          {% for phase in report.tech_scaling_roadmap %}
+            <tr>
+              <td><strong>{{ phase.phase }}</strong></td>
+              <td class="muted">{{ phase.trigger or "—" }}</td>
+              <td class="muted">{% if phase.est_monthly_cost_usd %}${{ phase.est_monthly_cost_usd.min_usd }}–{{ phase.est_monthly_cost_usd.max_usd }}/mo{% else %}—{% endif %}</td>
+              <td>{{ (phase.changes or []) | join(", ") or "—" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
     <div class="footer"><span>{{ report.title }}</span><span>Technology Stack</span></div>
   </section>
 {% endif %}
@@ -514,6 +761,28 @@ REPORT_TEMPLATE = r"""
   </section>
 {% endif %}
 
+{% if "well_architected" in report.sections %}
+  <section class="page">
+    <div class="section-kicker">Well-Architected Review</div>
+    <h2>{{ report.waf_title }}</h2>
+    <table>
+      <thead><tr><th>Pillar</th><th>Addressed By</th><th>Known Gaps</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for row in report.well_architected %}
+        <tr>
+          <td><strong>{{ row.pillar }}</strong></td>
+          <td>{{ row.addressed_by }}</td>
+          <td>{{ row.gaps }}</td>
+          <td style="{% if row.status.startswith('✓') %}color:#0f766e;font-weight:bold{% elif row.status.startswith('⚠') %}color:#b45309{% else %}color:#b91c1c{% endif %}">{{ row.status }}</td>
+        </tr>
+      {% else %}<tr><td colspan="4" class="muted">Well-Architected pillar coverage not recorded in the blueprint.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    <p class="muted" style="font-size:10px">Gaps declared in the blueprint are NOT defects — they surface known trade-offs for stakeholder discussion.</p>
+    <div class="footer"><span>{{ report.title }}</span><span>Well-Architected Review</span></div>
+  </section>
+{% endif %}
+
 {% if "step_results" in report.sections %}
   <section class="page">
     <div class="section-kicker">Step Results and Quality Gates</div>
@@ -521,7 +790,7 @@ REPORT_TEMPLATE = r"""
     <div class="timeline">
       {% for step in report.evidence_steps %}
         <div class="timeline-item">
-          <div class="timeline-title">{{ step.step }} <span class="status">{{ step.status }}</span></div>
+          <div class="timeline-title">{{ step.step | replace("_", " ") | title }} <span class="status">{{ step.status }}</span></div>
           <div class="muted">{{ step.timestamp }}</div>
           <p>{{ step.summary }}</p>
         </div>
@@ -529,7 +798,6 @@ REPORT_TEMPLATE = r"""
         <p class="muted">No workflow evidence was recorded for this run.</p>
       {% endfor %}
     </div>
-    {% if report.tool_summary %}<h3>Tool Summary</h3><pre>{{ report.tool_summary | tojson(indent=2) }}</pre>{% endif %}
     <div class="footer"><span>{{ report.title }}</span><span>Step Results</span></div>
   </section>
 {% endif %}

@@ -1,0 +1,23 @@
+{
+  "id": "case_04_azure_web_app",
+  "prompt": "Design an Azure architecture for a multi-tenant SaaS web application with React frontend, .NET backend, Azure SQL Database, Redis Cache, and Blob Storage. Include Azure Front Door, App Gateway, and Active Directory for authentication.",
+  "expected_nodes": [
+    "Azure Front Door", "App Gateway", "Container Apps", "Azure SQL", "Redis Cache",
+    "Blob Storage", "Azure AD", "Azure Monitor", "Key Vault"
+  ],
+  "expected_edges": [
+    {"from": "User", "to": "Azure Front Door"},
+    {"from": "Azure Front Door", "to": "App Gateway"},
+    {"from": "App Gateway", "to": "Container Apps"},
+    {"from": "Container Apps", "to": "Azure SQL"},
+    {"from": "Container Apps", "to": "Redis Cache"},
+    {"from": "Container Apps", "to": "Blob Storage"},
+    {"from": "Container Apps", "to": "Azure AD"}
+  ],
+  "expected_clusters": [
+    "Client", "Edge", "Application", "Data", "Security"
+  ],
+  "min_nodes": 6,
+  "min_edges": 5,
+  "min_clusters": 3
+}

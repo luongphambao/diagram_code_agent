@@ -31,10 +31,73 @@ export interface LogEntry {
   ok?: boolean;
 }
 
+export interface TechAlternative {
+  name: string;
+  why_rejected?: string;
+  criteria?: Record<string, number>;
+}
+
+export interface CostRange {
+  min_usd: number;
+  max_usd: number;
+}
+
+export interface TechRisk {
+  risk: string;
+  mitigation?: string;
+}
+
+export interface UserScaleAssumptions {
+  mau?: number;
+  dau?: number;
+  peak_concurrent?: number;
+  peak_rps?: number;
+  growth_rate_yoy_pct?: number;
+}
+
+export interface DataAssumptions {
+  initial_gb?: number;
+  growth_gb_per_month?: number;
+  read_write_ratio?: string;
+}
+
+export interface TeamAssumptions {
+  size?: number;
+  skill_level?: string;
+  devops_maturity?: string;
+}
+
+export interface SolutionAssumptions {
+  budget_tier?: string;
+  monthly_budget_range_usd?: CostRange;
+  users?: UserScaleAssumptions;
+  data?: DataAssumptions;
+  team?: TeamAssumptions;
+  project_phase?: string;
+  availability_target?: string;
+  latency_target_p99_ms?: number;
+  compliance?: string[];
+  primary_region?: string;
+  confirm_with_customer?: string[];
+}
+
+export interface ScalingPhase {
+  phase: string;
+  trigger?: string;
+  changes?: string[];
+  est_monthly_cost_usd?: CostRange;
+}
+
 export interface TechStackLayer {
   choice: string;
   rationale: string;
-  alternatives: string[];
+  cost_tier?: string;
+  decision_criteria?: Record<string, number>;
+  alternatives: Array<string | TechAlternative>;
+  estimated_monthly_cost_usd?: CostRange;
+  capacity_sizing?: string;
+  performance_target?: string;
+  risks?: TechRisk[];
 }
 
 export interface DiagramBrief {
@@ -82,6 +145,8 @@ export interface Blueprint {
   nodes: Array<{ id: string; label: string; tech?: string; cluster?: string; type?: string }>;
   clusters: Array<{ id: string; label: string; tier?: string }>;
   edges: Array<{ from: string; to: string; label?: string; protocol?: string }>;
+  pillar_coverage?: Record<string, { addressed_by?: string[]; gaps?: string[] }>;
+  nfr_mapping?: Array<{ nfr: string; mechanism?: string; node_ids?: string[] }>;
 }
 
 export interface Delegation {
@@ -126,6 +191,9 @@ export interface PendingInterrupt {
     question: string;
     // techstack_approval
     tech_stack?: Record<string, TechStackLayer>;
+    assumptions?: SolutionAssumptions;
+    scaling_roadmap?: ScalingPhase[];
+    estimated_total_monthly_cost_usd?: CostRange;
     // blueprint_approval
     blueprint?: Blueprint;
     // result_review
@@ -211,6 +279,8 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
       let buffer = "";
       let activeTcId = "";
       let activeTcArgs = "";
+      let currentAssistantMsg: WireMessage | null = null;
+      const pendingAssistantMsgs: WireMessage[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -242,6 +312,7 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
 
             case "TEXT_MESSAGE_START": {
               const msgId = evt.messageId as string;
+              currentAssistantMsg = { id: msgId, role: "assistant", content: "" };
               setChatMessages((prev) => [...prev, { id: msgId, role: "assistant", content: "" }]);
               break;
             }
@@ -249,9 +320,20 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
             case "TEXT_MESSAGE_CONTENT": {
               const msgId = evt.messageId as string;
               const delta = evt.delta as string;
+              if (currentAssistantMsg?.id === msgId) {
+                currentAssistantMsg.content += delta;
+              }
               setChatMessages((prev) =>
                 prev.map((m) => m.id === msgId ? { ...m, content: m.content + delta } : m)
               );
+              break;
+            }
+
+            case "TEXT_MESSAGE_END": {
+              if (currentAssistantMsg) {
+                pendingAssistantMsgs.push({ ...currentAssistantMsg });
+                currentAssistantMsg = null;
+              }
               break;
             }
 
@@ -330,6 +412,13 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
           }
         }
       }
+      // Flush any in-flight assistant message (e.g. stream cut off before TEXT_MESSAGE_END)
+      if (currentAssistantMsg) {
+        pendingAssistantMsgs.push({ ...currentAssistantMsg });
+      }
+      if (pendingAssistantMsgs.length > 0) {
+        wireMessagesRef.current = [...wireMessagesRef.current, ...pendingAssistantMsgs];
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -343,7 +432,16 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
     async (content: string) => {
       const msgId = `msg-${Date.now()}`;
       setChatMessages((prev) => [...prev, { id: msgId, role: "user", content }]);
-      setAgentState({});
+      // Set isRunning=true in the SAME batch as agentState clear so DiagramCanvas
+      // never sees a state where isRunning=false AND png_base64=undefined simultaneously.
+      setIsRunning(true);
+      setAgentState((prev) => ({
+        png_base64: prev.png_base64,
+        pdf_base64: prev.pdf_base64,
+        drawio: prev.drawio,
+        code: prev.code,
+        iteration: prev.iteration,
+      }));
       setPendingInterrupt(null);
       setError(null);
 

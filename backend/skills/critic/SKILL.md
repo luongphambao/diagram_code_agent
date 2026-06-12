@@ -48,8 +48,18 @@ documents the quality bar, the defect taxonomy, and what NOT to file.
 - **Every node has a real icon** — no blank/placeholder boxes.
 - **Correct provider icons**: an Azure architecture uses Azure icons; GCP uses
   GCP icons. No AWS icons in a non-AWS diagram.
-- **Legend present** when the diagram uses mixed edge styles (solid + dashed, or
-  solid + dotted). Missing legend = defect.
+- **Legend present and complete**: when the diagram uses ANY mixed edge styles
+  (solid + dashed, or solid + dotted, or color-coded edges), the legend MUST
+  explain EVERY distinct style/color used — not just acknowledge their existence.
+  A legend that lists only "solid=request" but omits the dashed style is a
+  readability defect (medium). A completely missing legend when >1 style is used
+  is a higher readability defect (medium).
+- **Security boundary visible when security_level is high or critical**: a
+  diagram with `security_level=high` or `security_level=critical` MUST show
+  explicit network/IAM boundaries (VPC/subnet, trust zone, security group
+  cluster) for the compute and data tiers. Absence of any security boundary on
+  a high/critical diagram is a **medium** finding (severity: medium → blocks
+  finalize).
 - **No empty visible shapes**: no blank rounded rectangles or spacer boxes.
 - **No clipped/truncated text**: node labels, sublabels, edge labels, and Legend
   text must fit inside their boxes. If text is visibly cut off at a box edge
@@ -68,8 +78,8 @@ documents the quality bar, the defect taxonomy, and what NOT to file.
 |-----------|---------|
 | `critical` | Render is broken; topology is wrong (edges connect wrong nodes; whole tier missing) |
 | `high`    | Blueprint node/edge missing; blank icon box; visible empty shape; Data nested in Application; orchestration flow not numbered |
-| `medium`  | Crossing or whole-canvas edges; aspect ratio > 2.6:1 (layout audit TOO WIDE); clipped/truncated text; overlapping labels; floating un-clustered nodes; floating labeled edges; missing expected VPC/subnet boundary; mixed edge styles without Legend; per-service observability lines instead of one aggregated channel; per-file config fan-out; primary-flow backtracking; client-facing code-level clutter |
-| `low`     | Minor misalignment; small inconsistency; negligible impact |
+| `medium`  | Crossing or whole-canvas edges; aspect ratio > 2.6:1 (layout audit TOO WIDE); clipped/truncated text; overlapping labels; floating un-clustered nodes; floating labeled edges; missing expected VPC/subnet boundary; mixed edge styles without Legend; incomplete legend (style used but not explained); absent security boundary when security_level=high/critical; per-service observability lines instead of one aggregated channel; per-file config fan-out; primary-flow backtracking; client-facing code-level clutter |
+| `low`     | Minor misalignment; small inconsistency; negligible impact; pillar_gap (Well-Architected pillar undocumented — file as `pillar_gap` category, `in_blueprint=false`, severity `low`) |
 
 ## Do NOT file
 - **Taste / aesthetics**: "would look nicer if…", color preferences, nudging boxes.

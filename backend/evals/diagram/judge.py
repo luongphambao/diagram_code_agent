@@ -107,6 +107,30 @@ def structural_f1(blueprint: dict | None, golden: dict) -> dict:
     result["min_edges_ok"] = len(produced_edges) >= min_edges
     result["min_clusters_ok"] = len(produced_clusters) >= min_clusters
 
+    # --- Phase 1/2 quality rubric checks (structural, no LLM) ---
+    pillar_coverage = blueprint.get("pillar_coverage") or {}
+    if isinstance(pillar_coverage, dict) and pillar_coverage:
+        pillar_names = [
+            "operational_excellence", "security", "reliability",
+            "performance_efficiency", "cost_optimization", "sustainability",
+        ]
+        covered_pillars = 0
+        for pname in pillar_names:
+            pdata = pillar_coverage.get(pname, {})
+            if isinstance(pdata, dict) and (pdata.get("addressed_by") or pdata.get("gaps")):
+                covered_pillars += 1
+        result["pillar_coverage_count"] = covered_pillars
+        result["pillar_coverage_pct"] = round(covered_pillars / len(pillar_names), 4)
+        result["pillar_coverage_nontrivial"] = covered_pillars >= 4
+    else:
+        result["pillar_coverage_count"] = 0
+        result["pillar_coverage_pct"] = 0.0
+        result["pillar_coverage_nontrivial"] = False
+
+    nfr_mapping = blueprint.get("nfr_mapping") or []
+    result["nfr_mapping_count"] = len(nfr_mapping) if isinstance(nfr_mapping, list) else 0
+    result["nfr_mapping_nontrivial"] = result["nfr_mapping_count"] >= 2
+
     return result
 
 
@@ -119,20 +143,28 @@ You are an expert architecture diagram reviewer. Evaluate the rendered diagram
 image on the following rubric. Return ONLY valid JSON — no markdown fences.
 
 Rubric dimensions (score 0.0–1.0 each):
-1. completeness   — Are all major components visible? No obvious missing tiers.
-2. readability    — Is the layout clean? Edges short and non-crossing, labels legible.
-3. icon_quality   — Do nodes show real provider icons (not blank boxes)?
-4. cluster_layout — Are nodes grouped into labeled tier clusters? No floating boxes.
-5. overall        — Your holistic quality score.
+1. completeness     — Are all major components visible? No obvious missing tiers.
+2. readability      — Is the layout clean? Edges short and non-crossing, labels legible.
+3. icon_quality     — Do nodes show real provider icons (not blank boxes)?
+4. cluster_layout   — Are nodes grouped into labeled tier clusters? No floating boxes.
+5. legend_quality   — Does the diagram have a legend that explains EVERY edge style and color
+                       used? 1.0 = complete legend present, 0.5 = partial legend, 0.0 = missing.
+                       Score 1.0 if only one edge style is used (no legend needed).
+6. boundary_clarity — Are security/network boundaries (VPC, subnet, trust zone) clearly
+                       visible when security concerns are implied? 1.0 = clearly shown,
+                       0.5 = partially shown, 0.0 = missing when expected.
+7. overall          — Your holistic quality score.
 
 Required JSON schema:
 {
-  "completeness":   <float 0-1>,
-  "readability":    <float 0-1>,
-  "icon_quality":   <float 0-1>,
-  "cluster_layout": <float 0-1>,
-  "overall":        <float 0-1>,
-  "reasoning":      "<1-2 sentence justification>"
+  "completeness":     <float 0-1>,
+  "readability":      <float 0-1>,
+  "icon_quality":     <float 0-1>,
+  "cluster_layout":   <float 0-1>,
+  "legend_quality":   <float 0-1>,
+  "boundary_clarity": <float 0-1>,
+  "overall":          <float 0-1>,
+  "reasoning":        "<1-2 sentence justification>"
 }
 
 Diagram context: {context}

@@ -187,28 +187,58 @@ def _has_any(values: set[str], targets: set[str]) -> bool:
     return bool(values.intersection(targets))
 
 
+_PATTERN_COST_META: dict[str, dict[str, Any]] = {
+    "aws_multi_account_governance": {
+        "relative_cost": "high",
+        "cost_drivers": ["AWS Organizations + Control Tower licensing", "per-account CloudTrail/Config costs", "Transit Gateway data transfer"],
+    },
+    "containerized_kubernetes": {
+        "relative_cost": "medium",
+        "cost_drivers": ["managed cluster control-plane fee", "node instance costs", "persistent volume storage"],
+    },
+    "three_tier": {
+        "relative_cost": "medium",
+        "cost_drivers": ["load balancer hourly fee", "multi-AZ RDS standby instance", "EC2/container instance costs"],
+    },
+    "serverless": {
+        "relative_cost": "low",
+        "cost_drivers": ["per-invocation Lambda pricing", "API Gateway request cost", "cold-start mitigation (provisioned concurrency)"],
+    },
+    "microservices": {
+        "relative_cost": "high",
+        "cost_drivers": ["per-service container/VM overhead", "service mesh sidecar resources", "inter-service network egress"],
+    },
+    "event_driven": {
+        "relative_cost": "medium",
+        "cost_drivers": ["message broker throughput pricing", "consumer instance costs", "dead-letter queue storage"],
+    },
+    "data_pipeline": {
+        "relative_cost": "medium",
+        "cost_drivers": ["compute cluster (Spark/Glue) job hours", "data lake storage", "egress between stages"],
+    },
+    "static_site_jamstack": {
+        "relative_cost": "low",
+        "cost_drivers": ["CDN request/bandwidth charges", "object storage hosting cost"],
+    },
+}
+
+
 def _suggest_patterns(app_type: str, scale: str, security: str, provider: str, capabilities: list[str], constraints: list[str]) -> list[dict[str, Any]]:
     caps = set(capabilities)
     cons = set(constraints)
-    names = [
-        "aws_multi_account_governance",
-        "containerized_kubernetes",
-        "three_tier",
-        "serverless",
-        "microservices",
-        "event_driven",
-        "data_pipeline",
-        "static_site_jamstack",
-    ]
+    names = list(_PATTERN_COST_META.keys())
     out: list[dict[str, Any]] = []
     for name in names:
         score, reasons = _pattern_score(name, caps, cons, app_type, scale, security, provider)
         if score > 0:
+            cost_meta = _PATTERN_COST_META.get(name, {})
             out.append({
                 "pattern": name,
                 "fit": "high" if score >= 6 else "medium" if score >= 3 else "low",
                 "score": score,
                 "reasons": reasons[:4],
+                "relative_cost": cost_meta.get("relative_cost", "medium"),
+                "cost_drivers": cost_meta.get("cost_drivers", []),
             })
     out.sort(key=lambda item: item["score"], reverse=True)
     return out[:5]
@@ -218,8 +248,24 @@ def _concerns(scale: str, security: str, capabilities: list[str], constraints: l
     caps = set(capabilities)
     cons = set(constraints)
     out: list[str] = []
-    if security in {"high", "critical"} and "security" not in caps:
-        out.append("Security level is elevated; include auth/security boundary even if services are not named.")
+    if security in {"high", "critical"}:
+        mandatory = [
+            "encryption at rest and in transit for all data stores",
+            "IAM boundary with least-privilege roles per service",
+            "audit trail (CloudTrail / Activity Log / Cloud Audit Logs)",
+            "network isolation (VPC/subnet boundaries, security groups)",
+        ]
+        if security == "critical":
+            mandatory += [
+                "WAF + DDoS protection on public ingress",
+                "secrets management (Vault / Secrets Manager) — no plaintext credentials",
+                "compliance boundary annotation (HIPAA/PCI zone or equivalent)",
+            ]
+        out.append(
+            f"Security level is {security}; the blueprint MUST show: "
+            + "; ".join(mandatory)
+            + ". Missing any of these is a medium critic finding."
+        )
     if "governance_required" in cons:
         out.append("Governance is in scope; show management/security/production boundaries or explain simplification.")
     if scale in {"large", "enterprise"} and "monitoring" not in caps:

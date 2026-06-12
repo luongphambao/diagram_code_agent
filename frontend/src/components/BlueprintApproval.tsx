@@ -29,7 +29,10 @@ export default function BlueprintApproval({ interrupt, onResolve, disabled = fal
   const [modifications, setModifications] = useState("");
   const [decided, setDecided] = useState(false);
 
-  const blueprint = interrupt.data.blueprint;
+  const blueprint = interrupt.data.blueprint as typeof interrupt.data.blueprint & {
+    pillar_coverage?: Record<string, { addressed_by?: string[]; gaps?: string[] }>;
+    nfr_mapping?: Array<{ nfr: string; mechanism?: string }>;
+  };
   const pattern = blueprint?.pattern ?? "unknown";
   const patternRationale = blueprint?.pattern_rationale ?? "";
   const keyDecisions = blueprint?.key_decisions ?? [];
@@ -168,6 +171,39 @@ export default function BlueprintApproval({ interrupt, onResolve, disabled = fal
                   </div>
                 ))}
                 {edges.length > 12 && <p className="text-[10px] text-slate-600">+{edges.length - 12} more flows</p>}
+              </div>
+            </div>
+          )}
+
+          {/* NFR mapping summary */}
+          {blueprint?.nfr_mapping && blueprint.nfr_mapping.length > 0 && (
+            <div>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-amber-400/70">
+                NFRs mapped: {blueprint.nfr_mapping.length}
+              </p>
+              <p className="text-[10px] text-slate-500">
+                {blueprint.nfr_mapping.map((n) => n.nfr).join(" · ")}
+              </p>
+            </div>
+          )}
+
+          {/* Well-Architected pillar coverage */}
+          {blueprint?.pillar_coverage && Object.keys(blueprint.pillar_coverage).length > 0 && (
+            <div>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-amber-400/70">Pillar coverage</p>
+              <div className="flex flex-wrap gap-1">
+                {Object.entries(blueprint.pillar_coverage).map(([pillar, data]) => {
+                  const hasGaps = (data.gaps?.length ?? 0) > 0;
+                  return (
+                    <span
+                      key={pillar}
+                      title={hasGaps ? `Gaps: ${data.gaps!.join(", ")}` : undefined}
+                      className={`rounded-md border px-2 py-0.5 text-[10px] capitalize ${hasGaps ? "border-amber-500/30 bg-amber-500/10 text-amber-300" : "border-white/8 bg-white/4 text-slate-400"}`}
+                    >
+                      {pillar}
+                    </span>
+                  );
+                })}
               </div>
             </div>
           )}

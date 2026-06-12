@@ -1,0 +1,22 @@
+{
+  "id": "case_05_gcp_data_platform",
+  "prompt": "Design a GCP data analytics platform with batch and streaming ingestion. Include Pub/Sub for event streaming, Dataflow for ETL, BigQuery for the data warehouse, Cloud Storage for the data lake, Looker for BI, and Vertex AI for ML model training. Add IAM, Cloud Monitoring, and Data Catalog.",
+  "expected_nodes": [
+    "Pub/Sub", "Dataflow", "BigQuery", "Cloud Storage", "Looker",
+    "Vertex AI", "Cloud Monitoring", "Data Catalog", "Cloud Composer"
+  ],
+  "expected_edges": [
+    {"from": "Source Systems", "to": "Pub/Sub"},
+    {"from": "Pub/Sub", "to": "Dataflow"},
+    {"from": "Dataflow", "to": "BigQuery"},
+    {"from": "Dataflow", "to": "Cloud Storage"},
+    {"from": "Cloud Storage", "to": "Vertex AI"},
+    {"from": "BigQuery", "to": "Looker"}
+  ],
+  "expected_clusters": [
+    "Ingestion", "Processing", "Storage", "Analytics", "AI"
+  ],
+  "min_nodes": 6,
+  "min_edges": 5,
+  "min_clusters": 3
+}

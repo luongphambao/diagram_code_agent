@@ -1,0 +1,25 @@
+{
+  "id": "case_10_multi_region_dr",
+  "prompt": "Design a multi-region active-passive disaster recovery architecture on AWS for a financial services application. Primary region: us-east-1, DR region: us-west-2. Include Route53 health checks for DNS failover, RDS Aurora Global Database with cross-region replica, S3 cross-region replication, CloudFront with origin failover, ECS Fargate in both regions, and RPO=15min, RTO=30min SLA.",
+  "expected_nodes": [
+    "Route53", "CloudFront", "ALB Primary", "ECS Primary", "RDS Aurora Primary",
+    "ALB DR", "ECS DR", "RDS Aurora Replica", "S3 Primary", "S3 DR Replica",
+    "CloudWatch", "SNS"
+  ],
+  "expected_edges": [
+    {"from": "User", "to": "Route53"},
+    {"from": "Route53", "to": "CloudFront"},
+    {"from": "CloudFront", "to": "ALB Primary"},
+    {"from": "ALB Primary", "to": "ECS Primary"},
+    {"from": "ECS Primary", "to": "RDS Aurora Primary"},
+    {"from": "RDS Aurora Primary", "to": "RDS Aurora Replica"},
+    {"from": "S3 Primary", "to": "S3 DR Replica"},
+    {"from": "Route53", "to": "ALB DR"}
+  ],
+  "expected_clusters": [
+    "DNS", "Primary Region", "DR Region", "Data Replication", "Monitoring"
+  ],
+  "min_nodes": 8,
+  "min_edges": 6,
+  "min_clusters": 3
+}

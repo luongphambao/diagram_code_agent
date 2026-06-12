@@ -1,0 +1,25 @@
+{
+  "id": "case_08_hipaa_healthcare",
+  "prompt": "Design a HIPAA-compliant healthcare platform on AWS for patient data management (EHR), telemedicine video, and appointment booking. Security level: critical. Requirements: PHI encryption at rest and in transit, audit logging, WAF, VPC with private subnets, IAM boundary, KMS key management, FHIR API via API Gateway, HL7 integration with legacy systems.",
+  "expected_nodes": [
+    "WAF", "API Gateway", "ECS", "RDS Aurora", "KMS", "CloudTrail",
+    "Secrets Manager", "VPC", "ALB", "Amazon Chime", "HL7 Adapter"
+  ],
+  "expected_edges": [
+    {"from": "Patient", "to": "WAF"},
+    {"from": "WAF", "to": "ALB"},
+    {"from": "ALB", "to": "ECS"},
+    {"from": "ECS", "to": "RDS Aurora"},
+    {"from": "ECS", "to": "KMS"},
+    {"from": "ECS", "to": "Secrets Manager"},
+    {"from": "ECS", "to": "Amazon Chime"},
+    {"from": "HL7 Adapter", "to": "ECS"}
+  ],
+  "expected_clusters": [
+    "Security", "Edge", "Application", "Data", "Integration"
+  ],
+  "min_nodes": 7,
+  "min_edges": 6,
+  "min_clusters": 4,
+  "security_level": "critical"
+}

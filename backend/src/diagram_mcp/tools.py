@@ -1050,12 +1050,141 @@ class DiagramBrief(BaseModel):
     )
 
 
+class TechCriteria(BaseModel):
+    """1–5 scoring dimensions for a technology choice (1 = best, 5 = worst on cost/complexity/lock-in)."""
+    cost: int = Field(3, ge=1, le=5, description="1=very low cost, 5=very high cost")
+    ops_complexity: int = Field(3, ge=1, le=5, description="1=simple to operate, 5=high operational burden")
+    scalability: int = Field(3, ge=1, le=5, description="1=limited, 5=highly scalable")
+    vendor_lockin: int = Field(3, ge=1, le=5, description="1=fully portable, 5=deeply vendor-locked")
+    team_fit: int = Field(3, ge=1, le=5, description="1=unfamiliar to team, 5=strong team expertise")
+
+
+class TechAlternative(BaseModel):
+    """An alternative technology with rejection rationale and optional scoring."""
+    name: str = Field(description="technology name")
+    why_rejected: str = Field("", description="one sentence: why this alternative was not chosen for this context")
+    criteria: Optional[TechCriteria] = Field(default=None, description="optional 1-5 scores for this alternative")
+
+
+class CostRange(BaseModel):
+    """Assumption-based monthly cost estimate in USD (always a range)."""
+    min_usd: int = Field(0, ge=0)
+    max_usd: int = Field(0, ge=0)
+
+
+class UserScaleAssumptions(BaseModel):
+    mau: Optional[int] = None
+    dau: Optional[int] = None
+    peak_concurrent: Optional[int] = None
+    peak_rps: Optional[int] = None
+    growth_rate_yoy_pct: Optional[int] = None
+
+
+class DataAssumptions(BaseModel):
+    initial_gb: Optional[int] = None
+    growth_gb_per_month: Optional[int] = None
+    read_write_ratio: str = ""
+
+
+class TeamAssumptions(BaseModel):
+    size: Optional[int] = None
+    skill_level: str = ""
+    devops_maturity: str = ""
+
+
+class SolutionAssumptions(BaseModel):
+    budget_tier: str = ""
+    monthly_budget_range_usd: Optional[CostRange] = None
+    users: Optional[UserScaleAssumptions] = None
+    data: Optional[DataAssumptions] = None
+    team: Optional[TeamAssumptions] = None
+    project_phase: str = ""
+    availability_target: str = ""
+    latency_target_p99_ms: Optional[int] = None
+    compliance: list[str] = Field(default_factory=list)
+    primary_region: str = ""
+    confirm_with_customer: list[str] = Field(
+        default_factory=list,
+        description="assumptions NOT yet confirmed by the customer — the senior-SA hedge list",
+    )
+
+
+class TechRisk(BaseModel):
+    risk: str
+    mitigation: str = ""
+
+
+class ScalingPhase(BaseModel):
+    phase: str
+    trigger: str = ""
+    changes: list[str] = Field(default_factory=list)
+    est_monthly_cost_usd: Optional[CostRange] = None
+
+
 class TechChoice(BaseModel):
     """One layer of the recommended technology stack."""
-    layer: str = Field(description="the layer name, one word: frontend|backend|database|cache|queue|auth|infra|monitoring|cdn|search")
+    layer: str = Field(
+        description=(
+            "the layer name — core layers: frontend, backend, database, auth, infra, monitoring, networking, security; "
+            "conditional layers: cache, queue, cdn, search, storage, ci_cd, analytics, ai_ml, integration"
+        )
+    )
     choice: str = Field(description="the specific technology chosen for this layer")
     rationale: str = Field("", description="1-2 sentence reason tied to the requirements")
-    alternatives: list[str] = Field(default_factory=list, description="a couple of alternatives")
+    cost_tier: str = Field("$$", description="relative cost: $=low, $$=medium, $$$=high")
+    decision_criteria: Optional[TechCriteria] = Field(
+        default=None,
+        description="1-5 scores for the CHOSEN technology on cost, ops_complexity, scalability, vendor_lockin, team_fit",
+    )
+    alternatives: list[TechAlternative] = Field(
+        default_factory=list,
+        description="rejected alternatives with why_rejected and optional criteria scores",
+    )
+    estimated_monthly_cost_usd: Optional[CostRange] = Field(
+        default=None,
+        description="assumption-based cost range for this layer in USD/month",
+    )
+    capacity_sizing: str = Field(
+        "",
+        description="instance type/count WITH the math — e.g. '2× Fargate 0.5vCPU, autoscale 2–6 — sized for ~150 RPS peak × 2 headroom'",
+    )
+    performance_target: str = Field(
+        "",
+        description="measurable target tied to an NFR — e.g. 'p99 ≤ 120 ms at 150 RPS'",
+    )
+    risks: list[TechRisk] = Field(
+        default_factory=list,
+        description="1-2 risks for this layer with mitigation",
+    )
+
+
+class WAFPillar(BaseModel):
+    """Coverage of one AWS Well-Architected Framework pillar in the blueprint."""
+    addressed_by: list[str] = Field(
+        default_factory=list,
+        description="node IDs or key_decision labels that address this pillar",
+    )
+    gaps: list[str] = Field(
+        default_factory=list,
+        description="known gaps — explicitly declare rather than leave empty; gaps are allowed when stated",
+    )
+
+
+class PillarCoverage(BaseModel):
+    """Well-Architected Framework 6-pillar coverage."""
+    operational_excellence: WAFPillar = Field(default_factory=WAFPillar)
+    security: WAFPillar = Field(default_factory=WAFPillar)
+    reliability: WAFPillar = Field(default_factory=WAFPillar)
+    performance_efficiency: WAFPillar = Field(default_factory=WAFPillar)
+    cost_optimization: WAFPillar = Field(default_factory=WAFPillar)
+    sustainability: WAFPillar = Field(default_factory=WAFPillar)
+
+
+class NFRMapping(BaseModel):
+    """Maps one non-functional requirement to the mechanism(s) and nodes that satisfy it."""
+    nfr: str = Field(description="the NFR text, ideally measurable: e.g. '99.9% uptime SLA'")
+    mechanism: str = Field(description="how this NFR is addressed: e.g. 'Multi-AZ RDS + ALB health checks'")
+    node_ids: list[str] = Field(default_factory=list, description="blueprint node IDs implementing this mechanism")
 
 
 class BPNode(BaseModel):
@@ -1132,6 +1261,21 @@ class Blueprint(BaseModel):
         description="3-6 concrete design decisions & trade-offs: data flow, scaling/performance, "
                     "availability/HA, security/auth, storage, integration — one sentence each",
     )
+    c4_level: Literal["context", "container"] = Field(
+        "container",
+        description="C4 diagram level: container (default, full component view) or context (5-8 nodes, "
+                    "system boundaries + external actors only — use for executive/client slide audience)",
+    )
+    pillar_coverage: Optional[PillarCoverage] = Field(
+        default=None,
+        description="Well-Architected Framework 6-pillar coverage; for each pillar list node IDs / "
+                    "key decisions that address it, and any known gaps. Gaps are allowed when declared.",
+    )
+    nfr_mapping: list[NFRMapping] = Field(
+        default_factory=list,
+        description="Maps each NFR from the diagram brief to the mechanism and blueprint nodes that satisfy it. "
+                    "Use measurable NFRs when possible (SLA %, RPO minutes, latency ms).",
+    )
     nodes: list[BPNode] = Field(default_factory=list)
     clusters: list[BPCluster] = Field(default_factory=list)
     edges: list[BPEdge] = Field(default_factory=list)
@@ -1164,33 +1308,201 @@ def propose_diagram_brief(brief: DiagramBrief) -> str:
 
 
 @tool
-def propose_tech_stack(tech_stack: list[TechChoice]) -> str:
+def propose_tech_stack(
+    tech_stack: list[TechChoice],
+    assumptions: Optional[SolutionAssumptions] = None,
+    scaling_roadmap: Optional[list[ScalingPhase]] = None,
+    estimated_total_monthly_cost_usd: Optional[CostRange] = None,
+) -> str:
     """Propose the technology stack for the user to review and approve.
 
-    `tech_stack` is a LIST of layers, each an object
-    {layer, choice, rationale, alternatives} — one entry per relevant layer
-    (frontend, backend, database, cache, queue, auth, infra, monitoring, cdn,
-    search…). This PAUSES for human approval — only call it once you have
-    analysed the requirements.
+    `tech_stack` is a LIST of layers, each an object with layer, choice, rationale,
+    cost_tier, decision_criteria, alternatives, estimated_monthly_cost_usd,
+    capacity_sizing, performance_target, risks.
+
+    Core layers (always consider): frontend, backend, database, auth, infra,
+    monitoring, networking, security.
+    Conditional layers (add when requirements call for it): cache, queue, cdn,
+    search, storage, ci_cd, analytics, ai_ml, integration.
+
+    `assumptions` captures the sizing basis (budget, user scale, data, team,
+    availability, compliance) BEFORE listing tech choices — state assumptions
+    explicitly, put unconfirmed ones in confirm_with_customer.
+
+    `scaling_roadmap` is a 2-3 phase roadmap with measurable triggers.
+    `estimated_total_monthly_cost_usd` is the sum across all layers.
+
+    This PAUSES for human approval — only call it once you have analysed the
+    requirements. If rejected you get the user's note — revise and propose again.
     """
     if not _BRIEF_FILE.exists():
         return "Create the diagram brief first by calling propose_diagram_brief."
     WORKSPACE.mkdir(parents=True, exist_ok=True)
-    as_dict = {
-        t.layer: {"choice": t.choice, "rationale": t.rationale, "alternatives": t.alternatives}
+
+    layers_dict = {
+        t.layer: {
+            "choice": t.choice,
+            "rationale": t.rationale,
+            "cost_tier": t.cost_tier,
+            "decision_criteria": t.decision_criteria.model_dump() if t.decision_criteria else None,
+            "alternatives": [
+                a.model_dump() if isinstance(a, TechAlternative) else {"name": str(a), "why_rejected": ""}
+                for a in t.alternatives
+            ],
+            "estimated_monthly_cost_usd": t.estimated_monthly_cost_usd.model_dump() if t.estimated_monthly_cost_usd else None,
+            "capacity_sizing": t.capacity_sizing,
+            "performance_target": t.performance_target,
+            "risks": [r.model_dump() if isinstance(r, TechRisk) else r for r in t.risks],
+        }
         for t in tech_stack
     }
+
+    as_dict: dict = {
+        "assumptions": assumptions.model_dump() if assumptions else None,
+        "layers": layers_dict,
+        "scaling_roadmap": [p.model_dump() if isinstance(p, ScalingPhase) else p for p in (scaling_roadmap or [])],
+        "estimated_total_monthly_cost_usd": estimated_total_monthly_cost_usd.model_dump() if estimated_total_monthly_cost_usd else None,
+    }
+
+    warnings: list[str] = []
+
+    if not assumptions:
+        warnings.append(
+            "No sizing assumptions recorded — a senior proposal states budget, user scale, and concurrency explicitly."
+        )
+    elif not assumptions.confirm_with_customer:
+        warnings.append(
+            "confirm_with_customer is empty — list every assumption that has NOT been validated by the customer."
+        )
+
+    layers_without_cost = [t.layer for t in tech_stack if not t.estimated_monthly_cost_usd]
+    if layers_without_cost:
+        warnings.append(f"Layers missing cost estimate: {', '.join(layers_without_cost)}.")
+
+    if estimated_total_monthly_cost_usd and assumptions and assumptions.monthly_budget_range_usd:
+        budget_max = assumptions.monthly_budget_range_usd.max_usd
+        if estimated_total_monthly_cost_usd.max_usd > budget_max:
+            warnings.append(
+                f"Total cost ceiling ${estimated_total_monthly_cost_usd.max_usd}/mo exceeds budget "
+                f"${budget_max}/mo — adjust design or re-scope."
+            )
+
+    if estimated_total_monthly_cost_usd:
+        layer_min_sum = sum(
+            t.estimated_monthly_cost_usd.min_usd for t in tech_stack if t.estimated_monthly_cost_usd
+        )
+        if layer_min_sum > estimated_total_monthly_cost_usd.max_usd:
+            warnings.append(
+                f"Sum of layer minimums (${layer_min_sum}/mo) exceeds stated total maximum "
+                f"(${estimated_total_monthly_cost_usd.max_usd}/mo) — cost estimates are inconsistent."
+            )
+
+    analysis_file = WORKSPACE / "architecture_analysis.json"
+    if analysis_file.exists():
+        try:
+            import json as _json
+            analysis = _json.loads(analysis_file.read_text(encoding="utf-8"))
+            sec_level = (analysis.get("security_level") or "").lower()
+            layer_names = {t.layer for t in tech_stack}
+            if sec_level in ("high", "critical"):
+                for required in ("security", "networking"):
+                    if required not in layer_names:
+                        warnings.append(
+                            f"security_level is '{sec_level}' but layer '{required}' is missing — "
+                            "add it or document why it's omitted."
+                        )
+        except Exception:
+            pass
+
     _TECHSTACK_FILE.write_text(json.dumps(as_dict, indent=2), encoding="utf-8")
     record_report_step(
         WORKSPACE,
         "propose_tech_stack",
-        summary=f"Approved technology stack covering {len(as_dict)} layer(s).",
+        summary=f"Approved technology stack covering {len(layers_dict)} layer(s).",
         data=as_dict,
     )
-    return (
+
+    result = (
         "Tech stack APPROVED. Next: design the architecture and call "
         "propose_blueprint with the components, clusters and connections."
     )
+    if warnings:
+        result += "\n\nSoft warnings (informational — does not block):\n" + "\n".join(f"• {w}" for w in warnings)
+    return result
+
+
+def _req_soft_match(requirement: str, candidates: list[str]) -> bool:
+    """Return True if any candidate substring-matches the requirement text (case-insensitive)."""
+    req_norm = requirement.lower().replace("-", " ").replace("_", " ")
+    for c in candidates:
+        c_norm = c.lower().replace("-", " ").replace("_", " ")
+        terms = [t for t in c_norm.split() if len(t) > 3]
+        if terms and any(t in req_norm for t in terms):
+            return True
+    return False
+
+
+def _validate_pillar_coverage(blueprint: Blueprint) -> list[str]:
+    """Return warning strings for pillars with no addressed_by AND no gaps declared."""
+    if blueprint.pillar_coverage is None:
+        return ["pillar_coverage not provided — add Well-Architected pillar coverage to the blueprint."]
+    warnings: list[str] = []
+    coverage = blueprint.pillar_coverage
+    for pillar_name in ("operational_excellence", "security", "reliability",
+                        "performance_efficiency", "cost_optimization", "sustainability"):
+        pillar = getattr(coverage, pillar_name)
+        if not pillar.addressed_by and not pillar.gaps:
+            warnings.append(
+                f"Pillar '{pillar_name}': no addressed_by nodes and no declared gaps — "
+                "populate addressed_by with node IDs / decisions, or add a gap with explanation."
+            )
+    return warnings
+
+
+def _validate_nfr_mapping(blueprint: Blueprint) -> list[str]:
+    """Return unmapped NFRs: NFRs in the brief that have no entry in blueprint.nfr_mapping."""
+    if not _BRIEF_FILE.exists():
+        return []
+    try:
+        brief_data = json.loads(_BRIEF_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    brief_nfrs: list[str] = brief_data.get("non_functional_requirements", [])
+    if not brief_nfrs:
+        return []
+    mapped_nfrs = [m.nfr for m in blueprint.nfr_mapping]
+    unmapped = [
+        nfr for nfr in brief_nfrs
+        if not _req_soft_match(nfr, mapped_nfrs)
+    ]
+    return unmapped
+
+
+def _validate_req_coverage(blueprint: Blueprint) -> tuple[int, int, list[str]]:
+    """Return (covered_count, total_count, list_of_uncovered) for functional requirements."""
+    if not _BRIEF_FILE.exists():
+        return 0, 0, []
+    try:
+        brief_data = json.loads(_BRIEF_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return 0, 0, []
+    func_reqs: list[str] = brief_data.get("functional_requirements", [])
+    if not func_reqs:
+        return 0, 0, []
+    # Candidates: node labels, node IDs, cluster labels, key decisions
+    candidates: list[str] = []
+    for node in blueprint.nodes:
+        if node.label:
+            candidates.append(node.label)
+        if node.id:
+            candidates.append(node.id)
+    for cluster in blueprint.clusters:
+        if cluster.label:
+            candidates.append(cluster.label)
+    candidates.extend(blueprint.key_decisions)
+    covered = [req for req in func_reqs if _req_soft_match(req, candidates)]
+    uncovered = [req for req in func_reqs if not _req_soft_match(req, candidates)]
+    return len(covered), len(func_reqs), uncovered
 
 
 @tool
@@ -1198,6 +1510,8 @@ def propose_blueprint(blueprint: Blueprint) -> str:
     """Propose the architecture blueprint for the user to review and approve.
 
     PAUSES for human approval. Call this AFTER the tech stack is approved.
+    Runs deterministic validators for Well-Architected pillar coverage, NFR mapping,
+    and functional requirements coverage — warnings are surfaced but do NOT block approval.
     """
     if not _TECHSTACK_FILE.exists():
         return "Get the tech stack approved first by calling propose_tech_stack."
@@ -1205,21 +1519,54 @@ def propose_blueprint(blueprint: Blueprint) -> str:
     _BLUEPRINT_FILE.write_text(
         blueprint.model_dump_json(by_alias=True, indent=2), encoding="utf-8"
     )
+
+    # --- deterministic validators (warnings only, do not block) ---
+    warnings: list[str] = []
+
+    pillar_warns = _validate_pillar_coverage(blueprint)
+    if pillar_warns:
+        warnings.extend(pillar_warns)
+
+    unmapped_nfrs = _validate_nfr_mapping(blueprint)
+    if unmapped_nfrs:
+        warnings.append(
+            f"NFR mapping: {len(unmapped_nfrs)} NFR(s) from the brief have no nfr_mapping entry: "
+            + ", ".join(f'"{n}"' for n in unmapped_nfrs[:5])
+        )
+
+    covered, total, uncovered_reqs = _validate_req_coverage(blueprint)
+    coverage_line = ""
+    if total > 0:
+        coverage_pct = round(100 * covered / total)
+        coverage_line = f"Coverage: {covered}/{total} functional requirements ({coverage_pct}%)"
+        if uncovered_reqs:
+            coverage_line += " — missing: " + "; ".join(f'"{r}"' for r in uncovered_reqs[:5])
+
     record_report_step(
         WORKSPACE,
         "propose_blueprint",
         summary=(
             f"Approved {blueprint.pattern} blueprint with {len(blueprint.nodes)} nodes, "
             f"{len(blueprint.clusters)} clusters, and {len(blueprint.edges)} edges."
+            + (f" {coverage_line}." if coverage_line else "")
         ),
         data=blueprint.model_dump(by_alias=True),
     )
     reset_render_count()
     _reset_revision_count()
-    return (
+
+    result_parts = [
         "Blueprint APPROVED. Next: write the diagram code, call render_diagram, "
-        "look at the PNG and refine, call export_drawio, then finalize_diagram."
-    )
+        "look at the PNG and refine, call export_drawio, then finalize_diagram.",
+    ]
+    if coverage_line:
+        result_parts.append(coverage_line)
+    if warnings:
+        result_parts.append(
+            "Architect warnings (address before finalizing if possible):\n"
+            + "\n".join(f"  ⚠ {w}" for w in warnings)
+        )
+    return "\n\n".join(result_parts)
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,24 @@
+{
+  "id": "case_06_serverless_api",
+  "prompt": "Design a serverless REST API on AWS for a mobile app backend with user authentication, CRUD operations, file uploads, and push notifications. Use API Gateway, Lambda, DynamoDB, S3, Cognito, SNS, and SQS for async processing. Target: 10,000 concurrent users, p99 latency < 300ms.",
+  "expected_nodes": [
+    "API Gateway", "Lambda", "DynamoDB", "S3", "Cognito",
+    "SNS", "SQS", "CloudWatch", "WAF"
+  ],
+  "expected_edges": [
+    {"from": "Mobile App", "to": "API Gateway"},
+    {"from": "API Gateway", "to": "Lambda"},
+    {"from": "Lambda", "to": "DynamoDB"},
+    {"from": "Lambda", "to": "S3"},
+    {"from": "Lambda", "to": "SQS"},
+    {"from": "SQS", "to": "Lambda"},
+    {"from": "Lambda", "to": "SNS"},
+    {"from": "Cognito", "to": "API Gateway"}
+  ],
+  "expected_clusters": [
+    "Client", "Edge", "Application", "Data", "Messaging"
+  ],
+  "min_nodes": 6,
+  "min_edges": 5,
+  "min_clusters": 3
+}

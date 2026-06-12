@@ -1,0 +1,26 @@
+{
+  "id": "case_07_event_driven_orders",
+  "prompt": "Design an event-driven order processing system for an e-commerce platform on AWS. Includes order intake (API Gateway + Lambda), Kafka (MSK) as the event bus, separate microservices for inventory, payment, fulfillment, and notifications, with DynamoDB for order state and RDS for inventory, plus a dead-letter queue and CloudWatch for monitoring.",
+  "expected_nodes": [
+    "API Gateway", "Lambda", "MSK", "Inventory Service", "Payment Service",
+    "Fulfillment Service", "Notification Service", "DynamoDB", "RDS",
+    "SQS DLQ", "CloudWatch"
+  ],
+  "expected_edges": [
+    {"from": "Client", "to": "API Gateway"},
+    {"from": "API Gateway", "to": "Lambda"},
+    {"from": "Lambda", "to": "MSK"},
+    {"from": "MSK", "to": "Inventory Service"},
+    {"from": "MSK", "to": "Payment Service"},
+    {"from": "MSK", "to": "Fulfillment Service"},
+    {"from": "MSK", "to": "Notification Service"},
+    {"from": "Inventory Service", "to": "RDS"},
+    {"from": "Payment Service", "to": "DynamoDB"}
+  ],
+  "expected_clusters": [
+    "Ingestion", "Event Bus", "Services", "Data", "Monitoring"
+  ],
+  "min_nodes": 7,
+  "min_edges": 6,
+  "min_clusters": 3
+}

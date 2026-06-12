@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field, field_validator
 
 Severity = Literal["low", "medium", "high", "critical"]
 Confidence = Literal["low", "medium", "high"]
-Category = Literal["layout", "completeness", "correctness", "readability", "style"]
+Category = Literal["layout", "completeness", "correctness", "readability", "style", "pillar_gap"]
 
 # Ordering for ranking/pruning (higher = more serious).
 _SEVERITY_ORDER: dict[str, int] = {"low": 0, "medium": 1, "high": 2, "critical": 3}

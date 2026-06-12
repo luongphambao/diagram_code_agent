@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { PendingInterrupt } from "../hooks/useDiagramAgent";
+import type { PendingInterrupt, TechAlternative, CostRange, ScalingPhase, TechRisk } from "../hooks/useDiagramAgent";
 
 interface TechStackApprovalProps {
   interrupt: PendingInterrupt;
@@ -7,13 +7,26 @@ interface TechStackApprovalProps {
   disabled?: boolean;
 }
 
-const LAYER_ORDER = ["frontend", "backend", "database", "cache", "queue", "auth", "infra", "monitoring", "cdn", "search"];
+const LAYER_ORDER = [
+  "frontend", "backend", "database", "auth", "infra", "monitoring",
+  "networking", "security", "cache", "queue", "cdn", "search",
+  "storage", "ci_cd", "analytics", "ai_ml", "integration",
+];
+
+function fmtUsd(r?: CostRange | null): string {
+  if (!r) return "";
+  const fmt = (n: number) => n >= 1000 ? `$${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k` : `$${n}`;
+  return `${fmt(r.min_usd)}–${fmt(r.max_usd)}/mo`;
+}
 
 export default function TechStackApproval({ interrupt, onResolve, disabled = false }: TechStackApprovalProps) {
   const [modifications, setModifications] = useState("");
   const [decided, setDecided] = useState(false);
 
   const techStack = interrupt.data.tech_stack ?? {};
+  const assumptions = interrupt.data.assumptions;
+  const scalingRoadmap = interrupt.data.scaling_roadmap ?? [];
+  const totalCost = interrupt.data.estimated_total_monthly_cost_usd;
 
   // Sort layers in preferred order
   const layers = [
@@ -31,6 +44,25 @@ export default function TechStackApproval({ interrupt, onResolve, disabled = fal
     onResolve(false);
   };
 
+  // Build assumption chips
+  const assumptionChips: string[] = [];
+  if (assumptions) {
+    if (assumptions.project_phase) assumptionChips.push(assumptions.project_phase.toUpperCase());
+    if (assumptions.monthly_budget_range_usd) assumptionChips.push(fmtUsd(assumptions.monthly_budget_range_usd) + " budget");
+    if (assumptions.users?.mau) assumptionChips.push(`${(assumptions.users.mau / 1000).toFixed(0)}k MAU`);
+    if (assumptions.users?.peak_concurrent) assumptionChips.push(`~${assumptions.users.peak_concurrent.toLocaleString()} concurrent`);
+    if (assumptions.users?.peak_rps) assumptionChips.push(`~${assumptions.users.peak_rps} RPS`);
+    if (assumptions.availability_target) assumptionChips.push(assumptions.availability_target);
+    if (assumptions.latency_target_p99_ms) assumptionChips.push(`p99 ≤${assumptions.latency_target_p99_ms}ms`);
+    if (assumptions.team) {
+      const t = assumptions.team;
+      const parts = [t.size ? `Team ${t.size}` : null, t.skill_level || null].filter(Boolean);
+      if (parts.length) assumptionChips.push(parts.join(" "));
+    }
+    if (assumptions.primary_region) assumptionChips.push(assumptions.primary_region);
+    if (assumptions.compliance?.length) assumptionChips.push(...assumptions.compliance);
+  }
+
   return (
     <div className="flex w-full flex-col overflow-hidden rounded-2xl border border-blue-500/20 bg-blue-950/20">
       {/* Header */}
@@ -46,40 +78,137 @@ export default function TechStackApproval({ interrupt, onResolve, disabled = fal
       {/* Question */}
       <p className="px-4 pt-3 text-xs leading-relaxed text-slate-400">{interrupt.data.question}</p>
 
+      {/* Assumptions block */}
+      {assumptions && (
+        <div className="mx-4 mt-3 rounded-xl border border-white/8 bg-white/3 px-3 py-2.5">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">Design Assumptions</p>
+          {assumptionChips.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {assumptionChips.map((chip, i) => (
+                <span key={i} className="rounded-full border border-blue-500/20 bg-blue-900/20 px-2 py-0.5 text-[10px] text-blue-300">
+                  {chip}
+                </span>
+              ))}
+            </div>
+          )}
+          {assumptions.confirm_with_customer && assumptions.confirm_with_customer.length > 0 && (
+            <div className="mt-2.5">
+              <p className="mb-1 text-[10px] font-semibold text-amber-400/80">Confirm with customer</p>
+              <ul className="space-y-0.5">
+                {assumptions.confirm_with_customer.map((item, i) => (
+                  <li key={i} className="flex items-start gap-1.5 text-[10px] leading-relaxed text-amber-300/70">
+                    <span className="mt-0.5 shrink-0">•</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Layer cards */}
       <div className="grid grid-cols-1 gap-2 px-4 py-3">
         {layers.map((layer) => {
           const info = techStack[layer];
           if (!info) return null;
+
+          // Build per-layer meta line segments
+          const metaParts: string[] = [];
+          if (info.estimated_monthly_cost_usd) metaParts.push(fmtUsd(info.estimated_monthly_cost_usd));
+          if (info.capacity_sizing) metaParts.push(info.capacity_sizing);
+          if (info.performance_target) metaParts.push(info.performance_target);
+
+          const risks: TechRisk[] = info.risks ?? [];
+
           return (
             <div key={layer} className="rounded-xl border border-white/8 bg-white/4 px-3 py-2.5">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-600">
                       {layer}
                     </span>
                     <span className="text-xs font-semibold text-blue-300">{info.choice}</span>
+                    {info.cost_tier && (
+                      <span className="rounded border border-white/10 bg-white/6 px-1.5 py-0.5 text-[9px] font-bold text-slate-500">
+                        {info.cost_tier}
+                      </span>
+                    )}
+                    {risks.length > 0 && (
+                      <span
+                        className="rounded border border-amber-500/20 bg-amber-900/10 px-1.5 py-0.5 text-[9px] text-amber-400 cursor-help"
+                        title={risks.map(r => `${r.risk}${r.mitigation ? ` → ${r.mitigation}` : ""}`).join("\n")}
+                      >
+                        ⚠ {risks.length}
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1 text-[11px] leading-relaxed text-slate-500">{info.rationale}</p>
+                  {metaParts.length > 0 && (
+                    <p className="mt-1 text-[10px] text-slate-600 leading-relaxed">
+                      {metaParts.join(" · ")}
+                    </p>
+                  )}
                 </div>
               </div>
-              {info.alternatives && info.alternatives.length > 0 && (
+              {Array.isArray(info.alternatives) && info.alternatives.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1">
-                  {info.alternatives.map((alt) => (
-                    <span
-                      key={alt}
-                      className="rounded-full border border-white/8 bg-white/4 px-2 py-0.5 text-[10px] text-slate-600"
-                    >
-                      {alt}
-                    </span>
-                  ))}
+                  {info.alternatives.map((alt, i) => {
+                    const name = typeof alt === "string" ? alt : (alt as TechAlternative)?.name ?? "";
+                    const why = typeof alt === "object" ? (alt as TechAlternative)?.why_rejected : undefined;
+                    return (
+                      <span
+                        key={`${name}-${i}`}
+                        title={why || undefined}
+                        className="rounded-full border border-white/8 bg-white/4 px-2 py-0.5 text-[10px] text-slate-600"
+                      >
+                        {name}
+                      </span>
+                    );
+                  })}
                 </div>
               )}
             </div>
           );
         })}
       </div>
+
+      {/* Footer: total cost + scaling roadmap */}
+      {(totalCost || scalingRoadmap.length > 0) && (
+        <div className="mx-4 mb-3 rounded-xl border border-white/8 bg-white/3 px-3 py-2.5">
+          {totalCost && (
+            <p className="text-[11px] font-semibold text-slate-300">
+              Estimated total:{" "}
+              <span className="text-blue-300">{fmtUsd(totalCost)}</span>
+              <span className="ml-1 text-[10px] font-normal text-slate-600">(assumption-based, infra only)</span>
+            </p>
+          )}
+          {scalingRoadmap.length > 0 && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-widest text-slate-500 hover:text-slate-400">
+                Scaling roadmap
+              </summary>
+              <div className="mt-2 space-y-2">
+                {scalingRoadmap.map((phase: ScalingPhase, i: number) => (
+                  <div key={i} className="text-[10px] leading-relaxed">
+                    <span className="font-semibold text-slate-300">{phase.phase}</span>
+                    {phase.trigger && (
+                      <span className="ml-2 text-slate-600">when: {phase.trigger}</span>
+                    )}
+                    {phase.est_monthly_cost_usd && (
+                      <span className="ml-2 text-slate-600">{fmtUsd(phase.est_monthly_cost_usd)}</span>
+                    )}
+                    {phase.changes && phase.changes.length > 0 && (
+                      <p className="mt-0.5 text-slate-600">{phase.changes.join(", ")}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+        </div>
+      )}
 
       {decided ? (
         <div className="border-t border-white/8 px-4 py-3">
