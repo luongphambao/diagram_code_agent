@@ -45,6 +45,7 @@ export default function PdfReportApproval({ interrupt, onResolve, disabled = fal
   const sections = interrupt.data.include_sections?.length
     ? interrupt.data.include_sections
     : DEFAULT_REPORT_SECTIONS;
+  const missingSections: string[] = interrupt.data.missing_sections ?? [];
 
   const approve = () => {
     setDecided(true);
@@ -100,6 +101,23 @@ export default function PdfReportApproval({ interrupt, onResolve, disabled = fal
               ))}
             </div>
           </div>
+          {missingSections.length > 0 && (
+            <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/8 px-3 py-2.5">
+              <p className="text-[11px] font-semibold text-yellow-300">
+                ⚠ {missingSections.length} section{missingSections.length > 1 ? "s" : ""} will be missing from this PDF
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {missingSections.map((s) => (
+                  <span key={s} className="rounded border border-yellow-500/25 bg-yellow-500/10 px-1.5 py-0.5 text-[10px] text-yellow-400">
+                    {SECTION_LABELS[s] ?? s}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[10px] text-yellow-300/60">
+                Reject and ask the agent to call generate_pdf_report with no arguments to include all sections.
+              </p>
+            </div>
+          )}
           <div className="flex gap-2.5">
             <button
               onClick={approve}

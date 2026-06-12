@@ -13,18 +13,23 @@ surfaces the produced out.png / out.drawio / diagram.py to the frontend.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import json
+from typing import Any
 
 from deepagents import create_deep_agent
 from langchain.agents.middleware import (
+    AgentMiddleware,
     ClearToolUsesEdit,
     ContextEditingMiddleware,
     ModelCallLimitMiddleware,
     ModelFallbackMiddleware,
+    ModelRequest,
+    ModelResponse,
 )
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, AnyMessage
 from langchain_core.messages import ToolMessage as LCToolMessage
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
@@ -48,6 +53,96 @@ from .prompts import (
 from .tools import CRITIC_TOOLS, DRAWER_TOOLS, GATE_TOOL_NAMES, MAIN_TOOLS
 
 logger = logging.getLogger(__name__)
+
+_IMAGE_TOOLS = frozenset({"render_diagram", "inspect_diagram"})
+_USAGE_FILE = None  # set lazily after WORKSPACE is imported
+
+
+class KeepLatestImagesEdit:
+    """Strip image blocks from all render/inspect ToolMessages except the most recent.
+
+    count_tokens_approximately counts images as a flat 85 tokens regardless of size,
+    so image accumulation is invisible to ClearToolUsesEdit.  This edit removes the
+    base64 payload from every image-bearing ToolMessage except the last one, replacing
+    each image block with a lightweight sentinel.  Runs unconditionally (no token
+    threshold) so it applies on every model call.
+    """
+
+    _STRIPPED = {"type": "text", "text": "[image cleared — see latest render]"}
+
+    def apply(self, messages: list[AnyMessage], *, count_tokens: Any) -> None:
+        image_indices: list[int] = []
+        for i, msg in enumerate(messages):
+            if not isinstance(msg, LCToolMessage):
+                continue
+            if getattr(msg, "name", None) not in _IMAGE_TOOLS:
+                continue
+            content = msg.content
+            if isinstance(content, list) and any(
+                isinstance(b, dict) and b.get("type") == "image" for b in content
+            ):
+                image_indices.append(i)
+
+        # Keep the last one; strip the rest.
+        for idx in image_indices[:-1]:
+            msg = messages[idx]
+            old = msg.content if isinstance(msg.content, list) else [msg.content]
+            new_content = [
+                self._STRIPPED if (isinstance(b, dict) and b.get("type") == "image") else b
+                for b in old
+            ]
+            messages[idx] = msg.model_copy(update={"content": new_content})
+
+
+class UsageLoggingMiddleware(AgentMiddleware):
+    """Append per-model-call token usage to WORKSPACE/usage.json.
+
+    Reads ``usage_metadata`` from the first AIMessage in the response and appends
+    a record to usage.json so we can observe token spend per agent over time.
+    """
+
+    def __init__(self, agent_name: str) -> None:
+        self._agent_name = agent_name
+
+    def _log(self, usage: dict) -> None:
+        try:
+            from .backends import WORKSPACE  # avoid circular at module load
+
+            path = WORKSPACE / "usage.json"
+            try:
+                records: list = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+            except Exception:
+                records = []
+            records.append({"agent": self._agent_name, **usage})
+            path.write_text(json.dumps(records, indent=2), encoding="utf-8")
+        except Exception:
+            logger.debug("UsageLoggingMiddleware: failed to write usage.json", exc_info=True)
+
+    def _extract_usage(self, response: ModelResponse) -> dict | None:
+        for msg in response.result or []:
+            if isinstance(msg, AIMessage) and msg.usage_metadata:
+                m = msg.usage_metadata
+                return {
+                    "input_tokens": m.get("input_tokens", 0),
+                    "output_tokens": m.get("output_tokens", 0),
+                    "total_tokens": m.get("total_tokens", 0),
+                }
+        return None
+
+    async def awrap_model_call(self, request: ModelRequest, handler):
+        response: ModelResponse = await handler(request)
+        usage = self._extract_usage(response)
+        if usage:
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, self._log, usage)
+        return response
+
+    def wrap_model_call(self, request: ModelRequest, handler):
+        response: ModelResponse = handler(request)
+        usage = self._extract_usage(response)
+        if usage:
+            self._log(usage)
+        return response
 
 
 def _compact_tool_args(args: dict | None, *, limit: int = 260) -> str:
@@ -209,24 +304,26 @@ CONTEXT_TRIGGER_TOKENS = 30_000   # main context is lean (no images/icons), can 
 # loops are bounded earlier by the render budget (tools.RENDER_HARD_CAP) and
 # the icon-search budget — hitting these caps means something is wrong, so we
 # stop spending. Override via env for experiments.
-_RUN_CALL_LIMIT = int(os.getenv("RUN_CALL_LIMIT", "80"))          # main + drawer
+_RUN_CALL_LIMIT = int(os.getenv("RUN_CALL_LIMIT", "120"))         # main + drawer
 _CRITIC_CALL_LIMIT = int(os.getenv("CRITIC_CALL_LIMIT", "20"))    # inspect+critique only
 
 
-def _middleware(run_limit: int = _RUN_CALL_LIMIT):
+def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent"):
     layers = [
         ContextEditingMiddleware(
             edits=[
+                KeepLatestImagesEdit(),
                 ClearToolUsesEdit(
                     trigger=CONTEXT_TRIGGER_TOKENS,
-                    clear_at_least=1_000_000,
-                    keep=6,
+                    clear_at_least=8_000,
+                    keep=8,
                     clear_tool_inputs=True,
                     exclude_tools=GATE_TOOL_NAMES,
-                )
+                ),
             ],
             token_count_method="approximate",
         ),
+        UsageLoggingMiddleware(agent_name),
         ModelCallLimitMiddleware(run_limit=run_limit, exit_behavior="end"),
     ]
     # Optional model fallback: set FALLBACK_MODEL env var to activate.
@@ -359,7 +456,7 @@ def build_agent(model: str = DEFAULT_MODEL, *, style: str = DEFAULT_STYLE,
                 backend=backend,
                 memory=[MEMORY_PATH],
                 skills=drawer_spec.get("skills"),
-                middleware=_middleware(),
+                middleware=_middleware(agent_name="drawer"),
                 store=store,
             ),
             "drawer",
@@ -375,7 +472,7 @@ def build_agent(model: str = DEFAULT_MODEL, *, style: str = DEFAULT_STYLE,
                 system_prompt=critic_spec["system_prompt"],
                 backend=backend,
                 memory=[MEMORY_PATH],
-                middleware=_middleware(run_limit=_CRITIC_CALL_LIMIT),
+                middleware=_middleware(run_limit=_CRITIC_CALL_LIMIT, agent_name="critic"),
                 store=store,
             ),
             "critic",
@@ -397,7 +494,7 @@ def build_agent(model: str = DEFAULT_MODEL, *, style: str = DEFAULT_STYLE,
         memory=[MEMORY_PATH],
         skills=MAIN_SKILL_PATHS,
         subagents=[drawer_compiled, critic_compiled],
-        middleware=_middleware(),
+        middleware=_middleware(agent_name="main"),
         checkpointer=checkpointer,
         store=store,
         interrupt_on=interrupt_on,

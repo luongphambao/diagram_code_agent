@@ -46,6 +46,7 @@ _BLUEPRINT_FILE = WORKSPACE / "blueprint.json"
 _CRITIQUE_FILE = WORKSPACE / "critique.json"
 
 
+_RENDER_SPEC_FILE = WORKSPACE / "render_spec.json"
 _RENDER_COUNT_FILE = WORKSPACE / "render_count.json"
 _ICON_SEARCH_BUDGET_FILE = WORKSPACE / "icon_search_budget.json"
 _NODE_SEARCH_BUDGET_FILE = WORKSPACE / "node_search_budget.json"
@@ -120,8 +121,8 @@ def clear_stage_markers() -> None:
     for f in (
         _ARCH_ANALYSIS_FILE, _BRIEF_FILE, _TECHSTACK_FILE, _BLUEPRINT_FILE,
         _CRITIQUE_FILE, _REVISION_COUNT_FILE, _TOOL_SUMMARY_FILE,
-        _ICON_SEARCH_BUDGET_FILE, _NODE_SEARCH_BUDGET_FILE,
-        WORKSPACE / REPORT_EVIDENCE_NAME,
+        _ICON_SEARCH_BUDGET_FILE, _NODE_SEARCH_BUDGET_FILE, _RENDER_SPEC_FILE,
+        _ICON_PLAN_FILE, WORKSPACE / REPORT_EVIDENCE_NAME,
     ):
         if f.exists():
             f.unlink()
@@ -159,9 +160,26 @@ def _layout_audit() -> str:
         return ""
     try:
         from .prettygraph import audit_layout
-        return audit_layout(str(dot), str(png))
+        verdict = audit_layout(str(dot), str(png))
     except Exception:  # noqa: BLE001 — audit is advisory, never fail over it
         return ""
+
+    # Append panel-fill check from the last slide render metadata.
+    slide_json = WORKSPACE / "out.slide.json"
+    if slide_json.exists():
+        try:
+            slide_data = json.loads(slide_json.read_text(encoding="utf-8"))
+            fill_pct = slide_data.get("layout", {}).get("panel_fill_pct")
+            if fill_pct is not None and fill_pct < 0.65:
+                verdict += (
+                    f"\n  PANEL FILL: {fill_pct:.0%} — body leaves large white margins "
+                    "inside the slide panel. Widen the diagram (more columns/nodes) or "
+                    "set a wider aspect via poster_grid; the body should fill ≥65% of the panel area."
+                )
+        except Exception:  # noqa: BLE001
+            pass
+
+    return verdict
 
 
 def _search_icon_hits(query: str, provider: Optional[str] = None, *, limit: int = 30) -> list[str]:
@@ -769,8 +787,8 @@ def plan_style_sizes(
         node_count: number of VISIBLE boxes planned (after collapsing replicas).
         longest_label_chars: character count of the longest node title.
         longest_sublabel_chars: character count of the longest sublabel.
-        output: "slide" (pro slide canvas), "diagram" (plain render), or
-                "poster" (dense numbered-section grid, 25-40 nodes).
+        output: "slide" (pro slide canvas, standard or detailed density), "diagram"
+                (plain render), or "poster" (dense numbered-section grid, 25-45 nodes).
     """
     import math
 
@@ -780,6 +798,8 @@ def plan_style_sizes(
         density, node_h, title = "medium", 60, 16
     elif node_count <= 22:
         density, node_h, title = "dense", 54, 14
+    elif node_count <= 28:
+        density, node_h, title = "detailed", 50, 13
     elif output == "poster":
         density, node_h, title = "poster", 46, 12
     else:
@@ -808,15 +828,24 @@ def plan_style_sizes(
             f"Longest label needs ~{raw_w:.0f}pt but cards cap at {w_cap}pt — shorten "
             f"titles to <={fit} chars or move detail into the sublabel."
         )
-    if node_count > 18 and output == "slide":
-        notes.append("18+ visible nodes on a slide reads cramped — collapse "
-                     "replicas/aggregate side concerns, or use output='poster'.")
+    if node_count > 18 and output == "slide" and node_count <= 26:
+        notes.append(
+            f"{node_count} nodes on a standard slide reads cramped — "
+            "set blueprint density='detailed' (up to 26 nodes, ≤6 columns, sublabel mandatory) "
+            "or collapse replicas/aggregate side concerns to stay under 18."
+        )
+    if node_count > 26 and output != "poster":
+        notes.append(
+            f"{node_count} nodes exceeds the detailed tier cap (26) — "
+            "switch to density='poster' and call plan_style_sizes(output='poster')."
+        )
     if output == "poster":
         notes.append(
-            "Poster mode: use a 2-row grid with 6-9 numbered sections. "
+            "Poster mode: use a 2-3 row grid with 6-12 numbered sections (25-45 nodes). "
             "Row 1 = client-facing tiers (Client→Orchestration→Inference→Storage), "
             "Row 2 = platform tiers (Ingestion→Parsing→VDB→Observability/Auth). "
-            "Pin columns with an invisible spine + same_rank across both rows. "
+            "Optional Row 3 for secondary concerns (Security/CI-CD/Cost). "
+            "Pin columns with an invisible spine + same_rank across all rows. "
             "Nested sub-clusters inside sections are encouraged. "
             "Target aspect 1.2-2.2."
         )
@@ -1229,14 +1258,18 @@ class Blueprint(BaseModel):
                     "title band + caption + legend; diagram: body-only output, "
                     "ONLY when the user explicitly asks for a plain/raw diagram",
     )
-    density: Literal["standard", "poster"] = Field(
+    density: Literal["standard", "detailed", "poster"] = Field(
         "standard",
-        description="standard (default): client-facing slide with 12-18 nodes, "
+        description="standard (default): client-facing slide with 12-18 nodes, ≤5 columns, "
                     "aggregating cross-cutting concerns. "
-                    "poster: 25-40 nodes in 6-9 numbered sections across a 2-row grid — "
+                    "detailed: engineering-grade single-grid slide with 18-26 nodes, ≤6 columns — "
+                    "sublabel (tech + sizing) is MANDATORY for every compute/data/network node; "
+                    "use when the source describes a medium-large system where component detail matters. "
+                    "poster: 25-45 nodes in 6-12 numbered sections across a 2-3-row grid — "
                     "use when the source document describes a large platform (15+ components, "
                     "5+ tiers) and full component coverage matters more than visual sparseness. "
-                    "Pass density to the drawer so it calls plan_style_sizes(output='poster').",
+                    "Pass density to the drawer so it calls plan_style_sizes(output='poster') "
+                    "for poster, or plan_style_sizes(output='slide') for standard/detailed.",
     )
     slide_title: str = Field(
         "",
@@ -1505,6 +1538,60 @@ def _validate_req_coverage(blueprint: Blueprint) -> tuple[int, int, list[str]]:
     return len(covered), len(func_reqs), uncovered
 
 
+def _detect_provider() -> str:
+    """Read provider from architecture_analysis.json, fall back to empty string."""
+    try:
+        analysis = json.loads(_ARCH_ANALYSIS_FILE.read_text(encoding="utf-8"))
+        return (analysis.get("provider_preference") or "").strip().lower()
+    except Exception:
+        return ""
+
+
+def _build_render_spec(blueprint: "Blueprint", provider: str) -> dict:
+    """Build a compact render spec dict from an approved blueprint."""
+    return {
+        "provider": provider,
+        "pattern": blueprint.pattern,
+        "density": blueprint.density,
+        "presentation_style": blueprint.presentation_style,
+        "layout_intent": blueprint.layout_intent,
+        "slide_title": blueprint.slide_title,
+        "slide_kicker": blueprint.slide_kicker,
+        "brand": blueprint.brand,
+        "diagram_title": blueprint.diagram_title,
+        "nodes": [
+            {"id": n.id, "label": n.label, "tech": n.tech, "cluster": n.cluster, "type": n.type}
+            for n in blueprint.nodes
+        ],
+        "clusters": [
+            {"id": c.id, "label": c.label, "tier": c.tier}
+            for c in blueprint.clusters
+        ],
+        "edges": [
+            {"from": e.from_, "to": e.to, "label": e.label, "protocol": e.protocol}
+            for e in blueprint.edges
+        ],
+    }
+
+
+def _preseed_icon_plan(blueprint: "Blueprint", provider: str) -> None:
+    """Run deterministic icon lookups for every node label and write icon_plan.json.
+
+    The drawer can read this file at step 1 to skip redundant search_icons calls
+    for nodes where a good match was already found.  Nodes with no hits are included
+    with an empty list so the drawer knows to fall back to search_icons.
+    """
+    plan: dict[str, list[str]] = {}
+    for node in blueprint.nodes:
+        query = node.label or node.id
+        hits = _search_icon_hits(query, provider or None, limit=5)
+        plan[node.id] = [_icon_rel(h) for h in hits]
+    try:
+        _ICON_PLAN_FILE.write_text(json.dumps(plan, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+
 @tool
 def propose_blueprint(blueprint: Blueprint) -> str:
     """Propose the architecture blueprint for the user to review and approve.
@@ -1519,6 +1606,14 @@ def propose_blueprint(blueprint: Blueprint) -> str:
     _BLUEPRINT_FILE.write_text(
         blueprint.model_dump_json(by_alias=True, indent=2), encoding="utf-8"
     )
+
+    # Write compact render_spec.json so the drawer reads from disk (P1-1).
+    provider = _detect_provider()
+    render_spec = _build_render_spec(blueprint, provider)
+    _RENDER_SPEC_FILE.write_text(json.dumps(render_spec, indent=2), encoding="utf-8")
+
+    # Pre-seed icon_plan.json so the drawer skips redundant search_icons calls (P1-2).
+    _preseed_icon_plan(blueprint, provider)
 
     # --- deterministic validators (warnings only, do not block) ---
     warnings: list[str] = []
@@ -1542,11 +1637,47 @@ def propose_blueprint(blueprint: Blueprint) -> str:
         if uncovered_reqs:
             coverage_line += " — missing: " + "; ".join(f'"{r}"' for r in uncovered_reqs[:5])
 
+    # --- density mismatch detection (deterministic, warn but do not block) ---
+    n = len(blueprint.nodes)
+    d = blueprint.density
+    if n >= 22 and d != "poster":
+        warnings.append(
+            f"density mismatch: blueprint has {n} nodes but density='{d}'. "
+            "Use density='poster' for 22+ nodes (25-45 nodes, 6-12 sections, 2-3 rows)."
+        )
+    elif 17 <= n <= 21 and d == "standard":
+        warnings.append(
+            f"density mismatch: blueprint has {n} nodes but density='standard'. "
+            "Consider density='detailed' (18-26 nodes, ≤6 columns, sublabel mandatory) "
+            "for engineering-grade detail without the full poster grid."
+        )
+    elif n < 13 and d == "poster":
+        warnings.append(
+            f"density mismatch: blueprint has only {n} nodes but density='poster'. "
+            "Poster mode with <13 nodes will produce an almost-empty grid — "
+            "use density='standard' instead."
+        )
+
+    # --- report quality: warn when blueprint data that feeds PDF sections is thin ---
+    if len(blueprint.key_decisions) < 3:
+        warnings.append(
+            f"report quality: blueprint has only {len(blueprint.key_decisions)} key_decision(s) "
+            "(target ≥ 3). This field feeds the executive summary, traceability, and risks sections "
+            "of the PDF report — add concrete design decisions and trade-offs before approving."
+        )
+    if not blueprint.pillar_coverage:
+        warnings.append(
+            "report quality: pillar_coverage is empty. "
+            "This field feeds the Well-Architected Review section of the PDF report — "
+            "populate at least the 4 core pillars (security, reliability, performance_efficiency, "
+            "cost_optimization) before approving."
+        )
+
     record_report_step(
         WORKSPACE,
         "propose_blueprint",
         summary=(
-            f"Approved {blueprint.pattern} blueprint with {len(blueprint.nodes)} nodes, "
+            f"Approved {blueprint.pattern} blueprint with {n} nodes (density={d}), "
             f"{len(blueprint.clusters)} clusters, and {len(blueprint.edges)} edges."
             + (f" {coverage_line}." if coverage_line else "")
         ),
@@ -1556,7 +1687,8 @@ def propose_blueprint(blueprint: Blueprint) -> str:
     _reset_revision_count()
 
     result_parts = [
-        "Blueprint APPROVED. Next: write the diagram code, call render_diagram, "
+        f"Blueprint APPROVED (density={d}, {n} nodes). "
+        "Next: write the diagram code, call render_diagram, "
         "look at the PNG and refine, call export_drawio, then finalize_diagram.",
     ]
     if coverage_line:
@@ -1675,7 +1807,23 @@ class PdfReportConfig(BaseModel):
     brand: str = Field("", description="Brand name shown on cover; defaults to blueprint.brand")
     include_sections: list[str] = Field(
         default_factory=lambda: DEFAULT_REPORT_SECTIONS.copy(),
-        description="Ordered list of sections to include",
+        description=(
+            "Ordered list of sections to include. Valid names: cover, executive_summary, "
+            "requirements_analysis, traceability, solution, techstack, architecture_analysis, "
+            "well_architected, step_results, risks, diagram. "
+            "Leave EMPTY to include ALL sections (recommended). "
+            "Only pass a subset when the USER explicitly asked to omit specific sections."
+        ),
+    )
+    reason_for_subset: str = Field(
+        "",
+        description=(
+            "REQUIRED when include_sections is a subset of all sections: quote the user's "
+            "exact words that requested omitting sections (e.g. 'user said: only blueprint and diagram'). "
+            "Leave empty when calling with all sections or with no include_sections argument. "
+            "If this field is empty and include_sections is shorter than the full list, "
+            "the tool will auto-expand to all sections."
+        ),
     )
 
 @tool(args_schema=PdfReportConfig)
@@ -1684,6 +1832,7 @@ def generate_pdf_report(
     subtitle: str = "",
     brand: str = "",
     include_sections: list[str] | None = None,
+    reason_for_subset: str = "",
 ) -> str:
     """Generate a client-ready HTML + PDF report from approved artifacts.
 
@@ -1691,8 +1840,20 @@ def generate_pdf_report(
     out.report.html, then renders out.pdf with Playwright Chromium. Call this
     AFTER finalize_diagram is approved.
     """
+    # Hard guard: if a subset was passed without a user-supplied reason, treat it
+    # as a model hallucination and expand to the full default section list.
+    auto_expanded_msg = ""
+    if include_sections and len(include_sections) < len(DEFAULT_REPORT_SECTIONS) and not reason_for_subset.strip():
+        auto_expanded_msg = (
+            f" NOTE: include_sections had only {len(include_sections)} section(s) but no "
+            "reason_for_subset was provided — auto-expanded to all sections to avoid a "
+            "truncated report. Pass reason_for_subset quoting the user's request if a "
+            "subset was intentional."
+        )
+        include_sections = None  # generate_report will use full DEFAULT_REPORT_SECTIONS
+
     try:
-        html_path, pdf_path, sections = generate_report(
+        html_path, pdf_path, sections, unrecognized = generate_report(
             WORKSPACE,
             title=title,
             subtitle=subtitle,
@@ -1704,7 +1865,24 @@ def generate_pdf_report(
     except ReportRenderError as exc:
         return f"PDF report generation failed: {exc}"
     _bump_tool_summary("generate_pdf_report", pdf_pages=len(sections))
-    return f"Wrote {pdf_path} and {html_path} ({len(sections)} sections)."
+    msg = f"Wrote {pdf_path} and {html_path} ({len(sections)} sections)."
+    if auto_expanded_msg:
+        msg += auto_expanded_msg
+    if unrecognized:
+        msg += (
+            f" WARNING: {len(unrecognized)} unrecognized section name(s) were ignored: "
+            + ", ".join(f'"{n}"' for n in unrecognized)
+            + ". Valid names: cover, executive_summary, requirements_analysis, traceability, "
+            "solution, techstack, architecture_analysis, well_architected, step_results, risks, diagram."
+        )
+    if include_sections:
+        missing = [s for s in DEFAULT_REPORT_SECTIONS if s not in sections]
+        if missing:
+            msg += (
+                f" NOTE: {len(missing)} section(s) were omitted from this run: "
+                + ", ".join(missing) + "."
+            )
+    return msg
 
 class GridSection(BaseModel):
     """One section (cluster) in a poster-mode grid row."""
@@ -1717,25 +1895,31 @@ class GridSection(BaseModel):
 def declare_poster_grid(
     row1: list[GridSection],
     row2: list[GridSection],
+    row3: list[GridSection] | None = None,
 ) -> str:
-    """Declare and validate the 2-row grid layout for a poster-mode diagram.
+    """Declare and validate the 2-or-3-row grid layout for a poster-mode diagram.
 
     Call this BEFORE writing prettygraph code when density='poster'.
-    Pass the planned sections for row 1 (client-facing tiers) and row 2
-    (platform tiers). Returns a ready-to-paste code skeleton with invisible
-    spine edges and same_rank anchors.
+    Pass the planned sections for row 1 (client-facing tiers), row 2
+    (platform tiers), and optionally row 3 (secondary concerns: Security,
+    CI/CD, Cost). Returns a ready-to-paste code skeleton.
 
     Rules enforced:
-    - row1 must have 3-6 sections
-    - row2 must have 2-5 sections
+    - row1 must have 3-7 sections
+    - row2 must have 2-6 sections
+    - row3 (optional) must have 0-5 sections
     - Each section must have a distinct anchor_node_id
     """
+    row3 = row3 or []
     errors: list[str] = []
-    if not (3 <= len(row1) <= 6):
-        errors.append(f"row1 has {len(row1)} sections; expected 3-6.")
-    if not (2 <= len(row2) <= 5):
-        errors.append(f"row2 has {len(row2)} sections; expected 2-5.")
-    all_anchors = [s.anchor_node_id for s in row1 + row2]
+    if not (3 <= len(row1) <= 7):
+        errors.append(f"row1 has {len(row1)} sections; expected 3-7.")
+    if not (2 <= len(row2) <= 6):
+        errors.append(f"row2 has {len(row2)} sections; expected 2-6.")
+    if row3 and not (1 <= len(row3) <= 5):
+        errors.append(f"row3 has {len(row3)} sections; expected 1-5 when provided.")
+    all_sections = row1 + row2 + row3
+    all_anchors = [s.anchor_node_id for s in all_sections]
     if len(all_anchors) != len(set(all_anchors)):
         seen: set[str] = set()
         dups = [a for a in all_anchors if a in seen or seen.add(a)]  # type: ignore[func-returns-value]
@@ -1745,22 +1929,35 @@ def declare_poster_grid(
 
     anchors1 = [s.anchor_node_id for s in row1]
     anchors2 = [s.anchor_node_id for s in row2]
-    n1, n2 = len(anchors1), len(anchors2)
+    anchors3 = [s.anchor_node_id for s in row3]
+    n1, n2, n3 = len(anchors1), len(anchors2), len(anchors3)
 
     # One line for the script: Pretty.poster_grid() builds the spine, per-column
     # same_rank, and decorative cross-section edges from these anchor rows.
-    call = f"g.poster_grid(\n    {anchors1!r},  # row 1\n    {anchors2!r},  # row 2\n)"
+    if anchors3:
+        call = (
+            f"g.poster_grid(\n    {anchors1!r},  # row 1\n"
+            f"    {anchors2!r},  # row 2\n"
+            f"    {anchors3!r},  # row 3\n)"
+        )
+    else:
+        call = f"g.poster_grid(\n    {anchors1!r},  # row 1\n    {anchors2!r},  # row 2\n)"
 
-    sections_info = {
+    sections_info: dict = {
         "row1": [{"id": s.id, "label": s.label, "anchor": s.anchor_node_id} for s in row1],
         "row2": [{"id": s.id, "label": s.label, "anchor": s.anchor_node_id} for s in row2],
     }
+    col_info: dict = {"row1": n1, "row2": n2}
+    if anchors3:
+        sections_info["row3"] = [{"id": s.id, "label": s.label, "anchor": s.anchor_node_id} for s in row3]
+        col_info["row3"] = n3
+
     WORKSPACE.mkdir(parents=True, exist_ok=True)
     (WORKSPACE / "poster_grid.json").write_text(json.dumps(sections_info, indent=2), encoding="utf-8")
 
     return json.dumps({
         "status": "OK",
-        "columns": {"row1": n1, "row2": n2},
+        "columns": col_info,
         "poster_grid_call": call,
         "instruction": (
             "Put this ONE call in your script AFTER all g.cluster()/g.box()/g.link() "

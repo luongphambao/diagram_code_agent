@@ -53,14 +53,26 @@ def read_json_file(path: Path, default: Any) -> Any:
         return default
 
 
-def normalize_sections(sections: list[str] | None) -> list[str]:
-    requested = sections or DEFAULT_REPORT_SECTIONS
+def normalize_sections(sections: list[str] | None) -> tuple[list[str], list[str]]:
+    """Return (resolved_sections, unrecognized_names).
+
+    Falls back to DEFAULT_REPORT_SECTIONS when more than half of the supplied
+    names are unrecognizable — treats the list as a model hallucination.
+    """
+    if not sections:
+        return DEFAULT_REPORT_SECTIONS.copy(), []
     out: list[str] = []
-    for raw in requested:
+    unrecognized: list[str] = []
+    for raw in sections:
         name = SECTION_ALIASES.get(str(raw).strip().lower(), str(raw).strip().lower())
         if name in DEFAULT_REPORT_SECTIONS and name not in out:
             out.append(name)
-    return out or DEFAULT_REPORT_SECTIONS.copy()
+        elif name not in DEFAULT_REPORT_SECTIONS:
+            unrecognized.append(str(raw).strip())
+    # >50% unrecognized: treat the entire list as hallucinated, use full default
+    if unrecognized and len(unrecognized) > len(sections) / 2:
+        return DEFAULT_REPORT_SECTIONS.copy(), unrecognized
+    return out or DEFAULT_REPORT_SECTIONS.copy(), unrecognized
 
 
 def _clip_text(value: Any, limit: int = 700) -> str:
@@ -429,7 +441,7 @@ def assemble_report_data(
     if not diagram_path.exists():
         raise FileNotFoundError("No diagram image found; call render_diagram and finalize_diagram first.")
 
-    sections = normalize_sections(include_sections)
+    sections, unrecognized_sections = normalize_sections(include_sections)
     # Extract new wrapped-shape fields before flattening for display
     tech_assumptions = tech_stack.get("assumptions") if isinstance(tech_stack, dict) else None
     tech_scaling_roadmap = tech_stack.get("scaling_roadmap") if isinstance(tech_stack, dict) else None
@@ -451,6 +463,7 @@ def assemble_report_data(
     total_count = len(traceability_rows)
     return {
         "sections": sections,
+        "unrecognized_sections": unrecognized_sections,
         "title": report_title,
         "subtitle": report_subtitle,
         "brand": report_brand,
@@ -881,7 +894,8 @@ def generate_report(
     subtitle: str = "",
     brand: str = "",
     include_sections: list[str] | None = None,
-) -> tuple[Path, Path, list[str]]:
+) -> tuple[Path, Path, list[str], list[str]]:
+    """Return (html_path, pdf_path, sections_rendered, unrecognized_section_names)."""
     workspace.mkdir(parents=True, exist_ok=True)
     report = assemble_report_data(
         workspace,
@@ -902,4 +916,4 @@ def generate_report(
         summary=f"Generated client-ready HTML and PDF report with {len(report['sections'])} requested sections.",
         data={"sections": report["sections"], "artifacts": artifacts},
     )
-    return html_path, pdf_path, report["sections"]
+    return html_path, pdf_path, report["sections"], report.get("unrecognized_sections", [])

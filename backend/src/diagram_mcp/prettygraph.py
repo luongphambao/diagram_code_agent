@@ -505,17 +505,24 @@ class Pretty:
         return "\n".join(out)
 
     # ---- render ---- #
-    def render(self, out_basename: str) -> str:
+    def render(self, out_basename: str, *, dpi_override: int | None = None) -> str:
         """Write ``<base>.dot`` + ``<base>.png`` + ``<base>.nodes.json``.
 
         Returns the PNG path. Raises CalledProcessError with dot's stderr on a
         layout/syntax failure so the agent can fix the script.
+
+        ``dpi_override`` re-renders the PNG at a higher DPI without changing
+        the layout (Graphviz re-uses the same positions from the .dot).  Used
+        by ``render_slide`` when the body is small relative to the panel so
+        that pixel upscaling in PIL is avoided.
         """
         dot_path = f"{out_basename}.dot"
         png_path = f"{out_basename}.png"
         Path(dot_path).write_text(self.to_dot(), encoding="utf-8")
-        subprocess.run(["dot", "-Tpng", dot_path, "-o", png_path],
-                       check=True, capture_output=True, text=True)
+        cmd = ["dot", "-Tpng", dot_path, "-o", png_path]
+        if dpi_override:
+            cmd.append(f"-Gdpi={dpi_override}")
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
         self._write_sidecar(f"{out_basename}.nodes.json")
         return png_path
 
@@ -625,9 +632,9 @@ def audit_layout(dot_path: str, png_path: str | None = None) -> str:
             long_labeled.append(f'"{txt}" ({frac:.0%} of canvas)')
 
     lines = [f"Layout audit: aspect {aspect:.2f}:1"
-             + (" — OK" if 0.55 <= aspect <= 2.3 else
-                " — TOO WIDE, fold cross-cutting tiers into a 2nd row (≤5 columns)"
-                if aspect > 2.3 else " — very tall, consider direction='LR'"),
+             + (" — OK" if 0.55 <= aspect <= 2.1 else
+                " — TOO WIDE for the slide panel, fold cross-cutting tiers into a 2nd row (≤5 columns)"
+                if aspect > 2.1 else " — very tall, consider direction='LR'"),
              f"  clusters: {n_clusters}"]
     if long_labeled:
         lines.append("  STRAND RISK — these labeled edges span far; their labels "
@@ -990,7 +997,11 @@ def _compose_slide_png(body_png: str, out_png: str, *, title: str,
     body = Image.open(body_png).convert("RGBA")
     max_w = panel_w - SLIDE_PANEL_PAD * 2
     max_h = panel_h - 82 - legend_h - SLIDE_PANEL_PAD
-    body.thumbnail((max_w, max_h), Image.LANCZOS)
+    scale = min(max_w / body.width, max_h / body.height)
+    if abs(scale - 1.0) > 0.01:
+        body = body.resize(
+            (round(body.width * scale), round(body.height * scale)), Image.LANCZOS
+        )
     area_top = panel_y + 74
     body_x = panel_x + (panel_w - body.width) // 2
     body_y = area_top + max(0, (max_h - body.height) // 2)
@@ -1015,9 +1026,13 @@ def _compose_slide_png(body_png: str, out_png: str, *, title: str,
             yy += 24
 
     canvas.save(out_png, quality=95)
+    panel_fill_pct = (body.width * body.height) / (max_w * max_h)
     return {
         "panel": [panel_x, panel_y, panel_w, panel_h],
         "body": [body_x, body_y, body.width, body.height],
+        "fill_w": round(body.width / max_w, 4),
+        "fill_h": round(body.height / max_h, 4),
+        "panel_fill_pct": round(panel_fill_pct, 4),
         "legend_count": len(legend_items),
     }
 
@@ -1158,6 +1173,22 @@ def render_slide(g: Pretty, out_basename: str, *, title: str,
     marker_path = f"{out_basename}.slide.json"
 
     body_png = g.render(out_basename)
+
+    # DPI upscale: if the body is small relative to the slide panel, re-render
+    # at a higher DPI so Graphviz produces a crisper PNG instead of letting PIL
+    # upscale pixels (>~1.3x pixel upscale looks noticeably blurry).
+    from PIL import Image as _Img
+    _bw, _bh = _Img.open(body_png).size
+    _panel_w = SLIDE_SIZE - SLIDE_MARGIN * 2
+    _panel_y_tmp = SLIDE_HERO_H + 34 if include_hero else SLIDE_MARGIN
+    _panel_h_tmp = SLIDE_SIZE - _panel_y_tmp - SLIDE_MARGIN
+    _max_w_tmp = _panel_w - SLIDE_PANEL_PAD * 2
+    _max_h_tmp = _panel_h_tmp - 82 - SLIDE_PANEL_PAD
+    _needed = min(_max_w_tmp / max(_bw, 1), _max_h_tmp / max(_bh, 1))
+    if _needed > 1.15:
+        _base_dpi = g.dpi or (192 if g.theme == "pro" else 168)
+        body_png = g.render(out_basename, dpi_override=round(_base_dpi * _needed))
+
     body_copy = f"{out_basename}.body.png"
     shutil.copy(body_png, body_copy)
     body_xml = g.to_drawio(out_basename)
@@ -1182,6 +1213,7 @@ def render_slide(g: Pretty, out_basename: str, *, title: str,
         "body_png": str(out.with_suffix(".body.png")),
         "drawio": str(out.with_suffix(".drawio")),
         "dot": str(out.with_suffix(".dot")),
+        "layout": layout,
     }, indent=2), encoding="utf-8")
     return png_path
 

@@ -516,6 +516,7 @@ def _card_for(val, summary: str):
         )
     if name == "generate_pdf_report":
         sections = args.get("include_sections") or DEFAULT_REPORT_SECTIONS
+        missing = [s for s in DEFAULT_REPORT_SECTIONS if s not in sections]
         return (
             {
                 "type": "pdf_report_approval",
@@ -524,6 +525,7 @@ def _card_for(val, summary: str):
                 "subtitle": args.get("subtitle", ""),
                 "brand": args.get("brand", ""),
                 "include_sections": sections,
+                "missing_sections": missing,
             },
             "awaiting_pdf_report",
             {},

@@ -204,6 +204,7 @@ export interface PendingInterrupt {
     subtitle?: string;
     brand?: string;
     include_sections?: string[];
+    missing_sections?: string[];
   };
 }
 

@@ -131,6 +131,32 @@ def structural_f1(blueprint: dict | None, golden: dict) -> dict:
     result["nfr_mapping_count"] = len(nfr_mapping) if isinstance(nfr_mapping, list) else 0
     result["nfr_mapping_nontrivial"] = result["nfr_mapping_count"] >= 2
 
+    # --- Sublabel coverage (% of nodes with non-empty tech field) ---
+    nodes = blueprint.get("nodes") or []
+    density = blueprint.get("density", "standard")
+    nodes_with_tech = sum(
+        1 for n in nodes
+        if isinstance(n, dict) and n.get("tech", "").strip()
+    )
+    result["sublabel_coverage"] = round(nodes_with_tech / len(nodes), 4) if nodes else 1.0
+    result["sublabel_coverage_nontrivial"] = (
+        result["sublabel_coverage"] >= 0.8
+        if density in ("detailed", "poster")
+        else True  # not required for standard density
+    )
+
+    # --- Panel fill (from out.slide.json if available) ---
+    slide_json_path = golden.get("slide_json_path")
+    if slide_json_path:
+        try:
+            slide_data = json.loads(Path(slide_json_path).read_text(encoding="utf-8"))
+            fill_pct = slide_data.get("layout", {}).get("panel_fill_pct")
+            if fill_pct is not None:
+                result["panel_fill_pct"] = round(fill_pct, 4)
+                result["panel_fill_ok"] = fill_pct >= 0.65
+        except Exception:  # noqa: BLE001
+            pass
+
     return result
 
 
@@ -153,7 +179,12 @@ Rubric dimensions (score 0.0–1.0 each):
 6. boundary_clarity — Are security/network boundaries (VPC, subnet, trust zone) clearly
                        visible when security concerns are implied? 1.0 = clearly shown,
                        0.5 = partially shown, 0.0 = missing when expected.
-7. overall          — Your holistic quality score.
+7. visual_density   — Does the diagram body fill the slide panel well, with appropriately
+                       sized nodes? 1.0 = body fills the panel and nodes show tech detail
+                       (sublabels visible); 0.5 = body fills about half the panel or nodes
+                       show only titles; 0.0 = tiny diagram floating in large whitespace,
+                       or no tech detail visible on any node.
+8. overall          — Your holistic quality score.
 
 Required JSON schema:
 {
@@ -163,6 +194,7 @@ Required JSON schema:
   "cluster_layout":   <float 0-1>,
   "legend_quality":   <float 0-1>,
   "boundary_clarity": <float 0-1>,
+  "visual_density":   <float 0-1>,
   "overall":          <float 0-1>,
   "reasoning":        "<1-2 sentence justification>"
 }
