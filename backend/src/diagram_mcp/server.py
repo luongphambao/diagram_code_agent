@@ -48,6 +48,7 @@ from . import conversations as conv_db
 # pool is opened/closed with the app) and stored here for the request handlers.
 AGENT = None
 from .backends import AGENT_SPACE, WORKSPACE
+from .reporting import DEFAULT_REPORT_SECTIONS, record_report_step
 from .requirements_reader import IMAGE_EXT, parse_file
 from .tools import GATE_TOOL_NAMES, clear_stage_markers
 
@@ -195,7 +196,7 @@ def _tool_detail(tool: str, args: dict | None, *, limit: int = 260) -> str:
             layers = [str(x.get("layer", "")) for x in stack if isinstance(x, dict)]
             return f"{len(stack)} layers: {', '.join([x for x in layers if x][:8])}"
     if tool == "generate_pdf_report":
-        sections = args.get("include_sections") or ["cover", "solution", "techstack", "blueprint", "diagram"]
+        sections = args.get("include_sections") or DEFAULT_REPORT_SECTIONS
         return f"sections={', '.join(map(str, sections))}"
     if tool == "submit_critique":
         findings = args.get("findings") or []
@@ -494,13 +495,7 @@ def _card_for(val, summary: str):
             "reviewing", {},
         )
     if name == "generate_pdf_report":
-        sections = args.get("include_sections") or [
-            "cover",
-            "solution",
-            "techstack",
-            "blueprint",
-            "diagram",
-        ]
+        sections = args.get("include_sections") or DEFAULT_REPORT_SECTIONS
         return (
             {
                 "type": "pdf_report_approval",
@@ -662,6 +657,16 @@ async def agui_endpoint(request: Request):
                 # Track gate outcomes for the learning loop (Tier 5).
                 if pending_name in GATE_TOOL_NAMES:
                     note = payload.get("feedback") or payload.get("modifications") or ""
+                    record_report_step(
+                        WORKSPACE,
+                        f"{pending_name}_gate",
+                        status=decision["type"],
+                        summary=(
+                            f"User {'approved' if decision['type'] == 'approve' else 'rejected'} {pending_name}."
+                            + (f" Feedback: {note}" if note else "")
+                        ),
+                        data={"gate": pending_name, "decision": decision["type"], "note": str(note) if note else ""},
+                    )
                     await conv_db.record_gate_outcome(
                         request.app.state.pool,
                         thread_id=thread_id,

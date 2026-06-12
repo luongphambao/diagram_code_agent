@@ -9,6 +9,7 @@ Diagram Code Agent turns plain-English system requirements into architecture dia
 - Proposes an architecture blueprint and waits for user approval.
 - Generates diagram code with local icon/logo support.
 - Renders diagram artifacts: `diagram.py`, `out.png`, `out.dot`, `out.drawio`.
+- Optionally generates a HITL-approved PDF report as `out.pdf`.
 - Streams chat, tool activity, approvals, and final state through AG-UI/SSE.
 - Persists conversations with Postgres when `DATABASE_URL` is configured.
 
@@ -46,6 +47,7 @@ Deep Agent (backend/src/diagram_mcp/agent.py)
     |   +-- propose_tech_stack       # HITL approval gate
     |   +-- propose_blueprint        # HITL approval gate
     |   +-- finalize_diagram         # HITL review gate
+    |   +-- generate_pdf_report      # optional HITL PDF gate
     |
     +-- Drawer subagent
     |   +-- writes diagram.py
@@ -78,14 +80,16 @@ Deep Agent (backend/src/diagram_mcp/agent.py)
 7. Agent writes diagram code, renders PNG, inspects result, and refines.
 8. Agent exports `.drawio` and calls `finalize_diagram`.
 9. Frontend shows final review card and diagram artifacts.
+10. If the user asks for a report/document, agent calls `generate_pdf_report`; frontend shows a PDF approval card before `out.pdf` is created.
 
 ### Human-in-the-loop Gates
 
-Three tools are configured as approval gates:
+These tools are configured as approval gates:
 
 - `propose_tech_stack`: confirms stack choices before diagram design.
 - `propose_blueprint`: confirms architecture structure before code generation.
 - `finalize_diagram`: confirms final rendered result before completion.
+- `generate_pdf_report`: confirms report settings before creating `out.pdf`.
 
 When the user rejects a gate, the frontend sends feedback to the server. The server resumes the LangGraph run with `Command(resume=...)`, and the agent revises the current step.
 
@@ -97,6 +101,33 @@ When the user rejects a gate, the frontend sends feedback to the server. The ser
 - `fetch_logo`: resolves vendor logos from local icons, Iconify, or favicon fallback.
 - `inspect_diagram`: lets the critic review rendered image quality.
 - `submit_critique`: records critic feedback for refinement.
+- `generate_pdf_report`: creates a multi-page PDF report after final diagram approval.
+
+### Tool Call Flow
+
+The intended tool order is:
+
+1. `analyze_architecture_requirements`
+2. `propose_diagram_brief`
+3. `propose_tech_stack`
+4. `propose_blueprint`
+5. `task(subagent_type="drawer", ...)`
+6. `task(subagent_type="critic", ...)`
+7. `finalize_diagram`
+8. `generate_pdf_report`
+
+`generate_pdf_report` is optional and should only be called after `finalize_diagram` is approved when the user asks for a PDF, report, or document. It pauses for HITL approval before writing `out.pdf`.
+
+Example PDF tool call:
+
+```json
+{
+  "title": "Architecture Blueprint",
+  "subtitle": "Solution Report",
+  "brand": "Customer or Product Name",
+  "include_sections": ["cover", "solution", "techstack", "blueprint", "diagram"]
+}
+```
 
 ### Memory and Skills
 
@@ -157,6 +188,7 @@ interrupt_on = {
     "propose_tech_stack": {"allowed_decisions": ["approve", "reject"]},
     "propose_blueprint": {"allowed_decisions": ["approve", "reject"]},
     "finalize_diagram": {"allowed_decisions": ["approve", "reject"]},
+    "generate_pdf_report": {"allowed_decisions": ["approve", "reject"]},
 }
 ```
 
@@ -354,7 +386,7 @@ VITE_BACKEND_URL=http://localhost:8001
 
 ## Generated Files
 
-Runtime artifacts are created under `backend/agent_space/`, including uploaded docs, memory files, workspace files, rendered PNGs, DOT files, and `.drawio` exports. This folder is ignored by Git.
+Runtime artifacts are created under `backend/agent_space/`, including uploaded docs, memory files, workspace files, rendered PNGs, DOT files, `.drawio` exports, and optional `out.pdf` reports. This folder is ignored by Git.
 
 ## Troubleshooting
 

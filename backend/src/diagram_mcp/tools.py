@@ -29,6 +29,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from .architecture_advisor import analyze_requirements
 from .backends import LOCAL_ICONS, LOCAL_MANIFEST, LOCAL_NODE_CATALOG, WORKSPACE
 from .findings import DiagramFinding, format_critique, prune, verdict_for
+from .reporting import (
+    DEFAULT_REPORT_SECTIONS,
+    REPORT_EVIDENCE_NAME,
+    ReportRenderError,
+    generate_report,
+    record_artifact_inventory,
+    record_report_step,
+)
 
 # Stage markers written under WORKSPACE so the staged tools can enforce order.
 _ARCH_ANALYSIS_FILE = WORKSPACE / "architecture_analysis.json"
@@ -113,6 +121,7 @@ def clear_stage_markers() -> None:
         _ARCH_ANALYSIS_FILE, _BRIEF_FILE, _TECHSTACK_FILE, _BLUEPRINT_FILE,
         _CRITIQUE_FILE, _REVISION_COUNT_FILE, _TOOL_SUMMARY_FILE,
         _ICON_SEARCH_BUDGET_FILE, _NODE_SEARCH_BUDGET_FILE,
+        WORKSPACE / REPORT_EVIDENCE_NAME,
     ):
         if f.exists():
             f.unlink()
@@ -519,6 +528,16 @@ def render_diagram(
                      "(e.g. a specific TEXT OVERFLOW label). Otherwise finalize "
                      "with this image and report residual warnings in your "
                      "summary — do not chase the same warning again.")
+    record_report_step(
+        WORKSPACE,
+        "render_diagram",
+        summary=f"Rendered out.png successfully on attempt {attempt}.",
+        data={
+            "attempt": attempt,
+            "audit": audit,
+            "artifacts": record_artifact_inventory(WORKSPACE),
+        },
+    )
     return ToolMessage(
         content_blocks=[
             {"type": "text", "text": text},
@@ -555,6 +574,12 @@ def export_drawio() -> str:
         return f"export_drawio failed: {exc}"
     if not out.exists():
         return "export_drawio produced no file."
+    record_report_step(
+        WORKSPACE,
+        "export_drawio",
+        summary=f"Created editable draw.io artifact ({out.stat().st_size} bytes).",
+        data={"artifacts": record_artifact_inventory(WORKSPACE)},
+    )
     return f"Wrote out.drawio ({out.stat().st_size} bytes)."
 
 
@@ -971,6 +996,17 @@ def analyze_architecture_requirements(requirements: str, provider_preference: st
     analysis = analyze_requirements(requirements, provider_preference)
     WORKSPACE.mkdir(parents=True, exist_ok=True)
     _ARCH_ANALYSIS_FILE.write_text(json.dumps(analysis, indent=2), encoding="utf-8")
+    record_report_step(
+        WORKSPACE,
+        "analyze_architecture_requirements",
+        summary=(
+            f"Detected {analysis.get('application_type', 'application')} workload, "
+            f"{analysis.get('scale_level', 'unspecified')} scale, "
+            f"{analysis.get('security_level', 'unspecified')} security, "
+            f"provider={analysis.get('provider_preference') or 'cloud-neutral'}."
+        ),
+        data=analysis,
+    )
     return json.dumps(analysis, indent=2)
 
 
@@ -1112,6 +1148,15 @@ def propose_diagram_brief(brief: DiagramBrief) -> str:
     """
     WORKSPACE.mkdir(parents=True, exist_ok=True)
     _BRIEF_FILE.write_text(brief.model_dump_json(indent=2), encoding="utf-8")
+    record_report_step(
+        WORKSPACE,
+        "propose_diagram_brief",
+        summary=(
+            f"Recorded diagram brief with {len(brief.functional_requirements)} functional "
+            f"and {len(brief.non_functional_requirements)} non-functional requirements."
+        ),
+        data=brief.model_dump(),
+    )
     return (
         "Diagram brief recorded. Next: propose the technology stack with "
         "propose_tech_stack."
@@ -1136,6 +1181,12 @@ def propose_tech_stack(tech_stack: list[TechChoice]) -> str:
         for t in tech_stack
     }
     _TECHSTACK_FILE.write_text(json.dumps(as_dict, indent=2), encoding="utf-8")
+    record_report_step(
+        WORKSPACE,
+        "propose_tech_stack",
+        summary=f"Approved technology stack covering {len(as_dict)} layer(s).",
+        data=as_dict,
+    )
     return (
         "Tech stack APPROVED. Next: design the architecture and call "
         "propose_blueprint with the components, clusters and connections."
@@ -1153,6 +1204,15 @@ def propose_blueprint(blueprint: Blueprint) -> str:
     WORKSPACE.mkdir(parents=True, exist_ok=True)
     _BLUEPRINT_FILE.write_text(
         blueprint.model_dump_json(by_alias=True, indent=2), encoding="utf-8"
+    )
+    record_report_step(
+        WORKSPACE,
+        "propose_blueprint",
+        summary=(
+            f"Approved {blueprint.pattern} blueprint with {len(blueprint.nodes)} nodes, "
+            f"{len(blueprint.clusters)} clusters, and {len(blueprint.edges)} edges."
+        ),
+        data=blueprint.model_dump(by_alias=True),
     )
     reset_render_count()
     _reset_revision_count()
@@ -1216,6 +1276,7 @@ def submit_critique(findings: list[DiagramFinding]) -> str:
     _CRITIQUE_FILE.write_text(
         json.dumps([f.model_dump() for f in kept], indent=2), encoding="utf-8"
     )
+    critique_data = [f.model_dump() for f in kept]
     if verdict_for(kept) == "revise":
         state = _read_json_file(_REVISION_COUNT_FILE, {"count": 0})
         count = int(state.get("count", 0)) + 1
@@ -1232,7 +1293,15 @@ def submit_critique(findings: list[DiagramFinding]) -> str:
         reset_render_count()  # a revision round gets a fresh render/search budget
     else:
         _bump_tool_summary("submit_critique")
-    return format_critique(kept)
+    verdict_text = format_critique(kept)
+    record_report_step(
+        WORKSPACE,
+        "submit_critique",
+        status="revise" if verdict_for(kept) == "revise" else "passed",
+        summary=verdict_text.splitlines()[0] if verdict_text else "Critic review completed.",
+        data={"findings": critique_data},
+    )
+    return verdict_text
 
 
 @tool
@@ -1244,6 +1313,12 @@ def finalize_diagram() -> str:
     """
     if not (WORKSPACE / "out.png").exists():
         return "No rendered diagram yet — call render_diagram (and export_drawio) first."
+    record_report_step(
+        WORKSPACE,
+        "finalize_diagram",
+        summary="Diagram finalized and approved by the user.",
+        data={"artifacts": record_artifact_inventory(WORKSPACE)},
+    )
     return "Diagram finalized and approved by the user."
 
 
@@ -1252,7 +1327,7 @@ class PdfReportConfig(BaseModel):
     subtitle: str = Field("", description="Cover subtitle/kicker")
     brand: str = Field("", description="Brand name shown on cover; defaults to blueprint.brand")
     include_sections: list[str] = Field(
-        default_factory=lambda: ["cover", "solution", "techstack", "blueprint", "diagram"],
+        default_factory=lambda: DEFAULT_REPORT_SECTIONS.copy(),
         description="Ordered list of sections to include",
     )
 
@@ -1263,282 +1338,26 @@ def generate_pdf_report(
     brand: str = "",
     include_sections: list[str] | None = None,
 ) -> str:
-    """Generate a multi-page PDF report from the approved artifacts.
+    """Generate a client-ready HTML + PDF report from approved artifacts.
 
-    Reads blueprint.json, tech_stack.json, architecture_analysis.json,
-    diagram_brief.json, and out.body.png (or out.png) from the workspace.
-    Composes a 2048x2896 A4-proportioned page per section using Pillow, then
-    saves to out.pdf. Call this AFTER finalize_diagram is approved.
+    Reads the staged architecture artifacts and report_evidence.json, renders
+    out.report.html, then renders out.pdf with Playwright Chromium. Call this
+    AFTER finalize_diagram is approved.
     """
-    from PIL import Image, ImageDraw
-    import PIL.JpegImagePlugin  # noqa: F401 - registers JPEG save handler for Pillow PDF output.
-
-    Image.init()
-
-    from .prettygraph import _draw_centered_text, _font, _gradient
-
-    config = PdfReportConfig(
-        title=title,
-        subtitle=subtitle,
-        brand=brand,
-        include_sections=include_sections
-        or ["cover", "solution", "techstack", "blueprint", "diagram"],
-    )
-    WORKSPACE.mkdir(parents=True, exist_ok=True)
-    blueprint = _read_json_file(_BLUEPRINT_FILE, {})
-    tech_stack = _read_json_file(_TECHSTACK_FILE, {})
-    analysis = _read_json_file(_ARCH_ANALYSIS_FILE, {})
-    brief = _read_json_file(_BRIEF_FILE, {})
-
-    diagram_path = WORKSPACE / "out.body.png"
-    if not diagram_path.exists():
-        diagram_path = WORKSPACE / "out.png"
-    if not diagram_path.exists():
-        return "No diagram image found; call render_diagram and finalize_diagram first."
-
-    page_w, page_h = 2048, 2896
-    margin = 130
-    band_h = 400
-    border = "#D7DEE8"
-    ink = "#0F172A"
-    muted = "#64748B"
-
-    def text_width(draw, text: str, font) -> int:
-        box = draw.textbbox((0, 0), text, font=font)
-        return box[2] - box[0]
-
-    def wrap_text(draw, text: str, font, max_width: int) -> list[str]:
-        words = str(text or "").replace("\n", " \n ").split()
-        lines: list[str] = []
-        current = ""
-        for word in words:
-            if word == "\n":
-                if current:
-                    lines.append(current)
-                    current = ""
-                continue
-            trial = word if not current else f"{current} {word}"
-            if text_width(draw, trial, font) <= max_width:
-                current = trial
-                continue
-            if current:
-                lines.append(current)
-            current = word
-        if current:
-            lines.append(current)
-        return lines
-
-    def draw_wrapped(draw, xy, text: str, font, fill=ink, max_width=1000,
-                     line_gap=10, max_lines: int | None = None) -> int:
-        x, y = xy
-        lines = wrap_text(draw, text, font, max_width)
-        if max_lines is not None:
-            lines = lines[:max_lines]
-        for line in lines:
-            draw.text((x, y), line, font=font, fill=fill)
-            box = draw.textbbox((0, 0), line, font=font)
-            y += (box[3] - box[1]) + line_gap
-        return y
-
-    def bullet_list(draw, x: int, y: int, title: str, items, *, max_items=8) -> int:
-        clean = [str(item).strip() for item in (items or []) if str(item).strip()]
-        if not clean:
-            return y
-        draw.text((x, y), title, font=_font(46, bold=True), fill=ink)
-        y += 68
-        for item in clean[:max_items]:
-            draw.text((x, y + 2), "-", font=_font(34, bold=True), fill="#0F766E")
-            y = draw_wrapped(draw, (x + 34, y), item, _font(32), fill="#334155",
-                             max_width=page_w - x - margin - 34, line_gap=8)
-            y += 18
-        return y + 22
-
-    def header_page(title: str):
-        page = Image.new("RGB", (page_w, page_h), "white")
-        page.paste(_gradient((page_w, band_h)), (0, 0))
-        draw = ImageDraw.Draw(page)
-        draw.text((margin, 150), title, font=_font(76, bold=True), fill="white")
-        brand_text = (config.brand or blueprint.get("brand") or "").strip()
-        if brand_text:
-            draw.text((page_w - margin, 76), brand_text, font=_font(38, bold=True),
-                      fill="white", anchor="ra")
-        return page, draw
-
-    def cover_page():
-        page = Image.new("RGB", (page_w, page_h), "white")
-        page.paste(_gradient((page_w, page_h)), (0, 0))
-        draw = ImageDraw.Draw(page)
-        brand_text = (config.brand or blueprint.get("brand") or "").strip()
-        if brand_text:
-            draw.text((page_w - margin, 110), brand_text, font=_font(48, bold=True),
-                      fill="white", anchor="ra")
-        subtitle = (config.subtitle or blueprint.get("slide_kicker") or "Architecture Report").strip()
-        title = (
-            config.title
-            or blueprint.get("slide_title")
-            or str(brief.get("objective", ""))[:80]
-            or "Architecture Blueprint"
+    try:
+        html_path, pdf_path, sections = generate_report(
+            WORKSPACE,
+            title=title,
+            subtitle=subtitle,
+            brand=brand,
+            include_sections=include_sections,
         )
-        _draw_centered_text(draw, (page_w // 2, 1110), subtitle, _font(54),
-                            "#E0F2FE", page_w - margin * 2)
-        _draw_centered_text(draw, (page_w // 2, 1280), title, _font(96, bold=True),
-                            "white", page_w - 280, line_gap=18)
-        badge = "Architecture Document"
-        font = _font(34, bold=True)
-        box = draw.textbbox((0, 0), badge, font=font)
-        bw, bh = box[2] - box[0] + 70, box[3] - box[1] + 40
-        bx, by = (page_w - bw) // 2, page_h - 360
-        draw.rounded_rectangle((bx, by, bx + bw, by + bh), radius=12,
-                               fill="#FFFFFF", outline="#BAE6FD", width=2)
-        draw.text((page_w // 2, by + 20), badge, font=font, fill="#075985", anchor="ma")
-        return page
-
-    def solution_page():
-        page, draw = header_page("Solution Overview")
-        y = band_h + 110
-        objective = brief.get("objective") or "Architecture solution overview."
-        y = draw_wrapped(draw, (margin, y), objective, _font(38), fill="#334155",
-                         max_width=1320, line_gap=14)
-        side_x, side_y, side_w = page_w - margin - 430, band_h + 110, 430
-        draw.rounded_rectangle((side_x, side_y, side_x + side_w, side_y + 310),
-                               radius=8, fill="#F8FAFC", outline=border, width=2)
-        draw.text((side_x + 34, side_y + 34), "Context", font=_font(34, bold=True), fill=ink)
-        y_side = side_y + 92
-        for label, value in (
-            ("Scale", analysis.get("scale_level") or brief.get("scale_level") or "unspecified"),
-            ("Deployment", analysis.get("deployment_context") or analysis.get("provider_preference") or brief.get("provider_preference") or "cloud-neutral"),
-            ("Security", analysis.get("security_level") or brief.get("security_level") or "standard"),
-        ):
-            draw.text((side_x + 34, y_side), label, font=_font(24, bold=True), fill=muted)
-            y_side = draw_wrapped(draw, (side_x + 34, y_side + 34), value, _font(30),
-                                  fill=ink, max_width=side_w - 68, line_gap=6,
-                                  max_lines=2) + 12
-        y += 70
-        y = bullet_list(draw, margin, y, "Functional Requirements",
-                        brief.get("functional_requirements"), max_items=8)
-        y = bullet_list(draw, margin, y, "Non-Functional Requirements",
-                        brief.get("non_functional_requirements"), max_items=7)
-        bullet_list(draw, margin, y, "Assumptions", brief.get("assumptions"), max_items=5)
-        return page
-
-    def tech_items() -> list[dict]:
-        if isinstance(tech_stack, list):
-            return [item for item in tech_stack if isinstance(item, dict)]
-        if isinstance(tech_stack, dict):
-            return [
-                {"layer": layer, **value} if isinstance(value, dict)
-                else {"layer": layer, "choice": value}
-                for layer, value in tech_stack.items()
-            ]
-        return []
-
-    def techstack_page():
-        page, draw = header_page("Technology Stack")
-        items = tech_items()
-        x1, x2 = margin, margin + 895 + 70
-        y0, card_w, card_h, gap_y = band_h + 110, 895, 330, 44
-        for idx, item in enumerate(items[:12]):
-            col = idx % 2
-            row = idx // 2
-            x = x1 if col == 0 else x2
-            y = y0 + row * (card_h + gap_y)
-            draw.rounded_rectangle((x, y, x + card_w, y + card_h), radius=8,
-                                   fill="#FFFFFF", outline=border, width=2)
-            draw.text((x + 34, y + 28), str(item.get("layer", "Layer")).title(),
-                      font=_font(28, bold=True), fill="#0F766E")
-            draw_wrapped(draw, (x + 34, y + 76), str(item.get("choice", "TBD")),
-                         _font(44, bold=True), fill=ink, max_width=card_w - 68,
-                         line_gap=6, max_lines=2)
-            draw_wrapped(draw, (x + 34, y + 170), str(item.get("rationale", "")),
-                         _font(25), fill="#334155", max_width=card_w - 68,
-                         line_gap=7, max_lines=3)
-            alts = item.get("alternatives") or []
-            alt_text = ", ".join(alts) if isinstance(alts, list) else str(alts)
-            if alt_text:
-                draw_wrapped(draw, (x + 34, y + 278), f"Alternatives: {alt_text}",
-                             _font(21), fill=muted, max_width=card_w - 68,
-                             line_gap=4, max_lines=1)
-        return page
-
-    def blueprint_page():
-        page, draw = header_page("Architecture Blueprint")
-        y = band_h + 100
-        pattern = str(blueprint.get("pattern") or "Architecture Pattern").title()
-        draw.text((margin, y), pattern, font=_font(54, bold=True), fill=ink)
-        y += 76
-        y = draw_wrapped(draw, (margin, y), blueprint.get("pattern_rationale", ""),
-                         _font(32), fill="#334155", max_width=page_w - margin * 2,
-                         line_gap=10, max_lines=5) + 48
-        decisions = blueprint.get("key_decisions") or []
-        if decisions:
-            draw.text((margin, y), "Key Design Decisions", font=_font(46, bold=True), fill=ink)
-            y += 68
-            for idx, decision in enumerate(decisions[:6], start=1):
-                draw.text((margin, y), f"{idx}.", font=_font(32, bold=True), fill="#0F766E")
-                y = draw_wrapped(draw, (margin + 58, y), decision, _font(30),
-                                 fill="#334155", max_width=page_w - margin * 2 - 58,
-                                 line_gap=8, max_lines=3) + 16
-            y += 22
-        draw.text((margin, y), "Tiers and Components", font=_font(46, bold=True), fill=ink)
-        y += 78
-        nodes = blueprint.get("nodes") or []
-        clusters = blueprint.get("clusters") or []
-        by_cluster: dict[str, list[str]] = {}
-        for node in nodes:
-            if not isinstance(node, dict):
-                continue
-            by_cluster.setdefault(str(node.get("cluster", "")), []).append(str(node.get("label", "")))
-        for cluster in clusters[:12]:
-            if not isinstance(cluster, dict):
-                continue
-            label = str(cluster.get("label") or cluster.get("id") or "Tier")
-            comps = ", ".join([c for c in by_cluster.get(str(cluster.get("id", "")), []) if c])
-            if not comps:
-                comps = "Components defined in blueprint"
-            draw.rounded_rectangle((margin, y, page_w - margin, y + 126),
-                                   radius=6, fill="#F8FAFC", outline=border, width=2)
-            draw_wrapped(draw, (margin + 28, y + 24), label, _font(30, bold=True),
-                         fill=ink, max_width=420, max_lines=2)
-            draw_wrapped(draw, (margin + 500, y + 24), comps, _font(27),
-                         fill="#334155", max_width=page_w - margin * 2 - 530,
-                         line_gap=6, max_lines=2)
-            y += 146
-            if y > page_h - 190:
-                break
-        return page
-
-    def diagram_page():
-        page = Image.new("RGB", (page_w, page_h), "white")
-        draw = ImageDraw.Draw(page)
-        draw.rectangle((0, 0, page_w, 190), fill="#075985")
-        draw.text((margin, 62), "Architecture Diagram", font=_font(58, bold=True), fill="white")
-        body = Image.open(diagram_path).convert("RGBA")
-        max_w, max_h = page_w - margin * 2, page_h - 430
-        body.thumbnail((max_w, max_h), Image.LANCZOS)
-        x = (page_w - body.width) // 2
-        y = 250 + max(0, (max_h - body.height) // 2)
-        page.paste(body, (x, y), body)
-        footer = blueprint.get("diagram_title") or blueprint.get("slide_title") or "System Architecture"
-        _draw_centered_text(draw, (page_w // 2, page_h - 132), footer, _font(34, bold=True),
-                            "#334155", page_w - margin * 2)
-        return page
-
-    page_factories = {
-        "cover": cover_page,
-        "solution": solution_page,
-        "techstack": techstack_page,
-        "blueprint": blueprint_page,
-        "diagram": diagram_page,
-    }
-    requested = [str(section).lower().strip() for section in config.include_sections]
-    pages = [page_factories[name]() for name in requested if name in page_factories]
-    if not pages:
-        return "No valid PDF sections requested."
-
-    out = WORKSPACE / "out.pdf"
-    pages[0].save(str(out), save_all=True, append_images=pages[1:], resolution=150)
-    _bump_tool_summary("generate_pdf_report", pdf_pages=len(pages))
-    return f"Wrote {out} ({len(pages)} pages)."
+    except FileNotFoundError as exc:
+        return str(exc)
+    except ReportRenderError as exc:
+        return f"PDF report generation failed: {exc}"
+    _bump_tool_summary("generate_pdf_report", pdf_pages=len(sections))
+    return f"Wrote {pdf_path} and {html_path} ({len(sections)} sections)."
 
 class GridSection(BaseModel):
     """One section (cluster) in a poster-mode grid row."""

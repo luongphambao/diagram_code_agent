@@ -28,7 +28,9 @@ WORKDIR /app
 # diagram_mcp.backends path logic (parents[2] == backend/) keeps resolving.
 COPY backend ./backend
 COPY resources ./resources
+COPY logo ./logo
 RUN pip install -e ./backend
+RUN python -m playwright install --with-deps chromium
 
 # AG-UI SSE server.
 EXPOSE 8001

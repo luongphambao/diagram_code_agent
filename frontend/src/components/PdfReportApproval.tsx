@@ -9,11 +9,30 @@ interface PdfReportApprovalProps {
 
 const SECTION_LABELS: Record<string, string> = {
   cover: "Cover",
+  executive_summary: "Executive Summary",
+  requirements_analysis: "Requirements Analysis",
+  traceability: "Traceability",
   solution: "Solution",
   techstack: "Tech Stack",
+  architecture_analysis: "Architecture Blueprint",
+  step_results: "Step Results",
+  risks: "Risks",
   blueprint: "Blueprint",
   diagram: "Diagram",
 };
+
+const DEFAULT_REPORT_SECTIONS = [
+  "cover",
+  "executive_summary",
+  "requirements_analysis",
+  "traceability",
+  "solution",
+  "techstack",
+  "architecture_analysis",
+  "step_results",
+  "risks",
+  "diagram",
+];
 
 export default function PdfReportApproval({ interrupt, onResolve, disabled = false }: PdfReportApprovalProps) {
   const [mode, setMode] = useState<"idle" | "feedback">("idle");
@@ -25,7 +44,7 @@ export default function PdfReportApproval({ interrupt, onResolve, disabled = fal
   const brand = interrupt.data.brand?.trim();
   const sections = interrupt.data.include_sections?.length
     ? interrupt.data.include_sections
-    : ["cover", "solution", "techstack", "blueprint", "diagram"];
+    : DEFAULT_REPORT_SECTIONS;
 
   const approve = () => {
     setDecided(true);
