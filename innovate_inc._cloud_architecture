@@ -1,0 +1,136 @@
+digraph "Innovate Inc. Cloud Architecture" {
+	graph [fontcolor="#2D3436" fontname="Sans-Serif" fontsize=15 label="Innovate Inc. Cloud Architecture" nodesep=0.60 pad=2.0 rankdir=TB ranksep=0.75 splines=ortho]
+	node [fixedsize=true fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13 height=1.4 imagescale=true labelloc=b shape=box style=rounded width=1.4]
+	edge [color="#7B8894"]
+	"7ee7825e951c41ce8fe362858874b51d" [label="End Users" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/general\users.png" shape=none]
+	b10536d6253b47988425784cf6d1f17c [label=Admin height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/general\users.png" shape=none]
+	"4a461280da264592888f2eb06c643f5a" -> "5443342b189c48feb1130f8aa50c602b" [color="#795548" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	b10536d6253b47988425784cf6d1f17c -> "4a461280da264592888f2eb06c643f5a" [label="Push Code" color="#000000" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	subgraph "cluster_GitHub (External)" {
+		graph [bgcolor="#79554820" fontname="Sans-Serif" fontsize=12 label="GitHub (External)" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+		"4a461280da264592888f2eb06c643f5a" [label="Source Code" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/onprem/vcs\github.png" shape=none]
+		"5443342b189c48feb1130f8aa50c602b" [label="CI/CD Pipelines" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/onprem/ci\github-actions.png" shape=none]
+	}
+	"7c974754e5f143e9a891b7327df2909f" -> e3d49dc14f6a43a7a3731e5175df0005 [dir=none fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	e3d49dc14f6a43a7a3731e5175df0005 -> "19feb918fcf041d4a14ec4b502c19e87" [dir=none fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"8ea6e3f2b6cc48f2b80c25fc31313d1f" -> "3cf5f431561b4fcbb1d69dbe393b40b1" [dir=none fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"1c7f8123443a431b9919f094dc13d1fe" -> "19feb918fcf041d4a14ec4b502c19e87" [dir=none fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"8e66e82249c44baf83c0336137e8b836" -> "0c3ae7c011994701ac6380bcaad533ee" [dir=none fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"0c3ae7c011994701ac6380bcaad533ee" -> d0696aa442f4468581bef619d9d65f75 [dir=none fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	subgraph "cluster_Management Account" {
+		graph [bgcolor="#00968810" fontname="Sans-Serif" fontsize=12 label="Management Account" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+		f80a03ddbae04676b3fef761f099e7c9 [label="AWS Organizations" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/management\organizations.png" shape=none]
+		subgraph "cluster_Centralized Management" {
+			graph [bgcolor="#EBF3E7" fontname="Sans-Serif" fontsize=12 label="Centralized Management" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+			"7ca3959e8ac44a1aac7ba2f85f64d673" [label="IAM Identity Center" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/security\identity-and-access-management-iam.png" shape=none]
+			subgraph "cluster_Security Services" {
+				graph [bgcolor="#FF572220" fontname="Sans-Serif" fontsize=12 label="Security Services" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+				"7c974754e5f143e9a891b7327df2909f" [label=GuardDuty height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/security\guardduty.png" shape=none]
+				e3d49dc14f6a43a7a3731e5175df0005 [label=CloudTrail height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/management\cloudtrail.png" shape=none]
+				"19feb918fcf041d4a14ec4b502c19e87" [label="Security Hub" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/security\shield.png" shape=none]
+				"8ea6e3f2b6cc48f2b80c25fc31313d1f" [label="AWS Config" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/management\config.png" shape=none]
+				"3cf5f431561b4fcbb1d69dbe393b40b1" [label="Trusted Advisor" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/management\trusted-advisor.png" shape=none]
+				"1c7f8123443a431b9919f094dc13d1fe" [label="Secrets Manager" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/security\secrets-manager.png" shape=none]
+			}
+			subgraph "cluster_Monitoring & Logs" {
+				graph [bgcolor="#607D8B20" fontname="Sans-Serif" fontsize=12 label="Monitoring & Logs" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+				"8e66e82249c44baf83c0336137e8b836" [label="CloudWatch Logs" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/management\cloudwatch.png" shape=none]
+				"0c3ae7c011994701ac6380bcaad533ee" [label="CloudWatch Metrics" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/management\cloudwatch.png" shape=none]
+				d0696aa442f4468581bef619d9d65f75 [label="Systems Manager" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/management\systems-manager.png" shape=none]
+			}
+		}
+	}
+	ad0faa79f2c64dd3a33bde6a2f561867 -> "5e45c4a52d5f47f5b8cbb9bd2dc8ed98" [dir=none fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	subgraph "cluster_Third-Party Monitoring" {
+		graph [bgcolor="#607D8B10" fontname="Sans-Serif" fontsize=12 label="Third-Party Monitoring" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+		ad0faa79f2c64dd3a33bde6a2f561867 [label="Datadog
+Monitoring" height=2.3 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/onprem/monitoring\datadog.png" shape=none]
+		"5e45c4a52d5f47f5b8cbb9bd2dc8ed98" [label="Splunk
+Log Analytics" height=2.3 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/onprem/monitoring\splunk.png" shape=none]
+	}
+	"0f61b6f9508e4fc7baeafd652a0a07f1" -> cdf550c01c5d4ee788432b037e2548f0 [color="#9C27B0" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"7ee7825e951c41ce8fe362858874b51d" -> "0f61b6f9508e4fc7baeafd652a0a07f1" [label="Web
+Access" color="#000000" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"0bf74e4fd0db4a0ba4c2011d7519cccf" -> "8b702bb7eef641fab0c31326c55d02f9" [dir=none fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"8b702bb7eef641fab0c31326c55d02f9" -> "29e413cdb8ce4b5eb8709ccd00a3e384" [label="Pull Secrets" color="#FF5722" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13 style=dashed]
+	subgraph "cluster_Production Account" {
+		graph [bgcolor="#F4433610" fontname="Sans-Serif" fontsize=12 label="Production Account" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+		"8c5a1982f81841e2b377e53052a40d73" [label=Account]
+		"2edd6d12d3664d169d1f9b54323465b4" [label="ECR Registry" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/compute\ec2-container-registry.png" shape=none]
+		"6af1f9b1ed5a48efa5db6bde3327ebf1" [label="Production VPN" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/network\client-vpn.png" shape=none]
+		a067e00a24904875859341c53ef788f4 [label="CloudWatch
+Logs & Metrics" height=2.3 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/management\cloudwatch.png" shape=none]
+		"29e413cdb8ce4b5eb8709ccd00a3e384" [label="Secrets Manager" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/security\secrets-manager.png" shape=none]
+		subgraph "cluster_Static Frontend Hosting" {
+			graph [bgcolor="#9C27B020" fontname="Sans-Serif" fontsize=12 label="Static Frontend Hosting" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+			cdf550c01c5d4ee788432b037e2548f0 [label="S3 Bucket
+(React SPA)" height=2.3 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/storage\simple-storage-service-s3.png" shape=none]
+			"0f61b6f9508e4fc7baeafd652a0a07f1" [label="CloudFront CDN" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/network\cloudfront.png" shape=none]
+		}
+		subgraph cluster_VPC {
+			graph [bgcolor="#8BC34A20" fontname="Sans-Serif" fontsize=12 label=VPC labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+			ae0a78d305f24cbf84e115fab1a67d21 [label="Internet Gateway" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/network\internet-gateway.png" shape=none]
+			subgraph "cluster_Public Subnets" {
+				graph [bgcolor="#ECE8F6" fontname="Sans-Serif" fontsize=12 label="Public Subnets" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+				d00fc5129d1a4f5da70573ca39b38720 [label="Load Balancer" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/network\elb-application-load-balancer.png" shape=none]
+				"2adbbbef9c4d4c558e441477ee6433f6" [label="NAT Gateway" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/network\nat-gateway.png" shape=none]
+			}
+			subgraph "cluster_Private Subnets" {
+				graph [bgcolor="#ECE8F6" fontname="Sans-Serif" fontsize=12 label="Private Subnets" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+				subgraph "cluster_VPC Endpoints" {
+					graph [bgcolor="#8BC34A30" fontname="Sans-Serif" fontsize=12 label="VPC Endpoints" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+					"44b88a9af1104dfdb3a969d9febbb7e3" [label="ECR API" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/network\endpoint.png" shape=none]
+					"7481830c889a4eaeb3e24faf5a3d90a6" [label="ECR DKR" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/network\endpoint.png" shape=none]
+					"67dae03d5e384609ae1746fafe8f4fda" [label=S3 height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/network\endpoint.png" shape=none]
+				}
+				subgraph cluster_Compute {
+					graph [bgcolor="#673AB720" fontname="Sans-Serif" fontsize=12 label=Compute labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+					a0cc3fd6fb1146e2858865fb01b9b668 [label="EKS Cluster" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/compute\elastic-kubernetes-service.png" shape=none]
+					subgraph "cluster_In-Cluster Services" {
+						graph [bgcolor="#E5F5FD" fontname="Sans-Serif" fontsize=12 label="In-Cluster Services" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+						"0bf74e4fd0db4a0ba4c2011d7519cccf" [label=ArgoCD height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/onprem/gitops\argocd.png" shape=none]
+						"8b702bb7eef641fab0c31326c55d02f9" [label="External
+Secrets
+Operator"]
+					}
+				}
+				subgraph cluster_Data {
+					graph [bgcolor="#FF980020" fontname="Sans-Serif" fontsize=12 label=Data labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+					"6069d2d2c8a94fd89a3aa14baa496fef" [label=PostgreSQL height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/database\rds.png" shape=none]
+				}
+			}
+		}
+	}
+	"2dc99e0c77394803aacae100de7b2c1c" [label=EventBridge height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/integration\eventbridge.png" shape=none]
+	"8d91138d78944adb9445d981650adddd" [label="Log Queue" height=1.9 image="C:\Users\luong\anaconda3\Lib\site-packages\resources/aws/integration\simple-queue-service-sqs.png" shape=none]
+	"5443342b189c48feb1130f8aa50c602b" -> "2edd6d12d3664d169d1f9b54323465b4" [label="Build &
+Push Images" color="#795548" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"4a461280da264592888f2eb06c643f5a" -> "0bf74e4fd0db4a0ba4c2011d7519cccf" [color="#795548" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"2edd6d12d3664d169d1f9b54323465b4" -> "44b88a9af1104dfdb3a969d9febbb7e3" [label="Pull
+Images" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"44b88a9af1104dfdb3a969d9febbb7e3" -> a0cc3fd6fb1146e2858865fb01b9b668 [dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	f80a03ddbae04676b3fef761f099e7c9 -> "8c5a1982f81841e2b377e53052a40d73" [label=Manage color="#009688" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"7ee7825e951c41ce8fe362858874b51d" -> d00fc5129d1a4f5da70573ca39b38720 [label="API Access" color="#000000" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	d00fc5129d1a4f5da70573ca39b38720 -> a0cc3fd6fb1146e2858865fb01b9b668 [dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	a0cc3fd6fb1146e2858865fb01b9b668 -> "6069d2d2c8a94fd89a3aa14baa496fef" [dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	a0cc3fd6fb1146e2858865fb01b9b668 -> a067e00a24904875859341c53ef788f4 [label="Logs &
+Metrics" color="#607D8B" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	a067e00a24904875859341c53ef788f4 -> "8e66e82249c44baf83c0336137e8b836" [label="Centralized
+Logging" color="#607D8B" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	a0cc3fd6fb1146e2858865fb01b9b668 -> "2dc99e0c77394803aacae100de7b2c1c" [label="Pod
+Logs" color="#607D8B" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13 style=dashed]
+	"2dc99e0c77394803aacae100de7b2c1c" -> "8d91138d78944adb9445d981650adddd" [dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"8d91138d78944adb9445d981650adddd" -> "5e45c4a52d5f47f5b8cbb9bd2dc8ed98" [dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	ad0faa79f2c64dd3a33bde6a2f561867 -> a0cc3fd6fb1146e2858865fb01b9b668 [label="Monitor
+Metrics" color="#607D8B" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13 style=dashed]
+	ad0faa79f2c64dd3a33bde6a2f561867 -> "6069d2d2c8a94fd89a3aa14baa496fef" [label="Monitor
+Metrics" color="#607D8B" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13 style=dashed]
+	"7c974754e5f143e9a891b7327df2909f" -> a0cc3fd6fb1146e2858865fb01b9b668 [label="Security
+Monitoring" color="#FF5722" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13 style=dotted]
+	b10536d6253b47988425784cf6d1f17c -> "6af1f9b1ed5a48efa5db6bde3327ebf1" [label="VPN
+Access" color="#000000" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"6af1f9b1ed5a48efa5db6bde3327ebf1" -> a0cc3fd6fb1146e2858865fb01b9b668 [color="#000000" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	b10536d6253b47988425784cf6d1f17c -> "7ca3959e8ac44a1aac7ba2f85f64d673" [label="SSO Login" color="#000000" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"7ca3959e8ac44a1aac7ba2f85f64d673" -> "8c5a1982f81841e2b377e53052a40d73" [label="Identity
+Federation" color="#009688" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+}
