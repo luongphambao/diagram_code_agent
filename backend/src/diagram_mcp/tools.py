@@ -16,15 +16,17 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import re
 import subprocess
 import sys
+import typing as _t
 from pathlib import Path
 from typing import Annotated, Literal, Optional
 
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import InjectedToolCallId, tool
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .architecture_advisor import analyze_requirements
 from .backends import LOCAL_ICONS, LOCAL_MANIFEST, LOCAL_NODE_CATALOG, WORKSPACE
@@ -529,7 +531,6 @@ def render_diagram(
             status="error",
         )
 
-    b64, mime = _inspection_image_b64(png)
     audit = _layout_audit()
     text = (f"Rendered out.png successfully (render #{attempt} of "
             f"{RENDER_HARD_CAP} this round). Inspect it and refine if the "
@@ -556,11 +557,20 @@ def render_diagram(
             "artifacts": record_artifact_inventory(WORKSPACE),
         },
     )
+    include_image = os.getenv("RENDER_INCLUDES_IMAGE", "1").lower() not in ("0", "false", "no")
+    if include_image:
+        b64, mime = _inspection_image_b64(png)
+        return ToolMessage(
+            content_blocks=[
+                {"type": "text", "text": text},
+                {"type": "image", "base64": b64, "mime_type": mime},
+            ],
+            name="render_diagram",
+            tool_call_id=tool_call_id,
+            status="success",
+        )
     return ToolMessage(
-        content_blocks=[
-            {"type": "text", "text": text},
-            {"type": "image", "base64": b64, "mime_type": mime},
-        ],
+        content=text + "\n\nImage saved to out.png — call export_drawio() when satisfied.",
         name="render_diagram",
         tool_call_id=tool_call_id,
         status="success",
@@ -1045,7 +1055,104 @@ def analyze_architecture_requirements(requirements: str, provider_preference: st
 # become the card the frontend renders.
 # ---------------------------------------------------------------------------
 
-class DiagramBrief(BaseModel):
+def _wants_structural(ann) -> bool:
+    """True if the annotation expects a model/list/dict (not a bare str/number).
+
+    Used to decide whether a stringified field value should be JSON-decoded. Unwraps
+    Optional/Union members so e.g. Optional[SolutionAssumptions] and list[TechChoice]
+    both count as structural.
+    """
+    for a in (_t.get_args(ann) or (ann,)):
+        origin = _t.get_origin(a) or a
+        if origin in (list, dict):
+            return True
+        if isinstance(origin, type) and issubclass(origin, BaseModel):
+            return True
+    return False
+
+
+def _mimo_coerce_before(cls, values):
+    """Before-validator: coerce mimo's non-standard outputs to what Pydantic expects for lists.
+
+    Some models (e.g. mimo) emit array-typed fields as plain objects with numeric string
+    keys ({"0": ..., "1": ...}) instead of JSON arrays, or as null instead of [], or emit
+    a whole nested object/array as a JSON-encoded STRING instead of a real object.
+    This runs before Pydantic field parsing so validation never sees the invalid shape.
+
+    Rules applied per-field:
+    - structural field (model/list/dict) whose value is a JSON string: json.loads it first
+    - list[X] field: dict → list(values); None → []
+    - Optional[list[X]] field: dict → list(values); None stays None (it's a valid Optional)
+    """
+    if not isinstance(values, dict):
+        return values
+    for field_name in cls.model_fields:
+        if field_name not in values:
+            continue
+        field = cls.model_fields[field_name]
+        val = values[field_name]
+        ann = field.annotation
+        if ann is None:
+            continue
+        # mimo sometimes sends a nested object/array as a JSON-encoded string. Decode it
+        # before the list/numeric coercion below runs, but only for fields that actually
+        # expect structural data — never JSON-parse a value bound for a genuine str field.
+        if isinstance(val, str) and _wants_structural(ann):
+            try:
+                parsed = json.loads(val)
+            except (ValueError, TypeError):
+                parsed = None
+            if isinstance(parsed, (dict, list)):
+                values[field_name] = val = parsed
+        origin = _t.get_origin(ann)
+        if origin is list:
+            # Non-optional list: coerce both dict and None
+            if isinstance(val, dict):
+                values[field_name] = list(val.values())
+            elif val is None:
+                values[field_name] = []
+            continue
+        # Handle Optional[list[X]] = Union[list[X], None] — coerce dict, keep None
+        if origin is _t.Union:
+            for arg in _t.get_args(ann):
+                if _t.get_origin(arg) is list:
+                    if isinstance(val, dict):
+                        values[field_name] = list(val.values())
+                    break
+            continue
+        # Plain numeric field with ge/le constraints — clamp out-of-range values
+        # so mimo's e.g. 0 or 9 on a 1-5 score (or a negative cost) doesn't trip
+        # Pydantic. bool is an int subclass — leave it alone.
+        if isinstance(val, bool) or not isinstance(val, (int, float)):
+            continue
+        lo = hi = None
+        for m in field.metadata:
+            if getattr(m, "ge", None) is not None:
+                lo = m.ge
+            if getattr(m, "le", None) is not None:
+                hi = m.le
+        if lo is not None and val < lo:
+            values[field_name] = lo
+        elif hi is not None and val > hi:
+            values[field_name] = hi
+    return values
+
+
+class CoercingModel(BaseModel):
+    """BaseModel that auto-coerces dict-with-numeric-string-keys → list for list-typed fields.
+
+    Inheriting from this instead of BaseModel means mimo's `{"0":…,"1":…}` payloads are
+    normalised to lists before Pydantic tries to validate them, preventing ValidationErrors
+    on list[TechChoice], list[BPNode], list[NFRMapping], etc.
+    """
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_dict_lists(cls, values):
+        return _mimo_coerce_before(cls, values)
+
+
+class DiagramBrief(CoercingModel):
     """Requirements-derived diagram brief used before tech stack and blueprint."""
 
     objective: str = Field(description="one concise sentence describing what the diagram must communicate")
@@ -1079,7 +1186,7 @@ class DiagramBrief(BaseModel):
     )
 
 
-class TechCriteria(BaseModel):
+class TechCriteria(CoercingModel):
     """1–5 scoring dimensions for a technology choice (1 = best, 5 = worst on cost/complexity/lock-in)."""
     cost: int = Field(3, ge=1, le=5, description="1=very low cost, 5=very high cost")
     ops_complexity: int = Field(3, ge=1, le=5, description="1=simple to operate, 5=high operational burden")
@@ -1088,14 +1195,14 @@ class TechCriteria(BaseModel):
     team_fit: int = Field(3, ge=1, le=5, description="1=unfamiliar to team, 5=strong team expertise")
 
 
-class TechAlternative(BaseModel):
+class TechAlternative(CoercingModel):
     """An alternative technology with rejection rationale and optional scoring."""
     name: str = Field(description="technology name")
     why_rejected: str = Field("", description="one sentence: why this alternative was not chosen for this context")
     criteria: Optional[TechCriteria] = Field(default=None, description="optional 1-5 scores for this alternative")
 
 
-class CostRange(BaseModel):
+class CostRange(CoercingModel):
     """Assumption-based monthly cost estimate in USD (always a range)."""
     min_usd: int = Field(0, ge=0)
     max_usd: int = Field(0, ge=0)
@@ -1121,7 +1228,7 @@ class TeamAssumptions(BaseModel):
     devops_maturity: str = ""
 
 
-class SolutionAssumptions(BaseModel):
+class SolutionAssumptions(CoercingModel):
     budget_tier: str = ""
     monthly_budget_range_usd: Optional[CostRange] = None
     users: Optional[UserScaleAssumptions] = None
@@ -1138,19 +1245,19 @@ class SolutionAssumptions(BaseModel):
     )
 
 
-class TechRisk(BaseModel):
+class TechRisk(CoercingModel):
     risk: str
     mitigation: str = ""
 
 
-class ScalingPhase(BaseModel):
+class ScalingPhase(CoercingModel):
     phase: str
     trigger: str = ""
     changes: list[str] = Field(default_factory=list)
     est_monthly_cost_usd: Optional[CostRange] = None
 
 
-class TechChoice(BaseModel):
+class TechChoice(CoercingModel):
     """One layer of the recommended technology stack."""
     layer: str = Field(
         description=(
@@ -1187,7 +1294,7 @@ class TechChoice(BaseModel):
     )
 
 
-class WAFPillar(BaseModel):
+class WAFPillar(CoercingModel):
     """Coverage of one AWS Well-Architected Framework pillar in the blueprint."""
     addressed_by: list[str] = Field(
         default_factory=list,
@@ -1209,7 +1316,7 @@ class PillarCoverage(BaseModel):
     sustainability: WAFPillar = Field(default_factory=WAFPillar)
 
 
-class NFRMapping(BaseModel):
+class NFRMapping(CoercingModel):
     """Maps one non-functional requirement to the mechanism(s) and nodes that satisfy it."""
     nfr: str = Field(description="the NFR text, ideally measurable: e.g. '99.9% uptime SLA'")
     mechanism: str = Field(description="how this NFR is addressed: e.g. 'Multi-AZ RDS + ALB health checks'")
@@ -1238,7 +1345,7 @@ class BPEdge(BaseModel):
     protocol: str = Field("", description="HTTP|gRPC|AMQP|TCP|WebSocket|SQL|Redis")
 
 
-class Blueprint(BaseModel):
+class Blueprint(CoercingModel):
     """A structured architecture blueprint."""
     audience: str = Field(
         "client",
@@ -1340,7 +1447,31 @@ def propose_diagram_brief(brief: DiagramBrief) -> str:
     )
 
 
-@tool
+class ProposeTechStackArgs(CoercingModel):
+    """Args wrapper for propose_tech_stack.
+
+    Without an explicit args_schema, LangChain auto-generates a plain (non-Coercing)
+    Pydantic model from the function signature, so mimo's {"0":…}/null array payloads
+    for the bare top-level list params (tech_stack, scaling_roadmap) bypass coercion
+    and trip validation. Wrapping them in a CoercingModel runs _mimo_coerce_before at
+    the top level too.
+    """
+    tech_stack: list[TechChoice] = Field(
+        description="one entry per layer; cover the core layers (frontend, backend, "
+                    "database, auth, infra, monitoring, networking, security)",
+    )
+    assumptions: Optional[SolutionAssumptions] = Field(
+        default=None, description="sizing basis: budget, user scale, data, team, compliance",
+    )
+    scaling_roadmap: Optional[list[ScalingPhase]] = Field(
+        default=None, description="2-3 phase roadmap with measurable triggers",
+    )
+    estimated_total_monthly_cost_usd: Optional[CostRange] = Field(
+        default=None, description="sum across all layers",
+    )
+
+
+@tool(args_schema=ProposeTechStackArgs)
 def propose_tech_stack(
     tech_stack: list[TechChoice],
     assumptions: Optional[SolutionAssumptions] = None,
@@ -1724,16 +1855,24 @@ def inspect_diagram(tool_call_id: Annotated[str, InjectedToolCallId]) -> ToolMes
             tool_call_id=tool_call_id,
             status="error",
         )
-    b64, mime = _inspection_image_b64(png)
     audit = _layout_audit()
     text = "Here is the rendered diagram to review."
     if audit:
         text += "\n\nObjective layout audit (read this FIRST):\n" + audit
+    include_image = os.getenv("RENDER_INCLUDES_IMAGE", "1").lower() not in ("0", "false", "no")
+    if include_image:
+        b64, mime = _inspection_image_b64(png)
+        return ToolMessage(
+            content_blocks=[
+                {"type": "text", "text": text},
+                {"type": "image", "base64": b64, "mime_type": mime},
+            ],
+            name="inspect_diagram",
+            tool_call_id=tool_call_id,
+            status="success",
+        )
     return ToolMessage(
-        content_blocks=[
-            {"type": "text", "text": text},
-            {"type": "image", "base64": b64, "mime_type": mime},
-        ],
+        content=text + "\n\nImage is at out.png in the workspace.",
         name="inspect_diagram",
         tool_call_id=tool_call_id,
         status="success",
@@ -1998,8 +2137,11 @@ MAIN_TOOLS = [
     generate_pdf_report,
 ]
 
-# Drawer subagent tools: everything needed for the render-refine loop.
-DRAWER_TOOLS = [search_diagrams_nodes, resolve_icons, search_icons, fetch_logo, plan_style_sizes, fit_labels, declare_poster_grid, audit_diagram_code, render_diagram, export_drawio]
+# Icon resolver subagent tools: node search + icon resolution (runs before drawer).
+ICON_RESOLVER_TOOLS = [search_diagrams_nodes, resolve_icons, search_icons, fetch_logo]
+
+# Drawer subagent tools: render-refine loop only (icons pre-resolved by icon_resolver).
+DRAWER_TOOLS = [plan_style_sizes, fit_labels, declare_poster_grid, audit_diagram_code, render_diagram, export_drawio]
 
 # Critic subagent tools: read-only review of the rendered diagram.
 CRITIC_TOOLS = [inspect_diagram, submit_critique]

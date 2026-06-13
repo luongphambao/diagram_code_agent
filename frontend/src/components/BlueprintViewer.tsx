@@ -24,7 +24,10 @@ const TIER_COLORS: Record<string, string> = {
 };
 
 export default function BlueprintViewer({ blueprint, blueprintForDiagram, onGenerateDiagram }: BlueprintViewerProps) {
-  const { pattern, pattern_rationale, nodes, clusters, edges, audience, detail_level, layout_intent } = blueprint;
+  const { pattern, pattern_rationale, audience, detail_level, layout_intent } = blueprint;
+  const nodes = Array.isArray(blueprint.nodes) ? blueprint.nodes : [];
+  const clusters = Array.isArray(blueprint.clusters) ? blueprint.clusters : [];
+  const edges = Array.isArray(blueprint.edges) ? blueprint.edges : [];
   const patternClass = PATTERN_COLORS[pattern] ?? PATTERN_COLORS["hybrid"];
   const metadata = [
     audience ? `Audience: ${audience}` : null,

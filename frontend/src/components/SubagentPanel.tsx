@@ -338,9 +338,11 @@ export default function SubagentPanel({
   logs = [],
   activity = null,
 }: SubagentPanelProps) {
-  if (!delegations.length && !activeSubagent && !isRunning) return null;
+  const safeDelegations = Array.isArray(delegations) ? delegations : [];
 
-  const calledKeys = new Set(delegations.map((d) => d.subagent.toLowerCase()));
+  if (!safeDelegations.length && !activeSubagent && !isRunning) return null;
+
+  const calledKeys = new Set(safeDelegations.map((d) => d.subagent.toLowerCase()));
 
   // Split logs: main orchestrator vs per-subagent
   const mainLogs = logs.filter((l) => !l.subagent);
@@ -389,12 +391,12 @@ export default function SubagentPanel({
 
       {/* ── Delegation list ─────────────────────────────────────────────────── */}
       <div className="p-4 space-y-2">
-        {delegations.length === 0 ? (
+        {safeDelegations.length === 0 ? (
           <p className="text-sm text-slate-700 italic py-2 px-1">
             Waiting for delegation…
           </p>
         ) : (
-          delegations.map((d, i) => (
+          safeDelegations.map((d, i) => (
             <DelegationCard
               key={d.id || i}
               d={d}

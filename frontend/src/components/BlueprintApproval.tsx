@@ -35,10 +35,10 @@ export default function BlueprintApproval({ interrupt, onResolve, disabled = fal
   };
   const pattern = blueprint?.pattern ?? "unknown";
   const patternRationale = blueprint?.pattern_rationale ?? "";
-  const keyDecisions = blueprint?.key_decisions ?? [];
-  const nodes = blueprint?.nodes ?? [];
-  const clusters = blueprint?.clusters ?? [];
-  const edges = blueprint?.edges ?? [];
+  const keyDecisions = Array.isArray(blueprint?.key_decisions) ? blueprint.key_decisions : [];
+  const nodes = Array.isArray(blueprint?.nodes) ? blueprint.nodes : [];
+  const clusters = Array.isArray(blueprint?.clusters) ? blueprint.clusters : [];
+  const edges = Array.isArray(blueprint?.edges) ? blueprint.edges : [];
   const metadata = [
     blueprint?.audience ? `Audience: ${blueprint.audience}` : null,
     blueprint?.detail_level ? `Detail: ${blueprint.detail_level}` : null,
@@ -176,7 +176,7 @@ export default function BlueprintApproval({ interrupt, onResolve, disabled = fal
           )}
 
           {/* NFR mapping summary */}
-          {blueprint?.nfr_mapping && blueprint.nfr_mapping.length > 0 && (
+          {Array.isArray(blueprint?.nfr_mapping) && blueprint.nfr_mapping.length > 0 && (
             <div>
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-amber-400/70">
                 NFRs mapped: {blueprint.nfr_mapping.length}
@@ -188,16 +188,17 @@ export default function BlueprintApproval({ interrupt, onResolve, disabled = fal
           )}
 
           {/* Well-Architected pillar coverage */}
-          {blueprint?.pillar_coverage && Object.keys(blueprint.pillar_coverage).length > 0 && (
+          {blueprint?.pillar_coverage && typeof blueprint.pillar_coverage === "object" && Object.keys(blueprint.pillar_coverage).length > 0 && (
             <div>
               <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-amber-400/70">Pillar coverage</p>
               <div className="flex flex-wrap gap-1">
                 {Object.entries(blueprint.pillar_coverage).map(([pillar, data]) => {
-                  const hasGaps = (data.gaps?.length ?? 0) > 0;
+                  const gaps = Array.isArray(data?.gaps) ? data.gaps : [];
+                  const hasGaps = gaps.length > 0;
                   return (
                     <span
                       key={pillar}
-                      title={hasGaps ? `Gaps: ${data.gaps!.join(", ")}` : undefined}
+                      title={hasGaps ? `Gaps: ${gaps.join(", ")}` : undefined}
                       className={`rounded-md border px-2 py-0.5 text-[10px] capitalize ${hasGaps ? "border-amber-500/30 bg-amber-500/10 text-amber-300" : "border-white/8 bg-white/4 text-slate-400"}`}
                     >
                       {pillar}

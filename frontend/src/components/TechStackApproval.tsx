@@ -25,7 +25,7 @@ export default function TechStackApproval({ interrupt, onResolve, disabled = fal
 
   const techStack = interrupt.data.tech_stack ?? {};
   const assumptions = interrupt.data.assumptions;
-  const scalingRoadmap = interrupt.data.scaling_roadmap ?? [];
+  const scalingRoadmap = Array.isArray(interrupt.data.scaling_roadmap) ? interrupt.data.scaling_roadmap : [];
   const totalCost = interrupt.data.estimated_total_monthly_cost_usd;
 
   // Sort layers in preferred order
@@ -60,7 +60,7 @@ export default function TechStackApproval({ interrupt, onResolve, disabled = fal
       if (parts.length) assumptionChips.push(parts.join(" "));
     }
     if (assumptions.primary_region) assumptionChips.push(assumptions.primary_region);
-    if (assumptions.compliance?.length) assumptionChips.push(...assumptions.compliance);
+    if (Array.isArray(assumptions.compliance) && assumptions.compliance.length) assumptionChips.push(...assumptions.compliance);
   }
 
   return (
@@ -91,7 +91,7 @@ export default function TechStackApproval({ interrupt, onResolve, disabled = fal
               ))}
             </div>
           )}
-          {assumptions.confirm_with_customer && assumptions.confirm_with_customer.length > 0 && (
+          {Array.isArray(assumptions.confirm_with_customer) && assumptions.confirm_with_customer.length > 0 && (
             <div className="mt-2.5">
               <p className="mb-1 text-[10px] font-semibold text-amber-400/80">Confirm with customer</p>
               <ul className="space-y-0.5">
@@ -119,7 +119,7 @@ export default function TechStackApproval({ interrupt, onResolve, disabled = fal
           if (info.capacity_sizing) metaParts.push(info.capacity_sizing);
           if (info.performance_target) metaParts.push(info.performance_target);
 
-          const risks: TechRisk[] = info.risks ?? [];
+          const risks: TechRisk[] = Array.isArray(info.risks) ? info.risks : [];
 
           return (
             <div key={layer} className="rounded-xl border border-white/8 bg-white/4 px-3 py-2.5">
@@ -199,7 +199,7 @@ export default function TechStackApproval({ interrupt, onResolve, disabled = fal
                     {phase.est_monthly_cost_usd && (
                       <span className="ml-2 text-slate-600">{fmtUsd(phase.est_monthly_cost_usd)}</span>
                     )}
-                    {phase.changes && phase.changes.length > 0 && (
+                    {Array.isArray(phase.changes) && phase.changes.length > 0 && (
                       <p className="mt-0.5 text-slate-600">{phase.changes.join(", ")}</p>
                     )}
                   </div>

@@ -109,10 +109,10 @@ _TOOL_LABELS = {
 
 # Maps tool name → which subagent owns it (for activity attribution).
 _TOOL_TO_SUBAGENT: dict[str, str] = {
-    "search_diagrams_nodes": "drawer",
-    "search_icons": "drawer",
-    "resolve_icons": "drawer",
-    "fetch_logo": "drawer",
+    "search_diagrams_nodes": "icon_resolver",
+    "search_icons": "icon_resolver",
+    "resolve_icons": "icon_resolver",
+    "fetch_logo": "icon_resolver",
     "audit_diagram_code": "drawer",
     "render_diagram": "drawer",
     "export_drawio": "drawer",
@@ -440,6 +440,74 @@ def _pending_action_name(val) -> str | None:
     return None
 
 
+def _coerce_list(val) -> list:
+    """Coerce an array-typed field into a list.
+
+    Some models (e.g. mimo) emit array-typed fields as plain objects with
+    numeric string keys ({"0": ..., "1": ...}) instead of JSON arrays. Calling
+    .map() on those objects crashes the frontend, so coerce them here. A dict
+    becomes its values; a list is kept; anything else (None, scalar) → [].
+    """
+    if isinstance(val, list):
+        return val
+    if isinstance(val, dict):
+        return list(val.values())
+    return []
+
+
+# Array-typed fields shared by blueprint / diagram_brief / architecture_analysis.
+_BRIEF_ARRAY_FIELDS = ("analysis_signals", "stakeholders", "functional_requirements",
+                       "non_functional_requirements", "layout_constraints", "assumptions")
+
+
+def _coerce_brief(d) -> dict:
+    """Ensure list-typed fields of a brief/analysis dict are always lists."""
+    if not isinstance(d, dict):
+        return d
+    result = dict(d)
+    for field in _BRIEF_ARRAY_FIELDS:
+        if field in result:
+            result[field] = _coerce_list(result[field])
+    return result
+
+
+# Array-typed fields inside the tech-stack `assumptions` object.
+_ASSUMPTION_ARRAY_FIELDS = ("confirm_with_customer", "compliance")
+
+
+def _coerce_assumptions(a):
+    """Ensure list-typed fields of the assumptions object are always lists."""
+    if not isinstance(a, dict):
+        return a
+    result = dict(a)
+    for field in _ASSUMPTION_ARRAY_FIELDS:
+        if field in result:
+            result[field] = _coerce_list(result[field])
+    return result
+
+
+def _normalize_blueprint(bp) -> dict:
+    """Ensure array fields in a blueprint are always lists.
+
+    Some models (e.g. mimo) may return array-typed fields as plain objects
+    with numeric string keys ({"0": {...}, "1": {...}}) instead of lists.
+    Calling .map() on those objects crashes the frontend.
+    """
+    if not isinstance(bp, dict):
+        return bp or {}
+    result = dict(bp)
+    _ARRAY_FIELDS = ("nodes", "clusters", "edges", "key_decisions", "nfr_mapping",
+                     "analysis_signals", "stakeholders", "functional_requirements",
+                     "non_functional_requirements", "layout_constraints", "assumptions")
+    for field in _ARRAY_FIELDS:
+        val = result.get(field)
+        if isinstance(val, dict):
+            result[field] = list(val.values())
+        elif val is None:
+            result[field] = []
+    return result
+
+
 def _normalize_tech_stack(ts) -> dict:
     """Normalize the model's tech_stack into {layer: {choice, rationale, alternatives, ...}}.
 
@@ -460,15 +528,15 @@ def _normalize_tech_stack(ts) -> dict:
         for item in ts:
             if isinstance(item, dict) and item.get("layer"):
                 layer_data = {f: item.get(f) for f in _LAYER_FIELDS}
-                layer_data["alternatives"] = layer_data.get("alternatives") or []
-                layer_data["risks"] = layer_data.get("risks") or []
+                layer_data["alternatives"] = _coerce_list(layer_data.get("alternatives"))
+                layer_data["risks"] = _coerce_list(layer_data.get("risks"))
                 out[item["layer"]] = layer_data
     elif isinstance(ts, dict):
         for layer, info in ts.items():
             if isinstance(info, dict):
                 layer_data = {f: info.get(f) for f in _LAYER_FIELDS}
-                layer_data["alternatives"] = layer_data.get("alternatives") or []
-                layer_data["risks"] = layer_data.get("risks") or []
+                layer_data["alternatives"] = _coerce_list(layer_data.get("alternatives"))
+                layer_data["risks"] = _coerce_list(layer_data.get("risks"))
                 out[layer] = layer_data
             else:
                 # flattened/degenerate value (e.g. a bare string) — show it as the choice
@@ -486,23 +554,25 @@ def _card_for(val, summary: str):
     args = ars[0].get("args") or {}
     if name == "propose_tech_stack":
         ts = _normalize_tech_stack(args.get("tech_stack"))
+        scaling_roadmap = _coerce_list(args.get("scaling_roadmap"))
+        assumptions = _coerce_assumptions(args.get("assumptions"))
         card_data = {
             "type": "techstack_approval",
             "tech_stack": ts,
             "question": "Review the recommended tech stack and its sizing assumptions. Approve, or reject with the changes you want.",
-            "assumptions": args.get("assumptions"),
-            "scaling_roadmap": args.get("scaling_roadmap"),
+            "assumptions": assumptions,
+            "scaling_roadmap": scaling_roadmap,
             "estimated_total_monthly_cost_usd": args.get("estimated_total_monthly_cost_usd"),
         }
         state_delta = {
             "tech_stack": ts,
-            "tech_assumptions": args.get("assumptions"),
-            "tech_scaling_roadmap": args.get("scaling_roadmap"),
+            "tech_assumptions": assumptions,
+            "tech_scaling_roadmap": scaling_roadmap,
             "tech_total_cost": args.get("estimated_total_monthly_cost_usd"),
         }
         return (card_data, "awaiting_techstack", state_delta)
     if name == "propose_blueprint":
-        bp = args.get("blueprint", {})
+        bp = _normalize_blueprint(args.get("blueprint", {}))
         return (
             {"type": "blueprint_approval", "blueprint": bp,
              "question": "Review the architecture blueprint. Approve, or request changes."},
@@ -611,13 +681,13 @@ def _stage_artifacts() -> dict:
     bp = _read_json(WORKSPACE / "blueprint.json")
     tool_summary = _read_json(WORKSPACE / "tool_budget_summary.json")
     if analysis:
-        out["architecture_analysis"] = analysis
+        out["architecture_analysis"] = _coerce_brief(analysis)
     if brief:
-        out["diagram_brief"] = brief
+        out["diagram_brief"] = _coerce_brief(brief)
     if ts:
-        out["tech_stack"] = ts
+        out["tech_stack"] = _normalize_tech_stack(ts)
     if bp:
-        out["blueprint"] = bp
+        out["blueprint"] = _normalize_blueprint(bp)
     if tool_summary:
         out["tool_budget_summary"] = tool_summary
     return out

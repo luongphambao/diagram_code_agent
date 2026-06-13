@@ -19,6 +19,7 @@ export interface ConversationHistory {
 }
 
 function wireToChat(wire: ConversationHistory["messages"]): ChatMessage[] {
+  if (!Array.isArray(wire)) return [];
   return wire
     .filter((m) => m.role === "user" || m.role === "assistant")
     .map((m) => ({ id: m.id, role: m.role as "user" | "assistant", content: m.content }));
@@ -32,7 +33,10 @@ export function useConversations() {
     setLoading(true);
     try {
       const res = await fetch(`${BACKEND_URL}/conversations`);
-      if (res.ok) setConversations(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setConversations(Array.isArray(data) ? data : []);
+      }
     } catch { /* ignore — backend may not be up yet */ }
     finally { setLoading(false); }
   }, []);

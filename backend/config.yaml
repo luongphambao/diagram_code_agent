@@ -1,0 +1,52 @@
+# ─── Model Configuration ──────────────────────────────────────────────────────
+# Assign a model to each agent role.  Leave a role unset to inherit the 'main'
+# model.  Supported roles: main, drawer, critic
+#
+# Examples
+#   main:   gpt-5.4-mini        → uses OPENAI_API_KEY
+#   main:   mimo-v2.5           → uses MIMO_API_KEY + mimo base_url
+#   main:   claude-sonnet-4-6   → uses ANTHROPIC_API_KEY
+
+models:
+  main:           mimo-v2.5
+  icon_resolver:  mimo-v2.5
+  drawer:         mimo-v2.5
+  critic:         mimo-v2.5
+
+
+# ─── Provider Configurations ──────────────────────────────────────────────────
+# Each provider maps a name to:
+#   api_key_env     — env-var that holds the API key
+#   base_url        — (optional) for OpenAI-compatible endpoints
+#   reasoning_effort— (optional) OpenAI reasoning effort hint
+#   use_responses_api — (optional) use OpenAI Responses API
+#   max_tokens      — (optional) max output tokens
+
+providers:
+  openai:
+    api_key_env: OPENAI_API_KEY
+    reasoning_effort: medium
+    use_responses_api: true
+
+  mimo:
+    api_key_env: MIMO_API_KEY
+    base_url: https://api.xiaomimimo.com/v1   # OpenAI-compatible endpoint
+    system_prompt_prefix: "Always respond in English only. Do not use Chinese or any other language.\n\n"
+    vision_in_tools: false  # mimo-v2.5 has vision but rejects image blocks in tool messages (400: text not set)
+
+  anthropic:
+    api_key_env: ANTHROPIC_API_KEY
+    max_tokens: 16000
+
+
+# ─── Model-name prefix → provider mapping ─────────────────────────────────────
+# Rules are matched in order; first match wins.
+# Add new rows for any additional providers / model families.
+
+model_prefixes:
+  "gpt-":    openai
+  "o1-":     openai
+  "o3-":     openai
+  "o4-":     openai
+  "claude-": anthropic
+  "mimo-":   mimo

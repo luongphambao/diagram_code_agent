@@ -62,11 +62,16 @@ _MAIN_TOOLS_BLOCK = """\
   Set `density="poster"` when the source document describes a large platform
   (15+ components, 5+ tiers) and full coverage is more important than sparseness —
   this unlocks 25-40 nodes in a 2-row numbered-section grid.
+- `task(subagent_type="icon_resolver", description=...)` — delegate icon and node
+  resolution to the `icon_resolver` subagent BEFORE calling the drawer. It reads
+  `render_spec.json`, resolves all built-in diagrams node class names and custom
+  icon paths, and writes `icon_plan.json`. Call this once after blueprint approval,
+  before delegating to the drawer. It returns a short status.
 - `task(subagent_type="drawer", description=...)` — delegate ALL diagram rendering to the
-  `drawer` subagent. The description must be self-contained and include: the FULL
-  approved blueprint (every node, cluster, edge), the approved tech stack, the
-  diagram provider/cloud, and any layout or style notes. The drawer owns icon
-  search, code writing, render-refine loop, and drawio export entirely on its own.
+  `drawer` subagent AFTER icon_resolver has completed. The description must tell the
+  drawer to read `render_spec.json` (full blueprint) and `icon_plan.json` (all
+  pre-resolved icons) from the workspace. The drawer owns code writing,
+  render-refine loop, and drawio export entirely on its own.
   It returns ONLY a short text status — no images reach your context.
 - `task(subagent_type="critic", description=...)` — after the drawer reports success, have
   the `critic` subagent review the rendered diagram against the blueprint. It looks
@@ -84,6 +89,19 @@ _MAIN_TOOLS_BLOCK = """\
   the path to `out.pdf`.
 - Plus `read_file`, `write_file`, `edit_file`, `ls`, `glob`, `grep`, `write_todos`."""
 
+_ICON_RESOLVER_TOOLS_BLOCK = """\
+## Tools available
+- `search_diagrams_nodes(queries=[...], provider="")` — search verified
+  built-in `diagrams` node classes from the local catalog. ALWAYS batch ALL
+  planned imports into ONE call via `queries=[...]`.
+- `resolve_icons(icons)` — batch resolve a planned icon list in ONE call. Each
+  item is `{label, provider, icon_keyword}`. Writes `icon_plan.json`.
+- `search_icons(query, provider=None)` — find exact icon `.png` paths for
+  `Custom`. Use ONLY for nodes where `resolve_icons` returned NOT_FOUND.
+- `fetch_logo(name)` — resolve a brand logo NOT in the pack. Use ONLY after
+  `search_icons` also fails.
+- Plus `read_file`, `ls`, `glob`, `grep`."""
+
 _DRAWER_TOOLS_BLOCK = """\
 ## Tools available
 - `render_diagram(code)` — write & RUN the full diagram script; returns the
@@ -92,16 +110,6 @@ _DRAWER_TOOLS_BLOCK = """\
   traceback — fix and retry.
 - `export_drawio()` — convert `out.dot` → editable `out.drawio` (logos embedded);
   slide renders already create `out.drawio`, so this confirms without overwriting.
-- `resolve_icons(icons)` — batch resolve a planned icon list in ONE call. Each
-  item is `{label, provider, icon_keyword}`. It writes `icon_plan.json`; use this
-  before fallback `search_icons`.
-- `search_diagrams_nodes(queries=[...], provider="")` — search verified
-  built-in `diagrams` node classes from the local catalog. Use this before
-  writing raw imports like `from diagrams.aws.database import RDS`. ALWAYS
-  batch every planned import into ONE call via `queries=[...]` — never call
-  once per node.
-- `search_icons(query, provider=None)` — find exact icon `.png` paths for `Custom`.
-- `fetch_logo(name)` — resolve a brand logo NOT in the pack (path or NOT_FOUND).
 - `plan_style_sizes(node_count, longest_label_chars, longest_sublabel_chars,
   output)` — decide icon/title/sublabel/edge/cluster sizes from diagram density
   BEFORE writing prettygraph code. Pass the returned `pretty_kwargs` verbatim
@@ -253,17 +261,23 @@ You design the solution step by step; the user reviews and approves the gated st
    details such as parser libraries, client implementation modes, algorithms,
    file names, and in-process compaction steps. Represent them as architecture
    capabilities instead.
-6. **Diagram.** Only now delegate rendering: call
+6. **Resolve icons first.** Call
+   `task(subagent_type="icon_resolver", description="Resolve all icons and node classes for the blueprint. Read render_spec.json, call search_diagrams_nodes for all node labels in one batch, call resolve_icons for all custom icons, write icon_plan.json.")`.
+   The icon_resolver reads `render_spec.json`, batches ALL node lookups in ONE
+   `search_diagrams_nodes(queries=[...])` call, resolves custom icons with
+   `resolve_icons(...)`, and writes `icon_plan.json`. It returns a short status.
+   Wait for it to complete before calling the drawer.
+7. **Render diagram.** Call
    `task(subagent_type="drawer", description="<brief spec>")`.
    Keep the description SHORT — the drawer reads the full blueprint from disk.
    Include ONLY: the density/style (standard/detailed/poster, slide/diagram), any
    user-specified layout hints or brand preferences not in the blueprint, and the
-   instruction: "Read render_spec.json from the workspace — it contains the full
-   approved blueprint (nodes, clusters, edges, provider, titles) written at
-   approval time." Do NOT inline the full blueprint or node list — it is already
-   in render_spec.json. The drawer handles icon search, code, render-refine, and
-   drawio export; it returns a short text status.
-7. **Critique (automatic quality gate).** Once the drawer reports success, call
+   instruction: "Read render_spec.json (full blueprint) and icon_plan.json
+   (pre-resolved icons) from the workspace. Do NOT call resolve_icons or
+   search_diagrams_nodes — all icons are already resolved in icon_plan.json."
+   The drawer handles code writing, render-refine, and drawio export; it returns
+   a short text status.
+8. **Critique (automatic quality gate).** Once the drawer reports success, call
    `task(subagent_type="critic", description="Review out.png against the approved blueprint. Full spec is in render_spec.json in the workspace. Verify all nodes are present, no overlap, arrows are clean, icons resolved.")`.
    Read the verdict line it returns:
    - `VERDICT: PASS` → proceed to finalize.
@@ -274,16 +288,17 @@ You design the solution step by step; the user reviews and approves the gated st
      a new node has no existing icon, and do not redesign from scratch. Repeat at
      most TWICE; if findings remain after that, proceed to finalize anyway and
      mention the residual findings to the user.
-8. **Finalize.** Call `finalize_diagram()` and WAIT for the final review. If the
+9. **Finalize.** Call `finalize_diagram()` and WAIT for the final review. If the
    user rejects, instruct the drawer to revise via another `task(...)`, re-critique,
    then call `finalize_diagram` again.
-9. **PDF report** (optional — generate if the user asks or the output clearly
+10. **PDF report** (optional — generate if the user asks or the output clearly
    warrants a document): ALWAYS call `generate_pdf_report({})` with NO arguments.
    DO NOT pass `include_sections` or `title` unless the user EXPLICITLY asked to
    omit specific sections or override the cover title. This is a HITL gate: wait
    for approval before the tool runs, then return the path to the user.
 Do NOT skip ahead (e.g. don't propose tech stack before the diagram brief, don't
-render before the blueprint is approved, don't finalize before the critic passes).
+render before the blueprint is approved, don't resolve icons before blueprint
+approval, don't render before icons are resolved, don't finalize before the critic passes).
 Once a gate tool returns "APPROVED", do NOT call that same tool again — move on to
 the next stage. Only re-propose a gated stage if the user REJECTED it."""
 
@@ -668,13 +683,59 @@ drawer to render without guessing:
 """
 
 
+def build_icon_resolver_prompt(
+    workdir: str = "/workspace",
+    icons_root: str = "/icons",
+    manifest: str = "/icons_manifest.json",
+) -> str:
+    """System prompt for the icon_resolver subagent (batch icon/node resolution only)."""
+    return f"""\
+You are the icon_resolver subagent. Your ONLY job is to batch-resolve all icons
+and built-in node class names for the approved blueprint, then write the results
+to `icon_plan.json`. You do NOT write diagram code or render anything.
+
+## Environment
+- Icon pack at `{icons_root}` (indexed by `{manifest}`, structured
+  `<provider>/<category>/<name>.png`).
+- Workspace at `{workdir}` — read `render_spec.json`, write `icon_plan.json`.
+
+## Your job (execute in order)
+1. Read `render_spec.json` from the workspace. It contains the full approved
+   blueprint: `nodes` (id, label, tech, cluster, type), `clusters`, `edges`,
+   `provider`, `density`, `presentation_style`, and slide metadata.
+2. Call `search_diagrams_nodes(queries=[<all node labels>])` in ONE batch to
+   find built-in `diagrams` class names for all nodes. This returns a map of
+   query → hits; the best hit per query gives `import_path`.
+3. Call `resolve_icons(icons=[...])` ONCE for all nodes — even those with a
+   built-in class (a custom icon may be needed as fallback). Each entry is
+   `{{label, provider, icon_keyword}}`. Derive `icon_keyword` from the node label
+   or tech (e.g. label="Redis Cache" → icon_keyword="redis").
+   This writes `icon_plan.json`.
+4. For any entry in `icon_plan.json` with `status=NOT_FOUND`, call
+   `search_icons(query, provider)` with a broader keyword (max ONE retry per node).
+5. For entries still NOT_FOUND after `search_icons`, call `fetch_logo(name)` if
+   it is a well-known brand logo (e.g. Supabase, NVIDIA). Skip otherwise.
+6. **Return a short summary** — list how many icons were FOUND vs NOT_FOUND and
+   confirm `icon_plan.json` is written. Example: "Done. icon_plan.json written:
+   12 FOUND, 2 NOT_FOUND (Prometheus, Grafana — use built-in or omit icon)."
+
+## Rules
+- Do NOT render or write diagram code.
+- Do NOT call `resolve_icons` more than once.
+- Do NOT call `search_icons` more than once per node.
+- Keep total tool calls under 10.
+
+{_ICON_RESOLVER_TOOLS_BLOCK}
+"""
+
+
 def build_drawer_prompt(
     workdir: str = "/workspace",
     icons_root: str = "/icons",
     manifest: str = "/icons_manifest.json",
     style: str = "pretty",
 ) -> str:
-    """System prompt for the drawer subagent (owns rendering, icon search, export)."""
+    """System prompt for the drawer subagent (owns rendering and export; icons pre-resolved)."""
     if style == "pretty":
         env_note = (
             f"`prettygraph` is importable as `from prettygraph import Pretty` "
@@ -715,14 +776,12 @@ from a senior solutions architect and produce a production-quality diagram.
    script first and make the smallest layout/content fix requested. Reuse icon
    paths already present in `diagram.py`, `icon_plan.json`, or `out.nodes.json`.
    Do NOT search icons again unless you add a brand-new visible node with no icon.
-3. For an initial render, verify every raw `diagrams` import with ONE batched
-   `search_diagrams_nodes(queries=[...])` call before writing code. Prefer
-   verified built-in nodes when they fit.
-4. **Icon pre-seed:** read `icon_plan.json` from the workspace — it was pre-populated
-   at blueprint approval with icon candidates for each node id. Nodes with a non-empty
-   list already have a resolved icon path; use it directly. Only nodes with an empty
-   list need `search_icons`. Then call `resolve_icons(...)` once for all required
-   custom icons. Use `fetch_logo` only after local icon search fails.
+3. Read `icon_plan.json` from the workspace — it was written by the icon_resolver
+   subagent and contains ALL pre-resolved icon paths for every node in the blueprint.
+   Use the resolved paths directly. Do NOT call `resolve_icons`, `search_icons`, or
+   `search_diagrams_nodes` — all lookups were done ahead of time. Each entry in
+   `icon_plan.json` has `{{label, status, path, icon}}`. Use `path` for
+   `Custom(label, path)` when status=FOUND; omit the icon when status=NOT_FOUND.
    **Call budget:** aim to complete the diagram in ≤15 model calls. Do NOT loop
    repeatedly on minor warnings — fix critical findings only and finalize.
 5. For prettygraph renders, call `plan_style_sizes(node_count=<visible boxes>,

@@ -29,7 +29,7 @@ from langchain.agents.middleware import (
     ModelRequest,
     ModelResponse,
 )
-from langchain_core.messages import AIMessage, AnyMessage
+from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
 from langchain_core.messages import ToolMessage as LCToolMessage
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
@@ -47,10 +47,11 @@ from .backends import (
 from .prompts import (
     build_critic_prompt,
     build_drawer_prompt,
+    build_icon_resolver_prompt,
     build_pretty_system_prompt,
     build_system_prompt,
 )
-from .tools import CRITIC_TOOLS, DRAWER_TOOLS, GATE_TOOL_NAMES, MAIN_TOOLS
+from .tools import CRITIC_TOOLS, DRAWER_TOOLS, GATE_TOOL_NAMES, ICON_RESOLVER_TOOLS, MAIN_TOOLS
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,77 @@ class KeepLatestImagesEdit:
                 for b in old
             ]
             messages[idx] = msg.model_copy(update={"content": new_content})
+
+
+class InjectVisionAsUserEdit:
+    """Relay PNG images from tool messages into a follow-up user message.
+
+    Some providers (e.g. mimo-v2.5) reject image blocks in tool messages with
+    400: 'text' is not set, even though they accept images in user messages.
+    This edit strips image blocks from render_diagram/inspect_diagram ToolMessages
+    and injects a synthetic HumanMessage immediately after each one, so the model
+    can still see the rendered PNG via the user-message path.
+
+    Old relay messages (marked with _SENTINEL) are removed on every apply() call
+    before new ones are injected, so only the latest image is live in context.
+    KeepLatestImagesEdit is a no-op after this edit because ToolMessages no longer
+    carry images.
+    """
+
+    _SENTINEL = "[VISION_RELAY]"
+
+    def apply(self, messages: list[AnyMessage], *, count_tokens: Any) -> None:
+        # Remove previously injected relay messages.
+        i = 0
+        while i < len(messages):
+            msg = messages[i]
+            if isinstance(msg, HumanMessage):
+                c = msg.content
+                is_relay = (
+                    (isinstance(c, str) and c.startswith(self._SENTINEL))
+                    or (
+                        isinstance(c, list)
+                        and any(
+                            isinstance(b, dict) and str(b.get("text", "")).startswith(self._SENTINEL)
+                            for b in c
+                        )
+                    )
+                )
+                if is_relay:
+                    messages.pop(i)
+                    continue
+            i += 1
+
+        # Strip images from ToolMessages and inject relay HumanMessages.
+        # Iterate in reverse so insert() indices stay valid.
+        for i in range(len(messages) - 1, -1, -1):
+            msg = messages[i]
+            if not isinstance(msg, LCToolMessage):
+                continue
+            if getattr(msg, "name", None) not in _IMAGE_TOOLS:
+                continue
+            content = msg.content
+            if not isinstance(content, list):
+                continue
+
+            image_blocks = [b for b in content if isinstance(b, dict) and b.get("type") == "image"]
+            if not image_blocks:
+                continue
+
+            # Strip image blocks from ToolMessage, keep text.
+            text_only = [b for b in content if not (isinstance(b, dict) and b.get("type") == "image")]
+            messages[i] = msg.model_copy(update={"content": text_only or "[rendered]"})
+
+            # Build relay HumanMessage with image_url blocks (user-message format).
+            relay_content: list = [{"type": "text", "text": self._SENTINEL + " Rendered diagram image:"}]
+            for block in image_blocks:
+                b64 = block.get("base64", "")
+                mime = block.get("mime_type", "image/png")
+                relay_content.append({
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{mime};base64,{b64}"},
+                })
+            messages.insert(i + 1, HumanMessage(content=relay_content))
 
 
 class UsageLoggingMiddleware(AgentMiddleware):
@@ -275,7 +347,7 @@ class _StreamingSubAgentRunnable:
 DEFAULT_MODEL    = "gpt-5.4-mini"
 DEFAULT_STYLE    = "pretty"          # "pretty" (prettygraph) or "plain" (raw diagrams)
 RECURSION_LIMIT  = 160               # max agent steps per run (used by the server)
-REASONING_EFFORT = "medium"
+REASONING_EFFORT = "medium"          # used as fallback when no config.yaml present
 
 MAIN_SKILL_PATHS = [
     str(SKILLS_DIR / "diagrams-as-code"),
@@ -308,19 +380,25 @@ _RUN_CALL_LIMIT = int(os.getenv("RUN_CALL_LIMIT", "120"))         # main + drawe
 _CRITIC_CALL_LIMIT = int(os.getenv("CRITIC_CALL_LIMIT", "20"))    # inspect+critique only
 
 
-def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent"):
+def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
+                use_vision_relay: bool = False):
+    from .config import vision_in_tools as _vision_in_tools
+    edits: list = []
+    if use_vision_relay:
+        edits.append(InjectVisionAsUserEdit())
+    edits += [
+        KeepLatestImagesEdit(),
+        ClearToolUsesEdit(
+            trigger=CONTEXT_TRIGGER_TOKENS,
+            clear_at_least=8_000,
+            keep=8,
+            clear_tool_inputs=True,
+            exclude_tools=GATE_TOOL_NAMES,
+        ),
+    ]
     layers = [
         ContextEditingMiddleware(
-            edits=[
-                KeepLatestImagesEdit(),
-                ClearToolUsesEdit(
-                    trigger=CONTEXT_TRIGGER_TOKENS,
-                    clear_at_least=8_000,
-                    keep=8,
-                    clear_tool_inputs=True,
-                    exclude_tools=GATE_TOOL_NAMES,
-                ),
-            ],
+            edits=edits,
             token_count_method="approximate",
         ),
         UsageLoggingMiddleware(agent_name),
@@ -336,14 +414,8 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent"):
 
 
 def _make_llm(model: str):
-    # timeout + max_retries: basic resilience against slow/transient model errors.
-    m = model.lower()
-    if m.startswith("claude") or m.startswith("anthropic"):
-        from langchain_anthropic import ChatAnthropic
-        return ChatAnthropic(model=model, max_tokens=16000, temperature=0,
-                             timeout=90, max_retries=6)
-    return ChatOpenAI(model=model, reasoning_effort=REASONING_EFFORT,
-                      use_responses_api=True, timeout=90, max_retries=6)
+    from .config import make_llm as _cfg_make_llm
+    return _cfg_make_llm(model)
 
 
 async def make_persistence():
@@ -386,14 +458,29 @@ async def make_persistence():
     return checkpointer, store, _aclose, pool
 
 
+def _icon_resolver_subagent(workdir: str, icons_root: str, manifest: str) -> dict:
+    """Config for the icon_resolver subagent: batch node/icon resolution before drawing."""
+    return {
+        "name": "icon_resolver",
+        "description": (
+            "Resolves all icon paths and built-in node class names for the approved "
+            "blueprint. Reads render_spec.json, calls search_diagrams_nodes + "
+            "resolve_icons in batch, writes icon_plan.json. Returns a short status."
+        ),
+        "system_prompt": build_icon_resolver_prompt(workdir, icons_root, manifest),
+        "tools": ICON_RESOLVER_TOOLS,
+    }
+
+
 def _drawer_subagent(workdir: str, icons_root: str, manifest: str, style: str) -> dict:
-    """Config for the drawer subagent: owns icon search + render-refine + export."""
+    """Config for the drawer subagent: render-refine loop + export (icons pre-resolved)."""
     return {
         "name": "drawer",
         "description": (
             "Renders the approved architecture blueprint into a production-quality "
-            "diagram. Handles icon search, diagram code, render-refine loop (≤3), "
-            "and drawio export. Returns ONLY a short text status — no images."
+            "diagram. Reads pre-resolved icon_plan.json, writes diagram code, "
+            "render-refine loop (≤3), and drawio export. Returns ONLY a short text "
+            "status — no images."
         ),
         "system_prompt": build_drawer_prompt(workdir, icons_root, manifest, style=style),
         "tools": DRAWER_TOOLS,
@@ -416,47 +503,102 @@ def _critic_subagent(style: str) -> dict:
     }
 
 
-def build_agent(model: str = DEFAULT_MODEL, *, style: str = DEFAULT_STYLE,
+def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
                 checkpointer=None, store=None):
     """Create the diagram deep agent (a compiled LangGraph graph).
 
     Pass ``checkpointer``/``store`` from :func:`make_persistence` for durable
     sessions; if omitted, an in-memory checkpointer is used (dev only).
 
-    Subagents (drawer, critic) are pre-compiled as ``CompiledSubAgent`` TypedDicts
-    so deepagents uses our ``_StreamingSubAgentRunnable`` wrapper as-is.  This lets
-    each subagent's internal tool calls (render_diagram, search_icons, …) stream
-    through the outer graph's ``"custom"`` mode and appear as live ACTIVITY events.
+    Subagents (icon_resolver, drawer, critic) are pre-compiled as
+    ``CompiledSubAgent`` TypedDicts so deepagents uses our
+    ``_StreamingSubAgentRunnable`` wrapper as-is.  This lets each subagent's
+    internal tool calls stream through the outer graph's ``"custom"`` mode and
+    appear as live ACTIVITY events.
+
+    *model* overrides the 'main' role in config.yaml; icon_resolver/drawer/critic
+    always come from config.yaml (falling back to the resolved main model).
     """
+    from .config import get_model, get_system_prompt_prefix
+
+    main_model           = model or get_model("main",          DEFAULT_MODEL)
+    icon_resolver_model  = get_model("icon_resolver", main_model)
+    drawer_model         = get_model("drawer",         main_model)
+    critic_model         = get_model("critic",         main_model)
+
     workdir = str(WORKSPACE)
+    prefix = get_system_prompt_prefix(main_model)
     if style == "pretty":
-        system_prompt = build_pretty_system_prompt(workdir, LOCAL_ICONS, LOCAL_MANIFEST)
+        system_prompt = prefix + build_pretty_system_prompt(workdir, LOCAL_ICONS, LOCAL_MANIFEST)
     else:
-        system_prompt = build_system_prompt(workdir, LOCAL_ICONS, LOCAL_MANIFEST)
+        system_prompt = prefix + build_system_prompt(workdir, LOCAL_ICONS, LOCAL_MANIFEST)
 
-    logger.info("build_agent  model=%s  style=%s", model, style)
+    icon_resolver_prefix = get_system_prompt_prefix(icon_resolver_model)
+    drawer_prefix        = get_system_prompt_prefix(drawer_model)
+    critic_prefix        = get_system_prompt_prefix(critic_model)
 
-    llm = _make_llm(model)
+    logger.info(
+        "build_agent  main=%s  icon_resolver=%s  drawer=%s  critic=%s  style=%s",
+        main_model, icon_resolver_model, drawer_model, critic_model, style,
+    )
+
+    from .config import vision_in_tools as _vision_in_tools
+    drawer_vision_in_tools = _vision_in_tools(drawer_model)
+    # vision_relay: provider can see images in user messages but not tool messages.
+    # Enable RENDER_INCLUDES_IMAGE so tools still return PNG data; InjectVisionAsUserEdit
+    # will move the image from the ToolMessage into a synthetic HumanMessage.
+    drawer_vision_relay = not drawer_vision_in_tools
+    if drawer_vision_relay:
+        os.environ["RENDER_INCLUDES_IMAGE"] = "1"
+        logger.info(
+            "Vision relay enabled for drawer model %s (images relayed via user message)",
+            drawer_model,
+        )
+    else:
+        os.environ.setdefault("RENDER_INCLUDES_IMAGE", "1")
+
+    llm                = _make_llm(main_model)
+    icon_resolver_llm  = _make_llm(icon_resolver_model)
+    drawer_llm         = _make_llm(drawer_model)
+    critic_llm         = _make_llm(critic_model)
     backend = make_local_backend()
 
     # Pre-compile subagents so their internal steps are visible in the outer stream.
-    # Each task still gets an ephemeral thread, but both subagents load the shared
-    # semantic memory file so learned icon/import/style notes survive delegations.
-    drawer_spec = _drawer_subagent(workdir, LOCAL_ICONS, LOCAL_MANIFEST, style)
-    critic_spec = _critic_subagent(style)
+    icon_resolver_spec = _icon_resolver_subagent(workdir, LOCAL_ICONS, LOCAL_MANIFEST)
+    drawer_spec        = _drawer_subagent(workdir, LOCAL_ICONS, LOCAL_MANIFEST, style)
+    critic_spec        = _critic_subagent(style)
+    icon_resolver_spec["system_prompt"] = icon_resolver_prefix + icon_resolver_spec["system_prompt"]
+    drawer_spec["system_prompt"]        = drawer_prefix + drawer_spec["system_prompt"]
+    critic_spec["system_prompt"]        = critic_prefix + critic_spec["system_prompt"]
 
+    icon_resolver_compiled: dict = {
+        "name": icon_resolver_spec["name"],
+        "description": icon_resolver_spec["description"],
+        "runnable": _StreamingSubAgentRunnable(
+            create_deep_agent(
+                model=icon_resolver_llm,
+                tools=icon_resolver_spec["tools"],
+                system_prompt=icon_resolver_spec["system_prompt"],
+                backend=backend,
+                memory=[MEMORY_PATH],
+                middleware=_middleware(run_limit=_CRITIC_CALL_LIMIT, agent_name="icon_resolver"),
+                store=store,
+            ),
+            "icon_resolver",
+        ),
+    }
     drawer_compiled: dict = {
         "name": drawer_spec["name"],
         "description": drawer_spec["description"],
         "runnable": _StreamingSubAgentRunnable(
             create_deep_agent(
-                model=llm,
+                model=drawer_llm,
                 tools=drawer_spec["tools"],
                 system_prompt=drawer_spec["system_prompt"],
                 backend=backend,
                 memory=[MEMORY_PATH],
                 skills=drawer_spec.get("skills"),
-                middleware=_middleware(agent_name="drawer"),
+                middleware=_middleware(agent_name="drawer", use_vision_relay=drawer_vision_relay),
                 store=store,
             ),
             "drawer",
@@ -467,12 +609,13 @@ def build_agent(model: str = DEFAULT_MODEL, *, style: str = DEFAULT_STYLE,
         "description": critic_spec["description"],
         "runnable": _StreamingSubAgentRunnable(
             create_deep_agent(
-                model=llm,
+                model=critic_llm,
                 tools=critic_spec["tools"],
                 system_prompt=critic_spec["system_prompt"],
                 backend=backend,
                 memory=[MEMORY_PATH],
-                middleware=_middleware(run_limit=_CRITIC_CALL_LIMIT, agent_name="critic"),
+                middleware=_middleware(run_limit=_CRITIC_CALL_LIMIT, agent_name="critic",
+                                     use_vision_relay=drawer_vision_relay),
                 store=store,
             ),
             "critic",
@@ -493,7 +636,7 @@ def build_agent(model: str = DEFAULT_MODEL, *, style: str = DEFAULT_STYLE,
         backend=backend,
         memory=[MEMORY_PATH],
         skills=MAIN_SKILL_PATHS,
-        subagents=[drawer_compiled, critic_compiled],
+        subagents=[icon_resolver_compiled, drawer_compiled, critic_compiled],
         middleware=_middleware(agent_name="main"),
         checkpointer=checkpointer,
         store=store,
