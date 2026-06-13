@@ -81,6 +81,7 @@ Deep Agent (backend/src/diagram_mcp/agent.py)
 8. Agent exports `.drawio` and calls `finalize_diagram`.
 9. Frontend shows final review card and diagram artifacts.
 10. If the user asks for a report/document, agent calls `generate_pdf_report`; frontend shows a PDF approval card before `out.pdf` is created.
+11. If the user asks to email the report, agent calls `send_architecture_report_email`; frontend shows an email approval card (recipient, subject) before sending via Gmail through Composio.
 
 ### Human-in-the-loop Gates
 
@@ -90,6 +91,7 @@ These tools are configured as approval gates:
 - `propose_blueprint`: confirms architecture structure before code generation.
 - `finalize_diagram`: confirms final rendered result before completion.
 - `generate_pdf_report`: confirms report settings before creating `out.pdf`.
+- `send_architecture_report_email`: confirms recipient and subject before sending the PDF via Gmail.
 
 When the user rejects a gate, the frontend sends feedback to the server. The server resumes the LangGraph run with `Command(resume=...)`, and the agent revises the current step.
 
@@ -114,9 +116,11 @@ The intended tool order is:
 5. `task(subagent_type="drawer", ...)`
 6. `task(subagent_type="critic", ...)`
 7. `finalize_diagram`
-8. `generate_pdf_report`
+8. `generate_pdf_report` *(optional — only when the user asks for a PDF report)*
+9. `send_architecture_report_email` *(optional — only when the user asks to email the report)*
 
-`generate_pdf_report` is optional and should only be called after `finalize_diagram` is approved when the user asks for a PDF, report, or document. It pauses for HITL approval before writing `out.pdf`.
+`generate_pdf_report` pauses for HITL approval before writing `out.pdf`.
+`send_architecture_report_email` pauses for HITL approval before sending the PDF via Gmail.
 
 Example PDF tool call:
 
@@ -135,6 +139,81 @@ Example PDF tool call:
 - Skills directory: `backend/skills/`.
 - Diagram generation skills: `diagrams-as-code` and `pro-style`.
 - Runtime workspace: `backend/agent_space/workspace/`.
+
+## Email Delivery (Composio Gmail)
+
+The agent can email the generated `out.pdf` via Gmail through the [Composio](https://composio.dev) integration. This is an optional HITL-gated step — the agent pauses for user confirmation before sending.
+
+### Prerequisites
+
+1. Create a free Composio account at [app.composio.dev](https://app.composio.dev) and grab your API key.
+2. Add `COMPOSIO_API_KEY=your_key_here` to `backend/.env`.
+3. Connect a Gmail account (one-time OAuth flow):
+
+```bash
+cd backend
+uv run composio add gmail
+# Opens browser — complete the Google OAuth consent and authorise the Gmail scope.
+```
+
+4. After authorising, note the **connected account ID** that Composio creates. You can list all connections with:
+
+```bash
+cd backend
+uv run python - <<'EOF'
+from dotenv import load_dotenv; load_dotenv()
+import composio, os
+client = composio.Composio(api_key=os.environ["COMPOSIO_API_KEY"])
+for a in client.connected_accounts.list().items:
+    print(a.toolkit.slug, a.user_id, a.id, a.status)
+EOF
+```
+
+Find the row where `toolkit.slug == "gmail"` and `status == "ACTIVE"`. Copy the `id` value (format: `ca_XXXXXXXXXX`).
+
+5. Set that ID in [`backend/src/diagram_mcp/email_tools.py`](backend/src/diagram_mcp/email_tools.py) inside the `client.tools.execute(...)` call:
+
+```python
+result = client.tools.execute(
+    "GMAIL_SEND_EMAIL",
+    arguments={...},
+    connected_account_id="ca_YOUR_ACCOUNT_ID",   # <-- paste here
+    version="20260612_00",
+)
+```
+
+> **Toolkit version note:** Composio requires a specific toolkit version (not `"latest"`) for manual execution. The current pinned version is `20260612_00`. If you get a "Toolkit version not specified" error after a Composio update, run the snippet below to find the latest version and update the `version=` field:
+>
+> ```python
+> import composio, os; from dotenv import load_dotenv; load_dotenv()
+> c = composio.Composio(api_key=os.environ["COMPOSIO_API_KEY"])
+> print(c.toolkits.get("GMAIL").meta.version)
+> ```
+
+### How It Works
+
+When the user asks to email the report (e.g. *"send the PDF to john@example.com"*):
+
+1. Agent calls `send_architecture_report_email` with `recipient_email`, `subject`, `project_name`, etc.
+2. The tool is a HITL gate — the frontend shows an approval card with the recipient and subject.
+3. On approval, the tool reads `out.pdf` from the workspace, uploads it to Composio file storage, then sends the email via `GMAIL_SEND_EMAIL`.
+4. A professional HTML email with the PDF attached is delivered to the recipient.
+
+### Environment Variable Summary
+
+```bash
+# backend/.env
+COMPOSIO_API_KEY=your_composio_api_key_here
+```
+
+### Troubleshooting
+
+| Error | Fix |
+|-------|-----|
+| `COMPOSIO_API_KEY environment variable is not set` | Add `COMPOSIO_API_KEY` to `backend/.env` |
+| `No connected account found for user ID default` | Run `composio add gmail` and update `connected_account_id` in `email_tools.py` |
+| `Toolkit version not specified` | Update the `version=` parameter in `email_tools.py` with the latest version from `c.toolkits.get("GMAIL").meta.version` |
+| `out.pdf not found in workspace` | Call `generate_pdf_report` first to produce `out.pdf` before emailing |
 
 ## LangGraph Details
 

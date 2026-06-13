@@ -4,6 +4,7 @@ import TechStackApproval from "./TechStackApproval";
 import BlueprintApproval from "./BlueprintApproval";
 import DiagramFeedback from "./DiagramFeedback";
 import PdfReportApproval from "./PdfReportApproval";
+import EmailApproval from "./EmailApproval";
 import FileUpload from "./FileUpload";
 
 interface ChatSidebarProps {
@@ -20,6 +21,7 @@ interface ChatSidebarProps {
   onResolveBlueprint: (approved: boolean, modifications?: string) => void;
   onResolveResult: (satisfied: boolean, feedback?: string) => void;
   onResolvePdfReport: (approved: boolean, modifications?: string) => void;
+  onResolveEmail: (approved: boolean) => void;
   iteration?: number;
   // File upload
   uploadedFiles: UploadedFile[];
@@ -41,6 +43,7 @@ export default function ChatSidebar({
   onResolveBlueprint,
   onResolveResult,
   onResolvePdfReport,
+  onResolveEmail,
   iteration,
   uploadedFiles,
   isUploading,
@@ -186,6 +189,15 @@ export default function ChatSidebar({
             <PdfReportApproval
               interrupt={pendingInterrupt}
               onResolve={onResolvePdfReport}
+              disabled={isRunning}
+            />
+          </div>
+        )}
+        {pendingInterrupt?.data.type === "email_approval" && (
+          <div className="mt-1">
+            <EmailApproval
+              interrupt={pendingInterrupt}
+              onResolve={onResolveEmail}
               disabled={isRunning}
             />
           </div>

@@ -87,6 +87,14 @@ _MAIN_TOOLS_BLOCK = """\
   artifacts. Call after `finalize_diagram` is approved if the user asks for a
   report/document. PAUSES for approval before creating the PDF, then returns
   the path to `out.pdf`.
+- `send_architecture_report_email(recipient_email, subject, project_name,
+  subtitle="", recipient_name="Team")` — send the generated `out.pdf` to a
+  recipient via Gmail using a professional BNK Solution HTML template.
+  Call ONLY after `generate_pdf_report` has completed and `out.pdf` exists.
+  PAUSES for user approval before sending. Use `project_name` from
+  `blueprint.slide_title` and `subtitle` from `blueprint.slide_kicker`.
+  Default recipient: bao.luong@bnksolution.com. Do NOT call unless the
+  user explicitly asks to send the report by email.
 - Plus `read_file`, `write_file`, `edit_file`, `ls`, `glob`, `grep`, `write_todos`."""
 
 _ICON_RESOLVER_TOOLS_BLOCK = """\
@@ -176,8 +184,8 @@ _BEHAVIOR_RULES = """\
   controls are declaration order, direction, short edges, anchors, same_rank,
   invisible spine edges, minlen, node_attr/edge_attr, and simplification.
 - **Autonomy** — do not ask for permission mid-task. The only legitimate approval
-  pauses are `propose_tech_stack`, `propose_blueprint`, `finalize_diagram`, and
-  `generate_pdf_report`.
+  pauses are `propose_tech_stack`, `propose_blueprint`, `finalize_diagram`,
+  `generate_pdf_report`, and `send_architecture_report_email`.
 - **PDF/report requests** â€” if the user asks for a PDF, report, or document in
   the current task, the task is NOT complete at `finalize_diagram`. After
   `finalize_diagram` is approved, call `generate_pdf_report({})`. Do not stop
@@ -296,6 +304,13 @@ You design the solution step by step; the user reviews and approves the gated st
    DO NOT pass `include_sections` or `title` unless the user EXPLICITLY asked to
    omit specific sections or override the cover title. This is a HITL gate: wait
    for approval before the tool runs, then return the path to the user.
+11. **Email report** (optional — only if the user explicitly asks to send the
+   report): after `generate_pdf_report` is approved and `out.pdf` exists, call
+   `send_architecture_report_email(recipient_email=<address>, subject=<subject>,
+   project_name=<blueprint.slide_title>, subtitle=<blueprint.slide_kicker>,
+   recipient_name=<name or "Team">)`. This PAUSES for user approval. After
+   approval the email is sent with the PDF attached. Default recipient:
+   bao.luong@bnksolution.com.
 Do NOT skip ahead (e.g. don't propose tech stack before the diagram brief, don't
 render before the blueprint is approved, don't resolve icons before blueprint
 approval, don't render before icons are resolved, don't finalize before the critic passes).

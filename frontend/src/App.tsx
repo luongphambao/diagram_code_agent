@@ -188,6 +188,7 @@ export default function App() {
             onResolveBlueprint={diagramAgent.resolveBlueprint}
             onResolveResult={diagramAgent.resolveResultReview}
             onResolvePdfReport={diagramAgent.resolvePdfReport}
+            onResolveEmail={diagramAgent.resolveEmail}
             iteration={diagramAgent.agentState.iteration}
             uploadedFiles={diagramAgent.uploadedFiles}
             isUploading={diagramAgent.isUploading}

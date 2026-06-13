@@ -2128,6 +2128,8 @@ DIAGRAM_TOOLS = [
 ]
 
 # Main agent tools: gate/planning only — no rendering or icon search.
+from .email_tools import send_architecture_report_email  # noqa: E402
+
 MAIN_TOOLS = [
     analyze_architecture_requirements,
     propose_diagram_brief,
@@ -2135,6 +2137,7 @@ MAIN_TOOLS = [
     propose_blueprint,
     finalize_diagram,
     generate_pdf_report,
+    send_architecture_report_email,
 ]
 
 # Icon resolver subagent tools: node search + icon resolution (runs before drawer).
@@ -2152,4 +2155,5 @@ GATE_TOOL_NAMES = [
     "propose_blueprint",
     "finalize_diagram",
     "generate_pdf_report",
+    "send_architecture_report_email",
 ]

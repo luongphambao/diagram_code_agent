@@ -182,7 +182,8 @@ export type InterruptType =
   | "techstack_approval"
   | "blueprint_approval"
   | "result_review"
-  | "pdf_report_approval";
+  | "pdf_report_approval"
+  | "email_approval";
 
 export interface PendingInterrupt {
   toolCallId: string;
@@ -205,6 +206,11 @@ export interface PendingInterrupt {
     brand?: string;
     include_sections?: string[];
     missing_sections?: string[];
+    // email_approval
+    recipient_email?: string;
+    subject?: string;
+    project_name?: string;
+    recipient_name?: string;
   };
 }
 
@@ -504,6 +510,13 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
     [_resolveWithPayload]
   );
 
+  const resolveEmail = useCallback(
+    async (approved: boolean) => {
+      await _resolveWithPayload({ approved });
+    },
+    [_resolveWithPayload]
+  );
+
   const uploadFile = useCallback(async (file: File) => {
     setIsUploading(true);
     setError(null);
@@ -566,6 +579,7 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
     resolveBlueprint,
     resolveResultReview,
     resolvePdfReport,
+    resolveEmail,
     uploadFile,
     clearFiles,
     restore,

@@ -97,6 +97,7 @@ _TOOL_LABELS = {
     "submit_critique": "Recording the diagram review",
     "finalize_diagram": "Finalizing the diagram",
     "generate_pdf_report": "Generating the PDF report",
+    "send_architecture_report_email": "Sending the architecture report email",
     "write_todos": "Planning the steps",
     "task": "Delegating to subagent",
     "ls": "Listing files",
@@ -598,6 +599,20 @@ def _card_for(val, summary: str):
                 "missing_sections": missing,
             },
             "awaiting_pdf_report",
+            {},
+        )
+    if name == "send_architecture_report_email":
+        return (
+            {
+                "type": "email_approval",
+                "question": f"Send the architecture report PDF to {args.get('recipient_email', '')}?",
+                "recipient_email": args.get("recipient_email", ""),
+                "subject": args.get("subject", ""),
+                "project_name": args.get("project_name", ""),
+                "subtitle": args.get("subtitle", ""),
+                "recipient_name": args.get("recipient_name", "Team"),
+            },
+            "awaiting_email_approval",
             {},
         )
     return None, None, {}
