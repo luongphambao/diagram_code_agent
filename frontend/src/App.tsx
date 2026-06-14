@@ -189,6 +189,8 @@ export default function App() {
             onResolveResult={diagramAgent.resolveResultReview}
             onResolvePdfReport={diagramAgent.resolvePdfReport}
             onResolveEmail={diagramAgent.resolveEmail}
+            onResolveMeeting={diagramAgent.resolveMeeting}
+            onResolveMeetingSlot={diagramAgent.resolveMeetingSlot}
             iteration={diagramAgent.agentState.iteration}
             uploadedFiles={diagramAgent.uploadedFiles}
             isUploading={diagramAgent.isUploading}

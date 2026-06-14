@@ -127,13 +127,14 @@ _DRAWER_TOOLS_BLOCK = """\
   `plan_style_sizes` (it reads `style_plan.json`) and again whenever the render
   audit reports TEXT OVERFLOW. Text must fit INSIDE its card — overflowing
   cards are auto-widened and break the uniform card grid.
-- `declare_poster_grid(row1, row2)` — **poster mode only**: call this BEFORE
-  writing prettygraph code when density='poster'. Pass the planned sections for
-  row 1 (client-facing tiers) and row 2 (platform tiers); each section is
-  `{id, label, anchor_node_id}`. It validates the rows and returns the exact
-  `g.poster_grid([...],[...])` call to put in your script (one line — Pretty
-  auto-builds the spine, per-column same_rank, and decorative cross-section
-  edges). Do NOT hand-wire spine/same_rank yourself.
+- `declare_poster_grid(row1, row2)` — **poster mode (the default)**: call this
+  BEFORE writing prettygraph code. Pass the planned region 'planes'; each is
+  `{id, label, anchor_node_id, cols}`. It validates them and returns one
+  `g.grid_cluster(region_id, cols=N)` call PER plane to paste after your boxes —
+  each packs that plane into a dense multi-column logo grid. Use
+  `direction='TB'` so the planes sit side by side across the width (the
+  reference-poster look). Do NOT call `g.poster_grid` (its single-column ranks
+  fight the in-plane grids) and do NOT hand-wire spine/same_rank yourself.
 - `audit_diagram_code(code)` — static pre-render audit for known diagrams/
   Graphviz pitfalls: missing output settings, floating `xlabel`, unstable large
   clusters, over-specific positioning, font defaults in the wrong attr bag, and
@@ -478,21 +479,29 @@ _PRETTY_DIAGRAM_DETAIL = """\
   Sublabel is MANDATORY for every compute/data/network node — populate from blueprint
   `tech` + tech-stack `capacity_sizing`. Primary-flow edges MUST carry a protocol
   label (≤3 words). Call `plan_style_sizes(output="slide")`.
-- For **poster-mode** diagrams (blueprint `density="poster"`): 25-45 nodes across
-  6-12 numbered sections are allowed. Call `plan_style_sizes(output="poster")`.
-  Layout: 2-3 row grid — Row 1 client-facing tiers, Row 2 platform tiers, optional
-  Row 3 secondary concerns (Security/CI-CD/Cost). DO NOT hand-wire the spine/same_rank.
-  Instead:
-  1. Call `declare_poster_grid(row1=[...], row2=[...])` (or with `row3=[...]` for a
-     3-row layout) to validate and pick one anchor node per section.
-  2. In the script, after declaring all clusters/boxes/links, call ONE line:
-     `g.poster_grid([<row1 anchor ids>], [<row2 anchor ids>])`. It auto-generates
-     the invisible per-row spine, makes each section a single vertical column,
-     stacks the two rows into aligned columns, and turns real cross-section edges
-     into decorative (`constraint=false`) so the grid — not the data flow — drives
-     the layout. It also auto-widens column spacing for a ~1.7-2.0 aspect.
-  3. Number every top-level section cluster (`number=1`, `number=2`, ...).
-  Nested sub-clusters inside sections are encouraged (model families, storage tiers).
+- For **poster-mode** diagrams (blueprint `density="poster"` — the DEFAULT): 25-45
+  nodes grouped into 4-8 numbered region 'planes', each plane packed as a DENSE
+  multi-column logo grid (the reference-poster look). Call
+  `plan_style_sizes(output="poster")`. Recipe — produces the dense grid; DO NOT
+  hand-wire spine/same_rank and DO NOT call `g.poster_grid`:
+  1. Call `declare_poster_grid(row1=[...], row2=[...])` (planes grouped loosely;
+     each `{id, label, anchor_node_id, cols}`) to validate and get the exact
+     `g.grid_cluster(...)` calls.
+  2. Pick `direction` by plane count: **5+ planes → `direction="LR"`** (planes
+     stack into a tall PORTRAIT poster — this matches the dense reference best);
+     ≤4 planes → `direction="TB"` (planes sit side by side across the width).
+     Create `Pretty(..., direction=<that>, theme="pro")`. Declare each plane with
+     `g.cluster(id, label, number=1,2,...)` and add its boxes with
+     `g.box(..., parent=id, icon=<REAL logo>, sublabel=<tech>)`.
+  3. AFTER all boxes/links, paste ONE `g.grid_cluster(region_id, cols=N)` per
+     plane (cols 2-3 reads densest). This packs each plane into a compact
+     COLS×rows logo grid instead of a tall single column.
+  4. Add only a few cross-plane `g.link(...)` for the primary flow; they
+     auto-relax (`constraint=false`) so the grids — not the data flow — drive the
+     layout.
+  5. Number every top-level plane cluster (`number=1`, `number=2`, ...).
+  Nested sub-clusters inside a plane are encouraged (model families, storage tiers).
+  Every compute/data/network box MUST show a real technology logo + a tech sublabel.
 - Fix and call `render_diagram` again until production-clean (≤3 renders), then
   call `export_drawio()`.
 
@@ -662,14 +671,17 @@ drawer to render without guessing:
   `slide_title`, `slide_kicker`, `brand` (only if known), and `diagram_title`.
   Use `presentation_style="diagram"` ONLY when the user explicitly asks for a
   plain/raw/body-only diagram (e.g. to embed in a doc).
-- Set `density="detailed"` when 17-21 nodes are needed for engineering-grade detail
-  (single-grid slide, ≤6 columns). Every compute/data/network node MUST have a `tech`
-  field (service + sizing, e.g. "Fargate 0.5 vCPU ×2-6", "PostgreSQL 15 Multi-AZ").
-- Set `density="poster"` when the source document describes a large platform
-  (15+ components, 5+ tiers — e.g. a RAG stack with ingestion pipeline, multiple
-  AI model endpoints, MCP KB layer, and observability). Standard density will
-  aggregate these to ~15 nodes and lose important detail. Poster unlocks 25-45
-  nodes across 6-12 numbered sections in a 2-3-row grid.
+- DEFAULT to `density="poster"`. Most real architectures are NOT simple, and the
+  house style is a dense, detailed poster: 25-45 nodes grouped into 4-8 numbered
+  region 'planes', each plane packed as a multi-column logo grid (Client, Network
+  & Security, AI/Compute Engine, Data & Storage, Observability & DevOps,
+  Enterprise Systems…). Every compute/data/network node carries a `tech` field and
+  a REAL technology logo. Prefer poster unless the system is genuinely small.
+- Use `density="detailed"` (18-26 nodes, single grid, ≤6 columns) for a mid-size
+  system that does not warrant full region planes. Every compute/data/network node
+  MUST have a `tech` field (service + sizing, e.g. "Fargate 0.5 vCPU ×2-6").
+- Use `density="standard"` ONLY for genuinely small systems (<10 components, ≤3
+  tiers) — 12-18 nodes, aggregated cross-cutting concerns.
 - Every important component as a node with its tier cluster.
 - For `density="detailed"` or `density="poster"`: every compute/data/network node
   MUST populate the `tech` field with service + capacity sizing (e.g. "ECS Fargate
@@ -728,8 +740,11 @@ to `icon_plan.json`. You do NOT write diagram code or render anything.
    This writes `icon_plan.json`.
 4. For any entry in `icon_plan.json` with `status=NOT_FOUND`, call
    `search_icons(query, provider)` with a broader keyword (max ONE retry per node).
-5. For entries still NOT_FOUND after `search_icons`, call `fetch_logo(name)` if
-   it is a well-known brand logo (e.g. Supabase, NVIDIA). Skip otherwise.
+5. For entries still NOT_FOUND after `search_icons`, call `fetch_logo(name)`.
+   Posters (the default density) want a REAL logo on EVERY box — a blank icon is a
+   defect — so attempt `fetch_logo` for every remaining NOT_FOUND that is a named
+   product/technology (e.g. Keycloak, MinIO, Qdrant, Supabase, NVIDIA, vLLM),
+   not just the most famous ones. Only leave NOT_FOUND for truly generic boxes.
 6. **Return a short summary** — list how many icons were FOUND vs NOT_FOUND and
    confirm `icon_plan.json` is written. Example: "Done. icon_plan.json written:
    12 FOUND, 2 NOT_FOUND (Prometheus, Grafana — use built-in or omit icon)."
@@ -876,17 +891,21 @@ _CRITIC_BODY = """\
 - For ANY slide output, file a `panel_underfill` finding (severity `medium`) when
   the body diagram is noticeably small in the slide panel — a small island of nodes
   floating in a large white area — OR when the layout audit reports `PANEL FILL`
-  below 65%. Fix suggestion: "add more columns/nodes, use poster_grid for wide
-  aspect, or re-render at a higher DPI so the body fills the panel."
-- For `density=poster`, the body MUST read as a balanced 2-row grid of numbered
-  sections that fills the panel. File a `poster_grid_broken` finding when you see
-  any of: sections stacked into a tall single column / L-shape; one row far taller
-  than the other; large empty quadrant (often bottom-right) with the content
-  crammed to one side; aspect outside ~1.4-2.2; or the panel mostly white with a
-  small off-center body. Fix suggestion: "the drawer must call
-  `g.poster_grid([row1 anchors],[row2 anchors])` after declaring all sections —
-  it builds the spine + per-column same_rank and makes each section one column;
-  do not hand-wire invisible edges." This is a concrete layout defect, not taste.
+  below 65%. Fix suggestion: "add more columns/nodes, raise per-plane grid cols
+  (g.grid_cluster(region, cols=3)), or use direction='TB' so planes sit side by
+  side and the body fills the panel."
+- For `density=poster`, every region 'plane' MUST read as a DENSE multi-column
+  logo grid (not a tall single column of boxes), and the planes should sit side by
+  side filling the width. File a `poster_grid_broken` finding when you see any of:
+  a plane rendered as a tall single column instead of a 2-3 column grid; planes
+  sprawling with large gaps; an L-shape / staircase; a large empty quadrant; or
+  the panel mostly white with a small off-center body. Fix suggestion: "the drawer
+  must use Pretty(..., direction='TB') and call g.grid_cluster(region_id, cols=2
+  or 3) once per plane after declaring its boxes — NOT g.poster_grid (its
+  single-column ranks fight the in-plane grids); do not hand-wire invisible
+  edges." This is a concrete layout defect, not taste.
+- For `density=poster`, file a `blank_icon` finding when any box renders without a
+  real technology logo — posters require a logo on every compute/data/network box.
 - For AWS client diagrams with public ingress plus private app/data resources,
   file a missing VPC/Public Subnet/Private Subnet boundary unless explicitly out
   of scope.

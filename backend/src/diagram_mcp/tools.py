@@ -175,8 +175,9 @@ def _layout_audit() -> str:
             if fill_pct is not None and fill_pct < 0.65:
                 verdict += (
                     f"\n  PANEL FILL: {fill_pct:.0%} — body leaves large white margins "
-                    "inside the slide panel. Widen the diagram (more columns/nodes) or "
-                    "set a wider aspect via poster_grid; the body should fill ≥65% of the panel area."
+                    "inside the slide panel. Add more columns/nodes, raise the per-plane "
+                    "grid cols (g.grid_cluster(region, cols=3)), or use direction='TB' so "
+                    "planes sit side by side; the body should fill ≥65% of the panel area."
                 )
         except Exception:  # noqa: BLE001
             pass
@@ -425,18 +426,19 @@ def audit_diagram_code(code: str) -> str:
     cluster_count = code.count("g.cluster(")
 
     if is_slide and cluster_count >= 6:
-        # poster_grid() auto-generates the spine + per-column same_rank, so it
-        # satisfies both structural requirements on its own.
-        has_grid = "poster_grid(" in code
+        # grid_cluster() (preferred) or poster_grid() auto-generate the rank
+        # structure, so either satisfies the structural requirement on its own.
+        has_grid = "grid_cluster(" in code or "poster_grid(" in code
         has_invis_spine = has_grid or 'style="invis"' in code or "style='invis'" in code
         has_numbered = "number=" in code
-        has_same_rank = has_grid or "same_rank(" in code
 
         if not has_invis_spine:
             _audit_add(
                 findings, "high", "poster_missing_spine",
-                f"Poster mode ({cluster_count} clusters) has no grid structure.",
-                "Call g.poster_grid([row1 anchors], [row2 anchors]) — it builds the invisible spine for you.",
+                f"Poster mode ({cluster_count} clusters) has no grid structure — "
+                "planes will sprawl and the layout will be sparse.",
+                "Pack each region: g.grid_cluster(region_id, cols=2 or 3) after its "
+                "boxes, and use Pretty(..., direction='TB') so planes sit side by side.",
             )
         if not has_numbered:
             _audit_add(
@@ -444,11 +446,13 @@ def audit_diagram_code(code: str) -> str:
                 "Poster mode: top-level clusters have no number= argument.",
                 "Add number=1, number=2, ... to every top-level g.cluster() call.",
             )
-        if not has_same_rank:
+        if "grid_cluster(" not in code and "poster_grid(" in code:
             _audit_add(
-                findings, "medium", "poster_missing_same_rank",
-                "Poster mode has no column alignment — rows may not align across columns.",
-                "Call g.poster_grid([row1 anchors], [row2 anchors]) to sync row/column positions.",
+                findings, "medium", "poster_uses_legacy_grid",
+                "Poster uses g.poster_grid (single-column ranks) instead of dense "
+                "in-plane grids — the diagram will read sparse, not like the reference.",
+                "Replace poster_grid with one g.grid_cluster(region_id, cols=N) per "
+                "plane + direction='TB' so each plane packs into a dense logo grid.",
             )
 
     if not findings:
@@ -849,15 +853,26 @@ def plan_style_sizes(
             f"{node_count} nodes exceeds the detailed tier cap (26) — "
             "switch to density='poster' and call plan_style_sizes(output='poster')."
         )
+    grid_cols = 0
     if output == "poster":
+        # Each region 'plane' is packed as a multi-column logo grid via
+        # g.grid_cluster(region_id, cols=grid_cols). 2-3 cols reads densest.
+        grid_cols = 2 if node_count <= 24 else 3
         notes.append(
-            "Poster mode: use a 2-3 row grid with 6-12 numbered sections (25-45 nodes). "
-            "Row 1 = client-facing tiers (Client→Orchestration→Inference→Storage), "
-            "Row 2 = platform tiers (Ingestion→Parsing→VDB→Observability/Auth). "
-            "Optional Row 3 for secondary concerns (Security/CI-CD/Cost). "
-            "Pin columns with an invisible spine + same_rank across all rows. "
-            "Nested sub-clusters inside sections are encouraged. "
-            "Target aspect 1.2-2.2."
+            "Poster mode (DEFAULT, dense): group nodes into 4-8 numbered region "
+            "'planes' (e.g. Client, Network & Security, AI/Compute Engine, "
+            "Data & Storage, Observability & DevOps, Enterprise Systems). "
+            f"Pack EACH plane as a logo grid: after declaring its boxes call "
+            f"g.grid_cluster(region_id, cols={grid_cols}). "
+            "Pick direction by plane count: 5+ planes → direction='LR' (planes "
+            "stack into a tall PORTRAIT poster — closest to the reference); ≤4 "
+            "planes → direction='TB' (planes side by side). Do NOT call "
+            "g.poster_grid (its single-column ranks fight the in-plane grids). "
+            "Draw only a few cross-plane "
+            "edges for the primary flow; they auto-relax so the grid drives layout. "
+            "Every compute/data/network box MUST have a real logo icon + a tech "
+            "sublabel. Nested sub-clusters inside a plane (model families, storage "
+            "tiers) are encouraged."
         )
 
     sizes = {
@@ -870,6 +885,7 @@ def plan_style_sizes(
         "density": density,
         "output": output,
         "sizes": sizes,
+        "grid_cols": grid_cols,
         "pretty_kwargs": ", ".join(f"{k}={v}" for k, v in sizes.items()),
         "notes": notes,
     }
@@ -1366,15 +1382,19 @@ class Blueprint(CoercingModel):
                     "ONLY when the user explicitly asks for a plain/raw diagram",
     )
     density: Literal["standard", "detailed", "poster"] = Field(
-        "standard",
-        description="standard (default): client-facing slide with 12-18 nodes, ≤5 columns, "
-                    "aggregating cross-cutting concerns. "
-                    "detailed: engineering-grade single-grid slide with 18-26 nodes, ≤6 columns — "
-                    "sublabel (tech + sizing) is MANDATORY for every compute/data/network node; "
-                    "use when the source describes a medium-large system where component detail matters. "
-                    "poster: 25-45 nodes in 6-12 numbered sections across a 2-3-row grid — "
-                    "use when the source document describes a large platform (15+ components, "
-                    "5+ tiers) and full component coverage matters more than visual sparseness. "
+        "poster",
+        description="poster (DEFAULT): dense, detailed output — 25-45 nodes grouped into "
+                    "6-12 numbered region 'planes', each plane packed as a multi-column "
+                    "logo grid (the drawer calls g.grid_cluster(region_id, cols=N) per "
+                    "plane). Every compute/data/network node carries a tech sublabel and a "
+                    "REAL technology logo. This is the house default because most real "
+                    "architectures are NOT simple — prefer poster unless the system is "
+                    "genuinely small. "
+                    "detailed: single-grid slide with 18-26 nodes, ≤6 columns — sublabel "
+                    "(tech + sizing) MANDATORY for every compute/data/network node. "
+                    "standard: ONLY for genuinely small systems (<10 components, ≤3 tiers) — "
+                    "client-facing slide with 12-18 nodes, ≤5 columns, aggregating "
+                    "cross-cutting concerns. "
                     "Pass density to the drawer so it calls plan_style_sizes(output='poster') "
                     "for poster, or plan_style_sizes(output='slide') for standard/detailed.",
     )
@@ -1769,24 +1789,22 @@ def propose_blueprint(blueprint: Blueprint) -> str:
             coverage_line += " — missing: " + "; ".join(f'"{r}"' for r in uncovered_reqs[:5])
 
     # --- density mismatch detection (deterministic, warn but do not block) ---
+    # Poster is the house default; only genuinely small systems should drop below it.
     n = len(blueprint.nodes)
     d = blueprint.density
-    if n >= 22 and d != "poster":
+    if n >= 13 and d != "poster":
         warnings.append(
             f"density mismatch: blueprint has {n} nodes but density='{d}'. "
-            "Use density='poster' for 22+ nodes (25-45 nodes, 6-12 sections, 2-3 rows)."
+            "Poster is the default for any non-trivial system — switch to "
+            "density='poster' (25-45 nodes, region planes packed as logo grids via "
+            "g.grid_cluster) so the diagram is detailed and dense like the reference."
         )
-    elif 17 <= n <= 21 and d == "standard":
-        warnings.append(
-            f"density mismatch: blueprint has {n} nodes but density='standard'. "
-            "Consider density='detailed' (18-26 nodes, ≤6 columns, sublabel mandatory) "
-            "for engineering-grade detail without the full poster grid."
-        )
-    elif n < 13 and d == "poster":
+    elif n < 10 and d == "poster":
         warnings.append(
             f"density mismatch: blueprint has only {n} nodes but density='poster'. "
-            "Poster mode with <13 nodes will produce an almost-empty grid — "
-            "use density='standard' instead."
+            "Poster mode with <10 nodes produces a sparse grid — this system looks "
+            "small; consider density='standard'. If the source really is this small, "
+            "keep poster but expand each tier with the real supporting components."
         )
 
     # --- report quality: warn when blueprint data that feeds PDF sections is thin ---
@@ -2024,10 +2042,11 @@ def generate_pdf_report(
     return msg
 
 class GridSection(BaseModel):
-    """One section (cluster) in a poster-mode grid row."""
+    """One region 'plane' (cluster) in a poster-mode layout."""
     id: str = Field(description="snake_case id matching the g.cluster() id")
     label: str = Field(description="section label, e.g. '① Client / Access Layer'")
-    anchor_node_id: str = Field(description="id of one node inside this section used as a spine anchor")
+    anchor_node_id: str = Field(description="id of one node inside this section (first box)")
+    cols: int = Field(2, description="columns to pack this plane's boxes into (2-3 reads densest)")
 
 
 @tool
@@ -2036,12 +2055,13 @@ def declare_poster_grid(
     row2: list[GridSection],
     row3: list[GridSection] | None = None,
 ) -> str:
-    """Declare and validate the 2-or-3-row grid layout for a poster-mode diagram.
+    """Declare and validate the region 'planes' for a poster-mode diagram.
 
-    Call this BEFORE writing prettygraph code when density='poster'.
-    Pass the planned sections for row 1 (client-facing tiers), row 2
-    (platform tiers), and optionally row 3 (secondary concerns: Security,
-    CI/CD, Cost). Returns a ready-to-paste code skeleton.
+    Call this BEFORE writing prettygraph code when density='poster' (the default).
+    Pass the planned region planes grouped loosely into row1/row2(/row3) — with
+    direction='TB' the planes render SIDE BY SIDE across the width (like the
+    reference poster). Returns a ready-to-paste skeleton of g.grid_cluster(...)
+    calls that pack each plane into a dense multi-column logo grid.
 
     Rules enforced:
     - row1 must have 3-7 sections
@@ -2066,29 +2086,26 @@ def declare_poster_grid(
     if errors:
         return json.dumps({"status": "INVALID", "errors": errors}, indent=2)
 
-    anchors1 = [s.anchor_node_id for s in row1]
-    anchors2 = [s.anchor_node_id for s in row2]
-    anchors3 = [s.anchor_node_id for s in row3]
-    n1, n2, n3 = len(anchors1), len(anchors2), len(anchors3)
+    n1, n2, n3 = len(row1), len(row2), len(row3)
 
-    # One line for the script: Pretty.poster_grid() builds the spine, per-column
-    # same_rank, and decorative cross-section edges from these anchor rows.
-    if anchors3:
-        call = (
-            f"g.poster_grid(\n    {anchors1!r},  # row 1\n"
-            f"    {anchors2!r},  # row 2\n"
-            f"    {anchors3!r},  # row 3\n)"
-        )
-    else:
-        call = f"g.poster_grid(\n    {anchors1!r},  # row 1\n    {anchors2!r},  # row 2\n)"
+    # One g.grid_cluster(...) per plane packs its boxes into a dense COLS-wide grid.
+    grid_lines = [
+        f"g.grid_cluster({s.id!r}, cols={max(1, s.cols)})  # {s.label}"
+        for s in all_sections
+    ]
+    call = "\n".join(grid_lines)
+
+    def _sec(s: GridSection) -> dict:
+        return {"id": s.id, "label": s.label, "anchor": s.anchor_node_id,
+                "cols": max(1, s.cols)}
 
     sections_info: dict = {
-        "row1": [{"id": s.id, "label": s.label, "anchor": s.anchor_node_id} for s in row1],
-        "row2": [{"id": s.id, "label": s.label, "anchor": s.anchor_node_id} for s in row2],
+        "row1": [_sec(s) for s in row1],
+        "row2": [_sec(s) for s in row2],
     }
     col_info: dict = {"row1": n1, "row2": n2}
-    if anchors3:
-        sections_info["row3"] = [{"id": s.id, "label": s.label, "anchor": s.anchor_node_id} for s in row3]
+    if row3:
+        sections_info["row3"] = [_sec(s) for s in row3]
         col_info["row3"] = n3
 
     WORKSPACE.mkdir(parents=True, exist_ok=True)
@@ -2096,12 +2113,19 @@ def declare_poster_grid(
 
     return json.dumps({
         "status": "OK",
-        "columns": col_info,
-        "poster_grid_call": call,
+        "planes": col_info,
+        "grid_cluster_calls": call,
         "instruction": (
-            "Put this ONE call in your script AFTER all g.cluster()/g.box()/g.link() "
-            "calls. Do NOT add manual invisible spine or same_rank lines — poster_grid "
-            "generates them. Number each top-level g.cluster() with number=1, 2, ..."
+            "1) Create Pretty(..., direction=<'LR' for 5+ planes (tall portrait "
+            "poster, closest to the reference) / 'TB' for ≤4 planes>, theme='pro'). "
+            "2) Declare every plane with g.cluster(id, label, number=1,2,...) and add "
+            "its boxes with g.box(..., parent=id, icon=<REAL logo>, sublabel=<tech>). "
+            "3) AFTER all boxes/links, paste the grid_cluster_calls below — one per "
+            "plane — to pack each into a dense logo grid. "
+            "4) Add only a few cross-plane g.link(...) for the primary flow; they "
+            "auto-relax so the grids drive the layout. "
+            "Do NOT call g.poster_grid — it fights the in-plane grids. "
+            "Do NOT add manual invisible spine / same_rank lines."
         ),
     }, indent=2)
 
@@ -2129,6 +2153,7 @@ DIAGRAM_TOOLS = [
 
 # Main agent tools: gate/planning only — no rendering or icon search.
 from .email_tools import send_architecture_report_email  # noqa: E402
+from .calendar_tools import propose_meeting_slots, create_client_meeting  # noqa: E402
 
 MAIN_TOOLS = [
     analyze_architecture_requirements,
@@ -2138,6 +2163,8 @@ MAIN_TOOLS = [
     finalize_diagram,
     generate_pdf_report,
     send_architecture_report_email,
+    propose_meeting_slots,    # uses internal interrupt() — NOT in GATE_TOOL_NAMES
+    create_client_meeting,    # interrupt_on gate — in GATE_TOOL_NAMES
 ]
 
 # Icon resolver subagent tools: node search + icon resolution (runs before drawer).
@@ -2156,4 +2183,5 @@ GATE_TOOL_NAMES = [
     "finalize_diagram",
     "generate_pdf_report",
     "send_architecture_report_email",
+    "create_client_meeting",
 ]

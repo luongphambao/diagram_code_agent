@@ -52,6 +52,8 @@ from .reporting import DEFAULT_REPORT_SECTIONS, record_report_step
 from .requirements_reader import IMAGE_EXT, parse_file
 from .tools import GATE_TOOL_NAMES, clear_stage_markers
 
+_DEFAULT_TZ = "Asia/Ho_Chi_Minh"
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("diagram-agent")
 # Silence the noisy HTTP client logs — we log the agent's real actions instead.
@@ -438,6 +440,9 @@ def _pending_action_name(val) -> str | None:
         ars = val.get("action_requests") or []
         if ars:
             return ars[0].get("name")
+        # manual interrupt() from propose_meeting_slots
+        if val.get("type") == "slot_picker":
+            return "propose_meeting_slots"
     return None
 
 
@@ -549,7 +554,28 @@ def _normalize_tech_stack(ts) -> dict:
 
 
 def _card_for(val, summary: str):
-    """Translate a HITLRequest → (card_data, current_step, state_delta)."""
+    """Translate an interrupt value → (card_data, current_step, state_delta).
+
+    Handles two interrupt shapes:
+      • interrupt_on tools  → val has {"action_requests": [{"name": ..., "args": ...}]}
+      • manual interrupt()  → val is the raw dict passed to interrupt(), e.g.
+                              {"type": "slot_picker", "slots": [...], ...}
+    """
+    # --- manual interrupt() from propose_meeting_slots ---
+    if isinstance(val, dict) and val.get("type") == "slot_picker":
+        return (
+            {
+                "type": "slot_picker",
+                "question": "Pick a time that works for the client meeting:",
+                "slots": val.get("slots", []),
+                "duration_minutes": val.get("duration_minutes", 60),
+                "timezone": val.get("timezone", _DEFAULT_TZ),
+                "context": val.get("context", ""),
+            },
+            "awaiting_slot_selection",
+            {},
+        )
+
     ars = (val or {}).get("action_requests") or [{}]
     name = ars[0].get("name")
     args = ars[0].get("args") or {}
@@ -615,6 +641,43 @@ def _card_for(val, summary: str):
             "awaiting_email_approval",
             {},
         )
+    if name == "create_client_meeting":
+        start_iso = args.get("start_datetime", "")
+        end_iso = args.get("end_datetime", "")
+        tz_name = args.get("timezone", "Asia/Ho_Chi_Minh")
+        # Format human-readable date/time for the card
+        display_start = start_iso
+        display_end = end_iso
+        try:
+            from datetime import datetime
+            from zoneinfo import ZoneInfo
+            _tz = ZoneInfo(tz_name)
+            _s = datetime.fromisoformat(start_iso).astimezone(_tz)
+            _e = datetime.fromisoformat(end_iso).astimezone(_tz)
+            display_start = _s.strftime("%A, %d %b %Y  %H:%M")
+            display_end = _e.strftime("%H:%M")
+            duration_min = int((_e - _s).total_seconds() / 60)
+        except Exception:
+            duration_min = 0
+        return (
+            {
+                "type": "meeting_approval",
+                "question": f"Schedule a meeting with {args.get('attendee_email', '')}?",
+                "title": args.get("title", ""),
+                "start_datetime": start_iso,
+                "end_datetime": end_iso,
+                "display_start": display_start,
+                "display_end": display_end,
+                "duration_minutes": duration_min,
+                "attendee_email": args.get("attendee_email", ""),
+                "attendee_name": args.get("attendee_name", "Client"),
+                "description": args.get("description", ""),
+                "add_google_meet": args.get("add_google_meet", True),
+                "timezone": tz_name,
+            },
+            "awaiting_meeting_approval",
+            {},
+        )
     return None, None, {}
 
 
@@ -626,7 +689,11 @@ def _decision_from_payload(payload: dict, pending_name: str | None) -> dict:
         ok = bool(payload.get("approved", False))
         msg = payload.get("modifications")
     if ok:
-        return {"type": "approve"}
+        decision: dict = {"type": "approve"}
+        # Pass through selected_slot for the slot-picker interrupt
+        if "selected_slot" in payload:
+            decision["selected_slot"] = payload["selected_slot"]
+        return decision
     return {"type": "reject", "message": msg or "Please revise based on the user's feedback."}
 
 

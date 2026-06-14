@@ -181,6 +181,11 @@ class Pretty:
     # same_rank, and forces real cross-section edges to constraint=false so the grid
     # — not the data flow — drives the macro layout.
     grid_rows: list[list[str]] = field(default_factory=list)
+    # Per-cluster grid packing: cluster id -> number of columns. When set, the
+    # cluster's child nodes are laid out as a compact COLS-wide grid (same_rank
+    # rows + invisible column spine) instead of a single tall vertical column.
+    # This is what makes a "plane" read as a dense logo grid (Gemini poster look).
+    cluster_grids: dict[str, int] = field(default_factory=dict)
 
     # ---- authoring API ---- #
     def cluster(self, id: str, label: str, kind: str = "Neutral",
@@ -224,6 +229,41 @@ class Pretty:
         longer hand-wires spine/same_rank — declaring the rows is enough.
         """
         self.grid_rows = [list(r) for r in rows if r]
+
+    def grid_cluster(self, cluster_id: str, cols: int = 3) -> None:
+        """Pack a cluster's child nodes into a compact ``cols``-wide grid.
+
+        By default the nodes inside a section stack into a single tall column
+        (sparse, lots of whitespace). Declaring ``g.grid_cluster("ai_engine",
+        cols=3)`` lays its boxes out as a dense COLS×rows grid — the bounded
+        "plane of logos" look. Pure layout: it does not add visible edges.
+        Call after the cluster + its boxes are declared.
+        """
+        if cols >= 1:
+            self.cluster_grids[cluster_id] = int(cols)
+
+    def _grid_block(self, cid: str, indent: str) -> list[str]:
+        """same_rank rows + invisible column spine that pack a cluster's direct
+        child nodes into a ``cols``-wide grid. Returns DOT lines (no braces)."""
+        cols = self.cluster_grids.get(cid)
+        if not cols:
+            return []
+        members = [n.id for n in self.nodes.values() if n.parent == cid]
+        if len(members) <= 1:
+            return []
+        rows = [members[i:i + cols] for i in range(0, len(members), cols)]
+        lines: list[str] = []
+        # Each row shares a rank -> horizontal band of up to `cols` boxes.
+        for row in rows:
+            if len(row) > 1:
+                joined = " ".join(f'"{m}"' for m in row)
+                lines.append(f'{indent}{{rank=same; {joined}}}')
+        # Invisible column spine keeps the rows vertically aligned into columns.
+        for col in range(cols):
+            colnodes = [row[col] for row in rows if col < len(row)]
+            for a, b in zip(colnodes[:-1], colnodes[1:]):
+                lines.append(f'{indent}"{a}" -> "{b}" [style="invis"];')
+        return lines
 
     def _top_section(self, node_id: str) -> str | None:
         """Top-level ancestor cluster id of a node (walks the parent chain)."""
@@ -383,6 +423,8 @@ class Pretty:
         for n in self.nodes.values():
             if n.parent == cid:
                 lines.append(f'{"  " * depth}{self._node_dot(n)}')
+        # pack direct child nodes into a compact grid if requested
+        lines += self._grid_block(cid, "  " * depth)
         lines.append(f'{"  " * depth}}}')
         return lines
 
@@ -402,6 +444,10 @@ class Pretty:
         # stacking so the two bands read wide (target aspect ~1.5) instead of tall.
         if self.grid_rows:
             nodesep, ranksep = "0.3", "1.5"
+        # Dense in-region grids: pack boxes tightly so each plane reads as a solid
+        # logo grid (Gemini poster look) instead of airy stacks.
+        if self.cluster_grids:
+            nodesep, ranksep = "0.18", "0.45"
         edge_color = PRO_EDGE if pro else EDGE_COLOR
         node_pen = "1.5" if pro else "1.4"
         arrowhead = ' arrowhead="vee"' if pro else ""
@@ -435,13 +481,27 @@ class Pretty:
             out.append(f"  {{rank=same; {ids}}}")
         # poster grid: invisible per-row spine + per-column same_rank + cross-row binder
         if self.grid_rows:
+            # Sections that pack their own grid must NOT be flattened to one rank
+            # (that would collapse the COLS×rows grid back into a single row).
+            gridded = set()
+            for gcid in self.cluster_grids:
+                top = gcid
+                seen: set[str] = set()
+                while top is not None and top not in seen:
+                    seen.add(top)
+                    c = self.clusters.get(top)
+                    if c is None or c.parent is None:
+                        break
+                    top = c.parent
+                gridded.add(top)
             # 1) Each section is ONE rank: same_rank every node in the anchor's
             #    section so the whole section stacks into a single vertical column
             #    (edge-less nodes otherwise collapse onto rank 0 → an L-shape).
+            #    Skip sections that pack their own grid — _grid_block ranks them.
             for row in self.grid_rows:
                 for anchor in row:
                     sec = self._top_section(anchor)
-                    if sec is None:
+                    if sec is None or sec in gridded:
                         continue
                     members = [nid for nid in self.nodes
                                if self._top_section(nid) == sec]
@@ -493,7 +553,7 @@ class Pretty:
             if e.lhead:
                 attrs.append(f'lhead="{e.lhead}"')
             relax = e.constraint is False
-            if (e.constraint is None and self.grid_rows):
+            if (e.constraint is None and (self.grid_rows or self.cluster_grids)):
                 ta, tb = self._top_section(e.a), self._top_section(e.b)
                 if ta is not None and tb is not None and ta != tb:
                     relax = True  # in a grid, real cross-section flow only decorates
@@ -964,7 +1024,36 @@ def _compose_slide_png(body_png: str, out_png: str, *, title: str,
                        include_hero: bool = True) -> dict:
     from PIL import Image, ImageDraw
 
-    canvas = Image.new("RGB", (SLIDE_SIZE, SLIDE_SIZE), "white")
+    panel_x = SLIDE_MARGIN
+    panel_y = SLIDE_HERO_H + 34 if include_hero else SLIDE_MARGIN
+    panel_w = SLIDE_SIZE - SLIDE_MARGIN * 2
+
+    legend_items = _normal_legend(legend)
+    legend_h = 118 if legend_items else 0
+    caption_area = 74  # space at panel top for the caption
+    max_w = panel_w - SLIDE_PANEL_PAD * 2
+
+    # Dynamic canvas height: scale the body to FILL the panel width, then grow the
+    # canvas to fit it. This removes the large vertical whitespace a wide-short or
+    # tall-narrow body left inside a fixed square panel. Height is clamped so the
+    # slide never becomes an absurd portrait/landscape strip.
+    body = Image.open(body_png).convert("RGBA")
+    scale = max_w / body.width
+    max_body_h = round(2.05 * SLIDE_SIZE)          # cap extreme portraits
+    if body.height * scale > max_body_h:
+        scale = max_body_h / body.height
+    if abs(scale - 1.0) > 0.01:
+        body = body.resize(
+            (max(1, round(body.width * scale)), max(1, round(body.height * scale))),
+            Image.LANCZOS,
+        )
+    # Panel hugs the body (no forced min height) so there is no dead band between
+    # the caption and the diagram.
+    body_render_h = body.height
+    panel_h = caption_area + body_render_h + SLIDE_PANEL_PAD + legend_h
+    slide_h = panel_y + panel_h + SLIDE_MARGIN
+
+    canvas = Image.new("RGB", (SLIDE_SIZE, slide_h), "white")
     if include_hero:
         canvas.paste(_gradient((SLIDE_SIZE, SLIDE_HERO_H)), (0, 0))
     draw = ImageDraw.Draw(canvas)
@@ -979,10 +1068,6 @@ def _compose_slide_png(body_png: str, out_png: str, *, title: str,
         _draw_centered_text(draw, (SLIDE_SIZE // 2, 390), title, _font(78, bold=True),
                             "white", 1850, line_gap=12)
 
-    panel_x = SLIDE_MARGIN
-    panel_y = SLIDE_HERO_H + 34 if include_hero else SLIDE_MARGIN
-    panel_w = SLIDE_SIZE - SLIDE_MARGIN * 2
-    panel_h = SLIDE_SIZE - panel_y - SLIDE_MARGIN
     draw.rounded_rectangle((panel_x, panel_y, panel_x + panel_w, panel_y + panel_h),
                            radius=4, fill="white", outline="#D7DEE8", width=2)
 
@@ -992,19 +1077,8 @@ def _compose_slide_png(body_png: str, out_png: str, *, title: str,
     draw.text((SLIDE_SIZE // 2 - (cap_box[2] - cap_box[0]) / 2, panel_y + 22),
               caption, font=cap_font, fill="#0F172A")
 
-    legend_items = _normal_legend(legend)
-    legend_h = 118 if legend_items else 0
-    body = Image.open(body_png).convert("RGBA")
-    max_w = panel_w - SLIDE_PANEL_PAD * 2
-    max_h = panel_h - 82 - legend_h - SLIDE_PANEL_PAD
-    scale = min(max_w / body.width, max_h / body.height)
-    if abs(scale - 1.0) > 0.01:
-        body = body.resize(
-            (round(body.width * scale), round(body.height * scale)), Image.LANCZOS
-        )
-    area_top = panel_y + 74
     body_x = panel_x + (panel_w - body.width) // 2
-    body_y = area_top + max(0, (max_h - body.height) // 2)
+    body_y = panel_y + caption_area + max(0, (body_render_h - body.height) // 2)
     canvas.paste(body, (body_x, body_y), body)
 
     if legend_items:
@@ -1026,12 +1100,14 @@ def _compose_slide_png(body_png: str, out_png: str, *, title: str,
             yy += 24
 
     canvas.save(out_png, quality=95)
-    panel_fill_pct = (body.width * body.height) / (max_w * max_h)
+    avail_h = body_render_h
+    panel_fill_pct = (body.width * body.height) / (max_w * max(avail_h, 1))
     return {
         "panel": [panel_x, panel_y, panel_w, panel_h],
         "body": [body_x, body_y, body.width, body.height],
+        "slide_h": slide_h,
         "fill_w": round(body.width / max_w, 4),
-        "fill_h": round(body.height / max_h, 4),
+        "fill_h": round(body.height / max(avail_h, 1), 4),
         "panel_fill_pct": round(panel_fill_pct, 4),
         "legend_count": len(legend_items),
     }
@@ -1092,14 +1168,15 @@ def _transform_drawio_body(xml: str, *, x: float, y: float, scale: float,
 def _compose_slide_drawio(body_xml: str, out_path: str, *, title: str,
                           kicker: str | None, brand: str | None,
                           diagram_title: str | None, legend, body_box: list[int],
-                          panel: list[int], include_hero: bool = True) -> str:
+                          panel: list[int], include_hero: bool = True,
+                          slide_h: int = SLIDE_SIZE) -> str:
     body_w, body_h = _page_dims(body_xml)
     bx, by, bw, bh = body_box
     scale = min(bw / body_w, bh / body_h) if body_w and body_h else 1.0
     body_inner = _transform_drawio_body(body_xml, x=bx, y=by, scale=scale)
 
     cells: list[str] = [
-        _drawio_rect_cell("slide_bg", 0, 0, SLIDE_SIZE, SLIDE_SIZE, fill="#FFFFFF"),
+        _drawio_rect_cell("slide_bg", 0, 0, SLIDE_SIZE, slide_h, fill="#FFFFFF"),
         _drawio_rect_cell("slide_panel", panel[0], panel[1], panel[2], panel[3],
                           fill="#FFFFFF", stroke="#D7DEE8", rounded=1, shadow=1),
     ]
@@ -1149,7 +1226,7 @@ def _compose_slide_drawio(body_xml: str, out_path: str, *, title: str,
         '<mxfile host="app.diagrams.net"><diagram name="architecture" id="d1">'
         '<mxGraphModel dx="1400" dy="900" grid="0" guides="1" tooltips="1" '
         'connect="1" arrows="1" fold="1" page="1" pageScale="1" '
-        f'pageWidth="{SLIDE_SIZE}" pageHeight="{SLIDE_SIZE}" math="0" shadow="0">'
+        f'pageWidth="{SLIDE_SIZE}" pageHeight="{slide_h}" math="0" shadow="0">'
         '<root><mxCell id="0"/><mxCell id="1" parent="0"/>'
         + "".join(cells) + body_inner + "</root></mxGraphModel></diagram></mxfile>"
     )
@@ -1180,11 +1257,10 @@ def render_slide(g: Pretty, out_basename: str, *, title: str,
     from PIL import Image as _Img
     _bw, _bh = _Img.open(body_png).size
     _panel_w = SLIDE_SIZE - SLIDE_MARGIN * 2
-    _panel_y_tmp = SLIDE_HERO_H + 34 if include_hero else SLIDE_MARGIN
-    _panel_h_tmp = SLIDE_SIZE - _panel_y_tmp - SLIDE_MARGIN
     _max_w_tmp = _panel_w - SLIDE_PANEL_PAD * 2
-    _max_h_tmp = _panel_h_tmp - 82 - SLIDE_PANEL_PAD
-    _needed = min(_max_w_tmp / max(_bw, 1), _max_h_tmp / max(_bh, 1))
+    # Body now fills the panel WIDTH (height is dynamic); size the crispness
+    # re-render off the width-fill factor.
+    _needed = _max_w_tmp / max(_bw, 1)
     if _needed > 1.15:
         _base_dpi = g.dpi or (192 if g.theme == "pro" else 168)
         body_png = g.render(out_basename, dpi_override=round(_base_dpi * _needed))
@@ -1201,6 +1277,7 @@ def render_slide(g: Pretty, out_basename: str, *, title: str,
         body_xml, drawio_path, title=title, kicker=kicker, brand=brand,
         diagram_title=diagram_title or g.title, legend=legend,
         body_box=layout["body"], panel=layout["panel"], include_hero=include_hero,
+        slide_h=layout.get("slide_h", SLIDE_SIZE),
     )
     Path(marker_path).write_text(json.dumps({
         "type": "slide",

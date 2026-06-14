@@ -49,6 +49,8 @@ g.link("alb", "svc", label="API Call")
 g.link("svc", "db", label="SQL + vector")
 
 g.same_rank(["svc", "db"])         # optional: force a clean row
+g.grid_cluster("ecs", cols=3)      # poster planes: pack a cluster's boxes into a
+                                   # dense COLS-wide logo grid (see Poster mode)
 g.render("<workdir>/out")          # -> out.png  (LOOK at this)
 ```
 `Pretty.render("<workdir>/out")` writes `out.png`, `out.dot`, `out.nodes.json`.
@@ -110,35 +112,41 @@ with 25-40 nodes that must show every component without aggregation.
 **Sizing:** call `plan_style_sizes(node_count=<n>, output="poster")` — it returns
 compact `pretty_kwargs` (cards capped at 260px wide, icon ~33-36px).
 
-**2-row grid layout** — split 6-9 numbered sections into two horizontal bands:
-- Row 1 (top): client-facing tiers — Client → Orchestration/API → Inference → Storage
-- Row 2 (bottom): platform tiers — Ingestion → Parsing → VDB → Observability/Auth
-
-Use **LR direction** with column-pinning across both rows:
+**Dense region 'planes' packed as logo grids** (the reference-poster look). Group
+the nodes into 4-8 numbered region planes (Client, Network & Security, AI/Compute
+Engine, Data & Storage, Observability & DevOps, Enterprise Systems…). Pick
+direction by plane count: **5+ planes → `direction="LR"`** (planes stack into a
+tall PORTRAIT poster — closest to the dense reference); **≤4 planes →
+`direction="TB"`** (planes sit side by side across the width). Pack each plane
+into a compact multi-column grid with `g.grid_cluster(region_id, cols=N)`:
 
 ```python
-# Row 1 spine — pins 4 columns
-for a, b in [("r1c1_anchor", "r1c2_anchor"), ("r1c2_anchor", "r1c3_anchor"), ("r1c3_anchor", "r1c4_anchor")]:
-    g.link(a, b, style="invis")
-# Row 2 spine — same column count
-for a, b in [("r2c1_anchor", "r2c2_anchor"), ("r2c2_anchor", "r2c3_anchor"), ("r2c3_anchor", "r2c4_anchor")]:
-    g.link(a, b, style="invis")
-# Vertical anchor — connects the two rows at col 1
-g.link("r1c1_anchor", "r2c1_anchor", style="invis")
+g = Pretty(title=..., subtitle=..., direction="LR", theme="pro", **sizes)  # 5+ planes
+
+# one plane = one numbered cluster; add its boxes (real logo + tech sublabel)
+g.cluster("ai", "② AI & Compute Engine", number=2, accent="green")
+for nid, label, tech, icon in AI_NODES:
+    g.box(nid, label, kind="compute", sublabel=tech, icon=icon, parent="ai")
+g.grid_cluster("ai", cols=3)        # pack this plane into a 3-wide logo grid
+
+# ... declare the other planes the same way, each with its own grid_cluster ...
+
+# only a few cross-plane edges for the primary flow — they auto-relax so the
+# grids drive the layout (do NOT call g.poster_grid; it fights the in-plane grids)
+g.link("net0", "ai0", label="route")
+g.link("ai0", "db0", label="query")
 ```
 
-Where `r1c1_anchor` etc. are real node ids inside the anchor sections of each band.
+`cols=2` for ≤24 nodes, `cols=3` for denser posters (or per the `grid_cols` value
+from `plan_style_sizes`). The panel auto-fits the body — fill the WIDTH with planes.
 
-**Sub-groups encouraged:** nest clusters inside sections for natural groupings
+**Sub-groups encouraged:** nest clusters inside a plane for natural groupings
 (model families, storage tiers, KB sources, parser types):
 ```python
 g.cluster("inference", "⑤ Inference Layer", number=5, accent="violet")
 g.cluster("llm_models", "LLM Models", kind="Compute", parent="inference")
 g.cluster("embed_models", "Embedding Models", kind="Compute", parent="inference")
 ```
-
-**Aspect target:** 1.2–2.2. If layout audit says TOO_WIDE, reduce sections per row
-or switch the second band to a stacked sub-column.
 
 **Icon aliases for AI stack** (common NOT_FOUND entries — use these keywords):
 | Service | `search_icons` keyword | provider |

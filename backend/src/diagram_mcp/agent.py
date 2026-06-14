@@ -377,7 +377,7 @@ CONTEXT_TRIGGER_TOKENS = 30_000   # main context is lean (no images/icons), can 
 # the icon-search budget — hitting these caps means something is wrong, so we
 # stop spending. Override via env for experiments.
 _RUN_CALL_LIMIT = int(os.getenv("RUN_CALL_LIMIT", "120"))         # main + drawer
-_CRITIC_CALL_LIMIT = int(os.getenv("CRITIC_CALL_LIMIT", "20"))    # inspect+critique only
+_CRITIC_CALL_LIMIT = int(os.getenv("CRITIC_CALL_LIMIT", "40"))    # inspect+critique only
 
 
 def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",

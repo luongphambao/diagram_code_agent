@@ -183,7 +183,9 @@ export type InterruptType =
   | "blueprint_approval"
   | "result_review"
   | "pdf_report_approval"
-  | "email_approval";
+  | "email_approval"
+  | "slot_picker"
+  | "meeting_approval";
 
 export interface PendingInterrupt {
   toolCallId: string;
@@ -211,6 +213,25 @@ export interface PendingInterrupt {
     subject?: string;
     project_name?: string;
     recipient_name?: string;
+    // slot_picker
+    slots?: Array<{
+      start: string;
+      end: string;
+      display_day: string;
+      display_time: string;
+    }>;
+    context?: string;
+    // meeting_approval
+    start_datetime?: string;
+    end_datetime?: string;
+    display_start?: string;
+    display_end?: string;
+    duration_minutes?: number;
+    attendee_email?: string;
+    attendee_name?: string;
+    description?: string;
+    add_google_meet?: boolean;
+    timezone?: string;
   };
 }
 
@@ -517,6 +538,20 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
     [_resolveWithPayload]
   );
 
+  const resolveMeeting = useCallback(
+    async (approved: boolean) => {
+      await _resolveWithPayload({ approved });
+    },
+    [_resolveWithPayload]
+  );
+
+  const resolveMeetingSlot = useCallback(
+    async (approved: boolean, selectedSlot?: { start: string; end: string; display_day: string; display_time: string }) => {
+      await _resolveWithPayload({ approved, selected_slot: selectedSlot });
+    },
+    [_resolveWithPayload]
+  );
+
   const uploadFile = useCallback(async (file: File) => {
     setIsUploading(true);
     setError(null);
@@ -580,6 +615,8 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
     resolveResultReview,
     resolvePdfReport,
     resolveEmail,
+    resolveMeeting,
+    resolveMeetingSlot,
     uploadFile,
     clearFiles,
     restore,

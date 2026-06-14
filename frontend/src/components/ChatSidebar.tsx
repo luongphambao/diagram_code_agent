@@ -5,6 +5,8 @@ import BlueprintApproval from "./BlueprintApproval";
 import DiagramFeedback from "./DiagramFeedback";
 import PdfReportApproval from "./PdfReportApproval";
 import EmailApproval from "./EmailApproval";
+import MeetingApproval from "./MeetingApproval";
+import MeetingSlotPicker from "./MeetingSlotPicker";
 import FileUpload from "./FileUpload";
 
 interface ChatSidebarProps {
@@ -22,6 +24,8 @@ interface ChatSidebarProps {
   onResolveResult: (satisfied: boolean, feedback?: string) => void;
   onResolvePdfReport: (approved: boolean, modifications?: string) => void;
   onResolveEmail: (approved: boolean) => void;
+  onResolveMeeting: (approved: boolean) => void;
+  onResolveMeetingSlot: (approved: boolean, selectedSlot?: { start: string; end: string; display_day: string; display_time: string }) => void;
   iteration?: number;
   // File upload
   uploadedFiles: UploadedFile[];
@@ -44,6 +48,8 @@ export default function ChatSidebar({
   onResolveResult,
   onResolvePdfReport,
   onResolveEmail,
+  onResolveMeeting,
+  onResolveMeetingSlot,
   iteration,
   uploadedFiles,
   isUploading,
@@ -198,6 +204,24 @@ export default function ChatSidebar({
             <EmailApproval
               interrupt={pendingInterrupt}
               onResolve={onResolveEmail}
+              disabled={isRunning}
+            />
+          </div>
+        )}
+        {pendingInterrupt?.data.type === "slot_picker" && (
+          <div className="mt-1">
+            <MeetingSlotPicker
+              interrupt={pendingInterrupt}
+              onResolve={onResolveMeetingSlot}
+              disabled={isRunning}
+            />
+          </div>
+        )}
+        {pendingInterrupt?.data.type === "meeting_approval" && (
+          <div className="mt-1">
+            <MeetingApproval
+              interrupt={pendingInterrupt}
+              onResolve={onResolveMeeting}
               disabled={isRunning}
             />
           </div>
