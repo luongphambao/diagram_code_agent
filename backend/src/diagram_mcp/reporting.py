@@ -668,7 +668,7 @@ REPORT_TEMPLATE = r"""
     <h3>Primary Flow</h3>
     <table>
       <thead><tr><th>From</th><th>To</th><th>Label</th><th>Protocol</th></tr></thead>
-      <tbody>{% for edge in report.blueprint.edges[:12] or [] %}<tr><td>{{ edge.get("from") or edge.get("from_") or "—" }}</td><td>{{ edge.get("to") or "—" }}</td><td>{{ edge.get("label") or "—" }}</td><td>{{ edge.get("protocol") or "—" }}</td></tr>{% else %}<tr><td colspan="4" class="muted">No blueprint edges were captured.</td></tr>{% endfor %}</tbody>
+      <tbody>{% for edge in (report.blueprint.edges or [])[:12] %}<tr><td>{{ edge.get("from") or edge.get("from_") or "—" }}</td><td>{{ edge.get("to") or "—" }}</td><td>{{ edge.get("label") or "—" }}</td><td>{{ edge.get("protocol") or "—" }}</td></tr>{% else %}<tr><td colspan="4" class="muted">No blueprint edges were captured.</td></tr>{% endfor %}</tbody>
     </table>
     <h3>Layout and Presentation Constraints</h3>
     <ul>{% for item in report.brief.layout_constraints or [] %}<li>{{ item }}</li>{% else %}<li class="muted">No explicit layout constraints were captured.</li>{% endfor %}</ul>

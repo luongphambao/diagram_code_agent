@@ -161,6 +161,7 @@ class InjectVisionAsUserEdit:
                 mime = block.get("mime_type", "image/png")
                 relay_content.append({
                     "type": "image_url",
+                    "text": "",  # mimo requires text on every content block
                     "image_url": {"url": f"data:{mime};base64,{b64}"},
                 })
             messages.insert(i + 1, HumanMessage(content=relay_content))

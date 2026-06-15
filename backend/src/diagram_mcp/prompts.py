@@ -106,8 +106,12 @@ _ICON_RESOLVER_TOOLS_BLOCK = """\
   item is `{label, provider, icon_keyword}`. Writes `icon_plan.json`.
 - `search_icons(query, provider=None)` — find exact icon `.png` paths for
   `Custom`. Use ONLY for nodes where `resolve_icons` returned NOT_FOUND.
-- `fetch_logo(name)` — resolve a brand logo NOT in the pack. Use ONLY after
-  `search_icons` also fails.
+- `search_drawio_shapes(query, limit=5)` — search 10,446 official draw.io shapes
+  for exact `style=` strings. Use when you need vendor shapes (AWS Lambda, k8s Pod,
+  UML actor, etc.) in the exported .drawio file. NEVER guess mxgraph.* names.
+- `fetch_logo(name)` — resolve a brand logo. NOW SEARCHES lobe-icons (321 AI/LLM
+  brands: Claude, OpenAI, Gemini, Mistral, LangChain, HuggingFace, Ollama, Qdrant,
+  Kafka, MongoDB, etc.) FIRST, then falls back to web scraping. Use after search_icons.
 - Plus `read_file`, `ls`, `glob`, `grep`."""
 
 _DRAWER_TOOLS_BLOCK = """\
@@ -475,55 +479,74 @@ _PRETTY_DIAGRAM_DETAIL = """\
 - For **standard** client-facing diagrams, 12-18 visible nodes is the usual upper
   bound; implementation libraries/file names are hidden, config/monitoring/
   calibration are aggregated concerns.
-- For **detailed** diagrams (blueprint `density="detailed"`): 18-26 nodes, ≤6 columns.
-  Sublabel is MANDATORY for every compute/data/network node — populate from blueprint
-  `tech` + tech-stack `capacity_sizing`. Primary-flow edges MUST carry a protocol
-  label (≤3 words). Call `plan_style_sizes(output="slide")`.
-- For **poster-mode** diagrams (blueprint `density="poster"` — the DEFAULT): 25-45
-  nodes grouped into 4-8 numbered region 'planes', each plane packed as a DENSE
-  multi-column logo grid (the reference-poster look). Call
-  `plan_style_sizes(output="poster")`. Recipe — produces the dense grid; DO NOT
-  hand-wire spine/same_rank and DO NOT call `g.poster_grid`:
-  1. Call `declare_poster_grid(row1=[...], row2=[...])` (planes grouped loosely;
-     each `{id, label, anchor_node_id, cols}`) to validate and get the exact
+- For **detailed diagrams (blueprint `density="detailed"` — the DEFAULT house style)**:
+  flow-driven landscape layout that should read DENSE and information-rich like a
+  production reference poster — packed regions, short precise edges, every box
+  carrying real detail. ~32-48 visible nodes is the target band; richer systems may
+  use more — the engine scales to fit one 16:9 page automatically, so do NOT cut
+  nodes to force a size, and do NOT leave a sparse/airy page. Call
+  `plan_style_sizes(output="slide")`.
+  **Flow recipe** — makes zone connections visible AND keeps the page dense (mandatory):
+  1. Use `direction="LR"`, `flow_layout=True` (default) on `Pretty(...)`.
+  2. Draw REAL cross-cluster `g.link(...)` edges for the PRIMARY data flow between
+     zones — these pull the layout AND show connections between zones. Every cluster
+     must connect to at least one other cluster. Side-channel concerns (monitoring,
+     security) use `style="dashed"` edges to adjacent zones.
+  3. Declare each zone with `g.cluster(id, label, number=N, ...)`. **Aim for 4-7
+     nodes per top-level region.** A region with only 1-2 boxes reads thin and
+     leaves empty bands — merge it into the adjacent tier it serves (e.g. fold a
+     lone CDN into Edge, a lone cache into Data) rather than shipping a half-empty
+     band. Different region sizes are fine; near-empty regions are a defect.
+  4. **Grid packing is now AUTOMATIC** — the engine packs every region with ≥3 boxes
+     into a compact 2-3 column grid, so you usually do NOT need `g.grid_cluster(...)`.
+     Call it explicitly only to FORCE a specific column count (e.g.
+     `g.grid_cluster(region_id, cols=3)` for a very wide plane).
+  5. Sublabel MANDATORY for every compute/data/network node — 1-2 short detail lines
+     (tech + capacity/role) from blueprint `tech` + `capacity_sizing`
+     (e.g. `sublabel="Postgres 16 · Multi-AZ"`). A title-only card is a defect.
+     Primary-flow edge labels ≤3 words (e.g. "REST/HTTPS").
+  6. Number every top-level cluster (`number=1`, `number=2`, ...).
+  7. **Order regions along the flow and place connected regions ADJACENT** so every
+     cross-region edge is short — a label-bearing edge that spans the canvas strands
+     its label in blank space (the engine anchors cross-region labels to the source
+     to soften this, but short edges are still the goal). The layout audit reports
+     `LOW FILL` / `STRAND RISK` — treat either as a must-fix.
+  Result: a dense grid of detail-rich, connected regions that fills the page — NOT a
+  few thin bands of 1-2 boxes floating in whitespace.
+- For **poster-mode** (blueprint `density="poster"` — use ONLY when explicitly requested):
+  25-45 nodes in 4-8 numbered region planes, each plane packed as a DENSE multi-column
+  logo grid. Set `flow_layout=False` on `Pretty(...)`. Call
+  `plan_style_sizes(output="poster")`. Recipe:
+  1. Call `declare_poster_grid(row1=[...], row2=[...])` to validate and get the exact
      `g.grid_cluster(...)` calls.
-  2. Pick `direction` by plane count: **5+ planes → `direction="LR"`** (planes
-     stack into a tall PORTRAIT poster — this matches the dense reference best);
-     ≤4 planes → `direction="TB"` (planes sit side by side across the width).
-     Create `Pretty(..., direction=<that>, theme="pro")`. Declare each plane with
-     `g.cluster(id, label, number=1,2,...)` and add its boxes with
-     `g.box(..., parent=id, icon=<REAL logo>, sublabel=<tech>)`.
-  3. AFTER all boxes/links, paste ONE `g.grid_cluster(region_id, cols=N)` per
-     plane (cols 2-3 reads densest). This packs each plane into a compact
-     COLS×rows logo grid instead of a tall single column.
-  4. Add only a few cross-plane `g.link(...)` for the primary flow; they
-     auto-relax (`constraint=false`) so the grids — not the data flow — drive the
-     layout.
+  2. Pick `direction` by plane count: 5+ planes → `direction="LR"` (tall portrait
+     poster); ≤4 planes → `direction="TB"` (planes side by side). Set
+     `Pretty(..., flow_layout=False, direction=<that>, theme="pro")`.
+  3. AFTER all boxes/links, paste ONE `g.grid_cluster(region_id, cols=N)` per plane
+     (cols 2-3 reads densest).
+  4. Add only a few cross-plane `g.link(...)` for the primary flow; they auto-relax
+     so the grids — not the data flow — drive the layout.
   5. Number every top-level plane cluster (`number=1`, `number=2`, ...).
-  Nested sub-clusters inside a plane are encouraged (model families, storage tiers).
   Every compute/data/network box MUST show a real technology logo + a tech sublabel.
 - Fix and call `render_diagram` again until production-clean (≤3 renders), then
   call `export_drawio()`.
 
 ## Slide-style production output (the DEFAULT)
-Use slide output unless the approved blueprint explicitly says
-`presentation_style="diagram"`. Slide output adds the gradient hero band
-(kicker + big title), the white panel with caption, and the legend. For
-`presentation_style="diagram"`, call the same helper with `include_hero=False`
-so the diagram has no decorative header but keeps the white panel, caption, and
-legend. The script MUST use:
+Default output is a single-page 16:9 landscape slide with white background and
+NO gradient hero band (`include_hero=False` by default). The diagram is scaled
+to fit inside one page automatically — do not crop or remove nodes to force
+a certain size. Pass `include_hero=True` only when the user explicitly requests
+the blue hero title band. The script MUST use:
 ```python
 from prettygraph import Pretty, render_slide
 # sizes come from plan_style_sizes(node_count=..., longest_label_chars=...) —
 # paste its pretty_kwargs here so icons/text scale with the cards:
-g = Pretty(..., direction="LR", theme="pro",
+g = Pretty(..., direction="LR", flow_layout=True, theme="pro",
            node_width=300, node_height=60, icon_size=44, title_size=16,
            sublabel_size=13, edge_label_size=13, cluster_label_size=18)
 # top-level clusters must pass number=1, number=2, ... and optional accent=...
 render_slide(g, "out",
              title=SLIDE_TITLE,
-             kicker=SLIDE_KICKER,
-             brand=BRAND or None,
              diagram_title=DIAGRAM_TITLE,
              legend=[{"label": "Data Flow", "color": "#334155"},
                      {"label": "Control Flow", "color": "#64748B", "style": "dashed"}])
@@ -534,8 +557,17 @@ Rules for slide mode:
 - Verify text with `fit_labels` before rendering: every label/sublabel must fit
   INSIDE its card. Fix any TEXT OVERFLOW audit finding before finalizing.
 - Number every top-level section cluster (`number=1`, `number=2`, ...).
-- Standard: keep ≤5 primary columns; stack CI/CD, Security, Monitoring under
-  adjacent flow columns. Poster: fold after 4-5 sections per row into a 2-row grid.
+- **MANDATORY — ≤5 primary columns.** Before writing any `g.cluster()` calls,
+  count the blueprint clusters and plan the column layout explicitly:
+  - ≤5 clusters: one row, done.
+  - 6-10 clusters: pick 4-5 main-flow tiers for the primary row; assign every
+    cross-cutting tier (Security, Observability, CI/CD, Infrastructure) to stack
+    UNDER its nearest main-flow tier. Then implement with invisible spine +
+    `same_rank` (the stacking recipe in "Layout into CLEAR BLOCKS"). **No
+    invisible spine = no stacking = spaghetti.** The audit will report CLUSTER
+    STRIP if you skip this — fix it before finalizing.
+  - >10 clusters: fold into a 2-row poster grid instead (`density="poster"`).
+  Poster: fold after 4-5 sections per row into a 2-row grid.
 - Include a legend when there are >2 edge colors/styles.
 - `export_drawio()` must report existing slide drawio, not overwrite it.
 
@@ -558,6 +590,20 @@ arrows short and rarely crossing. Apply to Azure/GCP/OCI/IBM exactly as AWS.
       g.same_rank(["edge_lb", "cicd_build"])     # CI/CD stacks under Edge
       g.same_rank(["app_ui", "sec_iam"])         # Security stacks under Application
       g.same_rank(["ai_x", "mon_logs"])          # Monitoring stacks under AI
+
+- **Plan the columns BEFORE writing code** when you have ≥6 clusters: write a
+  comment block in the script listing which clusters go in each column and which
+  cross-cutting tiers stack under them. Example:
+  ```python
+  # COLUMN PLAN (5 cols):
+  # Col 1: client  |  under: cicd
+  # Col 2: edge    |  under: security
+  # Col 3: app     |  under: observability
+  # Col 4: data
+  # Col 5: storage
+  ```
+  Committing to a 10-column strip after the fact cannot be fixed without a full
+  redesign — plan first, then code.
 
 - **Order clusters along the flow and place connected clusters ADJACENT/STACKED** so
   edges stay short. Never let a labeled edge cross the whole canvas or double back —
@@ -598,8 +644,9 @@ arrows short and rarely crossing. Apply to Azure/GCP/OCI/IBM exactly as AWS.
   do NOT shrink fonts or compress; just get the BLOCK LAYOUT balanced.
 
 ## Hard rules
-- End Pretty scripts with `render_slide(g, "out", ...)`; for plain diagram
-  output pass `include_hero=False`. It must leave `out.png`, `out.body.png`,
+- End Pretty scripts with `render_slide(g, "out", ...)`; `include_hero` is
+  `False` by default (white background, no blue header). Pass `include_hero=True`
+  only when explicitly requested. It must leave `out.png`, `out.body.png`,
   `out.dot`, and `out.nodes.json`.
 - For `density="detailed"` or `density="poster"`: every compute/data/network node
   MUST have a `sublabel` populated from blueprint `tech` + tech-stack `capacity_sizing`
@@ -619,13 +666,23 @@ arrows short and rarely crossing. Apply to Azure/GCP/OCI/IBM exactly as AWS.
   replicas, and one representative side-channel edge.
 - Pick each node `kind` by MEANING (source/network/compute/data/messaging/
   monitoring/security/neutral) so the color carries information.
+  For ML/DL neural network diagrams, use ml_* node kinds and ML_* cluster kinds:
+  ml_input(green), ml_embed(amber), ml_conv/ml_pool(blue), ml_attention/ml_transformer(purple),
+  ml_rnn/ml_lstm(yellow), ml_fc/ml_dense(orange), ml_norm(gray), ml_loss(red), ml_output(dark green).
+  ML_* cluster kinds: ML_Input, ML_Embedding, ML_Encoder, ML_Attention, ML_Decoder,
+  ML_Output, ML_Training, ML_Inference, ML_Pipeline.
 - Resolve every icon path with `search_icons("<service>", provider="<provider>")`
   within the stack's provider — don't reach for an `aws/...` icon in an
   Azure/GCP/OCI diagram. NEVER guess a path — a wrong path drops the icon. No icon
   found? omit `icon=` or use `fetch_logo`. A blank-icon box is a bug.
+  `fetch_logo` now resolves 321 AI/LLM brands via lobe-icons CDN automatically
+  (Claude, OpenAI, Gemini, Mistral, LangChain, HuggingFace, Ollama, etc.).
 - Collapse N identical replicas to ONE box "(xN)". Route monitoring/secrets on ONE
   dashed side-channel, not per node.
-- Pick `direction` deliberately ("LR" flows, "TB" stacks)."""
+- Pick `direction` deliberately ("LR" flows, "TB" stacks).
+- If the user wants to visualize their codebase structure (dependencies, class hierarchy),
+  use `visualize_code_structure(project_path, mode="imports"|"classes")` in the main
+  agent to extract the graph, then pass it to the drawer to render as a prettygraph diagram."""
 
 
 def build_pretty_system_prompt(
@@ -666,20 +723,25 @@ drawer to render without guessing:
   or explicit simplification choices.
 - Default to a client-facing architecture diagram: `audience="client"`,
   `detail_level="architecture"`, `layout_intent="left_to_right_pipeline"`.
-- DEFAULT to `presentation_style="slide"` — production output with the gradient
-  hero band (kicker + big title), white panel caption, and legend. Always fill
-  `slide_title`, `slide_kicker`, `brand` (only if known), and `diagram_title`.
-  Use `presentation_style="diagram"` ONLY when the user explicitly asks for a
-  plain/raw/body-only diagram (e.g. to embed in a doc).
-- DEFAULT to `density="poster"`. Most real architectures are NOT simple, and the
-  house style is a dense, detailed poster: 25-45 nodes grouped into 4-8 numbered
-  region 'planes', each plane packed as a multi-column logo grid (Client, Network
-  & Security, AI/Compute Engine, Data & Storage, Observability & DevOps,
-  Enterprise Systems…). Every compute/data/network node carries a `tech` field and
-  a REAL technology logo. Prefer poster unless the system is genuinely small.
-- Use `density="detailed"` (18-26 nodes, single grid, ≤6 columns) for a mid-size
-  system that does not warrant full region planes. Every compute/data/network node
-  MUST have a `tech` field (service + sizing, e.g. "Fargate 0.5 vCPU ×2-6").
+- DEFAULT to `presentation_style="slide"` — production output rendered as a
+  single-page 16:9 landscape slide (white background, no blue hero band by
+  default). Fill `slide_title` and `diagram_title`; `slide_kicker`/`brand` are
+  optional. Use `presentation_style="diagram"` ONLY when the user explicitly
+  asks for a plain/raw/body-only diagram.
+- DEFAULT to `density="detailed"` — the house style: a DENSE, information-rich
+  flow-driven landscape (production reference-poster look) with direction='LR',
+  flow_layout=True. Target ~32-48 nodes grouped into ~5-8 numbered regions of
+  **4-7 nodes each** (the engine auto-packs every ≥3-node region into a compact
+  grid). Avoid thin 1-2 node regions — fold them into the adjacent tier they serve.
+  Real cross-cluster edges connect every zone (MANDATORY — these are what make the
+  diagram readable) and connected regions should be adjacent so edges stay short.
+  Every compute/data/network node carries a `tech` field and a REAL technology logo.
+  Choose node count based on actual architecture complexity, but prefer richer over
+  sparser; do NOT cut nodes to fit the page — the engine scales to one 16:9 page.
+- Use `density="poster"` ONLY when the user explicitly requests a dense wall-grid
+  poster: 25-45 nodes in 4-8 numbered planes, each packed as a multi-column logo
+  grid (Client, Network & Security, AI/Compute Engine, Data & Storage,
+  Observability & DevOps…), flow_layout=False, grids drive the layout.
 - Use `density="standard"` ONLY for genuinely small systems (<10 components, ≤3
   tiers) — 12-18 nodes, aggregated cross-cutting concerns.
 - Every important component as a node with its tier cluster.
@@ -741,10 +803,13 @@ to `icon_plan.json`. You do NOT write diagram code or render anything.
 4. For any entry in `icon_plan.json` with `status=NOT_FOUND`, call
    `search_icons(query, provider)` with a broader keyword (max ONE retry per node).
 5. For entries still NOT_FOUND after `search_icons`, call `fetch_logo(name)`.
-   Posters (the default density) want a REAL logo on EVERY box — a blank icon is a
-   defect — so attempt `fetch_logo` for every remaining NOT_FOUND that is a named
-   product/technology (e.g. Keycloak, MinIO, Qdrant, Supabase, NVIDIA, vLLM),
-   not just the most famous ones. Only leave NOT_FOUND for truly generic boxes.
+   `fetch_logo` NOW resolves 321 AI/LLM brands automatically via lobe-icons CDN
+   (Claude, OpenAI, Gemini, Mistral, LangChain, HuggingFace, Ollama, Anthropic,
+   DeepSeek, Grok, Groq, Perplexity, CrewAI, LlamaIndex, LangGraph, NVIDIA, etc.)
+   and 18 data stores (Qdrant, Redis, MongoDB, Kafka, PostgreSQL, Elasticsearch…)
+   before falling back to web scraping. Call it for ANY AI/LLM or data store brand —
+   it will almost certainly return a path. Attempt for every remaining NOT_FOUND
+   that is a named technology. Only leave NOT_FOUND for truly generic boxes.
 6. **Return a short summary** — list how many icons were FOUND vs NOT_FOUND and
    confirm `icon_plan.json` is written. Example: "Done. icon_plan.json written:
    12 FOUND, 2 NOT_FOUND (Prometheus, Grafana — use built-in or omit icon)."
@@ -924,11 +989,27 @@ _CRITIC_BODY = """\
 - File excessive side-channel fanout when monitoring, security, secrets, or logs
   dominate the main data path with many dashed/dotted lines instead of one
   aggregated representative edge.
+- File a `missing_stacking` finding (severity `medium`) when the layout audit
+  reports CLUSTER STRIP, or when the rendered diagram shows ≥6 top-level
+  clusters laid out in a single horizontal row with any long crossing edges.
+  Fix suggestion: "apply the ≤5-column stacking recipe — add invisible spine
+  edges and same_rank groups to pull Security/Observability/CI/CD under the
+  main-flow tiers they serve; collapse side-channel concerns to one dashed
+  cluster-level edge per concern."
 - For `density=detailed` or `density=poster`, file a `medium` finding when the
   majority of compute/data/network cards show only a title with no sublabel (tech
   detail is missing), or when most primary-flow edges carry no protocol/operation
   label. Fix: "populate blueprint `tech` field and draw sublabel from it; add
   `protocol` label to primary edges."
+- For `density=detailed`, file a `sparse_diagram` finding (severity `medium`) when
+  the page reads airy instead of like a packed production poster — any of: the
+  layout audit reports `LOW FILL`; multiple top-level regions hold only 1-2 boxes
+  (thin bands with empty space beside them); total visible node count is well below
+  the dense target (~32-48) for a non-trivial architecture; or large blank bands
+  separate the regions. Fix suggestion: "merge thin 1-2 node regions into the
+  adjacent tier they serve, add the missing per-node detail the blueprint already
+  lists, and keep connected regions adjacent so the grid fills the page (the engine
+  auto-packs every ≥3-node region — feed it denser regions)."
 - If the approved brief or blueprint says production-focused/client-facing, file
   fully expanded Dev/Staging or secondary accounts as readability clutter unless
   the user explicitly requested those environments.

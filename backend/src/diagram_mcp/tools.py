@@ -15,9 +15,11 @@ All file artifacts live under WORKSPACE (the agent's default FilesystemBackend r
 from __future__ import annotations
 
 import base64
+import datetime as dt
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import typing as _t
@@ -29,7 +31,7 @@ from langchain_core.tools import InjectedToolCallId, tool
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .architecture_advisor import analyze_requirements
-from .backends import LOCAL_ICONS, LOCAL_MANIFEST, LOCAL_NODE_CATALOG, WORKSPACE
+from .backends import LOCAL_ICONS, LOCAL_MANIFEST, LOCAL_NODE_CATALOG, OUTPUTS_DIR, WORKSPACE
 from .findings import DiagramFinding, format_critique, prune, verdict_for
 from .reporting import (
     DEFAULT_REPORT_SECTIONS,
@@ -55,6 +57,66 @@ _NODE_SEARCH_BUDGET_FILE = WORKSPACE / "node_search_budget.json"
 _REVISION_COUNT_FILE = WORKSPACE / "revision_count.json"
 _TOOL_SUMMARY_FILE = WORKSPACE / "tool_budget_summary.json"
 _ICON_PLAN_FILE = WORKSPACE / "icon_plan.json"
+
+# Files copied into each session archive folder under OUTPUTS_DIR.
+_SESSION_ARTIFACTS = ("out.png", "out.body.png", "out.drawio", "diagram.py", "out.nodes.json", "out.dot")
+
+
+def _archive_session() -> Path | None:
+    """Copy final diagram artifacts into a timestamped session folder under OUTPUTS_DIR.
+
+    Called automatically by export_drawio() on success so every completed diagram
+    is preserved for reuse without overwriting the active workspace.
+
+    Returns the archive folder path, or None if nothing was saved.
+    """
+    png = WORKSPACE / "out.png"
+    drawio = WORKSPACE / "out.drawio"
+    if not png.exists() and not drawio.exists():
+        return None
+
+    # Derive a human-readable title from the blueprint or brief.
+    title = ""
+    for meta_file in (_BLUEPRINT_FILE, _BRIEF_FILE):
+        if meta_file.exists():
+            try:
+                data = json.loads(meta_file.read_text(encoding="utf-8"))
+                title = (
+                    data.get("diagram_title")
+                    or data.get("title")
+                    or data.get("topic")
+                    or ""
+                )
+                if title:
+                    break
+            except Exception:  # noqa: BLE001
+                pass
+
+    # Sanitize title for use in a folder name (max 60 chars).
+    safe_title = re.sub(r"[^\w\s-]", "", title).strip().replace(" ", "_")[:60]
+    timestamp = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+    folder_name = f"{timestamp}_{safe_title}" if safe_title else timestamp
+
+    dest = OUTPUTS_DIR / folder_name
+    dest.mkdir(parents=True, exist_ok=True)
+
+    copied: list[str] = []
+    for name in _SESSION_ARTIFACTS:
+        src = WORKSPACE / name
+        if src.exists():
+            shutil.copy2(str(src), str(dest / name))
+            copied.append(name)
+
+    # Write a lightweight index so the folder is self-describing.
+    meta = {
+        "saved_at": dt.datetime.now().isoformat(timespec="seconds"),
+        "title": title or folder_name,
+        "files": copied,
+    }
+    (dest / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
+    return dest
+
+
 # Per-round render budget: soft nudge at 3 (finalize with what you have), hard
 # refusal at 6 (the #1 cause of "run limit 80/80" was an endless fix->render
 # loop chasing audit warnings that cannot be fully resolved).
@@ -172,12 +234,15 @@ def _layout_audit() -> str:
         try:
             slide_data = json.loads(slide_json.read_text(encoding="utf-8"))
             fill_pct = slide_data.get("layout", {}).get("panel_fill_pct")
-            if fill_pct is not None and fill_pct < 0.65:
+            if fill_pct is not None and fill_pct < 0.55:
                 verdict += (
                     f"\n  PANEL FILL: {fill_pct:.0%} — body leaves large white margins "
-                    "inside the slide panel. Add more columns/nodes, raise the per-plane "
-                    "grid cols (g.grid_cluster(region, cols=3)), or use direction='TB' so "
-                    "planes sit side by side; the body should fill ≥65% of the panel area."
+                    "inside the slide panel. For flow-mode (LR landscape) this is normal "
+                    "when node count is low; options: add more nodes/edges to the flow, "
+                    "consolidate sparse zones, raise grid cols for large clusters "
+                    "(g.grid_cluster(region, cols=3)), or for poster mode use direction='TB' "
+                    "so planes sit side by side. Target ≥55% for flow diagrams, ≥65% for "
+                    "poster/wall-grid mode."
                 )
         except Exception:  # noqa: BLE001
             pass
@@ -424,35 +489,61 @@ def audit_diagram_code(code: str) -> str:
 
     is_slide = "render_slide(" in code
     cluster_count = code.count("g.cluster(")
+    is_poster = "flow_layout=False" in code or (
+        "density='poster'" in code or 'density="poster"' in code
+    )
+    has_link = "g.link(" in code
+    has_cross_cluster_edge = has_link  # any edge could be cross-cluster; we check below
 
     if is_slide and cluster_count >= 6:
-        # grid_cluster() (preferred) or poster_grid() auto-generate the rank
-        # structure, so either satisfies the structural requirement on its own.
-        has_grid = "grid_cluster(" in code or "poster_grid(" in code
-        has_invis_spine = has_grid or 'style="invis"' in code or "style='invis'" in code
         has_numbered = "number=" in code
 
-        if not has_invis_spine:
-            _audit_add(
-                findings, "high", "poster_missing_spine",
-                f"Poster mode ({cluster_count} clusters) has no grid structure — "
-                "planes will sprawl and the layout will be sparse.",
-                "Pack each region: g.grid_cluster(region_id, cols=2 or 3) after its "
-                "boxes, and use Pretty(..., direction='TB') so planes sit side by side.",
-            )
+        if is_poster:
+            # Poster / wall-grid mode: require structural grid for each plane.
+            has_grid = "grid_cluster(" in code or "poster_grid(" in code
+            has_invis_spine = has_grid or 'style="invis"' in code or "style='invis'" in code
+
+            if not has_invis_spine:
+                _audit_add(
+                    findings, "high", "poster_missing_spine",
+                    f"Poster mode ({cluster_count} clusters) has no grid structure — "
+                    "planes will sprawl and the layout will be sparse.",
+                    "Pack each region: g.grid_cluster(region_id, cols=2 or 3) after its "
+                    "boxes, and set Pretty(..., flow_layout=False) + direction='LR'.",
+                )
+            if "grid_cluster(" not in code and "poster_grid(" in code:
+                _audit_add(
+                    findings, "medium", "poster_uses_legacy_grid",
+                    "Poster uses g.poster_grid (single-column ranks) instead of dense "
+                    "in-plane grids — the diagram will read sparse, not like the reference.",
+                    "Replace poster_grid with one g.grid_cluster(region_id, cols=N) per "
+                    "plane so each plane packs into a dense logo grid.",
+                )
+        else:
+            # Flow mode (default): require cross-cluster edges for visible connections.
+            if not has_link:
+                _audit_add(
+                    findings, "high", "flow_missing_edges",
+                    f"Flow mode ({cluster_count} clusters) has no g.link() calls — "
+                    "clusters will be disconnected islands with no visible flow.",
+                    "Add real cross-cluster g.link() edges for the primary data flow. "
+                    "In flow_layout=True mode these edges pull the layout AND show "
+                    "connections between zones — they are mandatory.",
+                )
+            elif cluster_count >= 4 and code.count("g.link(") < cluster_count - 1:
+                _audit_add(
+                    findings, "medium", "flow_few_cross_cluster_edges",
+                    f"Flow mode has {code.count('g.link(')} edges for {cluster_count} "
+                    "clusters — many zones may appear disconnected.",
+                    "Add cross-cluster g.link() edges to connect every zone to the "
+                    "primary flow. The connections are what make the diagram readable.",
+                )
+
         if not has_numbered:
             _audit_add(
-                findings, "high", "poster_missing_numbers",
-                "Poster mode: top-level clusters have no number= argument.",
+                findings, "high", "missing_cluster_numbers",
+                f"Diagram with {cluster_count} clusters has no number= arguments.",
                 "Add number=1, number=2, ... to every top-level g.cluster() call.",
-            )
-        if "grid_cluster(" not in code and "poster_grid(" in code:
-            _audit_add(
-                findings, "medium", "poster_uses_legacy_grid",
-                "Poster uses g.poster_grid (single-column ranks) instead of dense "
-                "in-plane grids — the diagram will read sparse, not like the reference.",
-                "Replace poster_grid with one g.grid_cluster(region_id, cols=N) per "
-                "plane + direction='TB' so each plane packs into a dense logo grid.",
             )
 
     if not findings:
@@ -612,7 +703,68 @@ def export_drawio() -> str:
         summary=f"Created editable draw.io artifact ({out.stat().st_size} bytes).",
         data={"artifacts": record_artifact_inventory(WORKSPACE)},
     )
-    return f"Wrote out.drawio ({out.stat().st_size} bytes)."
+    # Structural lint — fast pre-check before visual review.
+    lint = ""
+    try:
+        from .validate_drawio import validate_file
+        report = validate_file(str(out))
+        lint = (f"\nLint: {report['error_count']} error(s), {report['warning_count']} warning(s).")
+        if report["errors"]:
+            lint += f" Errors: {'; '.join(report['errors'][:5])}"
+        elif report["warnings"]:
+            lint += f" Warnings: {'; '.join(report['warnings'][:3])}"
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Archive final artifacts to a timestamped session folder for reuse.
+    archive_note = ""
+    try:
+        dest = _archive_session()
+        if dest:
+            archive_note = f"\nArchived to: {dest}"
+    except Exception:  # noqa: BLE001
+        pass
+
+    return f"Wrote out.drawio ({out.stat().st_size} bytes).{lint}{archive_note}"
+
+
+@tool
+def list_saved_diagrams() -> str:
+    """List all previously saved diagram sessions from the outputs archive.
+
+    Returns a summary of every session folder under the outputs directory,
+    including the title, save date, and available files (PNG, drawio, etc.).
+    Use this to find diagrams from past sessions for reuse or reference.
+    """
+    if not OUTPUTS_DIR.exists():
+        return "No saved sessions found (outputs directory does not exist yet)."
+
+    sessions = sorted(OUTPUTS_DIR.iterdir(), key=lambda p: p.name, reverse=True)
+    sessions = [s for s in sessions if s.is_dir()]
+    if not sessions:
+        return "No saved sessions found."
+
+    lines: list[str] = [f"Found {len(sessions)} saved session(s):\n"]
+    for session in sessions:
+        meta_file = session / "meta.json"
+        if meta_file.exists():
+            try:
+                meta = json.loads(meta_file.read_text(encoding="utf-8"))
+                title = meta.get("title", session.name)
+                saved_at = meta.get("saved_at", "")
+                files = meta.get("files", [])
+                lines.append(f"  [{saved_at}] {title}")
+                lines.append(f"    Folder: {session}")
+                lines.append(f"    Files: {', '.join(files)}")
+            except Exception:  # noqa: BLE001
+                lines.append(f"  {session.name} (meta unreadable)")
+        else:
+            artifacts = [f.name for f in session.iterdir() if f.is_file()]
+            lines.append(f"  {session.name}")
+            lines.append(f"    Files: {', '.join(artifacts)}")
+        lines.append("")
+
+    return "\n".join(lines)
 
 
 @tool
@@ -845,31 +997,53 @@ def plan_style_sizes(
     if node_count > 18 and output == "slide" and node_count <= 26:
         notes.append(
             f"{node_count} nodes on a standard slide reads cramped — "
-            "set blueprint density='detailed' (up to 26 nodes, ≤6 columns, sublabel mandatory) "
-            "or collapse replicas/aggregate side concerns to stay under 18."
+            "set blueprint density='detailed' (up to ~28 nodes, sublabel mandatory) "
+            "with direction='LR' and flow_layout=True; or collapse replicas to stay under 18."
         )
-    if node_count > 26 and output != "poster":
+    if node_count > 28 and output != "poster":
         notes.append(
-            f"{node_count} nodes exceeds the detailed tier cap (26) — "
-            "switch to density='poster' and call plan_style_sizes(output='poster')."
+            f"{node_count} nodes is above the comfortable detailed range (~20-28). "
+            "The engine will scale the diagram to fit one 16:9 page — complex "
+            "architectures may use more nodes as long as they remain readable after "
+            "scaling. Alternatively switch to density='poster' for a wall-grid layout."
         )
     grid_cols = 0
-    if output == "poster":
+    if output == "slide":
+        # Detailed / standard slide: flow-driven layout (the DEFAULT house style).
+        # Use direction='LR', flow_layout=True. Only pack large clusters (≥4 nodes)
+        # as grids. The drawer should infer grid_cols from the cluster node count:
+        # 4-6 nodes → cols=2, 7+ nodes → cols=3.
+        grid_cols = 2 if node_count <= 16 else 3
+        notes.append(
+            "Detailed slide mode (house default — flow-driven): use direction='LR', "
+            "flow_layout=True on Pretty(). "
+            "Draw REAL cross-cluster edges for the primary flow — these are what pull "
+            "the layout and make zone connections visible (mandatory). "
+            f"Only call g.grid_cluster(region_id, cols={grid_cols}) for clusters that "
+            "have ≥4 child nodes; small clusters size naturally. "
+            "Set Pretty(..., flow_layout=True) explicitly (it is the default) so the "
+            "engine keeps cross-cluster edges at constraint=true. "
+            "Sublabel MANDATORY for every compute/data/network node. "
+            "Number every top-level cluster (number=1, 2, ...). "
+            "The engine scales the diagram to fit one 16:9 page — do not cut nodes "
+            "to force a certain size."
+        )
+    elif output == "poster":
         # Each region 'plane' is packed as a multi-column logo grid via
         # g.grid_cluster(region_id, cols=grid_cols). 2-3 cols reads densest.
         grid_cols = 2 if node_count <= 24 else 3
         notes.append(
-            "Poster mode (DEFAULT, dense): group nodes into 4-8 numbered region "
-            "'planes' (e.g. Client, Network & Security, AI/Compute Engine, "
-            "Data & Storage, Observability & DevOps, Enterprise Systems). "
+            "Poster mode (wall-grid, use when explicitly requested): group nodes into "
+            "4-8 numbered region 'planes' (e.g. Client, Network & Security, "
+            "AI/Compute Engine, Data & Storage, Observability & DevOps, Enterprise "
+            "Systems). Set Pretty(..., flow_layout=False). "
             f"Pack EACH plane as a logo grid: after declaring its boxes call "
             f"g.grid_cluster(region_id, cols={grid_cols}). "
             "Pick direction by plane count: 5+ planes → direction='LR' (planes "
-            "stack into a tall PORTRAIT poster — closest to the reference); ≤4 "
-            "planes → direction='TB' (planes side by side). Do NOT call "
-            "g.poster_grid (its single-column ranks fight the in-plane grids). "
-            "Draw only a few cross-plane "
-            "edges for the primary flow; they auto-relax so the grid drives layout. "
+            "stack into a tall PORTRAIT poster); ≤4 planes → direction='TB'. "
+            "Do NOT call g.poster_grid (its single-column ranks fight in-plane grids). "
+            "Draw only a few cross-plane edges for the primary flow; they auto-relax "
+            "so the grid drives layout. "
             "Every compute/data/network box MUST have a real logo icon + a tech "
             "sublabel. Nested sub-clusters inside a plane (model families, storage "
             "tiers) are encouraged."
@@ -1026,17 +1200,83 @@ def fit_labels(
 
 @tool
 def fetch_logo(name: str) -> str:
-    """Resolve a brand/product logo not in the pack (e.g. 'Supabase', 'NVIDIA Jetson').
+    """Resolve a brand/product logo — lobe-icons (321 AI/LLM brands + data stores) first,
+    then local pack, then Iconify, then favicon; downloads & validates.
 
-    Searches the local pack, then Iconify, then favicon; downloads & validates.
-    Returns an absolute PNG path to use in `Custom(label, "<path>")`, or NOT_FOUND.
+    For AI/LLM brands (Claude, OpenAI, Gemini, Mistral, LangChain, HuggingFace, Ollama,
+    Qdrant, Redis, MongoDB, Kafka, etc.) returns a cached PNG path from lobe-icons CDN.
+    Falls back to web scraping for other brands.
+    Returns an absolute PNG/SVG path to use in box(icon=...), or NOT_FOUND.
     """
     try:
+        from .aiicons import lookup_ai_logo
+        path = lookup_ai_logo(name, str(LOCAL_ICONS))
+        if path:
+            return path
+    except Exception:  # noqa: BLE001
+        pass
+    try:
         from .logo_fetch import get_logo
-        path = get_logo(name, LOCAL_ICONS, str(WORKSPACE))
+        path = get_logo(name, str(LOCAL_ICONS), str(WORKSPACE))
     except Exception as exc:  # noqa: BLE001
         return f"NOT_FOUND: fetch_logo error: {exc}"
     return path or f"NOT_FOUND: no verified logo for '{name}'. Use a built-in node or search_icons()."
+
+
+@tool
+def search_drawio_shapes(query: str, limit: int = 5) -> str:
+    """Search 10,446 official draw.io shapes for their exact style strings.
+
+    Use when you need a specific vendor shape (AWS Lambda, Azure VM, k8s Pod,
+    UML actor, BPMN task, etc.) in the exported .drawio file. Returns the exact
+    `style=` strings that render correctly — never guess mxgraph.* style names.
+
+    Examples: "aws lambda", "azure vm", "k8s pod", "uml actor", "dynamodb", "kafka"
+    """
+    try:
+        from .shapesearch import search_shapes
+        results = search_shapes(query, limit)
+        if not results:
+            return json.dumps({"status": "NOT_FOUND", "query": query,
+                               "hint": "Try broader keywords or check spelling."}, indent=2)
+        return json.dumps({"status": "OK", "query": query, "results": results}, indent=2)
+    except Exception as exc:  # noqa: BLE001
+        return f"search_drawio_shapes error: {exc}"
+
+
+@tool
+def visualize_code_structure(project_path: str, mode: str = "imports",
+                             language: str = "python", group: bool = True) -> str:
+    """Extract and visualize a codebase's module-import graph or class-inheritance hierarchy.
+
+    Returns a JSON graph describing the code structure. Use this when a user asks
+    to visualize their codebase, understand dependencies, or map class hierarchies.
+
+    Args:
+        project_path: Absolute path to the project/package directory.
+        mode: "imports" (module-level dependencies) or "classes" (class inheritance).
+        language: Currently only "python" is supported.
+        group: Group nodes by sub-package into nested clusters (recommended).
+
+    After calling this, use the returned graph to generate a prettygraph diagram:
+    pass nodes/edges/groups to g.cluster()/g.box()/g.link() calls.
+    """
+    if language != "python":
+        return json.dumps({"error": f"language={language!r} not yet supported. Only 'python' available."})
+    if not os.path.isdir(project_path):
+        return json.dumps({"error": f"project_path {project_path!r} is not a directory."})
+    try:
+        if mode == "imports":
+            from .codevis import build_import_graph
+            graph = build_import_graph(project_path, group=group)
+        elif mode == "classes":
+            from .codevis import build_class_graph
+            graph = build_class_graph(project_path, group=group)
+        else:
+            return json.dumps({"error": f"mode={mode!r} not recognized. Use 'imports' or 'classes'."})
+        return json.dumps(graph, indent=2)
+    except Exception as exc:  # noqa: BLE001
+        return f"visualize_code_structure error: {exc}"
 
 
 @tool
@@ -1382,19 +1622,23 @@ class Blueprint(CoercingModel):
                     "ONLY when the user explicitly asks for a plain/raw diagram",
     )
     density: Literal["standard", "detailed", "poster"] = Field(
-        "poster",
-        description="poster (DEFAULT): dense, detailed output — 25-45 nodes grouped into "
-                    "6-12 numbered region 'planes', each plane packed as a multi-column "
-                    "logo grid (the drawer calls g.grid_cluster(region_id, cols=N) per "
-                    "plane). Every compute/data/network node carries a tech sublabel and a "
-                    "REAL technology logo. This is the house default because most real "
-                    "architectures are NOT simple — prefer poster unless the system is "
-                    "genuinely small. "
-                    "detailed: single-grid slide with 18-26 nodes, ≤6 columns — sublabel "
-                    "(tech + sizing) MANDATORY for every compute/data/network node. "
-                    "standard: ONLY for genuinely small systems (<10 components, ≤3 tiers) — "
-                    "client-facing slide with 12-18 nodes, ≤5 columns, aggregating "
-                    "cross-cutting concerns. "
+        "detailed",
+        description="detailed (DEFAULT): flow-driven landscape slide — ~20-28 nodes "
+                    "(more is fine for complex systems; engine scales to fit one page), "
+                    "direction='LR', flow_layout=True so real cross-cluster edges pull "
+                    "the layout and connections between zones are clearly visible. "
+                    "Clusters size to their content (small clusters stay small); only "
+                    "clusters with ≥4 nodes get grid packing via g.grid_cluster(). "
+                    "Sublabel (tech + sizing) MANDATORY for every compute/data/network "
+                    "node. Primary-flow edges carry protocol labels (≤3 words). "
+                    "Choose density based on actual architecture complexity — do NOT "
+                    "cut nodes to fit the page; the engine scales the diagram to fit "
+                    "inside one 16:9 slide. "
+                    "poster: dense wall-grid output (flow_layout=False) — 25-45 nodes "
+                    "in 6-12 numbered planes each packed as a multi-column logo grid; "
+                    "use ONLY when the user explicitly requests a poster/wall layout. "
+                    "standard: ONLY for genuinely small systems (<10 components, ≤3 "
+                    "tiers) — 12-18 nodes, ≤5 columns. "
                     "Pass density to the drawer so it calls plan_style_sizes(output='poster') "
                     "for poster, or plan_style_sizes(output='slide') for standard/detailed.",
     )
@@ -1789,22 +2033,22 @@ def propose_blueprint(blueprint: Blueprint) -> str:
             coverage_line += " — missing: " + "; ".join(f'"{r}"' for r in uncovered_reqs[:5])
 
     # --- density mismatch detection (deterministic, warn but do not block) ---
-    # Poster is the house default; only genuinely small systems should drop below it.
+    # 'detailed' (flow-driven) is the house default for non-trivial systems.
     n = len(blueprint.nodes)
     d = blueprint.density
-    if n >= 13 and d != "poster":
-        warnings.append(
-            f"density mismatch: blueprint has {n} nodes but density='{d}'. "
-            "Poster is the default for any non-trivial system — switch to "
-            "density='poster' (25-45 nodes, region planes packed as logo grids via "
-            "g.grid_cluster) so the diagram is detailed and dense like the reference."
-        )
-    elif n < 10 and d == "poster":
+    if n < 10 and d == "poster":
         warnings.append(
             f"density mismatch: blueprint has only {n} nodes but density='poster'. "
-            "Poster mode with <10 nodes produces a sparse grid — this system looks "
-            "small; consider density='standard'. If the source really is this small, "
-            "keep poster but expand each tier with the real supporting components."
+            "Poster mode with <10 nodes produces a sparse wall-grid — consider "
+            "density='standard' for small systems, or density='detailed' (flow-driven) "
+            "if you want the default house style."
+        )
+    elif n >= 13 and d == "standard":
+        warnings.append(
+            f"density mismatch: blueprint has {n} nodes but density='standard'. "
+            "Standard is for genuinely small systems (<10 components). Switch to "
+            "density='detailed' (flow-driven, the house default) so the diagram "
+            "shows the full architecture."
         )
 
     # --- report quality: warn when blueprint data that feeds PDF sections is thin ---
@@ -2138,13 +2382,16 @@ DIAGRAM_TOOLS = [
     audit_diagram_code,
     render_diagram,
     export_drawio,
+    list_saved_diagrams,
     search_diagrams_nodes,
     search_icons,
+    search_drawio_shapes,
     resolve_icons,
     plan_style_sizes,
     fit_labels,
     declare_poster_grid,
     fetch_logo,
+    visualize_code_structure,
     inspect_diagram,
     submit_critique,
     finalize_diagram,
@@ -2160,6 +2407,8 @@ MAIN_TOOLS = [
     propose_diagram_brief,
     propose_tech_stack,
     propose_blueprint,
+    visualize_code_structure,
+    list_saved_diagrams,
     finalize_diagram,
     generate_pdf_report,
     send_architecture_report_email,
@@ -2168,7 +2417,7 @@ MAIN_TOOLS = [
 ]
 
 # Icon resolver subagent tools: node search + icon resolution (runs before drawer).
-ICON_RESOLVER_TOOLS = [search_diagrams_nodes, resolve_icons, search_icons, fetch_logo]
+ICON_RESOLVER_TOOLS = [search_diagrams_nodes, resolve_icons, search_icons, search_drawio_shapes, fetch_logo]
 
 # Drawer subagent tools: render-refine loop only (icons pre-resolved by icon_resolver).
 DRAWER_TOOLS = [plan_style_sizes, fit_labels, declare_poster_grid, audit_diagram_code, render_diagram, export_drawio]

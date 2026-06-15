@@ -55,6 +55,20 @@ NODE_KINDS: dict[str, tuple[str, str]] = {
     "aux": ("#fff5e6", "#d79b00"),
     "security": ("#ffe6e6", "#c0504d"),  # IAM / secrets                   (red)
     "neutral": ("#f5f5f5", "#999999"),   # notes / "..." collapse          (gray)
+    # --- ML/DL layer types (use for neural network / pipeline diagrams) ---
+    "ml_input": ("#d5e8d4", "#82b366"),   # Input / data ingestion layer   (green)
+    "ml_output": ("#d5e8d4", "#5a9148"),  # Output / prediction layer      (dark green)
+    "ml_conv": ("#dae8fc", "#6c8ebf"),    # Conv / Pooling layers          (blue)
+    "ml_pool": ("#dae8fc", "#5a7aad"),    # Pooling layers                 (blue)
+    "ml_attention": ("#e1d5e7", "#9673a6"),  # Attention / Transformer     (purple)
+    "ml_transformer": ("#e1d5e7", "#7b5ea7"),
+    "ml_rnn": ("#fff2cc", "#d6b656"),     # RNN / LSTM / GRU               (yellow)
+    "ml_lstm": ("#fff2cc", "#c8a838"),
+    "ml_fc": ("#ffe6cc", "#d79b00"),      # Fully connected / Dense        (orange)
+    "ml_dense": ("#ffe6cc", "#c88c00"),
+    "ml_loss": ("#f8cecc", "#b85450"),    # Loss / objective function      (red)
+    "ml_norm": ("#f5f5f5", "#888888"),    # Normalization / Dropout        (gray)
+    "ml_embed": ("#fff0d6", "#c87000"),   # Embedding / tokenizer          (amber)
 }
 # Cluster tint, stroke — cloud-neutral palette (tints by tier, applies to any
 # provider; originally distilled from AWS-CloudFormation-Diagrams).
@@ -67,6 +81,16 @@ CLUSTER_KINDS: dict[str, tuple[str, str]] = {
     "Security": ("#ffe6e6", "#d9a3a3"),
     "Storage": ("#e6ffe6", "#a3cca3"),
     "Neutral": ("#fafafa", "#cfcfcf"),
+    # --- ML/DL pipeline stages ---
+    "ML_Input": ("#edf7ed", "#82b366"),       # Data ingestion / preprocessing  (green tint)
+    "ML_Embedding": ("#fff8e6", "#d6a030"),   # Embedding / tokenization        (amber tint)
+    "ML_Encoder": ("#e8eeff", "#6c8ebf"),     # Encoder / Conv blocks           (blue tint)
+    "ML_Attention": ("#f0eaf8", "#9673a6"),   # Attention / Transformer blocks  (purple tint)
+    "ML_Decoder": ("#e8f4ff", "#5a89b4"),     # Decoder / generative blocks     (light blue tint)
+    "ML_Output": ("#edf7ed", "#4f9147"),      # Output head / loss / logits     (dark green tint)
+    "ML_Training": ("#fff5e6", "#d0903a"),    # Training loop / optimizer       (orange tint)
+    "ML_Inference": ("#e6f2ff", "#4a7bb5"),   # Inference / serving             (blue tint)
+    "ML_Pipeline": ("#fafafa", "#aaaaaa"),    # General ML pipeline stage       (gray tint)
 }
 
 # --- "pro" theme palette --------------------------------------------------- #
@@ -101,6 +125,13 @@ SLIDE_SIZE = 2048
 SLIDE_HERO_H = 620
 SLIDE_MARGIN = 38
 SLIDE_PANEL_PAD = 26
+# 16:9 landscape page ratio for single-page slide output.
+SLIDE_PAGE_RATIO = 16 / 9
+# Minimum child-node count for a cluster to get in-cluster grid packing in flow
+# mode. Clusters with fewer nodes co-size naturally; larger ones get grid_cluster.
+# Kept at 3 so a 3-box region packs as a 2-wide grid (2+1) instead of a tall thin
+# column — denser, fewer empty bands, closer to a production reference poster.
+FLOW_GRID_MIN = 3
 
 
 def _est_text_w(s: str, size: int, *, bold: bool = False) -> float:
@@ -186,6 +217,12 @@ class Pretty:
     # rows + invisible column spine) instead of a single tall vertical column.
     # This is what makes a "plane" read as a dense logo grid (Gemini poster look).
     cluster_grids: dict[str, int] = field(default_factory=dict)
+    # Flow-driven layout mode (default True). When True, real cross-cluster edges
+    # keep constraint=true so the data flow — not the grid — pulls the macro
+    # layout. Clusters size to their content; only large ones get grid packing
+    # (see FLOW_GRID_MIN). When False (poster/wall mode), cross-cluster edges are
+    # relaxed so the grid structure controls placement (old default behaviour).
+    flow_layout: bool = True
 
     # ---- authoring API ---- #
     def cluster(self, id: str, label: str, kind: str = "Neutral",
@@ -244,12 +281,20 @@ class Pretty:
 
     def _grid_block(self, cid: str, indent: str) -> list[str]:
         """same_rank rows + invisible column spine that pack a cluster's direct
-        child nodes into a ``cols``-wide grid. Returns DOT lines (no braces)."""
+        child nodes into a ``cols``-wide grid. Returns DOT lines (no braces).
+
+        In flow mode (self.flow_layout=True) a cluster must have at least
+        FLOW_GRID_MIN direct children before grid packing is applied — small
+        clusters stay natural so different clusters size differently.  In poster
+        mode (flow_layout=False) the threshold drops to 2 so every cluster is
+        packed into a dense grid.
+        """
         cols = self.cluster_grids.get(cid)
         if not cols:
             return []
         members = [n.id for n in self.nodes.values() if n.parent == cid]
-        if len(members) <= 1:
+        min_members = FLOW_GRID_MIN if self.flow_layout else 2
+        if len(members) < min_members:
             return []
         rows = [members[i:i + cols] for i in range(0, len(members), cols)]
         lines: list[str] = []
@@ -264,6 +309,29 @@ class Pretty:
             for a, b in zip(colnodes[:-1], colnodes[1:]):
                 lines.append(f'{indent}"{a}" -> "{b}" [style="invis"];')
         return lines
+
+    def _auto_grid(self) -> None:
+        """Deterministically grid-pack any cluster dense enough to benefit.
+
+        Production diagrams should read as packed logo grids without the drawer
+        having to remember a ``grid_cluster`` call per region. In flow mode, every
+        cluster (top-level or nested) whose direct child count is >= FLOW_GRID_MIN
+        and that has no explicit grid gets one — column count scaled to the node
+        count so wide regions stay compact instead of stacking into a tall column.
+
+        Explicit ``grid_cluster(...)`` calls always win (never overwritten).
+        Poster mode keeps its own (lower) threshold via ``_grid_block``.
+        """
+        if not self.flow_layout:
+            return
+        for cid in self.clusters:
+            if cid in self.cluster_grids:
+                continue
+            n = sum(1 for nd in self.nodes.values() if nd.parent == cid)
+            if n < FLOW_GRID_MIN:
+                continue
+            # 3-6 boxes read best 2-wide; 7+ go 3-wide so the region stays square.
+            self.cluster_grids[cid] = 2 if n <= 6 else 3
 
     def _top_section(self, node_id: str) -> str | None:
         """Top-level ancestor cluster id of a node (walks the parent chain)."""
@@ -429,6 +497,7 @@ class Pretty:
         return lines
 
     def to_dot(self) -> str:
+        self._auto_grid()  # deterministic per-region grid packing (no LLM call needed)
         pro = self.theme == "pro"
         tcolor = PRO_TITLE if pro else "#000000"
         tsize = "22" if pro else "20"
@@ -446,8 +515,17 @@ class Pretty:
             nodesep, ranksep = "0.3", "1.5"
         # Dense in-region grids: pack boxes tightly so each plane reads as a solid
         # logo grid (Gemini poster look) instead of airy stacks.
+        # In FLOW mode we use relaxed spacing so cross-cluster edges have room to
+        # carry labels; tight "0.18/0.45" is reserved for poster (wall-grid) mode.
         if self.cluster_grids:
-            nodesep, ranksep = "0.18", "0.45"
+            if self.flow_layout:
+                # Tight within-row stacking (nodesep) so each region reads as a
+                # solid grid; a touch of rank gap (ranksep) keeps cross-region
+                # edge labels off the cards. This is the default dense look now
+                # that _auto_grid packs every region.
+                nodesep, ranksep = "0.28", "0.7"
+            else:
+                nodesep, ranksep = "0.18", "0.45"
         edge_color = PRO_EDGE if pro else EDGE_COLOR
         node_pen = "1.5" if pro else "1.4"
         arrowhead = ' arrowhead="vee"' if pro else ""
@@ -523,7 +601,16 @@ class Pretty:
         # edges
         for e in self.edges:
             attrs = []
-            if e.label:
+            # Cross-region flow edges are the ones that span far and whose midpoint
+            # label floats loose in blank canvas. Anchor their label to the SOURCE
+            # boundary (taillabel) so it stays glued to the originating region no
+            # matter how long the edge gets. Within-region edges keep the centred
+            # midpoint label (short, reads cleanest). Explicit taillabel still wins.
+            anchor_to_tail = False
+            if e.label and not e.taillabel and self.flow_layout:
+                ta, tb = self._top_section(e.a), self._top_section(e.b)
+                anchor_to_tail = ta is not None and tb is not None and ta != tb
+            if e.label and not anchor_to_tail:
                 # White-backed HTML label: stays readable and visually "anchored"
                 # to its edge instead of floating loose on the canvas.
                 lbl = (
@@ -533,6 +620,15 @@ class Pretty:
                     f'{_esc(e.label)}</FONT></TD></TR></TABLE>>'
                 )
                 attrs.append(f'label={lbl}')
+            if anchor_to_tail:
+                albl = (
+                    '<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" '
+                    'CELLPADDING="2" BGCOLOR="white"><TR><TD>'
+                    f'<FONT POINT-SIZE="{sz["edge"]}" COLOR="{EDGE_FONTCOLOR}">'
+                    f'{_esc(e.label)}</FONT></TD></TR></TABLE>>'
+                )
+                attrs.append(f'taillabel={albl}')
+                attrs.append('labeldistance="1.6"')
             if e.taillabel:
                 tlbl = (
                     '<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" '
@@ -553,10 +649,12 @@ class Pretty:
             if e.lhead:
                 attrs.append(f'lhead="{e.lhead}"')
             relax = e.constraint is False
-            if (e.constraint is None and (self.grid_rows or self.cluster_grids)):
+            if e.constraint is None and (
+                self.grid_rows or (self.cluster_grids and not self.flow_layout)
+            ):
                 ta, tb = self._top_section(e.a), self._top_section(e.b)
                 if ta is not None and tb is not None and ta != tb:
-                    relax = True  # in a grid, real cross-section flow only decorates
+                    relax = True  # in poster/wall mode the grid drives layout
             if relax:
                 attrs.append("constraint=false")
             a = f" [{', '.join(attrs)}]" if attrs else ""
@@ -707,6 +805,17 @@ def audit_layout(dot_path: str, png_path: str | None = None) -> str:
         lines.append("  SPARSE CENTER — no nodes in the central canvas. This often "
                      "means a huge blank hole; fold the diagram into a balanced "
                      "2-row grid or add a hub/summary stage in the center.")
+    # Canvas fill: fraction of the 3x3 macro-grid cells that hold any node. A low
+    # fill on a node-rich diagram = lots of empty bands (the airy look). Grid-pack
+    # regions and add detail rather than spreading a few boxes across the page.
+    fill = len(occupied) / 9.0
+    if len(node_pts) >= 12 and fill < 0.67:
+        lines.append(
+            f"  LOW FILL — only {len(occupied)}/9 canvas cells occupied "
+            f"({fill:.0%}). The page reads airy. Grid-pack each multi-node region "
+            "(g.grid_cluster / the engine now auto-packs ≥3-node regions), add the "
+            "missing per-node detail, and keep connected regions adjacent so the "
+            "layout fills instead of stranding boxes in blank bands.")
     # Graphviz coordinates use y-up. Row 0 is bottom, row 2 is top.
     if ((0, 0) in occupied or (1, 0) in occupied) and (
         (2, 1) in occupied or (2, 2) in occupied
@@ -728,6 +837,18 @@ def audit_layout(dot_path: str, png_path: str | None = None) -> str:
         lines.append(f"  SIDE-CHANNEL FANOUT — {dashed_edges}/{edge_count} edges "
                      "are dashed. Collapse observability/security/control lines "
                      "to one cluster-level dashed edge per concern.")
+    # ≥7 clusters in one horizontal strip guarantees long crossing edges and tiny
+    # nodes — Graphviz compresses everything to fit PAGE_SIZE. The fix is to stack
+    # cross-cutting tiers (Security, Observability, CI/CD, Infrastructure) under
+    # their adjacent main-flow tier using the invisible spine + same_rank recipe.
+    if n_clusters >= 7 and aspect > 1.9:
+        lines.append(
+            f"  CLUSTER STRIP — {n_clusters} clusters in a {aspect:.1f}:1 strip. "
+            "Long crossing edges are inevitable at this width. REQUIRED FIX: "
+            "stack the cross-cutting tiers (Security, Observability, CI/CD, "
+            "Infrastructure) under their adjacent main-flow tier using invisible "
+            "spine + same_rank so the layout folds to ≤5 primary columns. "
+            "See the stacking recipe in the pro-style skill.")
     lines += _audit_text_fit(dot_path)
     return "\n".join(lines)
 
@@ -1021,7 +1142,7 @@ def _normal_legend(legend) -> list[dict[str, str]]:
 def _compose_slide_png(body_png: str, out_png: str, *, title: str,
                        kicker: str | None, brand: str | None,
                        diagram_title: str | None, legend,
-                       include_hero: bool = True) -> dict:
+                       include_hero: bool = False) -> dict:
     from PIL import Image, ImageDraw
 
     panel_x = SLIDE_MARGIN
@@ -1033,25 +1154,23 @@ def _compose_slide_png(body_png: str, out_png: str, *, title: str,
     caption_area = 74  # space at panel top for the caption
     max_w = panel_w - SLIDE_PANEL_PAD * 2
 
-    # Dynamic canvas height: scale the body to FILL the panel width, then grow the
-    # canvas to fit it. This removes the large vertical whitespace a wide-short or
-    # tall-narrow body left inside a fixed square panel. Height is clamped so the
-    # slide never becomes an absurd portrait/landscape strip.
+    # Single-page 16:9 landscape canvas: fix the slide height from SLIDE_SIZE and
+    # the aspect ratio, then scale the body to FIT INSIDE both dimensions (no crop,
+    # no portrait overflow). The body is always centred inside the available area.
+    slide_h = round(SLIDE_SIZE / SLIDE_PAGE_RATIO)
+    avail_h_for_body = (slide_h - panel_y - SLIDE_MARGIN
+                        - caption_area - SLIDE_PANEL_PAD - legend_h)
+    avail_h_for_body = max(avail_h_for_body, 100)
+
     body = Image.open(body_png).convert("RGBA")
-    scale = max_w / body.width
-    max_body_h = round(2.05 * SLIDE_SIZE)          # cap extreme portraits
-    if body.height * scale > max_body_h:
-        scale = max_body_h / body.height
+    scale = min(max_w / body.width, avail_h_for_body / body.height)
     if abs(scale - 1.0) > 0.01:
         body = body.resize(
             (max(1, round(body.width * scale)), max(1, round(body.height * scale))),
             Image.LANCZOS,
         )
-    # Panel hugs the body (no forced min height) so there is no dead band between
-    # the caption and the diagram.
-    body_render_h = body.height
+    body_render_h = avail_h_for_body  # reserve full available height for centering
     panel_h = caption_area + body_render_h + SLIDE_PANEL_PAD + legend_h
-    slide_h = panel_y + panel_h + SLIDE_MARGIN
 
     canvas = Image.new("RGB", (SLIDE_SIZE, slide_h), "white")
     if include_hero:
@@ -1168,7 +1287,7 @@ def _transform_drawio_body(xml: str, *, x: float, y: float, scale: float,
 def _compose_slide_drawio(body_xml: str, out_path: str, *, title: str,
                           kicker: str | None, brand: str | None,
                           diagram_title: str | None, legend, body_box: list[int],
-                          panel: list[int], include_hero: bool = True,
+                          panel: list[int], include_hero: bool = False,
                           slide_h: int = SLIDE_SIZE) -> str:
     body_w, body_h = _page_dims(body_xml)
     bx, by, bw, bh = body_box
@@ -1237,12 +1356,14 @@ def _compose_slide_drawio(body_xml: str, out_path: str, *, title: str,
 def render_slide(g: Pretty, out_basename: str, *, title: str,
                  kicker: str | None = None, brand: str | None = None,
                  diagram_title: str | None = None, legend=None,
-                 include_hero: bool = True) -> str:
-    """Render ``g`` inside a 2048x2048 production slide.
+                 include_hero: bool = False) -> str:
+    """Render ``g`` as a single-page 16:9 landscape slide (white background).
 
-    The body diagram remains fully audit/exportable as ``out.dot`` and
-    ``out.nodes.json``. The final ``out.png`` is a composed square slide, and
-    ``out.drawio`` contains editable hero text, legend, clusters, nodes, and edges.
+    Default: no gradient hero band (include_hero=False).  Pass include_hero=True
+    to add the blue kicker/title hero strip at the top.  The body diagram remains
+    fully audit/exportable as ``out.dot`` and ``out.nodes.json``.  The final
+    ``out.png`` is a composed 16:9 slide with the diagram scaled to fit inside
+    one page; ``out.drawio`` contains an editable version.
     """
     out = Path(out_basename)
     png_path = f"{out_basename}.png"

@@ -56,72 +56,95 @@ g.render("<workdir>/out")          # -> out.png  (LOOK at this)
 `Pretty.render("<workdir>/out")` writes `out.png`, `out.dot`, `out.nodes.json`.
 A bad ImportError/IMG path raises — read the traceback and fix it.
 
-## Slide-style production output (the DEFAULT)
-Use the slide wrapper instead of plain `g.render` unless the blueprint
-explicitly says `presentation_style="diagram"` (user asked for a plain/raw
-body-only diagram). The slide adds the gradient hero band (kicker + big
-title), the white panel with caption, and the legend; the body diagram stays
-auditable/editable inside it.
+## Slide-style production output (the DEFAULT — flow-driven)
+Default output: single-page 16:9 landscape, white background, **no blue hero band**
+(`include_hero=False` by default). The engine scales the diagram to fit one page.
+Use the slide wrapper instead of plain `g.render` unless the blueprint explicitly
+says `presentation_style="diagram"`. The body diagram stays auditable/editable.
 
 ```python
 from prettygraph import Pretty, render_slide
 
-# sizes from plan_style_sizes(node_count=..., longest_label_chars=...) —
+# sizes from plan_style_sizes(node_count=..., output="slide") —
 # paste its pretty_kwargs so icons/text scale with the cards:
 g = Pretty("Document Understanding System Architecture",
-           subtitle="end-to-end architecture", direction="LR",
+           subtitle="end-to-end architecture",
+           direction="LR",       # landscape — clusters arrange left to right
+           flow_layout=True,     # real edges pull the layout (default)
            icons_root=ICONS, theme="pro",
            node_width=300, node_height=60, icon_size=44, title_size=16,
            sublabel_size=13, edge_label_size=13, cluster_label_size=18)
-g.cluster("data", "Data Preparation & Model Training", number=1, accent="green")
-g.cluster("registry", "Model Registry & Storage", number=2, accent="violet")
-# ...
+
+g.cluster("ingest", "① Data Ingestion", number=1, accent="blue")
+g.box("src", "Data Source", kind="source",
+      sublabel="S3 / APIs", icon="aws/storage/simple-storage-service.png", parent="ingest")
+g.box("pipe", "ETL Pipeline", kind="compute",
+      sublabel="Airflow", icon="onprem/workflow/apache-airflow.png", parent="ingest")
+
+g.cluster("ai", "② AI Pipeline", number=2, accent="green")
+g.box("embed", "Embeddings", kind="compute",
+      sublabel="OpenAI text-3", icon="onprem/mlops/mlflow.png", parent="ai")
+g.box("llm", "LLM", kind="compute",
+      sublabel="GPT-4o", icon="onprem/mlops/mlflow.png", parent="ai")
+g.box("rerank", "Re-ranker", kind="compute",
+      sublabel="Cohere", icon="onprem/mlops/mlflow.png", parent="ai")
+g.box("router", "Query Router", kind="compute",
+      sublabel="LangChain", icon="onprem/mlops/mlflow.png", parent="ai")
+g.grid_cluster("ai", cols=2)   # optional: force 2-wide; engine auto-packs ≥3-node regions
+
+g.cluster("store", "③ Storage", number=3, accent="cyan")
+g.box("vec", "Vector Store", kind="data",
+      sublabel="Weaviate", icon="onprem/database/mongodb.png", parent="store")
+g.box("rdb", "Metadata DB", kind="data",
+      sublabel="PostgreSQL", icon="onprem/database/postgresql.png", parent="store")
+
+# REAL cross-cluster edges — MANDATORY: they pull the layout and show connections
+g.link("src", "pipe", label="raw data")
+g.link("pipe", "embed", label="chunks")
+g.link("embed", "vec", label="vectors")
+g.link("llm", "router", label="response")
+g.link("vec", "rerank", label="candidates")
+
 render_slide(
     g, "out",
-    kicker="Dự án cuối khoá:",
-    title="AI Document Understanding System (End-to-end)",
-    brand=None,
+    title="AI Document Understanding System",
     diagram_title="DOCUMENT UNDERSTANDING SYSTEM ARCHITECTURE",
     legend=[
         {"label": "Data Flow", "color": "#334155"},
         {"label": "Control Flow", "color": "#64748B", "style": "dashed"},
     ],
+    # include_hero=False  ← default; pass True only when user requests the blue band
 )
 ```
 
 Slide-mode hard rules:
+- `direction="LR"`, `flow_layout=True` (defaults for `density="detailed"`).
+- **Cross-cluster edges are MANDATORY** — they pull the layout and show connections.
+  Every zone must link to at least one other. Side-channels use `style="dashed"`.
+- **Grid packing is AUTOMATIC** — the engine packs every region with ≥3 boxes into
+  a 2-wide grid and regions with ≥7 boxes into a 3-wide grid. You do NOT need to
+  call `g.grid_cluster(...)` unless you want to force a specific column count (e.g.
+  `g.grid_cluster("ai", cols=3)` for a wide region). Aim for **4-7 nodes per
+  top-level region** — thin 1-2 box regions leave empty bands; fold them into the
+  adjacent tier they serve.
 - `theme="pro"` plus fixed `node_width` / `node_height`.
-- Size with the `plan_style_sizes` tool (node_count + longest label/sublabel
-  chars) and pass its `pretty_kwargs` verbatim — do NOT hand-pick icon/font
-  sizes or leave the small legacy defaults on a sparse client-facing diagram.
-- Then verify text with `fit_labels(nodes=[...])` and apply its suggestions:
-  every label/sublabel must fit INSIDE its card. Overflowing cards are
-  auto-widened at render (audit reports TEXT OVERFLOW) and break the uniform
-  card grid — shorten the text, never ship it.
-- Every top-level cluster has `number=1`, `number=2`, ... and a clear stage label.
+- Size with `plan_style_sizes(output="slide")` and pass `pretty_kwargs` verbatim.
+- Verify text with `fit_labels(nodes=[...])` before rendering.
+- Every top-level cluster has `number=1`, `number=2`, ... and a clear label.
 - Include `legend` whenever >2 edge colors/styles appear.
-- Keep ≤5 primary columns; stack CI/CD, Security, Monitoring under adjacent
-  flow columns.
-- Still call `export_drawio()` after `render_diagram`; it will detect
-  `out.slide.json` and keep the slide `.drawio`.
+- Still call `export_drawio()` after `render_diagram`.
 
-## Poster mode (blueprint `density="poster"`)
-Use when the blueprint carries `density="poster"` — a full-stack platform diagram
-with 25-40 nodes that must show every component without aggregation.
+## Poster mode (blueprint `density="poster"` — use ONLY when explicitly requested)
+A dense wall-grid layout with 25-40 nodes. **Set `flow_layout=False`.**
+Call `plan_style_sizes(node_count=<n>, output="poster")`.
 
-**Sizing:** call `plan_style_sizes(node_count=<n>, output="poster")` — it returns
-compact `pretty_kwargs` (cards capped at 260px wide, icon ~33-36px).
-
-**Dense region 'planes' packed as logo grids** (the reference-poster look). Group
-the nodes into 4-8 numbered region planes (Client, Network & Security, AI/Compute
-Engine, Data & Storage, Observability & DevOps, Enterprise Systems…). Pick
-direction by plane count: **5+ planes → `direction="LR"`** (planes stack into a
-tall PORTRAIT poster — closest to the dense reference); **≤4 planes →
-`direction="TB"`** (planes sit side by side across the width). Pack each plane
-into a compact multi-column grid with `g.grid_cluster(region_id, cols=N)`:
+Group nodes into 4-8 numbered region planes. Pick direction by plane count:
+**5+ planes → `direction="LR"`** (tall portrait poster); **≤4 planes →
+`direction="TB"`** (planes side by side). Pack each plane into a compact grid:
 
 ```python
-g = Pretty(title=..., subtitle=..., direction="LR", theme="pro", **sizes)  # 5+ planes
+g = Pretty(title=..., subtitle=..., direction="LR",
+           flow_layout=False, theme="pro", **sizes)  # 5+ planes
 
 # one plane = one numbered cluster; add its boxes (real logo + tech sublabel)
 g.cluster("ai", "② AI & Compute Engine", number=2, accent="green")
@@ -180,29 +203,11 @@ Tints are by tier, not by vendor — use them for any cloud.
   (providers: aws, azure, gcp, oci, ibm, alibabacloud, onprem, programming, saas,
   k8s, generic, …). The pack covers the major clouds equally well (Azure ~800,
   AWS ~525, GCP ~120 icons) — there is NO reason to default to AWS.
-- **Always resolve paths with tools before using them — planned, bounded search:**
-  - Make an exact icon plan first: one entry per visible node that truly needs an
-    icon. Exclude legend, spacers, generic notes, and nodes where `icon=` should
-    be omitted. Each entry has `{label, provider, icon_keyword}`.
-  - Generate `icon_keyword` in the icon-pack filename dialect: short product noun,
-    not full marketing label. Examples: `Amazon Aurora PostgreSQL Server` ->
-    `aurora`, `AWS App Runner` -> `app runner`, `CloudFront CDN` -> `cloudfront`,
-    `Azure Container Apps` -> `container apps`, `GCP Cloud Run` -> `run`,
-    `Cloud SQL` -> `sql`, `Cloud Pub/Sub` -> `pubsub`.
-  - `resolve_icons(icons=[...])` declares the plan AND resolves the whole plan in
-    ONE tool call. It records `icon_plan.json` and sets the fallback search budget
-    to `unique planned icons * 3`. Use the returned `icon` relative path for
-    prettygraph, or `path` if absolute is required. NOT_FOUND entries include
-    `tried_keywords` — use a DIFFERENT keyword in `search_icons` to avoid
-    redundant queries.
-  - `search_icons(icon_keyword, provider="<provider>")` is fallback for misses
-    only. Check `tried_keywords` in the NOT_FOUND result first. Never call it
-    more than 3 times for the same icon/query/provider; total fallback search
-    budget is `unique planned icons * 3`.
+- **Always resolve paths with tools before using them:**
+  - `search_icons("<service>", provider="<provider>")` — finds the exact path
+    within a provider subtree (e.g. `search_icons("App Service", provider="azure")`).
   - `fetch_logo("<Product Name>")` — for brand logos not in the pack (Stripe,
-    Twilio, etc.); call ONLY for specific planned services that `resolve_icons`
-    returned as `NOT_FOUND` and fallback `search_icons` also failed, once per
-    missing logo. Do not call it for every service upfront.
+    Twilio, etc.), returns `PATH: <file>` or `NOT_FOUND`.
   - NEVER guess a path — a wrong path silently drops the icon.
 - If no icon exists, omit `icon=` (the box still renders with color) or use a
   generic one (e.g. `onprem/client/users.png`, `generic/database/sql.png`).
@@ -336,25 +341,21 @@ Simplification:
 
 ## Workflow
 1. Plan tiers, clusters, the few typed edges.
-2. Make the exact icon plan with `icon_keyword`, then call `resolve_icons(icons=[...])`
-   once for the whole plan — it records the budget (unique_icons × 3) and resolves
-   all paths in a single call. Check `tried_keywords` in any NOT_FOUND result before
-   calling `search_icons`. Use `search_icons` only for misses (different keyword than
-   what was tried). Call `fetch_logo` only if fallback local search also fails; fetch
-   each missing brand logo at most once.
-3. For raw `diagrams` node imports, call `search_diagrams_nodes` first and use
-   only returned import paths; use custom icons only when no built-in node fits.
-4. Write the complete `prettygraph` script.
-5. Call `audit_diagram_code(code=<complete script>)` and fix high/medium findings.
-6. Call `render_diagram(code=<complete script>)` — the tool runs the script and
+2. Use `search_icons` / `fetch_logo` to resolve all icon paths before writing code.
+3. Write the complete `prettygraph` script.
+4. Call `render_diagram(code=<complete script>)` — the tool runs the script and
    returns the rendered PNG **plus a layout audit**. On error it returns the
    traceback — read and fix.
-7. **Read the LAYOUT AUDIT first** (objective check the eye misses): it reports the
-   page `aspect` ratio and any label-bearing edges that span too far and will
-   STRAND. If it says TOO WIDE → fold cross-cutting tiers into stacked columns
-   (rule 3b). If it lists strand-risk edges → move those endpoints into adjacent/
-   stacked clusters. Never finalize with an unresolved audit warning.
-8. THEN LOOK at the PNG like a reviewer: title present? every box has its real icon
+5. **Read the LAYOUT AUDIT first** (objective check the eye misses): it reports the
+   page `aspect` ratio, any label-bearing edges that span too far (`STRAND RISK`),
+   and canvas fill (`LOW FILL`). Act on every warning:
+   - `TOO WIDE` → fold cross-cutting tiers into stacked columns (rule 3b).
+   - `STRAND RISK` → move those cluster endpoints adjacent/stacked so the edge
+     and label stay short.
+   - `LOW FILL` → the page is airy; add missing per-node detail, merge thin
+     1-2-box regions into adjacent tiers, keep connected regions adjacent.
+   Never finalize with an unresolved audit warning.
+6. THEN LOOK at the PNG like a reviewer: title present? every box has its real icon
    (no blanks)? clusters tinted & non-overlapping? edges labeled and not crossing?
    collapse applied? Fix the script and call `render_diagram` again (≤3).
 
@@ -395,22 +396,15 @@ boxes size to their text and look ragged.
 ```python
 g = Pretty(title, ..., node_width=270, node_height=46, theme="pro")  # uniform pills
 ```
-Keep labels short (≤ ~26 chars) and sublabels shorter (≤ ~24 chars) so they fit.
-If detail is longer, abbreviate, split into another box, or widen boxes; never
-ship clipped text.
-
-For a Legend, do NOT put all entries in one long sublabel such as
-`solid=sync · dashed=obs · dotted=deploy`. Split entries into short lines/nodes
-(`Solid: sync`, `Dashed: obs`, `Dotted: deploy`) or give the legend extra width.
+Keep labels short (≤ ~26 chars) so they fit; push detail into a short `sublabel=`.
 
 ## 2. One icon FAMILY (so logos look consistent)
 Mixing aws + azure + saas + programming logos looks noisy. For an infographic,
 pick ONE family and use it for every box — `azure/general/*` is a clean
 line-style set (file, files, tag, table, cubes, gear, workflow, search-grid,
 versions, counter, support, usericon, log-streaming, dashboard, …). Verify each
-paths with one `resolve_icons(icons=[...])` batch; a wrong path silently drops
-the icon. Use `search_icons` fallback only for misses, and do not search any one
-icon more than 3 times.
+path with `search_icons("<name>", provider="azure")` — a wrong path silently
+drops the icon.
 
 ## 3. Bold flow arrows that go CLUSTER→CLUSTER (the key to aligned clusters)
 If a flow edge connects a node *inside* cluster A to a node *inside* cluster B,
@@ -468,3 +462,125 @@ script must produce `out.png` + `out.drawio` (render_diagram validates this).
   counts or padding)? Arrows run border-to-border between stages, not from a box
   inside one? Main path bold/colored, side concerns thin/dashed? Band sits at the
   very bottom spanning the width? Feedback loop dashed and not distorting ranks?
+
+---
+
+## ML/DL Diagram Preset
+
+Use for neural network architectures (BERT, ResNet, LLM pipelines, RAG systems, etc.).
+
+### Node kinds — `ml_*` color coding
+| kind | color | use for |
+|------|-------|---------|
+| `ml_input` | green | Data input, dataset, feature extraction |
+| `ml_embed` | amber | Embedding, tokenizer, positional encoding |
+| `ml_conv` / `ml_pool` | blue | Conv layers, pooling, downsampling |
+| `ml_attention` / `ml_transformer` | purple | Attention heads, transformer blocks, MHA |
+| `ml_rnn` / `ml_lstm` | yellow | RNN, LSTM, GRU cells |
+| `ml_fc` / `ml_dense` | orange | Fully connected, linear, dense layers |
+| `ml_norm` | gray | BatchNorm, LayerNorm, Dropout |
+| `ml_loss` | red | Loss function, objective, softmax output |
+| `ml_output` | dark green | Final output, predictions, logits |
+
+### Cluster kinds — `ML_*` tints
+Use for grouping layers by stage: `ML_Input`, `ML_Embedding`, `ML_Encoder`,
+`ML_Attention`, `ML_Decoder`, `ML_Output`, `ML_Training`, `ML_Inference`, `ML_Pipeline`.
+
+### Example — Transformer encoder
+```python
+g = Pretty("BERT Encoder Architecture", subtitle="12-layer bidirectional transformer",
+           direction="TB", icons_root="<icons_root>")
+
+g.cluster("inp", "Input", kind="ML_Input")
+g.box("tokens", "Tokenizer", kind="ml_input", sublabel="WordPiece", parent="inp")
+g.box("posenc", "Positional Encoding", kind="ml_embed", parent="inp")
+
+g.cluster("enc", "Encoder Block ×12", kind="ML_Attention")
+g.box("mha", "Multi-Head Attention", kind="ml_attention", sublabel="12 heads, d=768", parent="enc")
+g.box("ffn", "Feed-Forward Network", kind="ml_fc", sublabel="d_ff=3072", parent="enc")
+g.box("ln", "LayerNorm + Residual", kind="ml_norm", parent="enc")
+
+g.cluster("out", "Output", kind="ML_Output")
+g.box("cls", "[CLS] Representation", kind="ml_output", sublabel="768-dim", parent="out")
+g.box("pool", "Pooler (tanh)", kind="ml_dense", parent="out")
+
+g.link("tokens", "posenc", label="token ids")
+g.link("posenc", "mha", label="embeddings\n768-dim")
+g.link("mha", "ffn", label="attended")
+g.link("ffn", "ln", label="transformed")
+g.link("ln", "cls", label="sequence")
+g.link("cls", "pool", label="[CLS] token")
+```
+
+### Tips for ML/DL diagrams
+- Direction: `TB` for layer stacks (best for encoder/decoder architectures)
+- Direction: `LR` for data pipelines (best for training/inference flows)
+- Annotate tensor shapes in `sublabel`: `sublabel="[B, 512, 768]"` 
+- Collapse `×N` repeated blocks: one box with `sublabel="×12 layers"` is cleaner
+- Use `same_rank` to align parallel branches (encoder/decoder)
+- For RAG architectures: use standard node kinds (source, data, compute, messaging)
+  for the retrieval/generation flow; reserve `ml_*` kinds for the model internals
+
+---
+
+## AI/LLM Brand Icons (NEW)
+
+The `fetch_logo` tool now resolves **321 AI/LLM brand logos** automatically via
+lobe-icons CDN before falling back to web scraping. Just call `fetch_logo` with
+the brand name — no need to guess paths:
+
+```
+fetch_logo("claude")        -> /icons/ai-brands/claude.png
+fetch_logo("openai")        -> /icons/ai-brands/openai.png  
+fetch_logo("langchain")     -> /icons/ai-brands/langchain.png
+fetch_logo("qdrant")        -> /icons/ai-brands/qdrant.png  (simple-icons fallback)
+fetch_logo("huggingface")   -> /icons/ai-brands/huggingface.png
+```
+
+Supported brands include: Claude, Anthropic, OpenAI, Gemini, Mistral, Llama, Ollama,
+LangChain, LangGraph, LangSmith, LlamaIndex, HuggingFace, Cohere, CrewAI, PydanticAI,
+DeepSeek, Grok, Groq, Perplexity, Replicate, Together, Fireworks, NVIDIA, Azure AI,
+Vertex AI, Bedrock, Tavily, Dify, n8n, Zapier, and 290+ more.
+
+---
+
+## draw.io Shape Search (NEW)
+
+Use `search_drawio_shapes` to **confirm the canonical vendor/service shape exists
+and find the right keyword** (instead of guessing `mxgraph.*` names):
+
+```
+search_drawio_shapes("aws lambda")    -> confirms the official AWS Lambda shape
+search_drawio_shapes("k8s pod")       -> confirms the Kubernetes Pod shape
+search_drawio_shapes("dynamodb")      -> confirms DynamoDB shape + dimensions
+```
+
+Covers 10,446 shapes: AWS, Azure, GCP, Cisco, Kubernetes, UML, BPMN, ER, flowchart,
+network, electrical, P&ID, and more.
+
+**Important — how this export works:** the `.drawio` is generated from your
+prettygraph script (each node becomes a `shape=label` box with `icon=` + theme
+colour by `kind`). The export does NOT consume a raw `style=` string, so use the
+result to pick the right icon (`search_icons` / `fetch_logo` → `icon=`), not to
+paste a style. For non-architecture types (ERD / UML / sequence / flowchart) and
+the full mapping, see `diagrams-as-code/reference/drawio_export.md`.
+
+---
+
+## Code Structure Visualization (NEW)
+
+To visualize a Python codebase's module dependencies or class hierarchy:
+
+```python
+# In the agent, call:
+result = visualize_code_structure(
+    project_path="/path/to/project",
+    mode="imports",   # or "classes"
+    language="python",
+    group=True        # group by sub-package into nested clusters
+)
+# result is a JSON graph with nodes/edges/groups
+# then use the graph to build a prettygraph diagram
+```
+
+Use cases: architecture reviews, onboarding diagrams, refactor planning, dependency audits.

@@ -90,6 +90,7 @@ _TOOL_LABELS = {
     "propose_blueprint": "Designing the architecture blueprint",
     "render_diagram": "Rendering the diagram",
     "export_drawio": "Exporting the editable .drawio",
+    "list_saved_diagrams": "Listing saved diagram sessions",
     "resolve_icons": "Resolving icon plan",
     "search_diagrams_nodes": "Searching built-in diagram nodes",
     "search_icons": "Searching the icon library",

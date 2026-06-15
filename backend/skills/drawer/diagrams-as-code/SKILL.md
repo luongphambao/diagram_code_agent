@@ -21,6 +21,9 @@ edges colored/labeled by concern) — not from fighting the layout engine.
 - `reference/patterns.md` — full worked examples to imitate, for AWS **and**
   Azure/GCP/OCI/IBM. The idioms are provider-agnostic: keep the WHOLE diagram in
   one provider's node set — never mix AWS icons into an Azure/GCP/OCI diagram.
+- `reference/drawio_export.md` — how the editable `.drawio` is produced (it does
+  NOT consume raw `style=`), what `search_drawio_shapes` is actually for, and how
+  to map ERD / UML / sequence / flowchart requests onto prettygraph.
 
 ## Diagram object
 ```python
