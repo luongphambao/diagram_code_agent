@@ -51,6 +51,7 @@ from .prompts import (
     build_pretty_system_prompt,
     build_system_prompt,
 )
+from .context import SessionContext
 from .tools import CRITIC_TOOLS, DRAWER_TOOLS, GATE_TOOL_NAMES, ICON_RESOLVER_TOOLS, MAIN_TOOLS
 
 logger = logging.getLogger(__name__)
@@ -642,4 +643,7 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
         checkpointer=checkpointer,
         store=store,
         interrupt_on=interrupt_on,
+        # Per-session config (credentials, account ids, user email) reaches the
+        # gate tools via runtime.context instead of the prompt; see context.py.
+        context_schema=SessionContext,
     )

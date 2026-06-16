@@ -8,10 +8,12 @@ from datetime import datetime
 from pathlib import Path
 
 import httpx
+from langchain.tools import ToolRuntime
 from langchain_core.tools import tool
 from pydantic import BaseModel
 
 from .backends import WORKSPACE
+from .context import SessionContext
 
 
 _EMAIL_HTML_TEMPLATE = """\
@@ -177,6 +179,7 @@ def send_architecture_report_email(
     recipient_email: str,
     subject: str,
     project_name: str,
+    runtime: ToolRuntime[SessionContext],
     subtitle: str = "",
     recipient_name: str = "Team",
 ) -> str:
@@ -186,11 +189,16 @@ def send_architecture_report_email(
     then delivers it as an email attachment with a professional HTML template
     branded for BNK Solution.
 
-    Requires COMPOSIO_API_KEY in the environment and a connected Gmail account
-    (run `composio add gmail` once to authorise bao.luong@bnksolution.com).
+    Requires a Composio API key and a connected Gmail account (run
+    `composio add gmail` once to authorise the sending account).
     Call this ONLY after generate_pdf_report() has completed successfully.
     This tool PAUSES for user approval before sending.
     """
+    ctx = runtime.context
+    # Default the recipient to the session user when the model leaves it blank.
+    recipient_email = recipient_email or ctx.user_email
+    if not recipient_email:
+        return "ERROR: no recipient_email provided and no session user_email available."
     pdf_path: Path = WORKSPACE / "out.pdf"
     if not pdf_path.exists():
         return (
@@ -206,9 +214,10 @@ def send_architecture_report_email(
             "Run: pip install composio-langchain"
         )
 
-    api_key = os.environ.get("COMPOSIO_API_KEY", "")
+    api_key = ctx.composio_api_key or os.environ.get("COMPOSIO_API_KEY", "")
     if not api_key:
-        return "ERROR: COMPOSIO_API_KEY environment variable is not set."
+        return "ERROR: no Composio API key in session context or COMPOSIO_API_KEY env."
+    gmail_account_id = ctx.gmail_account_id or "ca_LVbY16_Vo874"
 
     html_body = _EMAIL_HTML_TEMPLATE.format(
         project_name=project_name,
@@ -250,7 +259,7 @@ def send_architecture_report_email(
                     "s3key": s3_key,
                 },
             },
-            connected_account_id="ca_LVbY16_Vo874",
+            connected_account_id=gmail_account_id,
             version="20260612_00",
         )
     except Exception as exc:

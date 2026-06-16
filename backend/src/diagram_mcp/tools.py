@@ -552,20 +552,26 @@ def audit_diagram_code(code: str) -> str:
     return json.dumps({"verdict": verdict, "findings": findings}, indent=2)
 
 
-@tool
+@tool(parse_docstring=True)
 def render_diagram(
     code: str,
     tool_call_id: Annotated[str, InjectedToolCallId],
 ) -> ToolMessage:
     """Render a `diagrams` (mingrammer) Python script and return the resulting image.
 
-    Pass the COMPLETE Python script as `code`. It must render to `out.png` AND
-    `out.dot` in the working directory, e.g.:
-        Diagram("...", filename="out", outformat=["png", "dot"], show=False, ...)
-    (pretty style: `Pretty(...).render("out")`).
-
     On success the rendered PNG is returned so you can LOOK at it and refine.
     On failure the error output is returned so you can fix the code and retry.
+    Rendering is budget-capped per round, so fix known defects rather than
+    re-rendering to chase the same warning.
+
+    When to use: after the blueprint is approved and icons are resolved, to draw
+    and iteratively refine the diagram.
+
+    Args:
+        code: The COMPLETE Python script. It must render to `out.png` AND `out.dot`
+            in the working directory, e.g. Diagram("...", filename="out",
+            outformat=["png", "dot"], show=False, ...) — or for pretty style,
+            Pretty(...).render("out").
     """
     if not _BLUEPRINT_FILE.exists():
         return ToolMessage(
@@ -767,13 +773,22 @@ def list_saved_diagrams() -> str:
     return "\n".join(lines)
 
 
-@tool
+@tool(parse_docstring=True)
 def search_icons(query: str, provider: Optional[str] = None) -> str:
     """Search the bundled icon pack for matching icon paths.
 
     Returns absolute `.png` paths to use in `Custom(label, "<path>")` when no
-    built-in `diagrams` node fits. Optionally restrict to one `provider`
-    (e.g. "aws", "azure", "gcp", "onprem", "k8s", "programming", "saas").
+    built-in `diagrams` node fits.
+
+    When to use: only AFTER `search_diagrams_nodes` finds no built-in node for a
+    component. Try one keyword; on NOT_FOUND try at most one broader term, then
+    fall back to `fetch_logo` (brands) or omit the icon. Searches are budget-capped,
+    so do not call repeatedly for the same icon.
+
+    Args:
+        query: Short filename-style keyword for the icon, e.g. "redis", "lambda".
+        provider: Optional provider subtree to restrict the search; one of
+            "aws", "azure", "gcp", "onprem", "k8s", "programming", "saas".
     """
     state = _icon_search_state()
     key = _icon_key(query, provider)
@@ -826,17 +841,26 @@ def search_icons(query: str, provider: Optional[str] = None) -> str:
     return json.dumps(result, indent=2)
 
 
-@tool
+@tool(parse_docstring=True)
 def search_diagrams_nodes(query: str = "", provider: str = "", category: str = "",
                           limit: int = 10, queries: Optional[list[str]] = None) -> str:
     """Search built-in `diagrams` node classes using the local node catalog.
 
-    Use this before writing raw `from diagrams.<provider>.<category> import X`
-    imports. It returns verified import paths from `resources/node_catalog.json`.
-    Use `resolve_icons` / `search_icons` only when no built-in node fits.
+    Returns verified import paths from `resources/node_catalog.json`. Use
+    `resolve_icons` / `search_icons` only when no built-in node fits.
 
-    BATCH: pass `queries=["redis", "cloud run", ...]` to resolve ALL planned
-    imports in ONE call (returns {query: hits}). Do not call once per node.
+    When to use: before writing any raw `from diagrams.<provider>.<category> import X`
+    import. ALWAYS prefer the batch form `queries=[...]` to resolve every planned
+    import in one call — one-by-one single searches are budget-capped and warned.
+
+    Args:
+        query: A single node search term (only when not batching). Prefer `queries`.
+        provider: Optional provider subtree filter, e.g. "aws", "azure", "gcp", "onprem".
+        category: Optional category filter within a provider (e.g. "database", "compute").
+        limit: Max hits returned per query (default 10).
+        queries: Batch list of terms, e.g. ["redis", "cloud run", "pubsub"]; returns
+            a mapping of each query to its hits. Use this for the whole blueprint
+            in ONE call.
     """
     state = _node_search_state()
     if queries:
@@ -877,13 +901,21 @@ class IconRequest(BaseModel):
     icon_keyword: str = Field(description="short filename-style search term, e.g. redis|run|sql|pubsub")
 
 
-@tool
+@tool(parse_docstring=True)
 def resolve_icons(icons: list[IconRequest]) -> str:
     """Resolve a planned batch of icon lookups in one tool call.
 
     Returns JSON entries with a best matching absolute `path` and prettygraph
     relative `icon`. Also writes `icon_plan.json` in the workspace so revision
     tasks can reuse prior choices instead of searching again.
+
+    When to use: once per round, after planning all icons. Pass every needed icon
+    in a single call rather than calling repeatedly; the result is cached for the
+    round and re-resolving is rejected.
+
+    Args:
+        icons: Full list of planned icon lookups (each an IconRequest with label,
+            provider, and icon_keyword) to resolve together in one batch.
     """
     state = _icon_search_state()
     if state.get("resolved_this_round") and _ICON_PLAN_FILE.exists():
@@ -933,7 +965,7 @@ def resolve_icons(icons: list[IconRequest]) -> str:
     return json.dumps(resolved, indent=2)
 
 
-@tool
+@tool(parse_docstring=True)
 def plan_style_sizes(
     node_count: int,
     longest_label_chars: int = 22,
@@ -1116,7 +1148,7 @@ def _shorten(text: str, fits) -> tuple[str, str, list[str]]:
     return text, moved, steps
 
 
-@tool
+@tool(parse_docstring=True)
 def fit_labels(
     nodes: list[NodeText],
     edge_labels: Optional[list[str]] = None,
@@ -1129,11 +1161,21 @@ def fit_labels(
 
     Text MUST stay inside its card: cards that outgrow `node_width` get
     auto-widened at render (breaking uniform width), so fix the text FIRST.
-    Size args default to the last `plan_style_sizes` result (`style_plan.json`).
-    Returns JSON per node: `fits`, char budgets, and a deterministic
-    `suggestion` (parenthetical -> sublabel, standard abbreviations, vendor
-    prefix drop). Entries with `still_too_long: true` need a manual rename.
-    Edge labels longer than ~4 words are flagged with a trimmed suggestion.
+    Returns JSON per node: `fits`, char budgets, and a deterministic `suggestion`
+    (parenthetical -> sublabel, standard abbreviations, vendor prefix drop).
+    Entries with `still_too_long: true` need a manual rename; edge labels longer
+    than ~4 words are flagged with a trimmed suggestion.
+
+    When to use: after `plan_style_sizes` and before writing the render script, to
+    verify every label fits and to pull suggested shortenings.
+
+    Args:
+        nodes: The planned node texts to check (each a NodeText with title/sublabel).
+        edge_labels: Optional list of edge label strings to check for over-length.
+        node_width: Card width override; defaults to the last `plan_style_sizes` result.
+        icon_size: Icon size override; defaults to the last `plan_style_sizes` result.
+        title_size: Title font size override; defaults to the last `plan_style_sizes` result.
+        sublabel_size: Sublabel font size override; defaults to the last `plan_style_sizes` result.
     """
     plan_sizes: dict = {}
     plan_file = WORKSPACE / "style_plan.json"
@@ -1198,15 +1240,21 @@ def fit_labels(
     return json.dumps(out, indent=2, ensure_ascii=False)
 
 
-@tool
+@tool(parse_docstring=True)
 def fetch_logo(name: str) -> str:
     """Resolve a brand/product logo — lobe-icons (321 AI/LLM brands + data stores) first,
     then local pack, then Iconify, then favicon; downloads & validates.
 
     For AI/LLM brands (Claude, OpenAI, Gemini, Mistral, LangChain, HuggingFace, Ollama,
     Qdrant, Redis, MongoDB, Kafka, etc.) returns a cached PNG path from lobe-icons CDN.
-    Falls back to web scraping for other brands.
-    Returns an absolute PNG/SVG path to use in box(icon=...), or NOT_FOUND.
+    Falls back to web scraping for other brands. Returns an absolute PNG/SVG path to
+    use in box(icon=...), or NOT_FOUND.
+
+    When to use: for a named third-party brand/product when neither a built-in
+    `diagrams` node nor `search_icons` produced a usable icon.
+
+    Args:
+        name: The brand or product name to resolve, e.g. "OpenAI", "Snowflake", "Stripe".
     """
     try:
         from .aiicons import lookup_ai_logo
@@ -1223,15 +1271,20 @@ def fetch_logo(name: str) -> str:
     return path or f"NOT_FOUND: no verified logo for '{name}'. Use a built-in node or search_icons()."
 
 
-@tool
+@tool(parse_docstring=True)
 def search_drawio_shapes(query: str, limit: int = 5) -> str:
     """Search 10,446 official draw.io shapes for their exact style strings.
 
-    Use when you need a specific vendor shape (AWS Lambda, Azure VM, k8s Pod,
-    UML actor, BPMN task, etc.) in the exported .drawio file. Returns the exact
-    `style=` strings that render correctly — never guess mxgraph.* style names.
+    Returns the exact `style=` strings that render correctly — never guess
+    mxgraph.* style names.
 
-    Examples: "aws lambda", "azure vm", "k8s pod", "uml actor", "dynamodb", "kafka"
+    When to use: when you need a specific vendor shape (AWS Lambda, Azure VM, k8s
+    Pod, UML actor, BPMN task, etc.) in the exported .drawio file.
+
+    Args:
+        query: Shape search keywords, e.g. "aws lambda", "azure vm", "k8s pod",
+            "uml actor", "dynamodb", "kafka".
+        limit: Max number of matching shapes to return (default 5).
     """
     try:
         from .shapesearch import search_shapes
@@ -1244,22 +1297,23 @@ def search_drawio_shapes(query: str, limit: int = 5) -> str:
         return f"search_drawio_shapes error: {exc}"
 
 
-@tool
+@tool(parse_docstring=True)
 def visualize_code_structure(project_path: str, mode: str = "imports",
                              language: str = "python", group: bool = True) -> str:
     """Extract and visualize a codebase's module-import graph or class-inheritance hierarchy.
 
-    Returns a JSON graph describing the code structure. Use this when a user asks
-    to visualize their codebase, understand dependencies, or map class hierarchies.
+    Returns a JSON graph describing the code structure. After calling this, use the
+    returned graph to generate a prettygraph diagram: pass nodes/edges/groups to
+    g.cluster()/g.box()/g.link() calls.
+
+    When to use: when a user asks to visualize their codebase, understand
+    dependencies, or map class hierarchies.
 
     Args:
         project_path: Absolute path to the project/package directory.
         mode: "imports" (module-level dependencies) or "classes" (class inheritance).
         language: Currently only "python" is supported.
         group: Group nodes by sub-package into nested clusters (recommended).
-
-    After calling this, use the returned graph to generate a prettygraph diagram:
-    pass nodes/edges/groups to g.cluster()/g.box()/g.link() calls.
     """
     if language != "python":
         return json.dumps({"error": f"language={language!r} not yet supported. Only 'python' available."})
@@ -1279,14 +1333,22 @@ def visualize_code_structure(project_path: str, mode: str = "imports",
         return f"visualize_code_structure error: {exc}"
 
 
-@tool
+@tool(parse_docstring=True)
 def analyze_architecture_requirements(requirements: str, provider_preference: str = "") -> str:
     """Analyze architecture requirements into deterministic planning signals.
 
-    This is not a human-approval gate. Use it after reading the user prompt and
-    attached requirement docs, before `propose_diagram_brief`. It writes
-    `architecture_analysis.json` so the brief, tech stack, blueprint, and critic
-    can stay aligned on pattern, scale, security, provider, and scope signals.
+    Writes `architecture_analysis.json` so the brief, tech stack, blueprint, and
+    critic stay aligned on pattern, scale, security, provider, and scope signals.
+    This is NOT a human-approval gate.
+
+    When to use: once, after reading the user prompt and attached requirement docs,
+    before `propose_diagram_brief`.
+
+    Args:
+        requirements: The combined requirement text (user prompt plus extracted
+            content from any uploaded requirement documents).
+        provider_preference: Optional cloud preference to bias detection, e.g.
+            "aws", "azure", "gcp"; empty means cloud-neutral.
     """
     analysis = analyze_requirements(requirements, provider_preference)
     WORKSPACE.mkdir(parents=True, exist_ok=True)
@@ -1685,14 +1747,20 @@ class Blueprint(CoercingModel):
     edges: list[BPEdge] = Field(default_factory=list)
 
 
-@tool
+@tool(parse_docstring=True)
 def propose_diagram_brief(brief: DiagramBrief) -> str:
     """Record the diagram requirements brief before recommending a tech stack.
 
-    This is not a human-approval gate. Use it after reading the user's prompt and
-    any attached documents, before propose_tech_stack. It captures objective,
-    stakeholders, requirements, constraints, and assumptions so later blueprint
-    and rendering decisions stay grounded and simplification choices are explicit.
+    Captures objective, stakeholders, requirements, constraints, and assumptions so
+    later blueprint and rendering decisions stay grounded and simplification choices
+    are explicit. This is NOT a human-approval gate.
+
+    When to use: after reading the user's prompt and any attached documents, before
+    propose_tech_stack.
+
+    Args:
+        brief: The structured diagram brief (objective, stakeholders, functional and
+            non-functional requirements, constraints, and assumptions).
     """
     WORKSPACE.mkdir(parents=True, exist_ok=True)
     _BRIEF_FILE.write_text(brief.model_dump_json(indent=2), encoding="utf-8")
@@ -1987,13 +2055,20 @@ def _preseed_icon_plan(blueprint: "Blueprint", provider: str) -> None:
         pass
 
 
-@tool
+@tool(parse_docstring=True)
 def propose_blueprint(blueprint: Blueprint) -> str:
     """Propose the architecture blueprint for the user to review and approve.
 
-    PAUSES for human approval. Call this AFTER the tech stack is approved.
-    Runs deterministic validators for Well-Architected pillar coverage, NFR mapping,
-    and functional requirements coverage — warnings are surfaced but do NOT block approval.
+    PAUSES for human approval. Runs deterministic validators for Well-Architected
+    pillar coverage, NFR mapping, and functional requirements coverage — warnings
+    are surfaced but do NOT block approval.
+
+    When to use: AFTER the tech stack is approved, to lock the component/cluster/edge
+    design before icon resolution and rendering.
+
+    Args:
+        blueprint: The full architecture blueprint (nodes, clusters, edges, pattern,
+            and density) to present for approval.
     """
     if not _TECHSTACK_FILE.exists():
         return "Get the tech stack approved first by calling propose_tech_stack."
@@ -2141,15 +2216,20 @@ def inspect_diagram(tool_call_id: Annotated[str, InjectedToolCallId]) -> ToolMes
     )
 
 
-@tool
+@tool(parse_docstring=True)
 def submit_critique(findings: list[DiagramFinding]) -> str:
     """Record your diagram review as a list of concrete findings and get the verdict.
 
-    Pass an empty list if the diagram is clean. Each finding is
-    `{severity, confidence, category, title, detail, fix_suggestion?, in_blueprint?}`.
-    Findings are ranked and capped; the returned text starts with
-    `VERDICT: PASS` or `VERDICT: REVISE`. Return that verdict text verbatim as your
-    final answer so the architect can act on it.
+    Findings are ranked and capped; the returned text starts with `VERDICT: PASS`
+    or `VERDICT: REVISE`. Return that verdict text verbatim as your final answer so
+    the architect can act on it.
+
+    When to use: once, after inspecting the rendered diagram against the blueprint.
+
+    Args:
+        findings: The list of concrete review findings; each is
+            {severity, confidence, category, title, detail, fix_suggestion?,
+            in_blueprint?}. Pass an empty list if the diagram is clean.
     """
     kept = prune(findings)
     WORKSPACE.mkdir(parents=True, exist_ok=True)
@@ -2293,7 +2373,7 @@ class GridSection(BaseModel):
     cols: int = Field(2, description="columns to pack this plane's boxes into (2-3 reads densest)")
 
 
-@tool
+@tool(parse_docstring=True)
 def declare_poster_grid(
     row1: list[GridSection],
     row2: list[GridSection],
@@ -2301,17 +2381,18 @@ def declare_poster_grid(
 ) -> str:
     """Declare and validate the region 'planes' for a poster-mode diagram.
 
-    Call this BEFORE writing prettygraph code when density='poster' (the default).
-    Pass the planned region planes grouped loosely into row1/row2(/row3) — with
-    direction='TB' the planes render SIDE BY SIDE across the width (like the
+    With direction='TB' the planes render SIDE BY SIDE across the width (like the
     reference poster). Returns a ready-to-paste skeleton of g.grid_cluster(...)
-    calls that pack each plane into a dense multi-column logo grid.
+    calls that pack each plane into a dense multi-column logo grid. Rules enforced:
+    row1 must have 3-7 sections, row2 must have 2-6, row3 (optional) 0-5, and each
+    section must have a distinct anchor_node_id.
 
-    Rules enforced:
-    - row1 must have 3-7 sections
-    - row2 must have 2-6 sections
-    - row3 (optional) must have 0-5 sections
-    - Each section must have a distinct anchor_node_id
+    When to use: BEFORE writing prettygraph code when density='poster' (the default).
+
+    Args:
+        row1: Region planes for the top row (3-7 GridSection entries).
+        row2: Region planes for the second row (2-6 GridSection entries).
+        row3: Optional region planes for a third row (0-5 GridSection entries).
     """
     row3 = row3 or []
     errors: list[str] = []

@@ -42,6 +42,7 @@ load_dotenv()
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 from .agent import RECURSION_LIMIT, build_agent, make_persistence
+from .context import SessionContext
 from . import conversations as conv_db
 
 # The compiled agent is built in the FastAPI lifespan (so the Postgres connection
@@ -814,6 +815,15 @@ async def agui_endpoint(request: Request):
         "tags": ["diagram-agent"],
         "metadata": {"thread_id": thread_id, "run_id": run_id},
     }
+    # Per-session runtime context: credentials / account ids / user email reach the
+    # gate tools via runtime.context (not the prompt). Each field falls back to the
+    # process env inside the tool, so omitting them keeps current behaviour.
+    session_ctx = SessionContext(
+        user_email=body.get("userEmail", "") or "",
+        composio_api_key=body.get("composioApiKey", "") or "",
+        gmail_account_id=body.get("gmailAccountId", "") or "",
+        calendar_account_id=body.get("calendarAccountId", "") or "",
+    )
     last_tool = _last_tool_msg(messages)
 
     async def stream():
@@ -851,6 +861,7 @@ async def agui_endpoint(request: Request):
                     )
                 agen = AGENT.astream(
                     Command(resume={"decisions": [decision]}), config,
+                    context=session_ctx,
                     stream_mode=["messages", "updates", "custom"],
                 )
             else:
@@ -912,6 +923,7 @@ async def agui_endpoint(request: Request):
                             f" (+{len(image_blocks)} ref-image(s))" if image_blocks else "")
                 agen = AGENT.astream(
                     {"messages": [HumanMessage(content=content)]}, config,
+                    context=session_ctx,
                     stream_mode=["messages", "updates", "custom"],
                 )
 

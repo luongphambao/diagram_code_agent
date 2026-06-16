@@ -15,29 +15,32 @@ from datetime import datetime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 
+from langchain.tools import ToolRuntime
 from langchain_core.tools import tool
 from langgraph.types import interrupt
 from pydantic import BaseModel
+
+from .context import SessionContext
 
 
 _DEFAULT_TZ = "Asia/Ho_Chi_Minh"
 
 
-def _get_composio_client():
+def _get_composio_client(ctx: SessionContext | None = None):
     try:
         import composio  # type: ignore[import]
     except ImportError:
         raise RuntimeError(
             "composio package is not installed. Run: pip install composio-langchain"
         )
-    api_key = os.environ.get("COMPOSIO_API_KEY", "")
+    api_key = (ctx.composio_api_key if ctx else "") or os.environ.get("COMPOSIO_API_KEY", "")
     if not api_key:
-        raise RuntimeError("COMPOSIO_API_KEY environment variable is not set.")
+        raise RuntimeError("No Composio API key in session context or COMPOSIO_API_KEY env.")
     return composio.Composio(api_key=api_key)
 
 
-def _calendar_account_id() -> str:
-    acct = os.environ.get("GOOGLE_CALENDAR_CONNECTED_ACCOUNT_ID", "")
+def _calendar_account_id(ctx: SessionContext | None = None) -> str:
+    acct = (ctx.calendar_account_id if ctx else "") or os.environ.get("GOOGLE_CALENDAR_CONNECTED_ACCOUNT_ID", "")
     if not acct:
         raise RuntimeError(
             "GOOGLE_CALENDAR_CONNECTED_ACCOUNT_ID is not set. "
@@ -72,6 +75,7 @@ class ProposeMeetingSlotsArgs(BaseModel):
 
 @tool(args_schema=ProposeMeetingSlotsArgs)
 def propose_meeting_slots(
+    runtime: ToolRuntime[SessionContext],
     date_range_days: int = 5,
     duration_minutes: int = 60,
     timezone: str = _DEFAULT_TZ,
@@ -92,8 +96,8 @@ def propose_meeting_slots(
     a meeting time.  Call create_client_meeting afterward to confirm + book.
     """
     try:
-        client = _get_composio_client()
-        acct_id = _calendar_account_id()
+        client = _get_composio_client(runtime.context)
+        acct_id = _calendar_account_id(runtime.context)
     except RuntimeError as exc:
         return f"ERROR: {exc}"
 
@@ -229,6 +233,7 @@ def create_client_meeting(
     start_datetime: str,
     end_datetime: str,
     attendee_email: str,
+    runtime: ToolRuntime[SessionContext],
     attendee_name: str = "Client",
     description: str = "",
     add_google_meet: bool = True,
@@ -244,8 +249,8 @@ def create_client_meeting(
     (interrupt_on gate) before creating the event.
     """
     try:
-        client = _get_composio_client()
-        acct_id = _calendar_account_id()
+        client = _get_composio_client(runtime.context)
+        acct_id = _calendar_account_id(runtime.context)
     except RuntimeError as exc:
         return f"ERROR: {exc}"
 
