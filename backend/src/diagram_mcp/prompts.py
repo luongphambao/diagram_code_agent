@@ -33,6 +33,12 @@ _MAIN_TOOLS_BLOCK = """\
   assumptions[]}. This is not a human approval gate; it writes
   `diagram_brief.json` so later decisions stay grounded and simplifications are
   explicit.
+- `web_research(query, topic="general")` — ONE live Tavily web search returning a
+  synthesized answer + sources. HARD CAP: 3 calls per WHOLE session, and ONLY for
+  the tech-stack step (verify current pricing, latest versions/EOL, reference
+  architectures). Batch related questions into one query. NEVER call it during
+  icon/render/critic/report/email/calendar steps. Returns `BUDGET_EXHAUSTED` once
+  the 3 calls are used — then proceed from existing knowledge.
 - `propose_tech_stack(tech_stack, assumptions, scaling_roadmap, estimated_total_monthly_cost_usd)` —
   propose the technology stack; PAUSES for the user to approve/reject.
   `tech_stack` is a LIST of objects, ONE per layer:
@@ -253,6 +259,17 @@ You design the solution step by step; the user reviews and approves the gated st
    - `scaling_roadmap` — 2-3 phases with measurable `trigger` (DAU > N, p95 >
      target, DB CPU > 70%) and `est_monthly_cost_usd` per phase.
    - `estimated_total_monthly_cost_usd` — sum across all layers; must fit budget.
+   - **Verify time-sensitive facts (optional, budget-limited).** You have AT MOST
+     3 `web_research` calls for the WHOLE session — this is the ONLY step where you
+     should spend them. If unsure about current managed-service pricing, latest
+     stable versions / EOL dates, or a current reference architecture for the
+     chosen pattern/compliance, call `web_research` with ONE focused, batched query
+     per topic (pricing first, then versions, then reference architecture). Cite the
+     returned numbers/versions in `rationale`, `estimated_monthly_cost_usd`, and
+     `capacity_sizing`; anything you cannot verify goes in
+     `assumptions.confirm_with_customer`. Do NOT spend a search on facts you already
+     know with confidence, and never call it in later (icon/render/critic/report/
+     email/calendar) steps.
    Then WAIT for approval. If rejected, revise per the note and propose again.
 5. **Blueprint.** Call `propose_blueprint(...)` with a thorough senior SA design:
    - Pattern + WHY it fits, 3–6 key design decisions/trade-offs.

@@ -5,11 +5,14 @@ Diagram Code Agent turns plain-English system requirements into architecture dia
 ## What It Does
 
 - Reads typed requirements or uploaded PDF/DOCX/MD/TXT documents.
+- Runs live web search (Tavily, ≤3 calls/session) to verify current pricing, versions, and reference architectures before proposing the tech stack.
 - Proposes a technology stack and waits for user approval.
 - Proposes an architecture blueprint and waits for user approval.
 - Generates diagram code with local icon/logo support.
 - Renders diagram artifacts: `diagram.py`, `out.png`, `out.dot`, `out.drawio`.
 - Optionally generates a HITL-approved PDF report as `out.pdf`.
+- Optionally emails the report via Gmail through Composio (HITL-gated).
+- Optionally books a client meeting via Google Calendar through Composio (HITL-gated).
 - Streams chat, tool activity, approvals, and final state through AG-UI/SSE.
 - Persists conversations with Postgres when `DATABASE_URL` is configured.
 
@@ -19,10 +22,11 @@ Diagram Code Agent turns plain-English system requirements into architecture dia
 
 ## Tech Stack
 
-- Backend: Python 3.11, FastAPI, Deep Agents, LangGraph, LangChain, OpenAI, Graphviz, `diagrams`.
+- Backend: Python 3.11, FastAPI, Deep Agents, LangGraph, LangChain, OpenAI / Mimo, Graphviz, `diagrams`.
 - Frontend: Vite, React 19, TypeScript, Tailwind CSS 4, AG-UI client.
 - Storage: Postgres for durable sessions via Docker Compose; in-memory fallback for local dev.
 - Assets: local `resources/icons` icon pack plus generated icon manifests.
+- Integrations: Composio (Gmail, Google Calendar), Tavily (live web search), LangSmith (tracing).
 
 ## AI Agent Architecture
 
@@ -44,15 +48,25 @@ FastAPI Server (backend/src/diagram_mcp/server.py)
 Deep Agent (backend/src/diagram_mcp/agent.py)
     |
     +-- Main planner
+    |   +-- analyze_architecture_requirements
+    |   +-- propose_diagram_brief
+    |   +-- web_research             # optional live Tavily search (≤3/session)
     |   +-- propose_tech_stack       # HITL approval gate
     |   +-- propose_blueprint        # HITL approval gate
     |   +-- finalize_diagram         # HITL review gate
     |   +-- generate_pdf_report      # optional HITL PDF gate
+    |   +-- send_architecture_report_email  # optional HITL email gate (Composio Gmail)
+    |   +-- propose_meeting_slots    # optional — Calendar free-slot picker
+    |   +-- create_client_meeting    # optional HITL gate (Composio Google Calendar)
+    |
+    +-- Icon Resolver subagent
+    |   +-- search_diagrams_nodes
+    |   +-- resolve_icons
+    |   +-- search_icons
+    |   +-- fetch_logo
     |
     +-- Drawer subagent
     |   +-- writes diagram.py
-    |   +-- search_icons
-    |   +-- fetch_logo
     |   +-- render_diagram
     |   +-- export_drawio
     |
@@ -73,15 +87,19 @@ Deep Agent (backend/src/diagram_mcp/agent.py)
 
 1. User describes system requirements or uploads requirement documents.
 2. Server extracts document text and sends prompt/context to the Deep Agent.
-3. Agent proposes a technology stack with `propose_tech_stack`.
-4. Frontend shows approval card; user approves or rejects with feedback.
-5. Agent proposes architecture blueprint with `propose_blueprint`.
-6. Frontend shows blueprint card; user approves or asks for revisions.
-7. Agent writes diagram code, renders PNG, inspects result, and refines.
-8. Agent exports `.drawio` and calls `finalize_diagram`.
-9. Frontend shows final review card and diagram artifacts.
-10. If the user asks for a report/document, agent calls `generate_pdf_report`; frontend shows a PDF approval card before `out.pdf` is created.
-11. If the user asks to email the report, agent calls `send_architecture_report_email`; frontend shows an email approval card (recipient, subject) before sending via Gmail through Composio.
+3. Agent runs `analyze_architecture_requirements` and `propose_diagram_brief`.
+4. Agent optionally calls `web_research` (≤3 times) to verify current pricing, versions, or reference architectures before proposing the stack.
+5. Agent proposes a technology stack with `propose_tech_stack` — HITL gate.
+6. Frontend shows tech-stack approval card; user approves or rejects with feedback.
+7. Agent proposes architecture blueprint with `propose_blueprint` — HITL gate.
+8. Frontend shows blueprint card; user approves or asks for revisions.
+9. Icon resolver subagent batch-resolves all node classes and icon paths.
+10. Drawer subagent writes diagram code, runs the render-refine loop, and exports `.drawio`.
+11. Critic subagent reviews the rendered PNG and returns PASS or REVISE with findings.
+12. Agent calls `finalize_diagram` — HITL gate; frontend shows final review card and diagram artifacts.
+13. If the user asks for a report, agent calls `generate_pdf_report` — frontend shows a PDF approval card before `out.pdf` is created.
+14. If the user asks to email the report, agent calls `send_architecture_report_email` — frontend shows an email approval card before sending via Gmail through Composio.
+15. If the user asks to schedule a meeting, agent queries Google Calendar with `propose_meeting_slots`, user picks a slot, then `create_client_meeting` books it — HITL gate.
 
 ### Human-in-the-loop Gates
 
@@ -92,18 +110,42 @@ These tools are configured as approval gates:
 - `finalize_diagram`: confirms final rendered result before completion.
 - `generate_pdf_report`: confirms report settings before creating `out.pdf`.
 - `send_architecture_report_email`: confirms recipient and subject before sending the PDF via Gmail.
+- `create_client_meeting`: confirms meeting details before booking the Google Calendar event.
 
 When the user rejects a gate, the frontend sends feedback to the server. The server resumes the LangGraph run with `Command(resume=...)`, and the agent revises the current step.
 
 ### Agent Tools
 
-- `render_diagram`: runs generated Python `diagrams` code and creates PNG/DOT output.
-- `export_drawio`: converts Graphviz DOT output into editable `.drawio`.
-- `search_icons`: searches local icon catalog.
+Planning / approval (main agent):
+- `analyze_architecture_requirements`: deterministic advisor that reads requirements and returns app type, scale, security, and suggested patterns.
+- `propose_diagram_brief`: records objective, stakeholders, requirements, and constraints before design starts.
+- `web_research`: live Tavily search (≤3 calls/session) to verify current pricing, latest versions/EOL, and reference architectures at the tech-stack step.
+- `propose_tech_stack`: proposes the technology stack — pauses for HITL approval.
+- `propose_blueprint`: proposes the full architecture blueprint — pauses for HITL approval.
+- `finalize_diagram`: submits the rendered diagram for final user review — HITL gate.
+- `generate_pdf_report`: creates a multi-page PDF report — pauses for HITL approval.
+- `send_architecture_report_email`: emails `out.pdf` via Gmail through Composio — pauses for HITL approval.
+- `propose_meeting_slots`: queries Google Calendar for free slots and shows a picker (mid-run interrupt, not a gate).
+- `create_client_meeting`: books the selected slot and creates a Calendar event — HITL gate.
+
+Icon resolution subagent:
+- `search_diagrams_nodes`: batch-searches the built-in `diagrams` node catalog.
+- `resolve_icons`: batch-resolves custom icon paths.
+- `search_icons`: fallback search in the local icon pack.
+- `search_drawio_shapes`: looks up draw.io shape names.
 - `fetch_logo`: resolves vendor logos from local icons, Iconify, or favicon fallback.
-- `inspect_diagram`: lets the critic review rendered image quality.
-- `submit_critique`: records critic feedback for refinement.
-- `generate_pdf_report`: creates a multi-page PDF report after final diagram approval.
+
+Drawing subagent:
+- `plan_style_sizes`: sets canvas size and style for the chosen output mode.
+- `fit_labels`: adjusts label lengths to fit the layout.
+- `declare_poster_grid`: declares multi-column logo grid for poster mode.
+- `audit_diagram_code`: static analysis of generated diagram code before rendering.
+- `render_diagram`: executes generated Python `diagrams` code and returns PNG/DOT output.
+- `export_drawio`: converts Graphviz DOT output into editable `.drawio`.
+
+Critic subagent:
+- `inspect_diagram`: reads the rendered PNG and checks layout quality.
+- `submit_critique`: records verdict (PASS or REVISE with findings) for the main agent.
 
 ### Tool Call Flow
 
@@ -111,16 +153,21 @@ The intended tool order is:
 
 1. `analyze_architecture_requirements`
 2. `propose_diagram_brief`
-3. `propose_tech_stack`
-4. `propose_blueprint`
-5. `task(subagent_type="drawer", ...)`
-6. `task(subagent_type="critic", ...)`
-7. `finalize_diagram`
-8. `generate_pdf_report` *(optional — only when the user asks for a PDF report)*
-9. `send_architecture_report_email` *(optional — only when the user asks to email the report)*
+3. `web_research` *(optional — ≤3 calls/session, only at this step, to verify pricing/versions/reference architectures)*
+4. `propose_tech_stack` *(HITL gate)*
+5. `propose_blueprint` *(HITL gate)*
+6. `task(subagent_type="icon_resolver", ...)` — batch-resolves all node classes and icon paths
+7. `task(subagent_type="drawer", ...)` — writes diagram code, render-refine loop, exports drawio
+8. `task(subagent_type="critic", ...)` — reviews rendered diagram against blueprint
+9. `finalize_diagram` *(HITL gate)*
+10. `generate_pdf_report` *(optional HITL gate — only when the user asks for a PDF report)*
+11. `send_architecture_report_email` *(optional HITL gate — only when the user asks to email the report)*
+12. `propose_meeting_slots` *(optional — queries Google Calendar and shows slot picker)*
+13. `create_client_meeting` *(optional HITL gate — books the selected slot)*
 
 `generate_pdf_report` pauses for HITL approval before writing `out.pdf`.
 `send_architecture_report_email` pauses for HITL approval before sending the PDF via Gmail.
+`create_client_meeting` pauses for HITL approval before creating the calendar event.
 
 Example PDF tool call:
 
@@ -203,17 +250,17 @@ When the user asks to email the report (e.g. *"send the PDF to john@example.com"
 
 ```bash
 # backend/.env
-COMPOSIO_API_KEY=your_composio_api_key_here
+COMPOSIO_API_KEY=your_composio_api_key_here   # required for Gmail + Calendar via Composio
 ```
 
 ### Troubleshooting
 
-| Error | Fix |
-|-------|-----|
-| `COMPOSIO_API_KEY environment variable is not set` | Add `COMPOSIO_API_KEY` to `backend/.env` |
-| `No connected account found for user ID default` | Run `composio add gmail` and update `connected_account_id` in `email_tools.py` |
-| `Toolkit version not specified` | Update the `version=` parameter in `email_tools.py` with the latest version from `c.toolkits.get("GMAIL").meta.version` |
-| `out.pdf not found in workspace` | Call `generate_pdf_report` first to produce `out.pdf` before emailing |
+| Error                                                | Fix                                                                                                                           |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `COMPOSIO_API_KEY environment variable is not set` | Add `COMPOSIO_API_KEY` to `backend/.env`                                                                                  |
+| `No connected account found for user ID default`   | Run `composio add gmail` and update `connected_account_id` in `email_tools.py`                                          |
+| `Toolkit version not specified`                    | Update the `version=` parameter in `email_tools.py` with the latest version from `c.toolkits.get("GMAIL").meta.version` |
+| `out.pdf not found in workspace`                   | Call `generate_pdf_report` first to produce `out.pdf` before emailing                                                     |
 
 ## LangGraph Details
 
@@ -353,7 +400,8 @@ diagram_code_agent/
 - Python 3.11 or newer.
 - Node.js 18 or newer.
 - Graphviz installed on the host when running backend outside Docker.
-- OpenAI API key.
+- At least one LLM API key: `OPENAI_API_KEY` (OpenAI) or `MIMO_API_KEY` (Mimo).
+- `TAVILY_API_KEY` for live web search at the tech-stack step (optional but recommended).
 - Docker and Docker Compose for easiest full-stack run.
 
 Install Graphviz locally:
@@ -437,13 +485,30 @@ Open `http://localhost:5173`.
 Backend `backend/.env`:
 
 ```bash
-OPENAI_API_KEY=sk-...
+# --- AI model keys (at least one required) ---
+OPENAI_API_KEY=sk-...                    # OpenAI GPT models (required if using OpenAI)
+MIMO_API_KEY=sk-sl2w...                  # Mimo model provider (required if using Mimo)
+ANTHROPIC_API_KEY=sk-ant-...             # Anthropic Claude models (optional)
+
+# --- Web search (optional but recommended) ---
+TAVILY_API_KEY=tvly-dev-...              # Tavily — live fact-checking at tech-stack step (≤3 calls/session)
+
+# --- Observability (optional) ---
+LANGSMITH_TRACING=true
+LANGSMITH_ENDPOINT=https://api.smith.langchain.com
+LANGSMITH_API_KEY=lsv2_...
+LANGSMITH_PROJECT=diagram-agent
+
+# --- Integrations (optional) ---
+COMPOSIO_API_KEY=ak_...                  # Composio — required for Gmail email delivery and Google Calendar
+
+# --- Server config (optional) ---
 DIAGRAM_AGENT_PORT=8001
 DATABASE_URL=postgresql://diagram:diagram@localhost:5432/diagram
 ALLOWED_ORIGINS=http://localhost:5173
-LANGSMITH_TRACING=true
-LANGSMITH_API_KEY=lsv2_...
-LANGSMITH_PROJECT=diagram-code-agent
+
+# --- Model overrides (optional) ---
+PLAN_MODEL=gpt-4.1-mini                  # Model for the quick plan step; default gpt-4.1-mini
 ```
 
 Frontend `frontend/.env`:

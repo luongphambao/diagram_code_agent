@@ -128,6 +128,11 @@ NODE_SINGLE_SEARCH_WARN = 3
 NODE_SINGLE_SEARCH_HARD_CAP = 6
 CRITIC_REVISION_HARD_CAP = 2
 
+# Tavily web search is metered at a hard 3 calls per session (very limited quota).
+WEB_SEARCH_SESSION_CAP = 3
+_WEB_SEARCH_BUDGET_FILE = WORKSPACE / "web_search_budget.json"
+TAVILY_SEARCH_URL = "https://api.tavily.com/search"
+
 def _read_json_file(path: Path, default):
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -186,7 +191,7 @@ def clear_stage_markers() -> None:
         _ARCH_ANALYSIS_FILE, _BRIEF_FILE, _TECHSTACK_FILE, _BLUEPRINT_FILE,
         _CRITIQUE_FILE, _REVISION_COUNT_FILE, _TOOL_SUMMARY_FILE,
         _ICON_SEARCH_BUDGET_FILE, _NODE_SEARCH_BUDGET_FILE, _RENDER_SPEC_FILE,
-        _ICON_PLAN_FILE, WORKSPACE / REPORT_EVIDENCE_NAME,
+        _ICON_PLAN_FILE, _WEB_SEARCH_BUDGET_FILE, WORKSPACE / REPORT_EVIDENCE_NAME,
     ):
         if f.exists():
             f.unlink()
@@ -303,6 +308,12 @@ def _node_search_state() -> dict:
 
 def _save_node_search_state(state: dict) -> None:
     _write_json_file(_NODE_SEARCH_BUDGET_FILE, state)
+
+def _web_search_state() -> dict:
+    return _read_json_file(_WEB_SEARCH_BUDGET_FILE, {"calls": 0, "queries": []})
+
+def _save_web_search_state(state: dict) -> None:
+    _write_json_file(_WEB_SEARCH_BUDGET_FILE, state)
 
 
 def _tokens(text: str) -> list[str]:
@@ -2455,9 +2466,109 @@ def declare_poster_grid(
     }, indent=2)
 
 
+@tool(parse_docstring=True)
+def web_research(query: str, topic: str = "general") -> str:
+    """Run ONE live web search to verify time-sensitive facts via Tavily.
+
+    Returns a synthesized answer plus the top source URLs/snippets as JSON.
+    HARD LIMIT: at most 3 web searches per session — spend them deliberately.
+
+    When to use: ONLY at the tech-stack step, before propose_tech_stack — to verify
+    current managed-service pricing, latest stable versions / EOL dates, or a current
+    reference architecture for the chosen pattern/compliance. Batch related questions
+    into ONE rich query. Do NOT use during icon/render/critic/report/email/calendar.
+
+    Args:
+        query: One focused, fact-seeking question, e.g. "2026 AWS Fargate vCPU and
+            RDS Postgres db.t4g.medium monthly pricing us-east-1".
+        topic: Tavily topic hint, "general" (default) or "news" for recency.
+    """
+    import httpx
+
+    state = _web_search_state()
+    calls = int(state.get("calls", 0))
+    if calls >= WEB_SEARCH_SESSION_CAP:
+        _bump_tool_summary("web_research_budget_exhausted")
+        return json.dumps({
+            "status": "BUDGET_EXHAUSTED",
+            "query": query,
+            "calls_used": calls,
+            "session_cap": WEB_SEARCH_SESSION_CAP,
+            "instruction": (
+                "No web searches remain this session. Proceed with existing knowledge "
+                "and results already gathered; flag any unverified pricing/version as an "
+                "assumption in assumptions.confirm_with_customer."
+            ),
+        }, indent=2)
+
+    api_key = os.getenv("TAVILY_API_KEY")
+    if not api_key:
+        _bump_tool_summary("web_research_no_key")
+        return json.dumps({
+            "status": "NO_API_KEY",
+            "instruction": "TAVILY_API_KEY not set; skip web research and proceed.",
+        }, indent=2)
+
+    # Reserve the call BEFORE the network request, so a timeout/crash still consumes
+    # quota (fail-closed against the hard cap — the scarce resource is the quota).
+    state["calls"] = calls + 1
+    state.setdefault("queries", []).append(query)
+    _save_web_search_state(state)
+
+    try:
+        resp = httpx.post(
+            TAVILY_SEARCH_URL,
+            json={
+                "api_key": api_key,
+                "query": query,
+                "topic": topic if topic in ("general", "news") else "general",
+                "search_depth": "advanced",
+                "include_answer": "advanced",
+                "max_results": 5,
+            },
+            timeout=30,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as exc:  # noqa: BLE001
+        _bump_tool_summary("web_research_error")
+        return json.dumps({
+            "status": "ERROR",
+            "query": query,
+            "error": str(exc)[:300],
+            "calls_used": state["calls"],
+            "session_cap": WEB_SEARCH_SESSION_CAP,
+            "instruction": "Search failed (still counted). Proceed with existing knowledge.",
+        }, indent=2)
+
+    sources = [
+        {
+            "title": r.get("title", ""),
+            "url": r.get("url", ""),
+            "snippet": (r.get("content", "") or "")[:500],
+        }
+        for r in (data.get("results") or [])[:5]
+    ]
+    _bump_tool_summary("web_research", web_search_calls=state["calls"])
+    remaining = WEB_SEARCH_SESSION_CAP - state["calls"]
+    return json.dumps({
+        "status": "OK",
+        "query": query,
+        "answer": data.get("answer", ""),
+        "sources": sources,
+        "calls_used": state["calls"],
+        "calls_remaining": remaining,
+        "instruction": (
+            "Cite specific numbers/versions from answer/sources in your tech-stack "
+            f"rationale and cost estimates. Searches remaining: {remaining}."
+        ),
+    }, indent=2)
+
+
 DIAGRAM_TOOLS = [
     analyze_architecture_requirements,
     propose_diagram_brief,
+    web_research,
     propose_tech_stack,
     propose_blueprint,
     audit_diagram_code,
@@ -2486,6 +2597,7 @@ from .calendar_tools import propose_meeting_slots, create_client_meeting  # noqa
 MAIN_TOOLS = [
     analyze_architecture_requirements,
     propose_diagram_brief,
+    web_research,             # ≤3 Tavily calls/session — for tech-stack fact-checking
     propose_tech_stack,
     propose_blueprint,
     visualize_code_structure,
