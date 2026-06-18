@@ -29,9 +29,9 @@ if not api_key:
 client = composio.Composio(api_key=api_key)
 
 print("Checking Gmail connections on your Composio account...")
-all_accounts = client.connected_accounts.list()
+all_accounts = client.client.connected_accounts.list()
 
-gmail_all = [a for a in all_accounts.items if a.toolkit.slug == "gmail"]
+gmail_all = [a for a in all_accounts.items if getattr(a.toolkit, "slug", None) == "gmail"]
 gmail_active = [a for a in gmail_all if a.status == "ACTIVE"]
 
 if gmail_all:
@@ -43,8 +43,8 @@ else:
 
 if gmail_active:
     print(f"\n✓ Gmail is ACTIVE and ready to send emails.")
-    print("Run the test:")
-    print("  python test_email_send.py")
+    print(f"\nSet this in your .env:")
+    print(f"  GMAIL_CONNECTED_ACCOUNT_ID={gmail_active[0].id}")
 else:
     print("\n⚠ No active Gmail connection found.")
     print("\nTo connect, open this URL in your browser:")

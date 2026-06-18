@@ -539,6 +539,12 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
     drawer_prefix        = get_system_prompt_prefix(drawer_model)
     critic_prefix        = get_system_prompt_prefix(critic_model)
 
+    if not os.getenv("TAVILY_API_KEY"):
+        logger.warning(
+            "TAVILY_API_KEY not set — web_research tool will return NO_API_KEY. "
+            "Set TAVILY_API_KEY in .env to enable live tech-stack fact-checking."
+        )
+
     logger.info(
         "build_agent  main=%s  icon_resolver=%s  drawer=%s  critic=%s  style=%s",
         main_model, icon_resolver_model, drawer_model, critic_model, style,

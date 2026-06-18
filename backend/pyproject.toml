@@ -24,6 +24,8 @@ dependencies = [
     "python-multipart>=0.0.9",
     "langsmith>=0.1",
     "composio-langchain>=0.7.0",
+    "qdrant-client>=1.9",
+    "langchain-qdrant>=0.2",
 ]
 
 [project.optional-dependencies]

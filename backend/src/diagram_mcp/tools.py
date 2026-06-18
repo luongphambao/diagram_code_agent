@@ -2509,6 +2509,16 @@ def web_research(query: str, topic: str = "general") -> str:
             "instruction": "TAVILY_API_KEY not set; skip web research and proceed.",
         }, indent=2)
 
+    # Guard: tech-stack window has already passed
+    if _TECHSTACK_FILE.exists():
+        return json.dumps({
+            "status": "PHASE_PASSED",
+            "instruction": (
+                "Tech-stack has already been approved. web_research is only allowed "
+                "before propose_tech_stack. Proceed with existing knowledge."
+            ),
+        }, indent=2)
+
     # Reserve the call BEFORE the network request, so a timeout/crash still consumes
     # quota (fail-closed against the hard cap — the scarce resource is the quota).
     state["calls"] = calls + 1
@@ -2593,10 +2603,12 @@ DIAGRAM_TOOLS = [
 # Main agent tools: gate/planning only — no rendering or icon search.
 from .email_tools import send_architecture_report_email  # noqa: E402
 from .calendar_tools import propose_meeting_slots, create_client_meeting  # noqa: E402
+from .rag_tools import find_similar_solutions  # noqa: E402
 
 MAIN_TOOLS = [
     analyze_architecture_requirements,
     propose_diagram_brief,
+    find_similar_solutions,   # RAG over 52 BnK past projects — call before web_research
     web_research,             # ≤3 Tavily calls/session — for tech-stack fact-checking
     propose_tech_stack,
     propose_blueprint,

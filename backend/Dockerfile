@@ -17,6 +17,7 @@ ENV PYTHONUNBUFFERED=1 \
 #  - libjpeg/zlib   → Pillow runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
         graphviz \
+        ghostscript \
         fontconfig fonts-liberation fonts-dejavu-core \
         libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 \
         libjpeg62-turbo zlib1g \

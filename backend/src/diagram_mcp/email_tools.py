@@ -176,10 +176,10 @@ class SendEmailConfig(BaseModel):
 
 @tool(args_schema=SendEmailConfig)
 def send_architecture_report_email(
+    runtime: ToolRuntime[SessionContext],
     recipient_email: str,
     subject: str,
     project_name: str,
-    runtime: ToolRuntime[SessionContext],
     subtitle: str = "",
     recipient_name: str = "Team",
 ) -> str:
