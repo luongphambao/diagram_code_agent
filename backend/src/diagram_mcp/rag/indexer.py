@@ -3,6 +3,10 @@
 Indexing (offline, run once):
     python -m diagram_mcp.rag.indexer
 
+With Qdrant Cloud (set in .env):
+    QDRANT_URL=https://<cluster>.cloud.qdrant.io
+    QDRANT_API_KEY=<token>
+
 Runtime:
     from diagram_mcp.rag.indexer import get_retriever
     retriever = get_retriever("bnk_projects")
@@ -23,6 +27,7 @@ logger = logging.getLogger(__name__)
 QDRANT_URL_DEFAULT = "http://localhost:6333"
 COLLECTION_PROJECTS = "bnk_projects"
 COLLECTION_MODULES = "bnk_modules"
+COLLECTION_ITEMS = "bnk_wbs_items"
 EMBED_MODEL = "text-embedding-3-small"
 
 
@@ -30,8 +35,21 @@ def _qdrant_url() -> str:
     return os.getenv("QDRANT_URL", QDRANT_URL_DEFAULT)
 
 
+def _qdrant_api_key() -> str | None:
+    return os.getenv("QDRANT_API_KEY") or None
+
+
+def _make_client():
+    from qdrant_client import QdrantClient
+
+    url = _qdrant_url()
+    api_key = _qdrant_api_key()
+    return QdrantClient(url=url, api_key=api_key)
+
+
 def _make_embeddings():
     from langchain_openai import OpenAIEmbeddings
+
     return OpenAIEmbeddings(model=EMBED_MODEL)
 
 
@@ -43,17 +61,18 @@ def _collection_exists(client, name: str) -> bool:
         return False
 
 
-def build_index(data_dir: str | None = None) -> None:
+def build_index(data_dir: str | None = None, *, drop: bool = False) -> None:
     """Build (or rebuild) Qdrant collections from WBS JSON files.
 
-    Reads all WBS JSON files via ``wbs_normalizer``, creates two collections:
-    - ``bnk_projects``  — one document per project (semantic overview)
-    - ``bnk_modules``   — one document per module (fine-grained)
+    Creates three collections:
+    - ``bnk_projects``   — 1 doc per project (semantic overview)
+    - ``bnk_modules``    — 1 doc per effort_by_module row (mid-level)
+    - ``bnk_wbs_items``  — 1 doc per wbs_items task (fine-grained)
 
-    Upserts points so re-running is safe.
+    Set ``drop=True`` to delete and recreate existing collections.
+    Upserts are idempotent — safe to re-run without drop.
     """
     from langchain_qdrant import QdrantVectorStore
-    from qdrant_client import QdrantClient
     from qdrant_client.http.models import Distance, VectorParams
 
     from ..wbs_normalizer import load_all_projects, project_to_documents
@@ -67,19 +86,45 @@ def build_index(data_dir: str | None = None) -> None:
     embeddings = _make_embeddings()
     vector_size = 1536  # text-embedding-3-small output dim
 
-    client = QdrantClient(url=_qdrant_url())
+    client = _make_client()
+    logger.info("Connected to Qdrant at %s", _qdrant_url())
 
+    # Bucket docs by granularity
     project_docs: list[dict] = []
     module_docs: list[dict] = []
+    item_docs: list[dict] = []
     for p in projects:
-        docs = project_to_documents(p)
-        project_docs.extend(d for d in docs if d["metadata"]["granularity"] == "project")
-        module_docs.extend(d for d in docs if d["metadata"]["granularity"] == "module")
+        for doc in project_to_documents(p):
+            g = doc["metadata"]["granularity"]
+            if g == "project":
+                project_docs.append(doc)
+            elif g == "module":
+                module_docs.append(doc)
+            elif g == "item":
+                item_docs.append(doc)
 
-    for collection_name, docs in [
+    logger.info(
+        "Documents — projects: %d, modules: %d, items: %d",
+        len(project_docs),
+        len(module_docs),
+        len(item_docs),
+    )
+
+    collections = [
         (COLLECTION_PROJECTS, project_docs),
         (COLLECTION_MODULES, module_docs),
-    ]:
+        (COLLECTION_ITEMS, item_docs),
+    ]
+
+    for collection_name, docs in collections:
+        if not docs:
+            logger.info("Skipping %s — no documents", collection_name)
+            continue
+
+        if drop and _collection_exists(client, collection_name):
+            client.delete_collection(collection_name)
+            logger.info("Dropped collection %s", collection_name)
+
         if not _collection_exists(client, collection_name):
             client.create_collection(
                 collection_name=collection_name,
@@ -108,15 +153,18 @@ def get_retriever(
 ) -> "VectorStoreRetriever":
     """Return a LangChain retriever backed by the Qdrant collection.
 
-    Falls back to in-memory if Qdrant is unavailable — useful in tests /
-    CI where the Docker service isn't running.
+    Falls back to in-memory FAISS if Qdrant is unavailable (dev / CI).
     """
     from langchain_qdrant import QdrantVectorStore
-    from qdrant_client import QdrantClient
 
     embeddings = _make_embeddings()
     try:
-        client = QdrantClient(url=_qdrant_url(), timeout=3)
+        client = _make_client()
+        # Quick connectivity check (3 s timeout)
+        from qdrant_client import QdrantClient as _QC
+
+        client = _QC(url=_qdrant_url(), api_key=_qdrant_api_key(), timeout=3)
+
         if not _collection_exists(client, collection):
             logger.warning(
                 "Qdrant collection '%s' not found — run `python -m diagram_mcp.rag.indexer` first.",
@@ -142,25 +190,27 @@ def get_retriever(
 
 
 def _build_in_memory_store(embeddings):
-    """Fallback: build a FAISS in-memory store from WBS files (no Qdrant needed)."""
+    """Fallback: FAISS in-memory store from project-level docs only."""
     try:
         from langchain_community.vectorstores import FAISS
     except ImportError:
-        from langchain_qdrant import QdrantVectorStore
         from qdrant_client import QdrantClient
+        from langchain_qdrant import QdrantVectorStore
+
         client = QdrantClient(":memory:")
-        # Bootstrap with empty store; normalizer may not be available either
         return QdrantVectorStore(client=client, collection_name="fallback", embedding=embeddings)
 
     from ..wbs_normalizer import load_all_projects, project_to_documents
 
     projects, _ = load_all_projects()
-    docs = []
-    for p in projects:
-        docs.extend(d for d in project_to_documents(p) if d["metadata"]["granularity"] == "project")
+    docs = [
+        d
+        for p in projects
+        for d in project_to_documents(p)
+        if d["metadata"]["granularity"] == "project"
+    ]
 
     if not docs:
-        # Absolute last resort: empty FAISS index (retriever will return nothing)
         return FAISS.from_texts(["placeholder"], embeddings)
 
     return FAISS.from_texts(
@@ -175,6 +225,11 @@ def _build_in_memory_store(embeddings):
 # --------------------------------------------------------------------------- #
 if __name__ == "__main__":
     import sys
+
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    data_dir_arg = sys.argv[1] if len(sys.argv) > 1 else None
-    build_index(data_dir_arg)
+
+    drop_flag = "--drop" in sys.argv
+    args = [a for a in sys.argv[1:] if a != "--drop"]
+    data_dir_arg = args[0] if args else None
+
+    build_index(data_dir_arg, drop=drop_flag)
