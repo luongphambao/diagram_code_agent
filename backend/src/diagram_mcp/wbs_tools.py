@@ -1,0 +1,644 @@
+"""WBS planner tools — generate a BnK-format Work Breakdown Structure from the
+results of the earlier pipeline steps (diagram_brief / tech_stack / blueprint).
+
+Mirrors the structure of ``email_tools.py``: a self-contained tool module that the
+agent wires in. The estimation pipeline is deliberately **granular** (one tool per
+step) because WBS effort estimation is hard and benefits from explicit stages:
+
+    load_solution_context → get_effort_norms → draft_wbs_skeleton
+      → [HITL] propose_wbs_skeleton
+      → add_wbs_items (×N) → compute_wbs_rollup → plan_timeline_and_sprints
+      → plan_team_and_resources → define_milestones → validate_wbs
+      → [HITL] propose_wbs → [HITL] export_wbs_excel
+
+Effort follows the verified BnK ratio model (see :mod:`wbs_effort`): the planner
+only sizes dev (BE/FE/Mobile/AI) per leaf; BA/QC/PM are derived. The Excel export
+clones the template and keeps the formulas live (see :mod:`wbs_excel`).
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any, Optional
+
+from langchain_core.tools import tool
+from pydantic import BaseModel, Field, model_validator
+
+from .backends import WORKSPACE
+from . import wbs_excel
+from .wbs_effort import (
+    RATIOS, Ratios, derive_leaf_effort, rollup, make_ref_code, delivery_grid,
+    MANDAYS_PER_MONTH,
+)
+
+# ── state files (registered in tools.clear_stage_markers) ────────────────────
+_BRIEF_FILE = WORKSPACE / "diagram_brief.json"
+_TECHSTACK_FILE = WORKSPACE / "tech_stack.json"
+_BLUEPRINT_FILE = WORKSPACE / "blueprint.json"
+_SKELETON_FILE = WORKSPACE / "wbs_skeleton.json"
+_WBS_FILE = WORKSPACE / "wbs.json"
+_WBS_XLSX = WORKSPACE / "wbs_filled.xlsx"
+
+
+def _read_json(path: Path, default=None):
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return default
+
+
+def _write_json(path: Path, data) -> None:
+    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+# ── mimo-safe base: coerce {"0":..,"1":..} dicts to lists for list fields ────
+class _CoercingModel(BaseModel):
+    """Normalise mimo's numeric-keyed-dict payloads into lists before validation."""
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce(cls, values):
+        if not isinstance(values, dict):
+            return values
+        for name, field in cls.model_fields.items():
+            v = values.get(name)
+            ann = str(field.annotation)
+            if isinstance(v, dict) and "list" in ann.lower():
+                keys = list(v.keys())
+                if keys and all(str(k).isdigit() for k in keys):
+                    values[name] = [v[k] for k in sorted(v, key=lambda x: int(x))]
+        return values
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 1. load_solution_context
+# ════════════════════════════════════════════════════════════════════════════
+@tool(parse_docstring=True)
+def load_solution_context() -> str:
+    """Load the approved upstream artifacts to ground the WBS decomposition.
+
+    Reads diagram_brief.json, tech_stack.json and blueprint.json from the
+    workspace and returns a compact digest (objective, functional requirements,
+    application type, tech layers, blueprint clusters/nodes). Call this FIRST so
+    the modules and features you break down trace back to the approved solution.
+    """
+    brief = _read_json(_BRIEF_FILE, {}) or {}
+    tech = _read_json(_TECHSTACK_FILE, {}) or {}
+    bp = _read_json(_BLUEPRINT_FILE, {}) or {}
+    if not (brief or bp):
+        return ("No upstream artifacts found. Get the diagram brief / blueprint "
+                "approved first (propose_diagram_brief, propose_blueprint).")
+
+    digest: dict[str, Any] = {
+        "objective": brief.get("objective"),
+        "application_type": brief.get("application_type"),
+        "functional_requirements": brief.get("functional_requirements", [])[:40],
+        "non_functional_requirements": brief.get("non_functional_requirements", [])[:20],
+        "stakeholders": brief.get("stakeholders", []),
+        "tech_layers": {k: (v or {}).get("choice") for k, v in (tech.get("layers", {}) or {}).items()},
+        "blueprint_clusters": [c.get("label") for c in bp.get("clusters", [])],
+        "blueprint_nodes": [n.get("label") for n in bp.get("nodes", [])][:60],
+        "pattern": bp.get("pattern"),
+    }
+    return json.dumps(digest, ensure_ascii=False, indent=2)
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 2. get_effort_norms — deterministic benchmark table (distilled from samples)
+# ════════════════════════════════════════════════════════════════════════════
+# dev man-days (BE, FE/Mobile) per feature type; total ≈ 1.54×dev under 10/30/10.
+EFFORT_NORMS: dict[str, dict] = {
+    "login_auth_web": {"be": [0.5, 2], "fe": [0.5, 2], "note": "login/logout, forgot pw, OTP"},
+    "login_auth_mobile": {"be": [0, 0.5], "fe": [1, 2]},
+    "registration_onboarding": {"be": [3, 4], "fe": [4, 5]},
+    "dashboard": {"be": [1.5, 2], "fe": [1.5, 3]},
+    "crud_list": {"be": [0.75, 1.5], "fe": [0.75, 3], "note": "sort/filter/export"},
+    "crud_detail": {"be": [2, 3.5], "fe": [2, 3]},
+    "rbac_roles": {"be": [2, 4], "fe": [0, 2]},
+    "kyc": {"be": [3, 3], "fe": [5, 5]},
+    "file_upload": {"be": [3, 4], "fe": [1, 1]},
+    "notification_framework": {"be": [2, 2], "fe": [0, 0]},
+    "notification_channel": {"be": [1, 1], "fe": [0, 0], "note": "per channel email/sms/in-app"},
+    "chat_realtime": {"be": [1, 1], "fe": [3, 3]},
+    "report_export": {"be": [5, 11], "fe": [0, 8]},
+    "payment_integration": {"be": [1, 5], "fe": [0, 1]},
+    "third_party_integration": {"be": [1, 14], "fe": [0, 2], "note": "SSO/gateway/public API"},
+    "admin_user_mgmt": {"be": [2.5, 2.5], "fe": [3, 3]},
+    "search_filter_builder": {"be": [4, 6], "fe": [1, 4]},
+    "workflow_approval": {"be": [6, 6], "fe": [4, 4]},
+    "rule_calc_engine": {"be": [3, 9], "fe": [1, 3], "note": "per rule"},
+    "audit_trail": {"be": [3, 3.5], "fe": [1, 2]},
+    # design / setup (phase_type=design): BE-only, no BA/QC
+    "database_design": {"be": [1, 6], "fe": [0, 0], "phase_type": "design"},
+    "system_architecture_design": {"be": [5, 5], "fe": [0, 0], "phase_type": "design"},
+    "uiux_design": {"be": [0, 0], "fe": [5, 20], "phase_type": "uiux"},
+    "code_base_setup": {"be": [2, 2], "fe": [0, 2], "phase_type": "design"},
+    "deployment_setup": {"be": [3, 5], "fe": [0, 0], "phase_type": "design"},
+    "monitoring_setup": {"be": [2, 2], "fe": [0, 0], "phase_type": "design", "note": "per monitor"},
+    "prod_deploy_migration": {"be": [1, 1], "fe": [0, 0], "phase_type": "deployment", "note": "PM=0"},
+    # requirement (phase_type=requirement): BA-only
+    "requirement_workshop_brd": {"ba": [3, 14], "phase_type": "requirement"},
+    # AI (counts as dev)
+    "ai_dataset_prep": {"be": [15, 15], "fe": [0, 0], "note": "AI MD; ~17 total"},
+    "ai_finetune_sft": {"be": [15, 15], "fe": [0, 0]},
+    "ai_model_serving": {"be": [5, 6], "fe": [0, 0]},
+}
+
+
+@tool(parse_docstring=True)
+def get_effort_norms(feature_types: Optional[list[str]] = None) -> str:
+    """Return benchmark dev man-day ranges per feature type to anchor estimates.
+
+    These ranges are distilled from ~50 real BnK WBS files. Use them to size each
+    leaf's BE / FE-Mobile man-days consistently (BA/QC/PM are derived from dev by
+    the ratio model — do NOT estimate them yourself). Some entries carry a
+    ``phase_type`` (design/uiux/deployment/requirement) that gates which roles apply.
+
+    Args:
+        feature_types: optional subset of norm keys to return; omit for the full table.
+    """
+    if feature_types:
+        sub = {k: EFFORT_NORMS[k] for k in feature_types if k in EFFORT_NORMS}
+        if not sub:
+            return ("No matching norm keys. Available: " + ", ".join(sorted(EFFORT_NORMS)))
+        return json.dumps(sub, ensure_ascii=False, indent=2)
+    return json.dumps(EFFORT_NORMS, ensure_ascii=False, indent=2)
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 3. draft_wbs_skeleton
+# ════════════════════════════════════════════════════════════════════════════
+class ModuleMeta(BaseModel):
+    code: str = Field(description="dotted module code, e.g. 'II.A'")
+    name: str = Field(description="module name, e.g. 'Web Portal'")
+
+
+class PhaseMeta(BaseModel):
+    code: str = Field(description="roman phase code: I / II / III")
+    name: str = Field(description="phase name, e.g. 'DEVELOPMENT'")
+    modules: list[ModuleMeta] = Field(default_factory=list)
+
+
+class ProjectInfo(BaseModel):
+    name: str
+    project_code: str = Field("BNK", description="Ref.Code prefix, e.g. 'CL', 'DLP'")
+    client: str = ""
+    solution_type: str = ""
+    business_domain: str = ""
+
+
+class DraftSkeletonArgs(_CoercingModel):
+    project_info: ProjectInfo
+    phases: list[PhaseMeta]
+    ratios: Optional[dict] = Field(
+        None, description="override {ba_on_dev,qc_on_dev,pm_on_total}; default 0.10/0.30/0.10")
+
+
+@tool(args_schema=DraftSkeletonArgs)
+def draft_wbs_skeleton(project_info: ProjectInfo, phases: list[PhaseMeta],
+                       ratios: Optional[dict] = None) -> str:
+    """Define the WBS phase/module skeleton BEFORE estimating any effort.
+
+    Use the BnK 3-phase spine — I SET UP & INSTALLATION (Solution Design, System
+    Operation), II DEVELOPMENT (one module per product surface / architecture tier),
+    III TESTING & DEPLOYMENT SUPPORT (Solution Qualification, Deployment &
+    Maintenance). Writes wbs_skeleton.json. Follow with propose_wbs_skeleton for the
+    user to approve the structure, then add_wbs_items.
+    """
+    if not phases:
+        return "Provide at least one phase with modules."
+    r = {**RATIOS.__dict__, **(ratios or {})}
+    skeleton = {
+        "project_info": project_info.model_dump(),
+        "ratios": r,
+        "phases": [p.model_dump() for p in phases],
+    }
+    _write_json(_SKELETON_FILE, skeleton)
+    # seed wbs.json with empty item list + skeleton
+    _write_json(_WBS_FILE, {**skeleton, "items": []})
+    n_mod = sum(len(p.modules) for p in phases)
+    lines = [f"WBS skeleton drafted: {len(phases)} phase(s), {n_mod} module(s)."]
+    for p in phases:
+        lines.append(f"  {p.code} {p.name}: " + ", ".join(f"{m.code} {m.name}" for m in p.modules))
+    lines.append("Next: call propose_wbs_skeleton to get the structure approved.")
+    return "\n".join(lines)
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 4. add_wbs_items
+# ════════════════════════════════════════════════════════════════════════════
+class LeafIn(BaseModel):
+    phase_code: str = Field(description="which phase this leaf belongs to, e.g. 'II'")
+    module_code: str = Field(description="which module, e.g. 'II.A'")
+    name: str = Field(description="feature name (goes in the Features column)")
+    description: str = ""
+    group: str = Field("", description="optional sub-module group label, e.g. 'Common Module'")
+    phase_type: str = Field("development",
+                            description="development | design | uiux | deployment | requirement | support")
+    be: float = Field(0, description="Backend dev man-days (hand estimate)")
+    fe: float = Field(0, description="Frontend/web dev man-days")
+    mobile: float = Field(0, description="Mobile dev man-days")
+    ai: float = Field(0, description="AI/ML dev man-days")
+    ba: float = Field(0, description="ONLY for phase_type=requirement: the analysis man-days")
+    remark: str = ""
+
+
+class AddItemsArgs(_CoercingModel):
+    items: list[LeafIn]
+
+
+@tool(args_schema=AddItemsArgs)
+def add_wbs_items(items: list[LeafIn]) -> str:
+    """Append leaf features (with hand-estimated dev man-days) to the WBS.
+
+    Estimate ONLY the dev columns (be/fe/mobile/ai); BA/QC/PM and Total are derived
+    deterministically by the ratio model and phase-gating. Call repeatedly, one
+    module at a time, after the skeleton is approved. Each item must name its
+    phase_code + module_code (must exist in the skeleton). Use get_effort_norms to
+    size features consistently.
+    """
+    wbs = _read_json(_WBS_FILE)
+    if not wbs:
+        return "Draft the skeleton first (draft_wbs_skeleton)."
+    valid_modules = {m["code"] for p in wbs["phases"] for m in p["modules"]}
+    pc = wbs.get("project_info", {}).get("project_code", "BNK")
+    r = Ratios(**{k: wbs["ratios"][k] for k in ("ba_on_dev", "qc_on_dev", "pm_on_total")})
+    existing = wbs.setdefault("items", [])
+    seq = len(existing)
+    added, bad = 0, []
+    for it in items:
+        if it.module_code not in valid_modules:
+            bad.append(it.module_code)
+            continue
+        seq += 1
+        eff = derive_leaf_effort(be=it.be, fe=it.fe, mobile=it.mobile, ai=it.ai,
+                                 ba=it.ba, phase_type=it.phase_type, ratios=r)
+        existing.append({
+            "seq": seq, "ref_code": make_ref_code(pc, seq),
+            "phase_code": it.phase_code, "module_code": it.module_code,
+            "group": it.group or None, "name": it.name, "description": it.description,
+            "phase_type": it.phase_type, "remark": it.remark or None,
+            "be": eff["be"], "fe": eff["fe"], "mobile": eff["mobile"], "ai": eff["ai"],
+            "fe_mobile": round(eff["fe"] + eff["mobile"] + eff["ai"], 4),
+            "ba": eff["ba"], "qc": eff["qc"], "pm": eff["pm"], "total": eff["total"],
+        })
+        added += 1
+    _write_json(_WBS_FILE, wbs)
+    msg = f"Added {added} item(s); {len(existing)} total. Running dev+overhead = " \
+          f"{round(sum(i['total'] for i in existing), 2)} MD."
+    if bad:
+        msg += f"\nWARNING: unknown module_code(s) skipped: {sorted(set(bad))}. " \
+               f"Valid: {sorted(valid_modules)}."
+    return msg
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 5. compute_wbs_rollup — assemble nested tree + totals for export
+# ════════════════════════════════════════════════════════════════════════════
+def _assemble_nested(wbs: dict) -> dict:
+    """Group the flat items into the nested phases/modules/groups the builder needs."""
+    items = wbs.get("items", [])
+    by_mod: dict[str, list] = {}
+    for it in items:
+        by_mod.setdefault(it["module_code"], []).append(it)
+    phases_out = []
+    for p in wbs["phases"]:
+        modules_out = []
+        for m in p["modules"]:
+            mits = by_mod.get(m["code"], [])
+            # preserve first-seen group order
+            groups: dict = {}
+            order: list = []
+            for it in mits:
+                g = it.get("group") or None
+                if g not in groups:
+                    groups[g] = []
+                    order.append(g)
+                groups[g].append({
+                    "name": it["name"], "description": it.get("description", ""),
+                    "remark": it.get("remark"), "phase_type": it.get("phase_type", "development"),
+                    "be": it["be"], "fe": it["fe"], "mobile": it["mobile"], "ai": it["ai"],
+                    "fe_mobile": it.get("fe_mobile", round(it["fe"] + it["mobile"] + it["ai"], 4)),
+                    "ba": it["ba"], "qc": it["qc"], "pm": it["pm"], "total": it["total"],
+                })
+            modules_out.append({"code": m["code"], "name": m["name"],
+                                "groups": [{"name": g, "items": groups[g]} for g in order]})
+        phases_out.append({"code": p["code"], "name": p["name"], "modules": modules_out})
+    return phases_out
+
+
+@tool(parse_docstring=True)
+def compute_wbs_rollup() -> str:
+    """Roll up all leaf items into module/phase/role totals and assemble the tree.
+
+    Reads the flat items, groups them under their modules, computes effort_by_module,
+    effort_totals (man-days, man-months, by-role split) and writes the nested
+    ``phases`` structure that the Excel export consumes. Call after add_wbs_items.
+    """
+    wbs = _read_json(_WBS_FILE)
+    if not wbs or not wbs.get("items"):
+        return "No WBS items yet — call add_wbs_items first."
+    nested = _assemble_nested(wbs)
+    # effort_by_module
+    by_mod = []
+    for p in nested:
+        for m in p["modules"]:
+            leaves = [it for g in m["groups"] for it in g["items"]]
+            roll = rollup(leaves)
+            by_mod.append({"code": m["code"], "name": m["name"],
+                           "total_md": roll["total_mandays"], "breakdown": roll["effort_by_role"]})
+    totals = rollup(wbs["items"])
+    wbs["phases_nested"] = nested
+    wbs["effort_by_module"] = by_mod
+    wbs["effort_totals"] = totals
+    # the builder reads wbs["phases"] as the nested tree → swap it in for export,
+    # but keep the skeleton meta under phases_meta so add_wbs_items stays valid.
+    wbs["phases_meta"] = wbs["phases"]
+    wbs["phases"] = nested
+    _write_json(_WBS_FILE, wbs)
+    br = totals["effort_by_role"]
+    return (f"Roll-up complete: {totals['total_mandays']} MD "
+            f"(~{totals['total_manmonths']} man-months) across {len(by_mod)} modules. "
+            f"By role — BE {br['BE']}, FE/Mobile {br['FE_Mobile']}, BA {br['BA']}, "
+            f"QC {br['QC']}, PM {br['PM']}.")
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 6. plan_timeline_and_sprints
+# ════════════════════════════════════════════════════════════════════════════
+class TimelineArgs(_CoercingModel):
+    duration_weeks: Optional[int] = Field(
+        None, description="explicit project duration in weeks; omit to auto-derive from effort")
+    peak_dev_fte: float = Field(
+        3.0, description="peak parallel developers used to auto-derive duration")
+
+
+@tool(args_schema=TimelineArgs)
+def plan_timeline_and_sprints(duration_weeks: Optional[int] = None,
+                              peak_dev_fte: float = 3.0) -> str:
+    """Compute the delivery calendar: duration, 2-week sprints, months, Gantt grid.
+
+    1 sprint = 2 weeks, 1 month = 4 weeks. If duration_weeks is omitted it is derived
+    from total man-days and peak_dev_fte (duration_months ≈ mandays/(22·peak)). Emits
+    an explicit per-module active week-range so the Delivery Plan always has ENOUGH
+    months and no module overflows the calendar. Call after compute_wbs_rollup.
+    """
+    wbs = _read_json(_WBS_FILE)
+    if not wbs or not wbs.get("effort_totals"):
+        return "Roll up the WBS first (compute_wbs_rollup)."
+    total_md = wbs["effort_totals"]["total_mandays"]
+    if not duration_weeks:
+        months = max(1, round(total_md / (MANDAYS_PER_MONTH * max(0.5, peak_dev_fte))))
+        duration_weeks = months * 4
+    grid = delivery_grid(duration_weeks)
+    wbs["timeline"] = {
+        "weeks": grid["weeks"], "sprints": grid["sprints"], "months": grid["months"],
+        "weeks_per_sprint": 2, "weeks_per_month": 4,
+        "project_start_date": "TBD", "project_end_date": "TBD",
+    }
+    _write_json(_WBS_FILE, wbs)
+    return (f"Timeline: {grid['weeks']} weeks = {grid['months']} months / "
+            f"{grid['sprints']} sprints (2-week sprints). Delivery Plan will render "
+            f"{grid['months']} month columns.")
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 7. plan_team_and_resources
+# ════════════════════════════════════════════════════════════════════════════
+@tool(parse_docstring=True)
+def plan_team_and_resources() -> str:
+    """Derive a team composition reconciled to the role effort totals.
+
+    Maps the rolled-up BE/FE/BA/QC/PM man-days to a default BnK team (PM, Technical
+    Lead, Developer(s), Business Analyst, Quality Controller, Designer, DevOps) and
+    estimates headcount from man-days over the timeline. Call after
+    plan_timeline_and_sprints.
+    """
+    wbs = _read_json(_WBS_FILE)
+    if not wbs or not wbs.get("effort_totals"):
+        return "Roll up the WBS first (compute_wbs_rollup)."
+    br = wbs["effort_totals"]["effort_by_role"]
+    weeks = (wbs.get("timeline") or {}).get("weeks", 16)
+    workdays = max(1, weeks * 5)
+    team = [
+        {"role": "Project Manager", "total_md": br.get("PM", 0)},
+        {"role": "Technical Lead", "total_md": None},
+        {"role": "Developer", "total_md": round(br.get("BE", 0) + br.get("FE_Mobile", 0), 2)},
+        {"role": "Business Analyst", "total_md": br.get("BA", 0)},
+        {"role": "Quality Controller", "total_md": br.get("QC", 0)},
+        {"role": "Designer", "total_md": None},
+        {"role": "DevOps", "total_md": None},
+    ]
+    for m in team:
+        md = m["total_md"]
+        m["est_headcount"] = round(md / workdays, 2) if md else None
+    wbs["team_composition"] = team
+    _write_json(_WBS_FILE, wbs)
+    devs = next(t for t in team if t["role"] == "Developer")
+    return (f"Team: PM {br.get('PM',0)} MD, Developer {devs['total_md']} MD "
+            f"(~{devs['est_headcount']} FTE over {weeks} weeks), BA {br.get('BA',0)}, "
+            f"QC {br.get('QC',0)} MD + TL/Designer/DevOps as needed.")
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 8. define_milestones
+# ════════════════════════════════════════════════════════════════════════════
+_BNK_MILESTONES = [
+    {"name": "Contract Signoff", "deliverables": ["Signed contract"]},
+    {"name": "Requirement Confirmation/Signoff", "deliverables": ["BRD"]},
+    {"name": "Development Completion and UAT Initiation",
+     "deliverables": ["System ready in UAT", "Test Cases", "Test Report"]},
+    {"name": "Completion of UAT",
+     "deliverables": ["Source Code", "User Guide", "Technical Specification"]},
+    {"name": "Completion of Post-Launch Support", "deliverables": ["Maintenance log"]},
+]
+
+
+class MilestoneIn(BaseModel):
+    name: str
+    deliverables: list[str] = Field(default_factory=list)
+    start: str = "TBD"
+    end: str = "TBD"
+
+
+class MilestonesArgs(_CoercingModel):
+    milestones: Optional[list[MilestoneIn]] = Field(
+        None, description="override the default BnK 5-milestone spine")
+
+
+@tool(args_schema=MilestonesArgs)
+def define_milestones(milestones: Optional[list[MilestoneIn]] = None) -> str:
+    """Set the delivery milestones (defaults to the BnK 5-milestone spine).
+
+    Default: Contract Signoff → Requirement Signoff → Dev Completion & UAT Init →
+    UAT Completion → Post-Launch Support. Override only if the engagement differs.
+    Call after plan_team_and_resources.
+    """
+    wbs = _read_json(_WBS_FILE)
+    if not wbs:
+        return "Draft the skeleton first (draft_wbs_skeleton)."
+    ms = [m.model_dump() for m in milestones] if milestones else _BNK_MILESTONES
+    wbs["milestones"] = ms
+    _write_json(_WBS_FILE, wbs)
+    return "Milestones set: " + " → ".join(m["name"] for m in ms)
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 9. validate_wbs — non-blocking warnings
+# ════════════════════════════════════════════════════════════════════════════
+@tool(parse_docstring=True)
+def validate_wbs() -> str:
+    """Run deterministic quality checks on the WBS (warnings only, never blocks).
+
+    Checks: every dev leaf has effort > 0, ref codes unique/sequential, module
+    roll-ups reconcile to the grand total, functional-requirement coverage vs the
+    brief, and that the Delivery-Plan calendar covers every module's schedule. Call
+    before propose_wbs.
+    """
+    wbs = _read_json(_WBS_FILE)
+    if not wbs or not wbs.get("items"):
+        return "No WBS to validate — build it first."
+    warns: list[str] = []
+    items = wbs["items"]
+
+    zero = [it["ref_code"] for it in items if it.get("total", 0) <= 0]
+    if zero:
+        warns.append(f"{len(zero)} item(s) have zero effort: {zero[:6]}")
+
+    seqs = [it["seq"] for it in items]
+    if len(set(seqs)) != len(seqs):
+        warns.append("Duplicate sequence numbers found — ref codes are not unique.")
+
+    # coverage vs brief functional requirements (loose keyword match)
+    brief = _read_json(_BRIEF_FILE, {}) or {}
+    reqs = brief.get("functional_requirements", []) or []
+    if reqs:
+        names = " ".join(it["name"].lower() for it in items)
+        uncovered = [r for r in reqs if not any(w in names for w in str(r).lower().split()[:3])]
+        if uncovered:
+            warns.append(f"{len(uncovered)}/{len(reqs)} functional requirement(s) may be "
+                         f"uncovered by any feature: {uncovered[:4]}")
+
+    # delivery-plan coverage
+    tl = wbs.get("timeline") or {}
+    if tl.get("weeks"):
+        sched = wbs_excel._module_schedule(wbs, tl["weeks"])
+        over = [m["code"] for m in sched if m["end_week"] > tl["weeks"]]
+        if over:
+            warns.append(f"Delivery plan: module(s) overflow the calendar: {over}")
+        if tl.get("months", 0) < 1:
+            warns.append("Delivery plan has < 1 month — check the timeline.")
+
+    if not warns:
+        return "Validation passed: no issues found."
+    return "Validation warnings (non-blocking):\n- " + "\n- ".join(warns)
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# HITL GATE TOOLS (interrupt_on in agent.py)
+# ════════════════════════════════════════════════════════════════════════════
+def _tree_summary(wbs: dict) -> str:
+    lines = []
+    for p in wbs.get("phases", wbs.get("phases_meta", [])):
+        lines.append(f"{p['code']} {p['name']}")
+        for m in p.get("modules", []):
+            lines.append(f"   {m['code']} {m['name']}")
+    return "\n".join(lines)
+
+
+@tool(parse_docstring=True)
+def propose_wbs_skeleton() -> str:
+    """Present the WBS phase/module structure for the user to approve.
+
+    PAUSES for human approval of the STRUCTURE before any effort is estimated. If
+    rejected you get a note — revise the skeleton (draft_wbs_skeleton) and re-propose.
+    Call after draft_wbs_skeleton.
+    """
+    sk = _read_json(_SKELETON_FILE)
+    if not sk:
+        return "No skeleton yet — call draft_wbs_skeleton first."
+    pi = sk.get("project_info", {})
+    return (f"WBS structure for {pi.get('name')} (code {pi.get('project_code')}):\n"
+            + _tree_summary(sk)
+            + "\n\nApprove to start effort estimation, or reject with changes.")
+
+
+@tool(parse_docstring=True)
+def propose_wbs() -> str:
+    """Present the full estimated WBS plan for the user to review and approve.
+
+    PAUSES for human approval. Summarises total effort (man-days / man-months),
+    the per-role split, per-module effort, timeline (months/sprints), team and
+    milestones. Call after validate_wbs. On approval, export_wbs_excel produces the
+    .xlsx deliverable.
+    """
+    wbs = _read_json(_WBS_FILE)
+    if not wbs or not wbs.get("effort_totals"):
+        return "Roll up and plan the WBS first (compute_wbs_rollup ... validate_wbs)."
+    et = wbs["effort_totals"]; br = et["effort_by_role"]
+    tl = wbs.get("timeline", {})
+    lines = [
+        f"WBS PLAN — {wbs.get('project_info', {}).get('name')}",
+        f"Total effort: {et['total_mandays']} MD (~{et['total_manmonths']} man-months)",
+        f"By role: BE {br['BE']} | FE/Mobile {br['FE_Mobile']} | BA {br['BA']} | "
+        f"QC {br['QC']} | PM {br['PM']}",
+        f"Timeline: {tl.get('weeks','?')} weeks / {tl.get('months','?')} months / "
+        f"{tl.get('sprints','?')} sprints",
+        "Effort by module:",
+    ]
+    for m in wbs.get("effort_by_module", []):
+        lines.append(f"  {m['code']} {m['name']}: {m['total_md']} MD")
+    if wbs.get("milestones"):
+        lines.append("Milestones: " + " → ".join(m["name"] for m in wbs["milestones"]))
+    lines.append("\nApprove to generate the BnK-format .xlsx, or reject with changes.")
+    summary = lines[1]
+    try:
+        from .reporting import record_report_step
+        record_report_step(WORKSPACE, "propose_wbs", summary=summary, data=et)
+    except Exception:
+        pass
+    return "\n".join(lines)
+
+
+@tool(parse_docstring=True)
+def export_wbs_excel() -> str:
+    """Generate the BnK-format WBS .xlsx deliverable from the approved plan.
+
+    PAUSES for human approval. Clones the BnK template and fills the WBS, Effort and
+    Delivery-Plan sheets with LIVE formulas (Excel recomputes BA/QC/PM/totals on
+    open) and a dynamic month-by-month delivery grid. Writes wbs_filled.xlsx. Call
+    only after propose_wbs is approved.
+    """
+    wbs = _read_json(_WBS_FILE)
+    if not wbs or not wbs.get("phases"):
+        return "No approved WBS to export — run the planning pipeline first."
+    try:
+        layout = wbs_excel.build_wbs_workbook(wbs, _WBS_XLSX)
+    except Exception as exc:  # noqa: BLE001
+        return f"ERROR building WBS workbook: {exc}"
+    dly = layout.get("delivery", {})
+    et = wbs.get("effort_totals", {})
+    return (f"WBS exported to {_WBS_XLSX.name} "
+            f"({_WBS_XLSX.stat().st_size:,} bytes). "
+            f"{len(wbs.get('items', []))} work items, {et.get('total_mandays','?')} MD, "
+            f"Delivery Plan spans {dly.get('months','?')} months / {dly.get('weeks','?')} weeks. "
+            f"All effort columns are live formulas linked to the Master Data ratios.")
+
+
+# ── tool collections (imported by tools.py) ──────────────────────────────────
+WBS_PLANNER_TOOLS = [
+    load_solution_context,
+    get_effort_norms,
+    draft_wbs_skeleton,
+    add_wbs_items,
+    compute_wbs_rollup,
+    plan_timeline_and_sprints,
+    plan_team_and_resources,
+    define_milestones,
+    validate_wbs,
+]
+
+WBS_GATE_TOOLS = [propose_wbs_skeleton, propose_wbs, export_wbs_excel]
+WBS_GATE_TOOL_NAMES = ["propose_wbs_skeleton", "propose_wbs", "export_wbs_excel"]

@@ -50,9 +50,13 @@ from .prompts import (
     build_icon_resolver_prompt,
     build_pretty_system_prompt,
     build_system_prompt,
+    build_wbs_planner_prompt,
 )
 from .context import SessionContext
-from .tools import CRITIC_TOOLS, DRAWER_TOOLS, GATE_TOOL_NAMES, ICON_RESOLVER_TOOLS, MAIN_TOOLS
+from .tools import (
+    CRITIC_TOOLS, DRAWER_TOOLS, GATE_TOOL_NAMES, ICON_RESOLVER_TOOLS, MAIN_TOOLS,
+    WBS_PLANNER_TOOLS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -359,6 +363,9 @@ DRAWER_SKILL_PATHS = [
     str(SKILLS_DIR / "drawer" / "diagrams-as-code"),
     str(SKILLS_DIR / "drawer" / "pro-style"),
 ]
+WBS_PLANNER_SKILL_PATHS = [
+    str(SKILLS_DIR / "wbs-planning"),
+]
 
 # Context-management: the conversation is re-sent every turn, so stale tool
 # outputs (read_file of skill docs, repeated search_icons, old render images)
@@ -505,6 +512,30 @@ def _critic_subagent(style: str) -> dict:
     }
 
 
+def _wbs_planner_subagent(workdir: str) -> dict:
+    """Config for the wbs_planner subagent: decompose + estimate the WBS.
+
+    Reads the approved brief/tech_stack/blueprint, breaks the solution into a
+    BnK-format WBS (phases→modules→features), estimates dev effort (BA/QC/PM are
+    derived), plans timeline/team/milestones and writes wbs.json. The gate tools
+    (propose_wbs_skeleton / propose_wbs / export_wbs_excel) live on the MAIN agent.
+    """
+    return {
+        "name": "wbs_planner",
+        "description": (
+            "Builds a BnK-format Work Breakdown Structure from the approved solution. "
+            "Reads diagram_brief.json + tech_stack.json + blueprint.json, drafts the "
+            "phase/module skeleton, estimates dev effort per feature (BA/QC/PM derived), "
+            "rolls up totals, plans the timeline/team/milestones, validates, and writes "
+            "wbs.json / wbs_skeleton.json. Returns a short status — the MAIN agent runs "
+            "the propose/export gates."
+        ),
+        "system_prompt": build_wbs_planner_prompt(workdir),
+        "tools": WBS_PLANNER_TOOLS,
+        "skills": WBS_PLANNER_SKILL_PATHS,
+    }
+
+
 def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
                 checkpointer=None, store=None):
     """Create the diagram deep agent (a compiled LangGraph graph).
@@ -527,6 +558,7 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
     icon_resolver_model  = get_model("icon_resolver", main_model)
     drawer_model         = get_model("drawer",         main_model)
     critic_model         = get_model("critic",         main_model)
+    wbs_planner_model    = get_model("wbs_planner",     main_model)
 
     workdir = str(WORKSPACE)
     prefix = get_system_prompt_prefix(main_model)
@@ -538,6 +570,7 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
     icon_resolver_prefix = get_system_prompt_prefix(icon_resolver_model)
     drawer_prefix        = get_system_prompt_prefix(drawer_model)
     critic_prefix        = get_system_prompt_prefix(critic_model)
+    wbs_planner_prefix   = get_system_prompt_prefix(wbs_planner_model)
 
     if not os.getenv("TAVILY_API_KEY"):
         logger.warning(
@@ -569,15 +602,18 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
     icon_resolver_llm  = _make_llm(icon_resolver_model)
     drawer_llm         = _make_llm(drawer_model)
     critic_llm         = _make_llm(critic_model)
+    wbs_planner_llm    = _make_llm(wbs_planner_model)
     backend = make_local_backend()
 
     # Pre-compile subagents so their internal steps are visible in the outer stream.
     icon_resolver_spec = _icon_resolver_subagent(workdir, LOCAL_ICONS, LOCAL_MANIFEST)
     drawer_spec        = _drawer_subagent(workdir, LOCAL_ICONS, LOCAL_MANIFEST, style)
     critic_spec        = _critic_subagent(style)
+    wbs_planner_spec   = _wbs_planner_subagent(workdir)
     icon_resolver_spec["system_prompt"] = icon_resolver_prefix + icon_resolver_spec["system_prompt"]
     drawer_spec["system_prompt"]        = drawer_prefix + drawer_spec["system_prompt"]
     critic_spec["system_prompt"]        = critic_prefix + critic_spec["system_prompt"]
+    wbs_planner_spec["system_prompt"]   = wbs_planner_prefix + wbs_planner_spec["system_prompt"]
 
     icon_resolver_compiled: dict = {
         "name": icon_resolver_spec["name"],
@@ -629,6 +665,23 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
             "critic",
         ),
     }
+    wbs_planner_compiled: dict = {
+        "name": wbs_planner_spec["name"],
+        "description": wbs_planner_spec["description"],
+        "runnable": _StreamingSubAgentRunnable(
+            create_deep_agent(
+                model=wbs_planner_llm,
+                tools=wbs_planner_spec["tools"],
+                system_prompt=wbs_planner_spec["system_prompt"],
+                backend=backend,
+                memory=[MEMORY_PATH],
+                skills=wbs_planner_spec.get("skills"),
+                middleware=_middleware(agent_name="wbs_planner"),
+                store=store,
+            ),
+            "wbs_planner",
+        ),
+    }
 
     # Each gate tool pauses for human review/approval before it runs.
     interrupt_on = {
@@ -644,7 +697,7 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
         backend=backend,
         memory=[MEMORY_PATH],
         skills=MAIN_SKILL_PATHS,
-        subagents=[icon_resolver_compiled, drawer_compiled, critic_compiled],
+        subagents=[icon_resolver_compiled, drawer_compiled, critic_compiled, wbs_planner_compiled],
         middleware=_middleware(agent_name="main"),
         checkpointer=checkpointer,
         store=store,

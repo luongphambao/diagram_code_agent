@@ -192,6 +192,7 @@ def clear_stage_markers() -> None:
         _CRITIQUE_FILE, _REVISION_COUNT_FILE, _TOOL_SUMMARY_FILE,
         _ICON_SEARCH_BUDGET_FILE, _NODE_SEARCH_BUDGET_FILE, _RENDER_SPEC_FILE,
         _ICON_PLAN_FILE, _WEB_SEARCH_BUDGET_FILE, WORKSPACE / REPORT_EVIDENCE_NAME,
+        WORKSPACE / "wbs_skeleton.json", WORKSPACE / "wbs.json", WORKSPACE / "wbs_filled.xlsx",
     ):
         if f.exists():
             f.unlink()
@@ -2604,6 +2605,9 @@ DIAGRAM_TOOLS = [
 from .email_tools import send_architecture_report_email  # noqa: E402
 from .calendar_tools import propose_meeting_slots, create_client_meeting  # noqa: E402
 from .rag_tools import find_similar_solutions  # noqa: E402
+from .wbs_tools import (  # noqa: E402
+    WBS_PLANNER_TOOLS, propose_wbs_skeleton, propose_wbs, export_wbs_excel,
+)
 
 MAIN_TOOLS = [
     analyze_architecture_requirements,
@@ -2619,6 +2623,9 @@ MAIN_TOOLS = [
     send_architecture_report_email,
     propose_meeting_slots,    # uses internal interrupt() — NOT in GATE_TOOL_NAMES
     create_client_meeting,    # interrupt_on gate — in GATE_TOOL_NAMES
+    propose_wbs_skeleton,     # WBS structure approval gate
+    propose_wbs,              # WBS plan/effort approval gate
+    export_wbs_excel,         # WBS .xlsx deliverable gate
 ]
 
 # Icon resolver subagent tools: node search + icon resolution (runs before drawer).
@@ -2638,4 +2645,7 @@ GATE_TOOL_NAMES = [
     "generate_pdf_report",
     "send_architecture_report_email",
     "create_client_meeting",
+    "propose_wbs_skeleton",
+    "propose_wbs",
+    "export_wbs_excel",
 ]

@@ -60,3 +60,52 @@ tmp/
 temp/
 *.tmp
 *.bak
+
+# Upstream reference clone (its useful parts are vendored into
+# backend/src/diagram_mcp/ — see data/ATTRIBUTION.md). Kept locally for reference,
+# not part of this repo (contains its own nested .git).
+drawio-skill/
+
+# ── Reference / training data (too large or not code) ────────────────────────
+# Leading / anchors to repo root — avoids matching backend/src/.../data/ on Windows.
+/DATA/
+/DATA.zip
+/WBS_image/
+
+# ── Generated outputs, reports, and run artifacts ─────────────────────────────
+generated_diagrams/
+NEW_RUN/
+run/
+run2/
+run-*.json
+*.pdf
+test_poster_demo.*
+Gemini_Generated_Image_*.png
+
+# ── Diagram image outputs at repo root ────────────────────────────────────────
+diagram\ (*.png
+
+# ── Claude Code session / plan artifacts (auto-generated, not code) ───────────
+adaptive-exploring-lampson.md
+cheeky-hopping-clock.md
+lexical-cooking-marble.md
+hi-n-t-i-ang-mu-n-wild-sparkle.md
+context_engineering.md
+deep_agent_context_management.md
+diagram.md
+
+# ── Local scratch / prototype scripts (not part of the shipped agent) ─────────
+mino.py
+read_wbs.py
+read_wbs2.py
+build_wbs_json.py
+test_mimo_vision.py
+backend/_tmp_*.py
+backend/test_email_send.py
+
+# ── Large binary data files in the package data directory ─────────────────────
+backend/src/diagram_mcp/data/shape-index.json.gz
+
+# ── Local tool/external config not relevant to the repo ───────────────────────
+composio.json
+.agents/

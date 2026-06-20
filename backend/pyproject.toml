@@ -21,6 +21,7 @@ dependencies = [
     "playwright>=1.45",
     "pypdf>=4.0",
     "python-docx>=1.1",
+    "openpyxl>=3.1",
     "python-multipart>=0.0.9",
     "langsmith>=0.1",
     "composio-langchain>=0.7.0",
