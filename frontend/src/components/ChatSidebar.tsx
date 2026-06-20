@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { ChatMessage, PendingInterrupt, UploadedFile } from "../hooks/useDiagramAgent";
+import type { ChatMessage, PendingInterrupt, UploadedFile, WbsSummary } from "../hooks/useDiagramAgent";
 import TechStackApproval from "./TechStackApproval";
 import BlueprintApproval from "./BlueprintApproval";
 import DiagramFeedback from "./DiagramFeedback";
@@ -17,6 +17,8 @@ interface ChatSidebarProps {
   pendingInterrupt: PendingInterrupt | null;
   isRunning: boolean;
   pdfBase64?: string;
+  wbsXlsxBase64?: string;
+  wbsSummary?: WbsSummary;
   activity?: string | null;
   activeSubagent?: string | null;
   error: string | null;
@@ -45,6 +47,8 @@ export default function ChatSidebar({
   pendingInterrupt,
   isRunning,
   pdfBase64,
+  wbsXlsxBase64,
+  wbsSummary,
   activity,
   activeSubagent,
   error,
@@ -66,12 +70,13 @@ export default function ChatSidebar({
   onClearFiles,
 }: ChatSidebarProps) {
   const [draft, setDraft] = useState("");
+  const [wbsPreviewOpen, setWbsPreviewOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, error, pendingInterrupt, pdfBase64]);
+  }, [messages, error, pendingInterrupt, pdfBase64, wbsXlsxBase64]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setDraft(e.target.value);
@@ -113,6 +118,17 @@ export default function ChatSidebar({
     const a = document.createElement("a");
     a.href = url;
     a.download = "architecture_report.pdf";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadWbsXlsx = () => {
+    if (!wbsXlsxBase64) return;
+    const bytes = Uint8Array.from(atob(wbsXlsxBase64), (c) => c.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "wbs_filled.xlsx";
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -277,6 +293,82 @@ export default function ChatSidebar({
                     Download PDF
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {wbsXlsxBase64 && (
+          <div className="ml-9 max-w-[82%] rounded-2xl rounded-tl-sm border border-emerald-500/20 bg-emerald-950/20 px-4 py-3">
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-500/15">
+                <svg className="h-4 w-4 text-emerald-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-6h6v6M9 11V5h6v6M3 3h18v18H3z" />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-white">WBS Excel ready</p>
+                <p className="mt-1 text-xs text-slate-500">Download the filled .xlsx file or preview effort breakdown.</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setWbsPreviewOpen((v) => !v)}
+                    className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/20"
+                  >
+                    {wbsPreviewOpen ? "Hide Preview" : "Preview WBS"}
+                  </button>
+                  <button
+                    onClick={downloadWbsXlsx}
+                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200 transition-colors hover:bg-white/10"
+                  >
+                    Download .xlsx
+                  </button>
+                </div>
+                {wbsPreviewOpen && wbsSummary && (
+                  <div className="mt-3 space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300">
+                        {wbsSummary.total_mandays.toFixed(1)} MD
+                      </span>
+                      <span className="rounded-full border border-teal-500/30 bg-teal-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-teal-300">
+                        {wbsSummary.total_manmonths.toFixed(1)} MM
+                      </span>
+                      <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-sky-300">
+                        {wbsSummary.months} months
+                      </span>
+                      <span className="rounded-full border border-slate-500/30 bg-slate-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-slate-300">
+                        {wbsSummary.weeks} weeks
+                      </span>
+                    </div>
+                    {Object.keys(wbsSummary.effort_by_role).length > 0 && (
+                      <div>
+                        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Effort by Role</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {Object.entries(wbsSummary.effort_by_role).map(([role, md]) => (
+                            <span key={role} className="rounded border border-white/8 bg-white/5 px-2 py-0.5 text-[11px] text-slate-300">
+                              <span className="font-semibold text-white">{role}</span> {(md as number).toFixed(1)} MD
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {wbsSummary.effort_by_module.length > 0 && (
+                      <div>
+                        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Effort by Module</p>
+                        <table className="w-full text-[11px]">
+                          <tbody>
+                            {wbsSummary.effort_by_module.map((m) => (
+                              <tr key={m.code} className="border-b border-white/5">
+                                <td className="py-0.5 pr-2 font-mono text-slate-500">{m.code}</td>
+                                <td className="py-0.5 pr-2 text-slate-300">{m.name}</td>
+                                <td className="py-0.5 text-right font-semibold text-emerald-300">{m.total_md.toFixed(1)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

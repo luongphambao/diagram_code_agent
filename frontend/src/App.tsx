@@ -180,6 +180,8 @@ export default function App() {
             pendingInterrupt={diagramAgent.pendingInterrupt}
             isRunning={diagramAgent.isRunning}
             pdfBase64={diagramAgent.agentState.pdf_base64}
+            wbsXlsxBase64={diagramAgent.agentState.wbs_xlsx_base64}
+            wbsSummary={diagramAgent.agentState.wbs_summary}
             activity={diagramAgent.activity}
             activeSubagent={diagramAgent.activeSubagent}
             error={diagramAgent.error}

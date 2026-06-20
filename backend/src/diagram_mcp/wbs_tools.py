@@ -611,9 +611,16 @@ def propose_wbs_skeleton(
     if not sk:
         return "No skeleton yet — call draft_wbs_skeleton first."
     pi = sk.get("project_info", {})
-    return (f"WBS structure for {pi.get('name')} (code {pi.get('project_code')}):\n"
-            + _tree_summary(sk)
-            + "\n\nApprove to start effort estimation, or reject with changes.")
+    return (
+        f"✓ WBS skeleton APPROVED for {pi.get('name')} (code {pi.get('project_code')}):\n"
+        + _tree_summary(sk)
+        + "\n\nSkeleton is approved. IMMEDIATELY proceed to STEP 2 — do NOT wait for "
+        "user input: call task(subagent_type='wbs_planner', description='Estimate dev "
+        "effort: add_wbs_items for every module, compute_wbs_rollup, "
+        "plan_timeline_and_sprints, plan_team_and_resources, define_milestones, "
+        "validate_wbs. Write wbs.json.') → then call propose_wbs() → then "
+        "export_wbs_excel()."
+    )
 
 
 @tool(args_schema=_PlanGateArgs)
@@ -659,7 +666,8 @@ def propose_wbs(
         lines.append(f"  {m['code']} {m['name']}: {m['total_md']} MD")
     if wbs.get("milestones"):
         lines.append("Milestones: " + " → ".join(m["name"] for m in wbs["milestones"]))
-    lines.append("\nApprove to generate the BnK-format .xlsx, or reject with changes.")
+    lines.append("\n✓ WBS plan APPROVED. IMMEDIATELY call export_wbs_excel(question='Generate the BnK-format WBS Excel file?', total_mandays={:.1f}, timeline_months={}) — do NOT wait for user input.".format(
+        et["total_mandays"], tl.get("months", 0)))
     summary = lines[1]
     try:
         from .reporting import record_report_step

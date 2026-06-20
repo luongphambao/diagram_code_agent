@@ -680,6 +680,50 @@ def _card_for(val, summary: str):
             "awaiting_meeting_approval",
             {},
         )
+    if name == "propose_wbs_skeleton":
+        phases = args.get("phases") or []
+        if isinstance(phases, dict):
+            phases = list(phases.values())
+        return (
+            {
+                "type": "wbs_skeleton_approval",
+                "question": args.get("question", "Review the WBS structure and approve or request changes."),
+                "project_name": args.get("project_name", ""),
+                "project_code": args.get("project_code", ""),
+                "phases": phases,
+            },
+            "awaiting_wbs_skeleton",
+            {},
+        )
+    if name == "propose_wbs":
+        effort_by_module = args.get("effort_by_module") or []
+        if isinstance(effort_by_module, dict):
+            effort_by_module = list(effort_by_module.values())
+        return (
+            {
+                "type": "wbs_approval",
+                "question": args.get("question", "Review the WBS plan and effort estimates."),
+                "total_mandays": args.get("total_mandays", 0),
+                "total_manmonths": args.get("total_manmonths", 0),
+                "timeline_weeks": args.get("timeline_weeks", 0),
+                "timeline_months": args.get("timeline_months", 0),
+                "effort_by_role": args.get("effort_by_role") or {},
+                "effort_by_module": effort_by_module,
+            },
+            "awaiting_wbs_approval",
+            {},
+        )
+    if name == "export_wbs_excel":
+        return (
+            {
+                "type": "wbs_excel_approval",
+                "question": args.get("question", "Generate the WBS Excel file?"),
+                "total_mandays": args.get("total_mandays", 0),
+                "timeline_months": args.get("timeline_months", 0),
+            },
+            "awaiting_wbs_excel",
+            {},
+        )
     return None, None, {}
 
 
@@ -753,6 +797,9 @@ def _artifacts() -> dict:
     pdf = WORKSPACE / "out.pdf"
     if pdf.exists():
         out["pdf_base64"] = base64.b64encode(pdf.read_bytes()).decode("ascii")
+    xlsx = WORKSPACE / "wbs_filled.xlsx"
+    if xlsx.exists():
+        out["wbs_xlsx_base64"] = base64.b64encode(xlsx.read_bytes()).decode("ascii")
     return out
 
 
@@ -764,6 +811,7 @@ def _stage_artifacts() -> dict:
     ts = _read_json(WORKSPACE / "tech_stack.json")
     bp = _read_json(WORKSPACE / "blueprint.json")
     tool_summary = _read_json(WORKSPACE / "tool_budget_summary.json")
+    wbs = _read_json(WORKSPACE / "wbs.json")
     if analysis:
         out["architecture_analysis"] = _coerce_brief(analysis)
     if brief:
@@ -774,6 +822,17 @@ def _stage_artifacts() -> dict:
         out["blueprint"] = _normalize_blueprint(bp)
     if tool_summary:
         out["tool_budget_summary"] = tool_summary
+    if wbs:
+        totals = wbs.get("effort_totals") or {}
+        timeline = wbs.get("timeline") or {}
+        out["wbs_summary"] = {
+            "total_mandays": totals.get("total_mandays", 0),
+            "total_manmonths": totals.get("total_manmonths", 0),
+            "effort_by_role": totals.get("effort_by_role", {}),
+            "weeks": timeline.get("weeks", 0),
+            "months": timeline.get("months", 0),
+            "effort_by_module": (wbs.get("effort_by_module") or [])[:12],
+        }
     return out
 
 def _run_metrics(logs: list[dict]) -> dict:
@@ -1028,6 +1087,14 @@ async def agui_endpoint(request: Request):
                                         for k, v in _artifacts().items()
                                     ]
                                     artifact_delta.append({"op": "replace", "path": "/current_step", "value": "done"})
+                                    yield _sse({"type": "STATE_DELTA", "delta": artifact_delta})
+                                if name == "export_wbs_excel" and ok:
+                                    artifact_delta = [
+                                        {"op": "replace", "path": f"/{k}", "value": v}
+                                        for k, v in _artifacts().items()
+                                    ]
+                                    for k, v in _stage_artifacts().items():
+                                        artifact_delta.append({"op": "replace", "path": f"/{k}", "value": v})
                                     yield _sse({"type": "STATE_DELTA", "delta": artifact_delta})
                 elif mode == "custom":
                     # Live per-step activity from within a running subagent.

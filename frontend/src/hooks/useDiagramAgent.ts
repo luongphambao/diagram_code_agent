@@ -160,11 +160,22 @@ export interface Delegation {
   current_detail?: string;
 }
 
+export interface WbsSummary {
+  total_mandays: number;
+  total_manmonths: number;
+  effort_by_role: Record<string, number>;
+  weeks: number;
+  months: number;
+  effort_by_module: Array<{ code: string; name: string; total_md: number }>;
+}
+
 export interface AgentState {
   current_step?: string;
   iteration?: number;
   png_base64?: string;
   pdf_base64?: string;
+  wbs_xlsx_base64?: string;
+  wbs_summary?: WbsSummary;
   drawio?: string;
   code?: string;
   summary?: string;

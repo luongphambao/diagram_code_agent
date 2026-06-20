@@ -109,21 +109,28 @@ _MAIN_TOOLS_BLOCK = """\
 - `task(subagent_type="wbs_planner", description=...)` — OPTIONAL. Delegate building a
   Work Breakdown Structure (project effort estimate / WBS / delivery plan) to the
   `wbs_planner` subagent. Use ONLY when the user asks for a WBS / effort estimate /
-  project plan, and only AFTER `propose_blueprint` is approved (it reads
-  `diagram_brief.json` + `tech_stack.json` + `blueprint.json`). Run it in TWO steps:
-  (1) describe "draft the phase/module skeleton" → then call `propose_wbs_skeleton()`
-  to get the structure approved; (2) describe "estimate effort, roll up, plan
-  timeline/team/milestones, validate" → then call `propose_wbs()` to approve the plan
-  → then `export_wbs_excel()` for the .xlsx deliverable.
+  project plan. It reads `diagram_brief.json` + `tech_stack.json` + `blueprint.json`
+  (call AFTER those files exist). The FULL automated sequence — do NOT wait for the
+  user between steps, proceed immediately:
+  STEP 1 → call `task(subagent_type="wbs_planner", description="Draft the phase/module
+  skeleton only: load_solution_context, get_effort_norms, draft_wbs_skeleton. Write
+  wbs_skeleton.json. Return a short status.")` → read wbs_skeleton.json → call
+  `propose_wbs_skeleton()` (PAUSES for approval).
+  STEP 2 (run IMMEDIATELY after propose_wbs_skeleton returns, no user prompt needed) →
+  call `task(subagent_type="wbs_planner", description="Estimate effort: add_wbs_items
+  for every module, compute_wbs_rollup, plan_timeline_and_sprints,
+  plan_team_and_resources, define_milestones, validate_wbs. Write wbs.json. Return
+  short status.")` → read wbs.json → call `propose_wbs()` (PAUSES for approval) →
+  call `export_wbs_excel()` (PAUSES then generates .xlsx).
 - `propose_wbs_skeleton(question, project_name, project_code, phases)` — WBS gate #1.
   Read `wbs_skeleton.json` from workspace, then call with the full phase/module tree:
   `phases=[{{"code":"I","name":"...","modules":[{{"code":"I.A","name":"..."}},...]}},...]`.
-  PAUSES for the user to approve the structure.
+  PAUSES for the user to approve the structure. When this returns → IMMEDIATELY start STEP 2.
 - `propose_wbs(question, total_mandays, total_manmonths, timeline_weeks, timeline_months, effort_by_role, effort_by_module)` — WBS gate #2.
   Read `wbs.json` effort_totals + timeline, then call with those values.
   `effort_by_role={{"BE":x,"FE_Mobile":y,"BA":z,"QC":w,"PM":v}}`.
   `effort_by_module=[{{"code":"I.A","name":"...","total_md":x}},...]`.
-  PAUSES for the user to approve the plan.
+  PAUSES for the user to approve the plan. When this returns → IMMEDIATELY call export_wbs_excel.
 - `export_wbs_excel(question, total_mandays, timeline_months)` — WBS gate #3.
   Pass the totals for the confirmation card. PAUSES then generates the .xlsx.
 - Plus `read_file`, `write_file`, `edit_file`, `ls`, `glob`, `grep`, `write_todos`."""
