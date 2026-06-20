@@ -539,6 +539,44 @@ def validate_wbs() -> str:
 # ════════════════════════════════════════════════════════════════════════════
 # HITL GATE TOOLS (interrupt_on in agent.py)
 # ════════════════════════════════════════════════════════════════════════════
+# Pydantic arg schemas — the LLM passes display data when calling each gate
+# so the frontend can render a rich approval card from activeTcArgs.
+
+class _WbsModuleArg(_CoercingModel):
+    code: str = ""
+    name: str = ""
+
+class _WbsPhaseArg(_CoercingModel):
+    code: str = ""
+    name: str = ""
+    modules: list[_WbsModuleArg] = Field(default_factory=list)
+
+class _SkeletonGateArgs(_CoercingModel):
+    question: str = "Review the WBS structure and approve to begin effort estimation."
+    project_name: str = ""
+    project_code: str = ""
+    phases: list[_WbsPhaseArg] = Field(default_factory=list)
+
+class _ModuleEffortArg(_CoercingModel):
+    code: str = ""
+    name: str = ""
+    total_md: float = 0.0
+
+class _PlanGateArgs(_CoercingModel):
+    question: str = "Review the WBS plan and approve to export to Excel."
+    total_mandays: float = 0.0
+    total_manmonths: float = 0.0
+    timeline_weeks: int = 0
+    timeline_months: int = 0
+    effort_by_role: dict = Field(default_factory=dict)
+    effort_by_module: list[_ModuleEffortArg] = Field(default_factory=list)
+
+class _ExcelGateArgs(_CoercingModel):
+    question: str = "Ready to generate the BnK-format WBS Excel file."
+    total_mandays: float = 0.0
+    timeline_months: int = 0
+
+
 def _tree_summary(wbs: dict) -> str:
     lines = []
     for p in wbs.get("phases", wbs.get("phases_meta", [])):
@@ -548,13 +586,26 @@ def _tree_summary(wbs: dict) -> str:
     return "\n".join(lines)
 
 
-@tool(parse_docstring=True)
-def propose_wbs_skeleton() -> str:
+@tool(args_schema=_SkeletonGateArgs)
+def propose_wbs_skeleton(
+    question: str,
+    project_name: str = "",
+    project_code: str = "",
+    phases: list = None,
+) -> str:
     """Present the WBS phase/module structure for the user to approve.
 
-    PAUSES for human approval of the STRUCTURE before any effort is estimated. If
-    rejected you get a note — revise the skeleton (draft_wbs_skeleton) and re-propose.
+    PAUSES for human approval of the STRUCTURE before any effort is estimated.
+    Pass the full phase/module tree in `phases` so the frontend can render it.
+    If rejected you get a note — revise the skeleton (draft_wbs_skeleton) and re-propose.
     Call after draft_wbs_skeleton.
+
+    Args:
+        question: Approval question shown to the user.
+        project_name: Project name from project_info.
+        project_code: Project code from project_info.
+        phases: Phase/module tree from wbs_skeleton.json
+            [{code, name, modules: [{code, name}]}].
     """
     sk = _read_json(_SKELETON_FILE)
     if not sk:
@@ -565,14 +616,30 @@ def propose_wbs_skeleton() -> str:
             + "\n\nApprove to start effort estimation, or reject with changes.")
 
 
-@tool(parse_docstring=True)
-def propose_wbs() -> str:
+@tool(args_schema=_PlanGateArgs)
+def propose_wbs(
+    question: str,
+    total_mandays: float = 0.0,
+    total_manmonths: float = 0.0,
+    timeline_weeks: int = 0,
+    timeline_months: int = 0,
+    effort_by_role: dict = None,
+    effort_by_module: list = None,
+) -> str:
     """Present the full estimated WBS plan for the user to review and approve.
 
-    PAUSES for human approval. Summarises total effort (man-days / man-months),
-    the per-role split, per-module effort, timeline (months/sprints), team and
-    milestones. Call after validate_wbs. On approval, export_wbs_excel produces the
-    .xlsx deliverable.
+    PAUSES for human approval. Pass the effort summary so the frontend renders a
+    rich review card. Call after validate_wbs. On approval, export_wbs_excel produces
+    the .xlsx deliverable.
+
+    Args:
+        question: Approval question shown to the user.
+        total_mandays: Grand total man-days from effort_totals.
+        total_manmonths: Grand total man-months from effort_totals.
+        timeline_weeks: Project duration in weeks from timeline.
+        timeline_months: Project duration in months from timeline.
+        effort_by_role: {BE, FE_Mobile, BA, QC, PM} man-day split.
+        effort_by_module: [{code, name, total_md}] per-module breakdown.
     """
     wbs = _read_json(_WBS_FILE)
     if not wbs or not wbs.get("effort_totals"):
@@ -602,14 +669,23 @@ def propose_wbs() -> str:
     return "\n".join(lines)
 
 
-@tool(parse_docstring=True)
-def export_wbs_excel() -> str:
+@tool(args_schema=_ExcelGateArgs)
+def export_wbs_excel(
+    question: str = "Ready to generate the BnK-format WBS Excel file.",
+    total_mandays: float = 0.0,
+    timeline_months: int = 0,
+) -> str:
     """Generate the BnK-format WBS .xlsx deliverable from the approved plan.
 
     PAUSES for human approval. Clones the BnK template and fills the WBS, Effort and
-    Delivery-Plan sheets with LIVE formulas (Excel recomputes BA/QC/PM/totals on
-    open) and a dynamic month-by-month delivery grid. Writes wbs_filled.xlsx. Call
-    only after propose_wbs is approved.
+    Delivery-Plan sheets with LIVE formulas (Excel recomputes BA/QC/PM/totals on open)
+    and a dynamic month-by-month delivery grid. Writes wbs_filled.xlsx. Call only
+    after propose_wbs is approved.
+
+    Args:
+        question: Confirmation prompt shown to the user.
+        total_mandays: Total man-days for display (from effort_totals).
+        timeline_months: Project duration in months for display.
     """
     wbs = _read_json(_WBS_FILE)
     if not wbs or not wbs.get("phases"):

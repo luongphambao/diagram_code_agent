@@ -2604,7 +2604,7 @@ DIAGRAM_TOOLS = [
 # Main agent tools: gate/planning only — no rendering or icon search.
 from .email_tools import send_architecture_report_email  # noqa: E402
 from .calendar_tools import propose_meeting_slots, create_client_meeting  # noqa: E402
-from .rag_tools import find_similar_solutions  # noqa: E402
+# from .rag_tools import find_similar_solutions  # noqa: E402  # DISABLED: focus on WBS testing
 from .wbs_tools import (  # noqa: E402
     WBS_PLANNER_TOOLS, propose_wbs_skeleton, propose_wbs, export_wbs_excel,
 )
@@ -2612,7 +2612,7 @@ from .wbs_tools import (  # noqa: E402
 MAIN_TOOLS = [
     analyze_architecture_requirements,
     propose_diagram_brief,
-    find_similar_solutions,   # RAG over 52 BnK past projects — call before web_research
+    # find_similar_solutions,   # DISABLED: focus on WBS testing
     web_research,             # ≤3 Tavily calls/session — for tech-stack fact-checking
     propose_tech_stack,
     propose_blueprint,

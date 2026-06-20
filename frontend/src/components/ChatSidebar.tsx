@@ -7,6 +7,9 @@ import PdfReportApproval from "./PdfReportApproval";
 import EmailApproval from "./EmailApproval";
 import MeetingApproval from "./MeetingApproval";
 import MeetingSlotPicker from "./MeetingSlotPicker";
+import WbsSkeletonApproval from "./WbsSkeletonApproval";
+import WbsApproval from "./WbsApproval";
+import WbsExcelApproval from "./WbsExcelApproval";
 import FileUpload from "./FileUpload";
 
 interface ChatSidebarProps {
@@ -26,6 +29,9 @@ interface ChatSidebarProps {
   onResolveEmail: (approved: boolean) => void;
   onResolveMeeting: (approved: boolean) => void;
   onResolveMeetingSlot: (approved: boolean, selectedSlot?: { start: string; end: string; display_day: string; display_time: string }) => void;
+  onResolveWbsSkeleton: (approved: boolean, modifications?: string) => void;
+  onResolveWbs: (approved: boolean, modifications?: string) => void;
+  onResolveWbsExcel: (approved: boolean) => void;
   iteration?: number;
   // File upload
   uploadedFiles: UploadedFile[];
@@ -50,6 +56,9 @@ export default function ChatSidebar({
   onResolveEmail,
   onResolveMeeting,
   onResolveMeetingSlot,
+  onResolveWbsSkeleton,
+  onResolveWbs,
+  onResolveWbsExcel,
   iteration,
   uploadedFiles,
   isUploading,
@@ -224,6 +233,21 @@ export default function ChatSidebar({
               onResolve={onResolveMeeting}
               disabled={isRunning}
             />
+          </div>
+        )}
+        {pendingInterrupt?.data.type === "wbs_skeleton_approval" && (
+          <div className="mt-1">
+            <WbsSkeletonApproval interrupt={pendingInterrupt} onResolve={onResolveWbsSkeleton} disabled={isRunning} />
+          </div>
+        )}
+        {pendingInterrupt?.data.type === "wbs_approval" && (
+          <div className="mt-1">
+            <WbsApproval interrupt={pendingInterrupt} onResolve={onResolveWbs} disabled={isRunning} />
+          </div>
+        )}
+        {pendingInterrupt?.data.type === "wbs_excel_approval" && (
+          <div className="mt-1">
+            <WbsExcelApproval interrupt={pendingInterrupt} onResolve={onResolveWbsExcel} disabled={isRunning} />
           </div>
         )}
 

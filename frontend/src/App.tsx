@@ -191,6 +191,9 @@ export default function App() {
             onResolveEmail={diagramAgent.resolveEmail}
             onResolveMeeting={diagramAgent.resolveMeeting}
             onResolveMeetingSlot={diagramAgent.resolveMeetingSlot}
+            onResolveWbsSkeleton={diagramAgent.resolveWbsSkeleton}
+            onResolveWbs={diagramAgent.resolveWbs}
+            onResolveWbsExcel={diagramAgent.resolveWbsExcel}
             iteration={diagramAgent.agentState.iteration}
             uploadedFiles={diagramAgent.uploadedFiles}
             isUploading={diagramAgent.isUploading}

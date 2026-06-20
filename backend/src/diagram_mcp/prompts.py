@@ -91,9 +91,8 @@ _MAIN_TOOLS_BLOCK = """\
   `VERDICT: PASS` (proceed) or `VERDICT: REVISE` with concrete findings. Pass the
   approved blueprint + tech stack in the description so it can check completeness.
 - `finalize_diagram()` — submit the rendered diagram for the user's final review;
-  PAUSES. Call AFTER the critic returns `VERDICT: PASS`. If rejected you get
-  feedback — instruct the drawer again via `task(...)`, then re-critique and
-  `finalize_diagram` again.
+  PAUSES. Call AFTER the critic runs (regardless of verdict — one pass only).
+  If the user rejects, instruct the drawer to revise, then call `finalize_diagram` again.
 - `generate_pdf_report({})` — compose a multi-page PDF report (cover +
   solution + tech stack + blueprint + diagram) from approved workspace
   artifacts. Call after `finalize_diagram` is approved if the user asks for a
@@ -116,9 +115,17 @@ _MAIN_TOOLS_BLOCK = """\
   to get the structure approved; (2) describe "estimate effort, roll up, plan
   timeline/team/milestones, validate" → then call `propose_wbs()` to approve the plan
   → then `export_wbs_excel()` for the .xlsx deliverable.
-- `propose_wbs_skeleton()` / `propose_wbs()` / `export_wbs_excel()` — the three WBS
-  approval gates (run on the MAIN agent, each PAUSES for the user). Call them in that
-  order around the `wbs_planner` subagent runs as described above.
+- `propose_wbs_skeleton(question, project_name, project_code, phases)` — WBS gate #1.
+  Read `wbs_skeleton.json` from workspace, then call with the full phase/module tree:
+  `phases=[{{"code":"I","name":"...","modules":[{{"code":"I.A","name":"..."}},...]}},...]`.
+  PAUSES for the user to approve the structure.
+- `propose_wbs(question, total_mandays, total_manmonths, timeline_weeks, timeline_months, effort_by_role, effort_by_module)` — WBS gate #2.
+  Read `wbs.json` effort_totals + timeline, then call with those values.
+  `effort_by_role={{"BE":x,"FE_Mobile":y,"BA":z,"QC":w,"PM":v}}`.
+  `effort_by_module=[{{"code":"I.A","name":"...","total_md":x}},...]`.
+  PAUSES for the user to approve the plan.
+- `export_wbs_excel(question, total_mandays, timeline_months)` — WBS gate #3.
+  Pass the totals for the confirmation card. PAUSES then generates the .xlsx.
 - Plus `read_file`, `write_file`, `edit_file`, `ls`, `glob`, `grep`, `write_todos`."""
 
 _ICON_RESOLVER_TOOLS_BLOCK = """\
@@ -331,13 +338,8 @@ You design the solution step by step; the user reviews and approves the gated st
    `task(subagent_type="critic", description="Review out.png against the approved blueprint. Full spec is in render_spec.json in the workspace. Verify all nodes are present, no overlap, arrows are clean, icons resolved.")`.
    Read the verdict line it returns:
    - `VERDICT: PASS` → proceed to finalize.
-   - `VERDICT: REVISE` → forward the listed findings to the drawer via another
-     `task(subagent_type="drawer", ...)` to fix them, then re-run the critic.
-     The revision task MUST say: read and edit the existing `diagram.py`, reuse
-     `icon_plan.json` / `out.nodes.json` icon paths, do not re-search icons unless
-     a new node has no existing icon, and do not redesign from scratch. Repeat at
-     most TWICE; if findings remain after that, proceed to finalize anyway and
-     mention the residual findings to the user.
+   - `VERDICT: REVISE` → note the findings in your reply to the user, then proceed
+     to finalize immediately. Do NOT re-run the drawer or critic — one pass only.
 9. **Finalize.** Call `finalize_diagram()` and WAIT for the final review. If the
    user rejects, instruct the drawer to revise via another `task(...)`, re-critique,
    then call `finalize_diagram` again.

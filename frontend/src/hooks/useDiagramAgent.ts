@@ -185,7 +185,10 @@ export type InterruptType =
   | "pdf_report_approval"
   | "email_approval"
   | "slot_picker"
-  | "meeting_approval";
+  | "meeting_approval"
+  | "wbs_skeleton_approval"
+  | "wbs_approval"
+  | "wbs_excel_approval";
 
 export interface PendingInterrupt {
   toolCallId: string;
@@ -232,6 +235,18 @@ export interface PendingInterrupt {
     description?: string;
     add_google_meet?: boolean;
     timezone?: string;
+    // wbs_skeleton_approval
+    phases?: Array<{code: string; name: string; modules?: Array<{code: string; name: string}>}>;
+    project_code?: string;
+    // project_name is shared with email_approval above
+    // wbs_approval
+    total_mandays?: number;
+    total_manmonths?: number;
+    timeline_weeks?: number;
+    timeline_months?: number;
+    effort_by_role?: Record<string, number>;
+    effort_by_module?: Array<{code: string; name: string; total_md: number}>;
+    // wbs_excel_approval (reuses question, total_mandays, timeline_months)
   };
 }
 
@@ -552,6 +567,27 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
     [_resolveWithPayload]
   );
 
+  const resolveWbsSkeleton = useCallback(
+    async (approved: boolean, modifications?: string) => {
+      await _resolveWithPayload({ approved, modifications: modifications?.trim() || null });
+    },
+    [_resolveWithPayload]
+  );
+
+  const resolveWbs = useCallback(
+    async (approved: boolean, modifications?: string) => {
+      await _resolveWithPayload({ approved, modifications: modifications?.trim() || null });
+    },
+    [_resolveWithPayload]
+  );
+
+  const resolveWbsExcel = useCallback(
+    async (approved: boolean) => {
+      await _resolveWithPayload({ approved });
+    },
+    [_resolveWithPayload]
+  );
+
   const uploadFile = useCallback(async (file: File) => {
     setIsUploading(true);
     setError(null);
@@ -617,6 +653,9 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
     resolveEmail,
     resolveMeeting,
     resolveMeetingSlot,
+    resolveWbsSkeleton,
+    resolveWbs,
+    resolveWbsExcel,
     uploadFile,
     clearFiles,
     restore,
