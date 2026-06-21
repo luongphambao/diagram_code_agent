@@ -43,10 +43,13 @@ from copy import copy
 from pathlib import Path
 
 from openpyxl import load_workbook
+from openpyxl.drawing.image import Image as XLImage
 from openpyxl.worksheet.worksheet import Worksheet
 
 # The blank BnK template shipped inside the package (cloned for every export).
 DEFAULT_TEMPLATE = Path(__file__).resolve().parent / "data" / "wbs_template.xlsx"
+# Company logo stamped onto the "0. How to use" cover sheet.
+DEFAULT_LOGO = Path(__file__).resolve().parent / "data" / "logo.png"
 
 # ── Column map for the "2. WBS" sheet (1-based) ──────────────────────────────
 C_NUM, C_REF, C_FEAT, C_DESC, C_TOTAL = 2, 3, 4, 5, 6
@@ -448,6 +451,21 @@ def _write_master_data_ratios(wb, ratios: dict) -> None:
 _KEEP_SHEETS = ["0. How to use", "1. Effort", "2. WBS", "3. Delivery Plan", "4. Master Data"]
 
 
+def _add_logo(wb, logo_path: str | Path | None = None) -> None:
+    """Stamp the company logo onto the top-left of the "0. How to use" sheet."""
+    path = Path(logo_path or DEFAULT_LOGO)
+    if "0. How to use" not in wb.sheetnames or not path.exists():
+        return
+    img = XLImage(str(path))
+    # Keep the native aspect ratio but cap the footprint on the cover sheet.
+    max_side = 110
+    if img.width and img.height:
+        scale = min(max_side / img.width, max_side / img.height, 1.0)
+        img.width = int(img.width * scale)
+        img.height = int(img.height * scale)
+    wb["0. How to use"].add_image(img, "A1")
+
+
 def build_wbs_workbook(wbs: dict, out_path: str | Path,
                        template_path: str | Path | None = None) -> dict:
     """Clone the template and fill it from ``wbs``. Returns layout metadata."""
@@ -456,6 +474,7 @@ def build_wbs_workbook(wbs: dict, out_path: str | Path,
         if name not in _KEEP_SHEETS:
             del wb[name]
     _write_master_data_ratios(wb, wbs.get("ratios", {}))
+    _add_logo(wb)
     ws = wb["2. WBS"]
     snap = _snapshot_styles(ws)
     # Old example body spans rows 6..~73; clear generously.

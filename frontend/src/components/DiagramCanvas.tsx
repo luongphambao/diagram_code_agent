@@ -70,17 +70,23 @@ interface DiagramCanvasProps {
   activity?: string | null;
 }
 
-type Tab = "preview" | "pdf" | "code" | "activity" | "agents";
+type Tab = "preview" | "pdf" | "wbs" | "code" | "activity" | "agents";
 
 export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning, activeSubagent, activity }: DiagramCanvasProps) {
   const [lightbox, setLightbox] = useState(false);
   const [tab, setTab] = useState<Tab>("preview");
-  const { current_step, png_base64, pdf_base64, drawio, summary, error, iteration, code, logs, delegations } = agentState;
+  const { current_step, png_base64, pdf_base64, wbs_xlsx_base64, wbs_summary, drawio, summary, error, iteration, code, logs, delegations } = agentState;
   const hasDelegations = !!delegations && delegations.length > 0;
   const hasLiveAgentWork = isRunning || !!activeSubagent || hasDelegations || !!activity;
-  const tabs: Tab[] = pdf_base64
-    ? ["preview", "pdf", "code", "activity", "agents"]
-    : ["preview", "code", "activity", "agents"];
+  const hasWbs = !!wbs_summary || !!wbs_xlsx_base64;
+  const tabs: Tab[] = [
+    "preview",
+    ...(pdf_base64 ? (["pdf"] as Tab[]) : []),
+    ...(hasWbs ? (["wbs"] as Tab[]) : []),
+    "code",
+    "activity",
+    "agents",
+  ];
 
   // ── Download helpers ──────────────────────────────────────────────────────
   const downloadPng = () => {
@@ -110,6 +116,18 @@ export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning,
     const a = document.createElement("a");
     a.href = url;
     a.download = `architecture_report${iteration && iteration > 1 ? `_v${iteration}` : ""}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadWbsXlsx = () => {
+    if (!wbs_xlsx_base64) return;
+    const bytes = Uint8Array.from(atob(wbs_xlsx_base64), (char) => char.charCodeAt(0));
+    const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `wbs${iteration && iteration > 1 ? `_v${iteration}` : ""}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -176,6 +194,8 @@ export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning,
                     ? `Agents (${delegations.length})`
                     : t === "pdf"
                     ? "PDF"
+                    : t === "wbs"
+                    ? "WBS"
                     : t === "code" && code
                     ? "Code"
                     : t.charAt(0).toUpperCase() + t.slice(1)}
@@ -293,6 +313,79 @@ export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning,
               ) : (
                 <div className="flex flex-1 items-center justify-center">
                   <p className="text-sm text-slate-700">No PDF report available</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {tab === "wbs" && (
+            <div className="flex flex-1 flex-col overflow-hidden bg-[#0b0e14]">
+              <div className="flex items-center justify-between border-b border-white/8 px-4 py-2">
+                <span className="text-xs font-medium text-slate-400">Work Breakdown Structure</span>
+                <button
+                  onClick={downloadWbsXlsx}
+                  disabled={!wbs_xlsx_base64}
+                  className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-200 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download .xlsx
+                </button>
+              </div>
+              {wbs_summary ? (
+                <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                  {/* Headline metrics */}
+                  <div className="flex flex-wrap gap-2">
+                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+                      {wbs_summary.total_mandays.toFixed(1)} MD
+                    </span>
+                    <span className="rounded-full border border-teal-500/30 bg-teal-500/10 px-3 py-1 text-xs font-semibold text-teal-300">
+                      {wbs_summary.total_manmonths.toFixed(1)} MM
+                    </span>
+                    <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-300">
+                      {wbs_summary.months} months
+                    </span>
+                    <span className="rounded-full border border-slate-500/30 bg-slate-500/10 px-3 py-1 text-xs font-semibold text-slate-300">
+                      {wbs_summary.weeks} weeks
+                    </span>
+                  </div>
+
+                  {/* Effort by role */}
+                  {Object.keys(wbs_summary.effort_by_role).length > 0 && (
+                    <div>
+                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Effort by Role</p>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(wbs_summary.effort_by_role).map(([role, md]) => (
+                          <span key={role} className="rounded border border-white/8 bg-white/5 px-2.5 py-1 text-xs text-slate-300">
+                            <span className="font-semibold text-white">{role}</span> {(md as number).toFixed(1)} MD
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Effort by module */}
+                  {wbs_summary.effort_by_module.length > 0 && (
+                    <div>
+                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Effort by Module</p>
+                      <table className="w-full text-xs">
+                        <tbody>
+                          {wbs_summary.effort_by_module.map((m) => (
+                            <tr key={m.code} className="border-b border-white/5">
+                              <td className="py-1.5 pr-3 font-mono text-slate-500">{m.code}</td>
+                              <td className="py-1.5 pr-3 text-slate-300">{m.name}</td>
+                              <td className="py-1.5 text-right font-semibold text-emerald-300">{m.total_md.toFixed(1)} MD</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-1 items-center justify-center">
+                  <p className="text-sm text-slate-700">No WBS summary available</p>
                 </div>
               )}
             </div>

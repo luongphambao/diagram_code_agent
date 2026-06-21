@@ -190,6 +190,7 @@ export interface AgentState {
 }
 
 export type InterruptType =
+  | "brief_approval"
   | "techstack_approval"
   | "blueprint_approval"
   | "result_review"
@@ -206,6 +207,8 @@ export interface PendingInterrupt {
   data: {
     type: InterruptType;
     question: string;
+    // brief_approval
+    brief?: DiagramBrief;
     // techstack_approval
     tech_stack?: Record<string, TechStackLayer>;
     assumptions?: SolutionAssumptions;
