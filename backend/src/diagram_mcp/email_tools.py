@@ -176,10 +176,14 @@ class SendEmailConfig(BaseModel):
 
 @tool(args_schema=SendEmailConfig)
 def send_architecture_report_email(
-    runtime: ToolRuntime[SessionContext],
     recipient_email: str,
     subject: str,
     project_name: str,
+    # Injected by langgraph's ToolNode at runtime (detected by the name "runtime"
+    # and the ToolRuntime origin type). Defaults to None so the tool can also be
+    # invoked directly (e.g. test_email_send.py) outside a graph, where it falls
+    # back to a default SessionContext + process-env credentials.
+    runtime: ToolRuntime[SessionContext] = None,
     subtitle: str = "",
     recipient_name: str = "Team",
 ) -> str:
@@ -194,7 +198,7 @@ def send_architecture_report_email(
     Call this ONLY after generate_pdf_report() has completed successfully.
     This tool PAUSES for user approval before sending.
     """
-    ctx = runtime.context
+    ctx = runtime.context if runtime is not None else SessionContext()
     # Default the recipient to the session user when the model leaves it blank.
     recipient_email = recipient_email or ctx.user_email
     if not recipient_email:
@@ -217,7 +221,7 @@ def send_architecture_report_email(
     api_key = ctx.composio_api_key or os.environ.get("COMPOSIO_API_KEY", "")
     if not api_key:
         return "ERROR: no Composio API key in session context or COMPOSIO_API_KEY env."
-    gmail_account_id = ctx.gmail_account_id or "ca_LVbY16_Vo874"
+    gmail_account_id = ctx.gmail_account_id or "ca_T-8oe6uyvPuQ"
 
     html_body = _EMAIL_HTML_TEMPLATE.format(
         project_name=project_name,

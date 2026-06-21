@@ -154,11 +154,17 @@ def _build_wbs_sheet(ws: Worksheet, wbs: dict, snap: dict) -> dict:
                     _write_leaf_effort(ws, r, leaf, pt)
                     r += 1
 
-            # module roll-up over its full contiguous block (label rows are empty)
+            # module roll-up over its full contiguous block (label rows are empty).
+            # An empty module (no leaf rows) would make leaf_last < leaf_first, i.e. a
+            # reversed range that includes the module row itself → a circular reference
+            # that halts Excel's calc chain and blanks every downstream TOTAL. Guard it.
             leaf_last = r - 1
+            has_leaves = leaf_last >= leaf_first
             for col, letter in ((C_BE, "G"), (C_FEMOB, "H"), (C_RA, "I"),
                                 (C_TEST, "J"), (C_PM, "K")):
-                ws.cell(module_row, col).value = f"=SUM({letter}{leaf_first}:{letter}{leaf_last})"
+                ws.cell(module_row, col).value = (
+                    f"=SUM({letter}{leaf_first}:{letter}{leaf_last})" if has_leaves else 0
+                )
             ws.cell(module_row, C_TOTAL).value = f"=SUM(G{module_row}:K{module_row})"
 
             # blank spacer row between modules (styled like template's spacer)
