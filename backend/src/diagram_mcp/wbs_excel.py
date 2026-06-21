@@ -91,7 +91,17 @@ def _apply_style(ws: Worksheet, row: int, kind: str, snap: dict) -> None:
 
 
 def _clear_body(ws: Worksheet, first: int, last: int) -> None:
-    """Blank out every cell value in the template's example body."""
+    """Blank out every cell value in the template's example body.
+
+    The template ships footer merges (e.g. B75:K76) inside the body region; any
+    that survive turn their non-anchor cells into read-only ``MergedCell`` objects,
+    so writing the rebuilt hierarchy there raises "attribute 'value' is read-only".
+    Unmerge every range that intersects the clear region first (the title merge in
+    rows <first stays intact).
+    """
+    for mr in list(ws.merged_cells.ranges):
+        if mr.max_row >= first and mr.min_row <= last:
+            ws.unmerge_cells(str(mr))
     for r in range(first, last + 1):
         for c in range(1, 25):
             cell = ws.cell(r, c)
