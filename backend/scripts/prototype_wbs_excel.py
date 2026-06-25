@@ -20,8 +20,8 @@ REPO = ROOT.parent
 TEMPLATE = REPO / "DATA" / "[BnK] Template - WBS.xlsx"
 OUT = REPO / "DATA" / "SOLUTION_WBS" / "wbs_prototype.xlsx"
 
-from diagram_mcp.wbs_effort import derive_leaf_effort, rollup, delivery_grid  # noqa: E402
-from diagram_mcp import wbs_excel  # noqa: E402
+from wbs_effort import derive_leaf_effort, rollup, delivery_grid  # noqa: E402
+import wbs_excel  # noqa: E402
 
 
 def leaf(name, *, be=0, fe=0, mobile=0, ai=0, ba=0, pt="development", desc="", remark=""):

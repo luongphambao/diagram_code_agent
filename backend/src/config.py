@@ -2,7 +2,7 @@
 
 Usage
 -----
-from .config import get_model, make_llm
+from config import get_model, make_llm
 
 llm = make_llm(get_model("main", fallback="gpt-5.4-mini"))
 """
@@ -16,8 +16,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# backend/src/diagram_mcp/config.py → parents[2] == backend/
-_CONFIG_FILE = Path(__file__).resolve().parents[2] / "config.yaml"
+# backend/src/config.py → parents[1] == backend/
+_CONFIG_FILE = Path(__file__).resolve().parents[1] / "config.yaml"
 
 _cfg: dict | None = None
 

@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from .wbs_schema import WbsProject
+from wbs_schema import WbsProject
 
 logger = logging.getLogger(__name__)
 

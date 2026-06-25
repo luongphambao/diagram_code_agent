@@ -31,9 +31,9 @@ load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 from langchain_core.messages import HumanMessage
 from langgraph.types import Command
 
-from diagram_mcp.agent import DEFAULT_MODEL, RECURSION_LIMIT, build_agent
-from diagram_mcp.backends import WORKSPACE
-from diagram_mcp.tools import clear_stage_markers, GATE_TOOL_NAMES
+from agent import DEFAULT_MODEL, RECURSION_LIMIT, build_agent
+from backends import WORKSPACE
+from tools import clear_stage_markers, GATE_TOOL_NAMES
 
 logger = logging.getLogger("eval.target")
 logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(message)s")

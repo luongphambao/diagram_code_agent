@@ -39,19 +39,19 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.types import Command
 
 load_dotenv()
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
-from .agent import RECURSION_LIMIT, build_agent, make_persistence
-from .context import SessionContext
-from . import conversations as conv_db
+from agent import RECURSION_LIMIT, build_agent, make_persistence
+from context import SessionContext
+import conversations as conv_db
 
 # The compiled agent is built in the FastAPI lifespan (so the Postgres connection
 # pool is opened/closed with the app) and stored here for the request handlers.
 AGENT = None
-from .backends import AGENT_SPACE, WORKSPACE
-from .reporting import DEFAULT_REPORT_SECTIONS, record_report_step
-from .requirements_reader import IMAGE_EXT, parse_file
-from .tools import GATE_TOOL_NAMES, clear_stage_markers
+from backends import AGENT_SPACE, WORKSPACE
+from reporting import DEFAULT_REPORT_SECTIONS, record_report_step
+from requirements_reader import IMAGE_EXT, parse_file
+from tools import GATE_TOOL_NAMES, clear_stage_markers
 
 _DEFAULT_TZ = "Asia/Ho_Chi_Minh"
 
@@ -1225,7 +1225,7 @@ async def agui_endpoint(request: Request):
 def main() -> None:
     port = int(os.getenv("DIAGRAM_AGENT_PORT", "8001"))
     logger.info("Starting diagram agent server on port %d", port)
-    uvicorn.run("diagram_mcp.server:app", host="0.0.0.0", port=port, reload=False)
+    uvicorn.run("server:app", host="0.0.0.0", port=port, reload=False)
 
 
 if __name__ == "__main__":

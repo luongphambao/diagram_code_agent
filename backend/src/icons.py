@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .backends import LOCAL_ICONS, LOCAL_MANIFEST
+from backends import LOCAL_ICONS, LOCAL_MANIFEST
 
 ICONS_DIR = Path(LOCAL_ICONS)
 MANIFEST_PATH = Path(LOCAL_MANIFEST)

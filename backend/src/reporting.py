@@ -97,8 +97,8 @@ def _data_uri(path: Path) -> str:
 
 
 def _repo_root() -> Path:
-    # backend/src/diagram_mcp/reporting.py -> repo root
-    return Path(__file__).resolve().parents[3]
+    # backend/src/reporting.py -> repo root
+    return Path(__file__).resolve().parents[2]
 
 
 def _logo_uri() -> str:

@@ -1,10 +1,10 @@
 import base64
 import json
 
-from diagram_mcp import server
-from diagram_mcp import tools
-from diagram_mcp import reporting
-from diagram_mcp.tools import GATE_TOOL_NAMES
+import server
+import tools
+import reporting
+from tools import GATE_TOOL_NAMES
 
 
 def _use_workspace(monkeypatch, tmp_path) -> None:

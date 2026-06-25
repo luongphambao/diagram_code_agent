@@ -20,7 +20,7 @@ from langchain_core.tools import tool
 from langgraph.types import interrupt
 from pydantic import BaseModel
 
-from .context import SessionContext
+from context import SessionContext
 
 
 _DEFAULT_TZ = "Asia/Ho_Chi_Minh"

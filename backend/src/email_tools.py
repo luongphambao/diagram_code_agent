@@ -12,8 +12,8 @@ from langchain.tools import ToolRuntime
 from langchain_core.tools import tool
 from pydantic import BaseModel
 
-from .backends import WORKSPACE
-from .context import SessionContext
+from backends import WORKSPACE
+from context import SessionContext
 
 
 _EMAIL_HTML_TEMPLATE = """\

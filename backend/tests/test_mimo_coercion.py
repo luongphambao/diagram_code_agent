@@ -9,7 +9,7 @@ these so the tool validates instead of raising a ValidationError.
 
 import json
 
-from diagram_mcp.tools import CostRange, ProposeTechStackArgs, TechCriteria
+from tools import CostRange, ProposeTechStackArgs, TechCriteria
 
 
 def _layer(name: str = "frontend") -> dict:

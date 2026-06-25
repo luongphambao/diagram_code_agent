@@ -6,7 +6,7 @@ Layout under agent_space/:
   outputs/     — timestamped run archives
 
 Paths are resolved relative to this repo so the project is self-contained:
-  backend/                 <- _BACKEND_ROOT (parents[2] of this file)
+  backend/                 <- _BACKEND_ROOT (parents[1] of this file)
   backend/agent_space/     <- AGENT_SPACE (created at runtime)
   backend/skills/          <- SKILLS_DIR (bundled procedural skills)
   resources/icons/         <- icon pack (shared, sibling of backend/)
@@ -18,8 +18,8 @@ from pathlib import Path
 
 from deepagents.backends import CompositeBackend, FilesystemBackend
 
-# backend/src/diagram_mcp/backends.py -> parents[2] == backend/
-_BACKEND_ROOT  = Path(__file__).resolve().parents[2]
+# backend/src/backends.py -> parents[1] == backend/
+_BACKEND_ROOT  = Path(__file__).resolve().parents[1]
 _REPO_ROOT     = _BACKEND_ROOT.parent
 
 AGENT_SPACE    = _BACKEND_ROOT / "agent_space"

@@ -13,7 +13,7 @@ import logging
 
 from langchain_core.tools import tool
 
-from .backends import WORKSPACE
+from backends import WORKSPACE
 
 logger = logging.getLogger(__name__)
 

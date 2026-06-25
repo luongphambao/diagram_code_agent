@@ -32,7 +32,7 @@ load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 from evals.diagram.judge import structural_f1, vision_judge
 from evals.diagram.target import run_case
-from diagram_mcp.agent import DEFAULT_MODEL
+from agent import DEFAULT_MODEL
 
 logger = logging.getLogger("eval.run")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(message)s")

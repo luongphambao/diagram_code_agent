@@ -34,11 +34,18 @@ dependencies = [
 anthropic = ["langchain-anthropic>=0.3"]
 
 [project.scripts]
-diagram-agent-server = "diagram_mcp.server:main"
+diagram-agent-server = "server:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build]
+sources = ["src"]
+
+[tool.hatch.build.targets.editable]
+path = "src"
+
 [tool.hatch.build.targets.wheel]
-packages = ["src/diagram_mcp"]
+include = ["src/**/*.py", "src/**/*.json", "src/**/*.xlsx", "src/**/*.png", "src/**/*.md"]
+sources = {"src" = ""}

@@ -2,8 +2,8 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-from diagram_mcp import tools
-from diagram_mcp.agent import DRAWER_SKILL_PATHS
+import tools
+from agent import DRAWER_SKILL_PATHS
 
 
 def _use_workspace(monkeypatch, tmp_path: Path) -> None:

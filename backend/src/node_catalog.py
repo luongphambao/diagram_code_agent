@@ -18,7 +18,7 @@ import json
 import pkgutil
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]  # backend/
+PROJECT_ROOT = Path(__file__).resolve().parents[1]  # backend/
 JSON_OUT = PROJECT_ROOT.parent / "resources" / "node_catalog.json"
 MD_OUT = PROJECT_ROOT / "skills" / "diagrams-as-code" / "reference" / "nodes.md"
 

@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Copy the backend package and the icon pack, then install editable so the
-# diagram_mcp.backends path logic (parents[2] == backend/) keeps resolving.
+# backends.py path logic (parents[1] == backend/) keeps resolving.
 COPY backend ./backend
 COPY resources ./resources
 COPY logo ./logo

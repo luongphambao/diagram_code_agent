@@ -25,9 +25,9 @@ from typing import Any, Optional
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field, model_validator
 
-from .backends import WORKSPACE
-from . import wbs_excel
-from .wbs_effort import (
+from backends import WORKSPACE
+import wbs_excel
+from wbs_effort import (
     RATIOS, Ratios, derive_leaf_effort, rollup, make_ref_code, delivery_grid,
     MANDAYS_PER_MONTH,
 )

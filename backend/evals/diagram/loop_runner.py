@@ -23,9 +23,9 @@ from dotenv import load_dotenv
 load_dotenv()
 load_dotenv(_HERE.parents[1] / ".env")
 
-from diagram_mcp.agent import DEFAULT_MODEL
-from diagram_mcp.backends import WORKSPACE
-from diagram_mcp.prettygraph import audit_layout
+from agent import DEFAULT_MODEL
+from backends import WORKSPACE
+from prettygraph import audit_layout
 
 from target import run_case
 

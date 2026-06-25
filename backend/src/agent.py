@@ -36,7 +36,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.config import get_stream_writer
 from langgraph.store.memory import InMemoryStore
 
-from .backends import (
+from backends import (
     LOCAL_ICONS,
     LOCAL_MANIFEST,
     MEMORY_PATH,
@@ -44,7 +44,7 @@ from .backends import (
     WORKSPACE,
     make_local_backend,
 )
-from .prompts import (
+from prompts import (
     build_critic_prompt,
     build_drawer_prompt,
     build_icon_resolver_prompt,
@@ -52,8 +52,8 @@ from .prompts import (
     build_system_prompt,
     build_wbs_planner_prompt,
 )
-from .context import SessionContext
-from .tools import (
+from context import SessionContext
+from tools import (
     CRITIC_TOOLS, DRAWER_TOOLS, GATE_TOOL_NAMES, ICON_RESOLVER_TOOLS, MAIN_TOOLS,
     WBS_PLANNER_TOOLS,
 )
