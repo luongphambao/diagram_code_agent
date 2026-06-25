@@ -1,0 +1,280 @@
+/** Pure utilities and shared types for the diagram agent hooks. */
+
+export const BACKEND_URL =
+  (import.meta.env.VITE_BACKEND_URL as string | undefined) ??
+  "http://localhost:8001";
+
+export function applyOps(
+  state: Record<string, unknown>,
+  ops: Array<{ op: string; path: string; value: unknown }>
+): Record<string, unknown> {
+  const next = { ...state };
+  for (const op of ops) {
+    const key = op.path.slice(1);
+    if (op.op === "add" || op.op === "replace") {
+      next[key] = op.value;
+    } else if (op.op === "remove") {
+      delete next[key];
+    }
+  }
+  return next;
+}
+
+// ---- Shared domain types ---- //
+
+export interface LogEntry {
+  t: number;
+  type: "llm" | "tool_start" | "tool_end";
+  model?: string;
+  turn?: number;
+  tool?: string;
+  label?: string;
+  input?: string;
+  output?: string;
+  elapsed_s?: number;
+  error?: string;
+  subagent?: string;
+  ok?: boolean;
+}
+
+export interface TechAlternative {
+  name: string;
+  why_rejected?: string;
+  criteria?: Record<string, number>;
+}
+
+export interface CostRange {
+  min_usd: number;
+  max_usd: number;
+}
+
+export interface TechRisk {
+  risk: string;
+  mitigation?: string;
+}
+
+export interface UserScaleAssumptions {
+  mau?: number;
+  dau?: number;
+  peak_concurrent?: number;
+  peak_rps?: number;
+  growth_rate_yoy_pct?: number;
+}
+
+export interface DataAssumptions {
+  initial_gb?: number;
+  growth_gb_per_month?: number;
+  read_write_ratio?: string;
+}
+
+export interface TeamAssumptions {
+  size?: number;
+  skill_level?: string;
+  devops_maturity?: string;
+}
+
+export interface SolutionAssumptions {
+  budget_tier?: string;
+  monthly_budget_range_usd?: CostRange;
+  users?: UserScaleAssumptions;
+  data?: DataAssumptions;
+  team?: TeamAssumptions;
+  project_phase?: string;
+  availability_target?: string;
+  latency_target_p99_ms?: number;
+  compliance?: string[];
+  primary_region?: string;
+  confirm_with_customer?: string[];
+}
+
+export interface ScalingPhase {
+  phase: string;
+  trigger?: string;
+  changes?: string[];
+  est_monthly_cost_usd?: CostRange;
+}
+
+export interface TechStackLayer {
+  choice: string;
+  rationale: string;
+  cost_tier?: string;
+  decision_criteria?: Record<string, number>;
+  alternatives: Array<string | TechAlternative>;
+  estimated_monthly_cost_usd?: CostRange;
+  capacity_sizing?: string;
+  performance_target?: string;
+  risks?: TechRisk[];
+}
+
+export interface DiagramBrief {
+  objective: string;
+  application_type?: string;
+  scale_level?: string;
+  security_level?: string;
+  provider_preference?: string;
+  analysis_signals?: string[];
+  stakeholders?: string[];
+  functional_requirements?: string[];
+  non_functional_requirements?: string[];
+  layout_constraints?: string[];
+  assumptions?: string[];
+}
+
+export interface ArchitectureAnalysis {
+  application_type: string;
+  scale_level: string;
+  security_level: string;
+  provider_preference?: string;
+  detected_capabilities: string[];
+  constraints: string[];
+  suggested_patterns: Array<{
+    pattern: string;
+    fit: "high" | "medium" | "low";
+    score: number;
+    reasons: string[];
+  }>;
+  concerns: string[];
+}
+
+export interface Blueprint {
+  audience?: string;
+  detail_level?: string;
+  layout_intent?: string;
+  presentation_style?: "slide" | "diagram";
+  slide_title?: string;
+  slide_kicker?: string;
+  brand?: string;
+  diagram_title?: string;
+  pattern: string;
+  pattern_rationale?: string;
+  key_decisions?: string[];
+  nodes: Array<{ id: string; label: string; tech?: string; cluster?: string; type?: string }>;
+  clusters: Array<{ id: string; label: string; tier?: string }>;
+  edges: Array<{ from: string; to: string; label?: string; protocol?: string }>;
+  pillar_coverage?: Record<string, { addressed_by?: string[]; gaps?: string[] }>;
+  nfr_mapping?: Array<{ nfr: string; mechanism?: string; node_ids?: string[] }>;
+}
+
+export interface Delegation {
+  id: string;
+  subagent: string;
+  description: string;
+  status: "running" | "completed" | "error";
+  result?: string | null;
+  current_tool?: string;
+  current_label?: string;
+  current_detail?: string;
+}
+
+export interface WbsSummary {
+  total_mandays: number;
+  total_manmonths: number;
+  effort_by_role: Record<string, number>;
+  weeks: number;
+  months: number;
+  effort_by_module: Array<{ code: string; name: string; total_md: number }>;
+}
+
+export interface AgentState {
+  current_step?: string;
+  iteration?: number;
+  png_base64?: string;
+  pdf_base64?: string;
+  wbs_xlsx_base64?: string;
+  wbs_summary?: WbsSummary;
+  drawio?: string;
+  code?: string;
+  summary?: string;
+  error?: string;
+  logs?: LogEntry[];
+  architecture_analysis?: ArchitectureAnalysis;
+  diagram_brief?: DiagramBrief;
+  tech_stack?: Record<string, TechStackLayer>;
+  blueprint?: Blueprint;
+  delegations?: Delegation[];
+  activeSubagent?: string;
+}
+
+export type InterruptType =
+  | "brief_approval"
+  | "techstack_approval"
+  | "blueprint_approval"
+  | "result_review"
+  | "pdf_report_approval"
+  | "email_approval"
+  | "slot_picker"
+  | "meeting_approval"
+  | "wbs_skeleton_approval"
+  | "wbs_approval"
+  | "wbs_excel_approval";
+
+export interface PendingInterrupt {
+  toolCallId: string;
+  data: {
+    type: InterruptType;
+    question: string;
+    brief?: DiagramBrief;
+    tech_stack?: Record<string, TechStackLayer>;
+    assumptions?: SolutionAssumptions;
+    scaling_roadmap?: ScalingPhase[];
+    estimated_total_monthly_cost_usd?: CostRange;
+    blueprint?: Blueprint;
+    summary?: string;
+    iteration?: number;
+    title?: string;
+    subtitle?: string;
+    brand?: string;
+    include_sections?: string[];
+    missing_sections?: string[];
+    recipient_email?: string;
+    subject?: string;
+    project_name?: string;
+    recipient_name?: string;
+    slots?: Array<{
+      start: string;
+      end: string;
+      display_day: string;
+      display_time: string;
+    }>;
+    context?: string;
+    start_datetime?: string;
+    end_datetime?: string;
+    display_start?: string;
+    display_end?: string;
+    duration_minutes?: number;
+    attendee_email?: string;
+    attendee_name?: string;
+    description?: string;
+    add_google_meet?: boolean;
+    timezone?: string;
+    phases?: Array<{code: string; name: string; modules?: Array<{code: string; name: string}>}>;
+    project_code?: string;
+    total_mandays?: number;
+    total_manmonths?: number;
+    timeline_weeks?: number;
+    timeline_months?: number;
+    effort_by_role?: Record<string, number>;
+    effort_by_module?: Array<{code: string; name: string; total_md: number}>;
+  };
+}
+
+export interface UploadedFile {
+  file_id: string;
+  filename: string;
+  kind: string;
+  char_count: number;
+  preview?: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface WireMessage {
+  id: string;
+  role: string;
+  content: string;
+  toolCallId?: string;
+}
