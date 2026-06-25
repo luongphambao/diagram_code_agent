@@ -172,8 +172,7 @@ DIAGRAM_TOOLS = [
 ]
 
 # Late imports (same as original tools.py bottom section)
-from email_tools import send_architecture_report_email  # noqa: E402
-from calendar_tools import propose_meeting_slots, create_client_meeting  # noqa: E402
+from integrations import send_architecture_report_email, propose_meeting_slots, create_client_meeting  # noqa: E402
 from wbs_tools import (  # noqa: E402
     WBS_PLANNER_TOOLS, propose_wbs_skeleton, propose_wbs, export_wbs_excel,
 )

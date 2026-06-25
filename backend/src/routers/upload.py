@@ -8,7 +8,7 @@ import uuid
 from fastapi import APIRouter, File, UploadFile
 
 from backends import AGENT_SPACE
-from requirements_reader import parse_file
+from document_parsers import parse_file
 
 router = APIRouter(tags=["upload"])
 
