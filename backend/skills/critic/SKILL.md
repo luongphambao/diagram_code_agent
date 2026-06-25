@@ -78,11 +78,23 @@ documents the quality bar, the defect taxonomy, and what NOT to file.
 |-----------|---------|
 | `critical` | Render is broken; topology is wrong (edges connect wrong nodes; whole tier missing) |
 | `high`    | Blueprint node/edge missing; blank icon box; visible empty shape; Data nested in Application; orchestration flow not numbered |
-| `medium`  | Crossing or whole-canvas edges; aspect ratio > 2.6:1 (layout audit TOO WIDE); clipped/truncated text; overlapping labels; floating un-clustered nodes; floating labeled edges; missing expected VPC/subnet boundary; mixed edge styles without Legend; incomplete legend (style used but not explained); absent security boundary when security_level=high/critical; per-service observability lines instead of one aggregated channel; per-file config fan-out; primary-flow backtracking; client-facing code-level clutter |
+| `medium`  | Crossing or whole-canvas edges; aspect ratio > 2.6:1 (layout audit TOO WIDE); clipped/truncated text; overlapping labels; floating un-clustered nodes; floating labeled edges; missing expected VPC/subnet boundary; absent security boundary when security_level=high/critical; per-service observability lines instead of one aggregated channel; per-file config fan-out; primary-flow backtracking; client-facing code-level clutter (legend issues go under the aesthetic `legend` category — advisory, not here) |
 | `low`     | Minor misalignment; small inconsistency; negligible impact; pillar_gap (Well-Architected pillar undocumented — file as `pillar_gap` category, `in_blueprint=false`, severity `low`) |
 
+## Aesthetic findings (art-director polish — advisory, NEVER block)
+File concrete look-and-feel issues using the AESTHETIC categories so they surface
+without holding the user up: `color_harmony` (edges not color-coded by flow,
+clashing colors), `alignment` (ragged grid, uneven gaps), `legend` (missing legend
+when ≥2 flow colors are visible, or legend not matching arrow colors), `whitespace`
+(empty bands / sparse or cramped page), `grouping` (weak zone boundaries, a
+sub-group that should nest in a parent zone, unnumbered zones), `style`
+(inconsistent card sizes/fonts, missing sublabels). These ride along on a PASS —
+they NEVER force REVISE. Still anchor them to something visible; do not file vague
+"would look nicer" nits with no concrete symptom.
+
 ## Do NOT file
-- **Taste / aesthetics**: "would look nicer if…", color preferences, nudging boxes.
+- **Vague taste**: "would look nicer if…" with no concrete, visible symptom (a
+  concrete cosmetic defect goes under an aesthetic category above instead).
 - **Speculation** about what isn't visible in THIS render.
 - **Scope-policing the blueprint**: the blueprint was approved by the user. Set
   `in_blueprint=false` for out-of-scope observations — they do NOT block finalize.
@@ -90,7 +102,9 @@ documents the quality bar, the defect taxonomy, and what NOT to file.
 - Anything the layout audit did NOT flag and you cannot see in the image.
 
 ## Verdict rule
-- Any `medium`+ in-blueprint finding → `VERDICT: REVISE`
-- Only `low` or out-of-blueprint findings → `VERDICT: PASS`
+- Any `medium`+ in-blueprint **functional** finding (layout/completeness/
+  correctness/readability/pillar_gap) → `VERDICT: REVISE`
+- `low`, out-of-blueprint, OR any **aesthetic** finding (color_harmony/alignment/
+  legend/whitespace/grouping/style) → does NOT block → `VERDICT: PASS`
 - Reserve REVISE for defects a careful architect would also send back.
 - Keep findings tight: 3–5 maximum. A wall of nits is noise.

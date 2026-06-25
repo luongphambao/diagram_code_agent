@@ -20,14 +20,28 @@ from pydantic import BaseModel, Field, field_validator
 
 Severity = Literal["low", "medium", "high", "critical"]
 Confidence = Literal["low", "medium", "high"]
-Category = Literal["layout", "completeness", "correctness", "readability", "style", "pillar_gap"]
+Category = Literal[
+    # Functional categories — a blocking one sends the diagram back to the drawer.
+    "layout", "completeness", "correctness", "readability", "pillar_gap",
+    # Aesthetic ("art-director") categories — advisory polish only, NEVER block
+    # finalize. They surface so the drawer can improve the look on a later pass,
+    # but the user is never held up by a purely cosmetic note.
+    "style", "color_harmony", "alignment", "legend", "whitespace", "grouping",
+]
+
+# Aesthetic categories never block finalize regardless of severity — they are the
+# art-director's polish notes. Functional defects (missing node, wrong topology,
+# unreadable cramped layout) still gate the verdict via is_blocking().
+AESTHETIC_CATEGORIES: frozenset[str] = frozenset(
+    {"style", "color_harmony", "alignment", "legend", "whitespace", "grouping"}
+)
 
 # Ordering for ranking/pruning (higher = more serious).
 _SEVERITY_ORDER: dict[str, int] = {"low": 0, "medium": 1, "high": 2, "critical": 3}
 _CONFIDENCE_ORDER: dict[str, int] = {"low": 0, "medium": 1, "high": 2}
 
-# A finding at or above this severity, when it is in-blueprint scope, forces a
-# revise verdict (the diagram goes back to the drawer).
+# A finding at or above this severity, when it is in-blueprint scope AND in a
+# functional category, forces a revise verdict (the diagram goes back to the drawer).
 BLOCKING_SEVERITY = "medium"
 
 # Keep only the strongest few. A wall of nits reads as noise and the drawer
@@ -52,7 +66,9 @@ class DiagramFinding(BaseModel):
         description="how sure you are this is a real defect you can see, not a guess",
     )
     category: Category = Field(
-        description="layout|completeness|correctness|readability|style",
+        description="functional (gates the verdict): layout|completeness|correctness|"
+        "readability|pillar_gap. aesthetic (advisory polish, NEVER blocks): "
+        "style|color_harmony|alignment|legend|whitespace|grouping",
     )
     title: str = Field(
         description="names the defect in ~4-10 words; do not copy the detail",
@@ -106,7 +122,11 @@ def _rank_key(f: DiagramFinding) -> tuple[int, int, int]:
 
 
 def is_blocking(f: DiagramFinding) -> bool:
-    """A finding blocks finalize when it is at/above BLOCKING_SEVERITY."""
+    """A finding blocks finalize when it is a FUNCTIONAL defect at/above
+    BLOCKING_SEVERITY. Aesthetic (art-director) findings are advisory and never
+    block, no matter how severe."""
+    if f.category in AESTHETIC_CATEGORIES:
+        return False
     return _SEVERITY_ORDER[f.severity] >= _SEVERITY_ORDER[BLOCKING_SEVERITY]
 
 
@@ -157,5 +177,10 @@ def format_critique(findings: list[DiagramFinding]) -> str:
     if out_of_scope:
         lines.append(
             "(out-of-blueprint findings are for awareness only and do NOT block finalize)"
+        )
+    if any(f.category in AESTHETIC_CATEGORIES for f in kept):
+        lines.append(
+            "(aesthetic findings are art-director polish notes — advisory only, "
+            "they do NOT block finalize)"
         )
     return "\n".join(lines)

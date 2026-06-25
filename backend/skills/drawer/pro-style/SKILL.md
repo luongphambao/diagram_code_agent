@@ -98,20 +98,27 @@ g.box("vec", "Vector Store", kind="data",
 g.box("rdb", "Metadata DB", kind="data",
       sublabel="PostgreSQL", icon="onprem/database/postgresql.png", parent="store")
 
-# REAL cross-cluster edges — MANDATORY: they pull the layout and show connections
-g.link("src", "pipe", label="raw data")
-g.link("pipe", "embed", label="chunks")
-g.link("embed", "vec", label="vectors")
-g.link("llm", "router", label="response")
-g.link("vec", "rerank", label="candidates")
+# REAL cross-cluster edges — MANDATORY: they pull the layout and show connections.
+# Color-code each edge by its semantic `flow` (from render_spec.json edge.flow):
+# data | control | serving | registry | monitoring | security. `flow=` sets a
+# consistent color + dash from the shared palette — do NOT hand-pick edge colors.
+g.link("src", "pipe", flow="data", label="raw data")
+g.link("pipe", "embed", flow="data", label="chunks")
+g.link("embed", "vec", flow="data", label="vectors")
+g.link("llm", "router", flow="serving", label="response")
+g.link("monitor", "router", flow="monitoring")  # dashed automatically
 
 render_slide(
     g, "out",
     title="AI Document Understanding System",
     diagram_title="DOCUMENT UNDERSTANDING SYSTEM ARCHITECTURE",
+    # Pass render_spec.json["legend"] straight through: each row is
+    # {"label": ..., "flow": ...} and the flow resolves the matching color/dash so
+    # the legend always matches the arrows.
     legend=[
-        {"label": "Data Flow", "color": "#334155"},
-        {"label": "Control Flow", "color": "#64748B", "style": "dashed"},
+        {"label": "Data Flow", "flow": "data"},
+        {"label": "Serving / Inference", "flow": "serving"},
+        {"label": "Monitoring", "flow": "monitoring"},
     ],
     # include_hero=False  ← default; pass True only when user requests the blue band
 )
@@ -120,7 +127,9 @@ render_slide(
 Slide-mode hard rules:
 - `direction="LR"`, `flow_layout=True` (defaults for `density="detailed"`).
 - **Cross-cluster edges are MANDATORY** — they pull the layout and show connections.
-  Every zone must link to at least one other. Side-channels use `style="dashed"`.
+  Every zone must link to at least one other. Color-code edges with `flow=`
+  (data/control/serving/registry/monitoring/security); side-channels like
+  `flow="monitoring"`/`flow="security"` render dashed automatically.
 - **Grid packing is AUTOMATIC** — the engine packs every region with ≥3 boxes into
   a 2-wide grid and regions with ≥7 boxes into a 3-wide grid. You do NOT need to
   call `g.grid_cluster(...)` unless you want to force a specific column count (e.g.

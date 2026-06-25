@@ -536,9 +536,15 @@ _PRETTY_DIAGRAM_DETAIL = """\
   1. Use `direction="LR"`, `flow_layout=True` (default) on `Pretty(...)`.
   2. Draw REAL cross-cluster `g.link(...)` edges for the PRIMARY data flow between
      zones — these pull the layout AND show connections between zones. Every cluster
-     must connect to at least one other cluster. Side-channel concerns (monitoring,
-     security) use `style="dashed"` edges to adjacent zones.
-  3. Declare each zone with `g.cluster(id, label, number=N, ...)`. **Aim for 4-7
+     must connect to at least one other cluster. **Color-code each edge by its
+     `flow` from `render_spec.json`: `g.link(a, b, flow="data")`** (categories:
+     data | control | serving | registry | monitoring | security). The flow sets a
+     consistent color + dash automatically (control/monitoring/security render
+     dashed) — do NOT hand-pick edge colors. The same flow keys feed the legend.
+  3. Declare each zone with `g.cluster(id, label, number=N, accent=A, parent=P, ...)`
+     using the `number`, `accent`, and `parent` from each cluster in
+     `render_spec.json` (when present): `accent` pins the zone color, `parent` nests
+     a sub-group inside another zone. **Aim for 4-7
      nodes per top-level region.** A region with only 1-2 boxes reads thin and
      leaves empty bands — merge it into the adjacent tier it serves (e.g. fold a
      lone CDN into Edge, a lone cache into Data) rather than shipping a half-empty
@@ -591,11 +597,14 @@ g = Pretty(..., direction="LR", flow_layout=True, theme="pro",
            node_width=300, node_height=60, icon_size=44, title_size=16,
            sublabel_size=13, edge_label_size=13, cluster_label_size=18)
 # top-level clusters must pass number=1, number=2, ... and optional accent=...
+# Pass the legend straight from render_spec.json["legend"] — each row is
+# {"label": ..., "flow": ...} and the flow resolves the matching arrow color/dash
+# automatically, so the legend always matches the edges. Omit legend only when the
+# blueprint has no flow-typed edges.
 render_slide(g, "out",
              title=SLIDE_TITLE,
              diagram_title=DIAGRAM_TITLE,
-             legend=[{"label": "Data Flow", "color": "#334155"},
-                     {"label": "Control Flow", "color": "#64748B", "style": "dashed"}])
+             legend=RENDER_SPEC_LEGEND)  # e.g. [{"label": "Data Flow", "flow": "data"}, ...]
 ```
 Rules for slide mode:
 - Always use `theme="pro"` with `node_width` and `node_height` for uniform cards.
@@ -982,6 +991,24 @@ _CRITIC_BODY = """\
    clash, or a missing expected VPC/subnet boundary.
 3. It is anchored to a specific node / edge / cluster, or to the page as a whole
    (for an aspect-ratio/audit issue).
+
+## Art-director polish (aesthetic findings — advisory, NEVER block finalize)
+Besides functional defects above, also file AESTHETIC findings so the look keeps
+improving — but use the aesthetic categories so they stay advisory and do not
+hold the user up. File these with low/medium severity and the matching category:
+- `color_harmony`: edges not color-coded by flow, clashing/garish colors, a zone
+  accent that fights the palette, monochrome arrows where the legend implies
+  multiple flows.
+- `alignment`: cards/zones not on a shared grid, ragged columns, uneven gaps.
+- `legend`: legend missing when ≥2 flow colors/styles are visible, or legend
+  rows that don't match the actual arrow colors.
+- `whitespace`: large empty bands, a sparse airy page, or cramped overcrowding.
+- `grouping`: weak/illegible zone boundaries, a sub-group that should nest inside
+  a parent zone but floats separately, zones not numbered.
+- `style`: inconsistent card sizes/fonts, missing sublabels, generic look.
+These NEVER force REVISE — they ride along on a PASS so the drawer can polish on a
+later round. Only functional categories (layout/completeness/correctness/
+readability/pillar_gap) gate the verdict.
 
 ## Client-facing defects to file
 - If the blueprint/diagram metadata says `audience=client` or

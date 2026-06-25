@@ -1665,6 +1665,23 @@ class BPCluster(BaseModel):
     id: str = Field(description="unique snake_case id")
     label: str = Field(description="tier / group name")
     tier: str = Field("", description="frontend|backend|data|infra|external|security")
+    parent: str = Field(
+        "",
+        description="id of the parent cluster when this group nests inside another "
+                    "(e.g. an 'OCR Pipeline' sub-group inside a 'Serving' zone); "
+                    "leave empty for top-level zones",
+    )
+    accent: str = Field(
+        "",
+        description="optional pinned accent color for this zone — one of: blue, cyan, "
+                    "teal, violet, indigo, green, amber, rose, slate. Leave empty to "
+                    "auto-assign by declaration order. Use to color-code phases.",
+    )
+    number: Optional[int] = Field(
+        None,
+        description="optional explicit step number shown as a badge in the zone header "
+                    "(1, 2, 3 …). Leave null to skip numbering.",
+    )
 
 
 class BPEdge(BaseModel):
@@ -1673,6 +1690,27 @@ class BPEdge(BaseModel):
     to: str = Field(description="target node id")
     label: str = Field("", description="operation or protocol label")
     protocol: str = Field("", description="HTTP|gRPC|AMQP|TCP|WebSocket|SQL|Redis")
+    flow: str = Field(
+        "",
+        description="semantic flow category used to color-code the arrow consistently "
+                    "with the legend: data|control|serving|registry|monitoring|security. "
+                    "Leave empty for a neutral default arrow.",
+    )
+    style: str = Field(
+        "",
+        description="line style override: solid|dashed|dotted. Leave empty to use the "
+                    "style implied by `flow` (control/monitoring/security are dashed).",
+    )
+
+
+class LegendEntry(BaseModel):
+    """One row of the diagram legend mapping a flow category to a human label."""
+    label: str = Field(description="human-readable name, e.g. 'Data & Training Flow'")
+    flow: str = Field(
+        "",
+        description="the matching BPEdge.flow key (data|control|serving|registry|"
+                    "monitoring|security) — its color/style is taken from that flow",
+    )
 
 
 class Blueprint(CoercingModel):
@@ -1753,6 +1791,12 @@ class Blueprint(CoercingModel):
         default_factory=list,
         description="Maps each NFR from the diagram brief to the mechanism and blueprint nodes that satisfy it. "
                     "Use measurable NFRs when possible (SLA %, RPO minutes, latency ms).",
+    )
+    legend: list[LegendEntry] = Field(
+        default_factory=list,
+        description="optional legend rows mapping each flow category used in `edges` to "
+                    "a human label (e.g. data → 'Data & Training Flow'). Leave empty to "
+                    "auto-derive one row per distinct flow present in the edges.",
     )
     nodes: list[BPNode] = Field(default_factory=list)
     clusters: list[BPCluster] = Field(default_factory=list)
@@ -2024,6 +2068,19 @@ def _detect_provider() -> str:
 
 def _build_render_spec(blueprint: "Blueprint", provider: str) -> dict:
     """Build a compact render spec dict from an approved blueprint."""
+    # Auto-derive a legend (one row per distinct edge flow) when the architect did
+    # not supply one, so the drawer always has a styling-consistent legend to draw.
+    legend = [{"label": le.label, "flow": le.flow} for le in blueprint.legend]
+    if not legend:
+        _flow_labels = {
+            "data": "Data Flow", "control": "Control Flow", "serving": "Serving / Inference",
+            "registry": "Registry & Storage", "monitoring": "Monitoring", "security": "Security",
+        }
+        seen: list[str] = []
+        for e in blueprint.edges:
+            if e.flow and e.flow not in seen:
+                seen.append(e.flow)
+        legend = [{"label": _flow_labels.get(f, f.title()), "flow": f} for f in seen]
     return {
         "provider": provider,
         "pattern": blueprint.pattern,
@@ -2034,16 +2091,19 @@ def _build_render_spec(blueprint: "Blueprint", provider: str) -> dict:
         "slide_kicker": blueprint.slide_kicker,
         "brand": blueprint.brand,
         "diagram_title": blueprint.diagram_title,
+        "legend": legend,
         "nodes": [
             {"id": n.id, "label": n.label, "tech": n.tech, "cluster": n.cluster, "type": n.type}
             for n in blueprint.nodes
         ],
         "clusters": [
-            {"id": c.id, "label": c.label, "tier": c.tier}
+            {"id": c.id, "label": c.label, "tier": c.tier,
+             "parent": c.parent, "accent": c.accent, "number": c.number}
             for c in blueprint.clusters
         ],
         "edges": [
-            {"from": e.from_, "to": e.to, "label": e.label, "protocol": e.protocol}
+            {"from": e.from_, "to": e.to, "label": e.label, "protocol": e.protocol,
+             "flow": e.flow, "style": e.style}
             for e in blueprint.edges
         ],
     }

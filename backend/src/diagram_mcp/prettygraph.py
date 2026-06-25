@@ -117,6 +117,20 @@ PRO_MUTED = "#64748B"       # muted sublabel / subtitle
 EDGE_COLOR = "#5A6573"      # crisp slate — readable but not harsh
 EDGE_FONTCOLOR = "#3f4a57"
 FONT = "Helvetica"
+
+# Semantic edge flow categories -> (color, style). One source of truth shared by
+# the PNG (DOT) and the editable .drawio so a "data" arrow is the same blue in
+# both. Drive it from the blueprint via `link(flow="data")`; an explicit
+# color=/style= on link() still wins over the flow default. Keep the legend
+# (Blueprint.legend) consistent with these.
+FLOW_COLORS: dict[str, tuple[str, str]] = {
+    "data":       ("#2563EB", "solid"),    # primary data flow — blue
+    "control":    ("#64748B", "dashed"),   # control / orchestration — slate dashed
+    "serving":    ("#0D9488", "solid"),    # request / inference serving — teal
+    "registry":   ("#7C3AED", "solid"),    # model/artifact registry & storage — violet
+    "monitoring": ("#D97706", "dashed"),   # observability / metrics — amber dashed
+    "security":   ("#E11D48", "dashed"),   # security / auth side-channel — rose dashed
+}
 # Page fit: a GENEROUS cap (inches) so wide layouts aren't crushed to tiny text.
 # `size` only shrinks an oversized layout — a small diagram keeps its natural,
 # legible size; a large one caps here instead of being squeezed onto A4.
@@ -241,7 +255,17 @@ class Pretty:
              style: str = "solid", color: str | None = None,
              penwidth: float | None = None, ltail: str | None = None,
              lhead: str | None = None, constraint: bool | None = None,
-             taillabel: str | None = None) -> None:
+             taillabel: str | None = None, flow: str | None = None) -> None:
+        # `flow` (a FLOW_COLORS key, e.g. "data"/"control"/"serving") sets the
+        # color + style from the shared semantic palette so the same flow reads
+        # identically in the PNG and the .drawio. An explicit color=/non-default
+        # style= still wins, so callers can override per edge.
+        if flow and flow in FLOW_COLORS:
+            fcolor, fstyle = FLOW_COLORS[flow]
+            if color is None:
+                color = fcolor
+            if style == "solid":
+                style = fstyle
         self.edges.append(_Edge(a, b, label, style, color, penwidth,
                                 ltail, lhead, constraint, taillabel))
 
@@ -962,10 +986,26 @@ def dot_to_drawio(dot_path: str, sidecar_path: str, out_path: str) -> str:
         src, tgt = gvid_to_cell.get(e.get("tail")), gvid_to_cell.get(e.get("head"))
         if not src or not tgt:
             continue
+        # Skip layout-only invisible edges (the grid column spine / poster binder).
+        # They drive Graphviz ranking but must NOT appear as stray lines in the
+        # editable diagram (the PNG hides them; the .drawio used to leak them).
+        if "invis" in str(e.get("style", "")):
+            continue
+        # Carry the per-edge color + dash from the laid-out .dot (Graphviz -Tjson
+        # exposes the resolved `color`/`style` attributes) so semantic flow edges
+        # keep their color in the editable .drawio instead of all collapsing to a
+        # single slate. Falls back to the neutral default for unstyled edges.
+        ecolor = e.get("color") or EDGE_COLOR
+        # Graphviz may emit a colorList ("#2563EB:#..."); take the first stop.
+        ecolor = str(ecolor).split(":")[0].split(";")[0] or EDGE_COLOR
+        edashed = "dashed" in str(e.get("style", ""))
+        epen = e.get("penwidth")
         style = (
             "edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;"
-            f"endFill=1;strokeColor={EDGE_COLOR};fontSize={edge_fs};fontColor={EDGE_FONTCOLOR};"
+            f"endFill=1;strokeColor={ecolor};fontSize={edge_fs};fontColor={EDGE_FONTCOLOR};"
             "labelBackgroundColor=#FFFFFF;"
+            + ("dashed=1;dashPattern=6 6;" if edashed else "")
+            + (f"strokeWidth={float(epen):.1f};" if epen else "")
         )
         cells.append(
             f'<mxCell id="e{i}" value="{html.escape(e.get("label") or "")}" '
@@ -1127,8 +1167,13 @@ def _normal_legend(legend) -> list[dict[str, str]]:
     for item in legend:
         if isinstance(item, dict):
             label = str(item.get("label") or item.get("name") or "").strip()
-            color = str(item.get("color") or "#5A6573").strip()
-            style = str(item.get("style") or "solid").strip()
+            # A `flow` key (data/control/serving/…) resolves color+style from the
+            # shared FLOW_COLORS palette so the legend always matches the arrows.
+            # Explicit color=/style= still win.
+            flow = str(item.get("flow") or "").strip()
+            fcolor, fstyle = FLOW_COLORS.get(flow, ("#5A6573", "solid"))
+            color = str(item.get("color") or fcolor).strip()
+            style = str(item.get("style") or fstyle).strip()
         else:
             vals = list(item)
             label = str(vals[0]) if vals else ""
