@@ -75,7 +75,7 @@ def build_index(data_dir: str | None = None, *, drop: bool = False) -> None:
     from langchain_qdrant import QdrantVectorStore
     from qdrant_client.http.models import Distance, VectorParams
 
-    from ..wbs_normalizer import load_all_projects, project_to_documents
+    from wbs_normalizer import load_all_projects, project_to_documents
 
     projects, errors = load_all_projects(data_dir)
     if errors:
@@ -200,7 +200,7 @@ def _build_in_memory_store(embeddings):
         client = QdrantClient(":memory:")
         return QdrantVectorStore(client=client, collection_name="fallback", embedding=embeddings)
 
-    from ..wbs_normalizer import load_all_projects, project_to_documents
+    from wbs_normalizer import load_all_projects, project_to_documents
 
     projects, _ = load_all_projects()
     docs = [

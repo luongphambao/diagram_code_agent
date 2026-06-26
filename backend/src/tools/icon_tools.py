@@ -330,14 +330,14 @@ try:
             name: The brand or product name to resolve, e.g. "OpenAI", "Snowflake", "Stripe".
         """
         try:
-            from ..aiicons import lookup_ai_logo
+            from aiicons import lookup_ai_logo
             path = lookup_ai_logo(name, str(LOCAL_ICONS))
             if path:
                 return path
         except Exception:  # noqa: BLE001
             pass
         try:
-            from ..logo_fetch import get_logo
+            from logo_fetch import get_logo
             path = get_logo(name, str(LOCAL_ICONS), str(WORKSPACE))
         except Exception as exc:  # noqa: BLE001
             return f"NOT_FOUND: fetch_logo error: {exc}"
@@ -359,7 +359,7 @@ try:
             limit: Max number of matching shapes to return (default 5).
         """
         try:
-            from ..shapesearch import search_shapes
+            from shapesearch import search_shapes
             results = search_shapes(query, limit)
             if not results:
                 return json.dumps({"status": "NOT_FOUND", "query": query,

@@ -670,7 +670,7 @@ def propose_wbs(
         et["total_mandays"], tl.get("months", 0)))
     summary = lines[1]
     try:
-        from .reporting import record_report_step
+        from reporting import record_report_step
         record_report_step(WORKSPACE, "propose_wbs", summary=summary, data=et)
     except Exception:
         pass

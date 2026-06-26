@@ -118,7 +118,7 @@ def _layout_audit() -> str:
     if not dot.exists() or not png.exists():
         return ""
     try:
-        from ..prettygraph import audit_layout
+        from prettygraph import audit_layout
         verdict = audit_layout(str(dot), str(png))
     except Exception:  # noqa: BLE001 — audit is advisory, never fail over it
         return ""

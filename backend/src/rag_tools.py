@@ -34,7 +34,7 @@ def find_similar_solutions(query: str, top_k: int = 3) -> str:
             and workflow engine, cloud-native on AWS").
         top_k: Number of similar projects to return (default 3, max 5).
     """
-    from .rag.indexer import get_retriever
+    from rag.indexer import get_retriever
 
     top_k = max(1, min(int(top_k), 5))
 

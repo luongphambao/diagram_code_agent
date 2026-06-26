@@ -354,10 +354,10 @@ def export_drawio() -> str:
         return "No out.dot found — call render_diagram first."
     try:
         if sidecar.exists():
-            from ..prettygraph import dot_to_drawio
+            from prettygraph import dot_to_drawio
             dot_to_drawio(str(dot), str(sidecar), str(out))
         else:
-            from ..gv_to_drawio import convert
+            from gv_to_drawio import convert
             convert(str(dot), str(out))
     except Exception as exc:  # noqa: BLE001 — surface to the agent
         return f"export_drawio failed: {exc}"
@@ -372,7 +372,7 @@ def export_drawio() -> str:
     # Structural lint — fast pre-check before visual review.
     lint = ""
     try:
-        from ..validate_drawio import validate_file
+        from validate_drawio import validate_file
         report = validate_file(str(out))
         lint = (f"\nLint: {report['error_count']} error(s), {report['warning_count']} warning(s).")
         if report["errors"]:
@@ -730,10 +730,10 @@ def visualize_code_structure(project_path: str, mode: str = "imports",
         return json.dumps({"error": f"project_path {project_path!r} is not a directory."})
     try:
         if mode == "imports":
-            from ..codevis import build_import_graph
+            from codevis import build_import_graph
             graph = build_import_graph(project_path, group=group)
         elif mode == "classes":
-            from ..codevis import build_class_graph
+            from codevis import build_class_graph
             graph = build_class_graph(project_path, group=group)
         else:
             return json.dumps({"error": f"mode={mode!r} not recognized. Use 'imports' or 'classes'."})

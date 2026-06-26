@@ -348,7 +348,7 @@ def _build_delivery_sheet(wb, wbs: dict, wbs_last_row: int) -> dict:
     """
     from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
-    from .wbs_effort import delivery_grid
+    from wbs_effort import delivery_grid
 
     ws = wb["3. Delivery Plan"]
     weeks = int(wbs.get("timeline", {}).get("weeks") or 16)
