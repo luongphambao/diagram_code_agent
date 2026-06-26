@@ -226,14 +226,19 @@ def _is_ppt_followup(text: str) -> bool:
             "pptx",
             "powerpoint",
             "slide deck",
-            "proposal",
-            "deck",
+            "presentation deck",
+            "make a proposal",
+            "create a proposal",
+            "export proposal",
+            "generate proposal",
             "tạo ppt",
             "tao ppt",
             "xuất ppt",
             "xuat ppt",
             "tạo proposal",
             "tao proposal",
+            "xuất proposal",
+            "xuat proposal",
         )
     )
 
