@@ -184,7 +184,7 @@ class UsageLoggingMiddleware(AgentMiddleware):
 
     def _log(self, usage: dict) -> None:
         try:
-            from .backends import WORKSPACE  # avoid circular at module load
+            from backends import WORKSPACE  # avoid circular at module load
 
             path = WORKSPACE / "usage.json"
             try:
@@ -391,7 +391,7 @@ _CRITIC_CALL_LIMIT = int(os.getenv("CRITIC_CALL_LIMIT", "40"))    # inspect+crit
 
 def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
                 use_vision_relay: bool = False):
-    from .config import vision_in_tools as _vision_in_tools
+    from config import vision_in_tools as _vision_in_tools
     edits: list = []
     if use_vision_relay:
         edits.append(InjectVisionAsUserEdit())
@@ -423,7 +423,7 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
 
 
 def _make_llm(model: str):
-    from .config import make_llm as _cfg_make_llm
+    from config import make_llm as _cfg_make_llm
     return _cfg_make_llm(model)
 
 
@@ -552,7 +552,7 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
     *model* overrides the 'main' role in config.yaml; icon_resolver/drawer/critic
     always come from config.yaml (falling back to the resolved main model).
     """
-    from .config import get_model, get_system_prompt_prefix
+    from config import get_model, get_system_prompt_prefix
 
     main_model           = model or get_model("main",          DEFAULT_MODEL)
     icon_resolver_model  = get_model("icon_resolver", main_model)
@@ -583,7 +583,7 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
         main_model, icon_resolver_model, drawer_model, critic_model, style,
     )
 
-    from .config import vision_in_tools as _vision_in_tools
+    from config import vision_in_tools as _vision_in_tools
     drawer_vision_in_tools = _vision_in_tools(drawer_model)
     # vision_relay: provider can see images in user messages but not tool messages.
     # Enable RENDER_INCLUDES_IMAGE so tools still return PNG data; InjectVisionAsUserEdit

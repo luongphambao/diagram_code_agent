@@ -53,6 +53,6 @@ _OUT_NAMES = (
     "out.slide.json",
 )
 
-# prettygraph.py must be importable by the generated diagram.py (pretty style does
-# `from prettygraph import Pretty`). Stage a copy into the workspace.
-_PRETTYGRAPH_SRC = Path(__file__).parent.parent.joinpath("prettygraph.py").read_text(encoding="utf-8")
+# prettygraph package must be importable by the generated diagram.py (pretty style does
+# `from prettygraph import Pretty`). Stage the package directory into the workspace.
+_PRETTYGRAPH_PKG_DIR = Path(__file__).parent.parent / "prettygraph"

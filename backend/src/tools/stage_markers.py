@@ -19,7 +19,7 @@ from .constants import (
     _ICON_SEARCH_BUDGET_FILE,
     _NODE_SEARCH_BUDGET_FILE,
     _OUT_NAMES,
-    _PRETTYGRAPH_SRC,
+    _PRETTYGRAPH_PKG_DIR,
     _RENDER_COUNT_FILE,
     _RENDER_SPEC_FILE,
     _REVISION_COUNT_FILE,
@@ -102,9 +102,13 @@ def clear_stage_markers() -> None:
 
 def _stage_helpers() -> None:
     WORKSPACE.mkdir(parents=True, exist_ok=True)
-    pg = WORKSPACE / "prettygraph.py"
-    if not pg.exists() or pg.read_text(encoding="utf-8") != _PRETTYGRAPH_SRC:
-        pg.write_text(_PRETTYGRAPH_SRC, encoding="utf-8")
+    pg_dst = WORKSPACE / "prettygraph"
+    pg_dst.mkdir(exist_ok=True)
+    for src_file in _PRETTYGRAPH_PKG_DIR.glob("*.py"):
+        dst_file = pg_dst / src_file.name
+        content = src_file.read_text(encoding="utf-8")
+        if not dst_file.exists() or dst_file.read_text(encoding="utf-8") != content:
+            dst_file.write_text(content, encoding="utf-8")
 
 
 def _layout_audit() -> str:
