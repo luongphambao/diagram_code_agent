@@ -12,6 +12,7 @@ from pathlib import Path
 
 from langchain_core.messages import AIMessage, ToolMessage
 from reporting import DEFAULT_REPORT_SECTIONS
+from ppt_reporting import DEFAULT_PPT_SECTIONS
 
 logger = logging.getLogger("diagram-agent")
 
@@ -41,6 +42,7 @@ _TOOL_LABELS = {
     "submit_critique": "Recording the diagram review",
     "finalize_diagram": "Finalizing the diagram",
     "generate_pdf_report": "Generating the PDF report",
+    "generate_ppt_proposal": "Generating the PPT proposal",
     "send_architecture_report_email": "Sending the architecture report email",
     "write_todos": "Planning the steps",
     "task": "Delegating to subagent",
@@ -211,6 +213,27 @@ def _is_pdf_followup(text: str) -> bool:
             "xuat pdf",
             "tạo báo cáo",
             "tao bao cao",
+        )
+    )
+
+def _is_ppt_followup(text: str) -> bool:
+    """Detect a follow-up asking to package the current diagram as a PowerPoint proposal."""
+    normalized = " ".join(str(text or "").lower().split())
+    return any(
+        phrase in normalized
+        for phrase in (
+            "ppt",
+            "pptx",
+            "powerpoint",
+            "slide deck",
+            "proposal",
+            "deck",
+            "tạo ppt",
+            "tao ppt",
+            "xuất ppt",
+            "xuat ppt",
+            "tạo proposal",
+            "tao proposal",
         )
     )
 
@@ -411,6 +434,22 @@ def _card_for(val, summary: str):
             "awaiting_pdf_report",
             {},
         )
+    if name == "generate_ppt_proposal":
+        sections = args.get("include_sections") or DEFAULT_PPT_SECTIONS
+        missing = [s for s in DEFAULT_PPT_SECTIONS if s not in sections]
+        return (
+            {
+                "type": "ppt_proposal_approval",
+                "question": "Generate the BnK PowerPoint proposal with these settings?",
+                "title": args.get("title", ""),
+                "subtitle": args.get("subtitle", ""),
+                "brand": args.get("brand", ""),
+                "include_sections": sections,
+                "missing_sections": missing,
+            },
+            "awaiting_ppt_proposal",
+            {},
+        )
     if name == "send_architecture_report_email":
         return (
             {
@@ -582,6 +621,9 @@ def _artifacts(workspace) -> dict:
     pdf = workspace / "out.pdf"
     if pdf.exists():
         out["pdf_base64"] = base64.b64encode(pdf.read_bytes()).decode("ascii")
+    pptx = workspace / "out.pptx"
+    if pptx.exists():
+        out["pptx_base64"] = base64.b64encode(pptx.read_bytes()).decode("ascii")
     xlsx = workspace / "wbs_filled.xlsx"
     if xlsx.exists():
         out["wbs_xlsx_base64"] = base64.b64encode(xlsx.read_bytes()).decode("ascii")

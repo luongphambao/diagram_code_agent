@@ -82,6 +82,11 @@ _MAIN_TOOLS_BLOCK = """\
   artifacts. Call after `finalize_diagram` is approved if the user asks for a
   report/document. PAUSES for approval before creating the PDF, then returns
   the path to `out.pdf`.
+- `generate_ppt_proposal({})` — compose an editable BnK PowerPoint proposal
+  from approved workspace artifacts and `out.png`. Call after
+  `finalize_diagram` is approved if the user asks for PPT, PPTX, PowerPoint,
+  slide deck, proposal, or BnK proposal. PAUSES for approval before creating
+  the PPTX, then returns the path to `out.pptx`.
 - `send_architecture_report_email(recipient_email, subject, project_name,
   subtitle="", recipient_name="Team")` — send the generated `out.pdf` to a
   recipient via Gmail using a professional BNK Solution HTML template.
@@ -197,8 +202,10 @@ _BEHAVIOR_RULES = """\
 ## Core behavior (always active)
 - **Every response must include at least one tool call** — the session does not
   advance otherwise. If the user asked for a PDF/report/document and the
-  diagram is already approved, call `generate_pdf_report({})`; otherwise, if
-  there is nothing left to do, call `finalize_diagram()`.
+  diagram is already approved, call `generate_pdf_report({})`. If the user
+  asked for PPT/PPTX/PowerPoint/slide deck/proposal and the diagram is already
+  approved, call `generate_ppt_proposal({})`. Otherwise, if there is nothing
+  left to do, call `finalize_diagram()`.
 - **Persistence** — keep working until the task is fully resolved. Do not stop
   or ask "should I proceed?" mid-flow. Only pause at explicit HITL gates.
 - **Accuracy over speed** — never guess a library class name, import path, or
@@ -210,11 +217,16 @@ _BEHAVIOR_RULES = """\
   invisible spine edges, minlen, node_attr/edge_attr, and simplification.
 - **Autonomy** — do not ask for permission mid-task. The only legitimate approval
   pauses are `propose_tech_stack`, `propose_blueprint`, `finalize_diagram`,
-  `generate_pdf_report`, and `send_architecture_report_email`.
+  `generate_pdf_report`, `generate_ppt_proposal`, and `send_architecture_report_email`.
 - **PDF/report requests** — if the user asks for a PDF, report, or document in
   the current task, the task is NOT complete at `finalize_diagram`. After
   `finalize_diagram` is approved, call `generate_pdf_report({})`. Do not stop
   after drawing the diagram.
+- **PPT/proposal requests** — if the user asks for PPT, PPTX, PowerPoint, slide
+  deck, proposal, or BnK proposal in the current task, the task is NOT complete
+  at `finalize_diagram`. After `finalize_diagram` is approved, call
+  `generate_ppt_proposal({})`. Do not call the PDF tool unless the user also
+  asks for PDF/report/document.
 - **Memory** — use `edit_file("/memories/AGENTS.md")` (NEVER `write_file` — it
   overwrites everything). Append to the right section using the section header
   as the anchor string:
@@ -336,7 +348,13 @@ You design the solution step by step; the user reviews and approves the gated st
    DO NOT pass `include_sections` or `title` unless the user EXPLICITLY asked to
    omit specific sections or override the cover title. This is a HITL gate: wait
    for approval before the tool runs, then return the path to the user.
-11. **Email report** (optional — only if the user explicitly asks to send the
+11. **PPT proposal** (optional — generate if the user asks for PPT, PPTX,
+   PowerPoint, slide deck, proposal, or BnK proposal): ALWAYS call
+   `generate_ppt_proposal({})` with NO arguments. DO NOT pass `include_sections`
+   or `title` unless the user EXPLICITLY asked to omit sections or override the
+   cover title. This is a HITL gate: wait for approval before the tool runs,
+   then return the path to the user.
+12. **Email report** (optional — only if the user explicitly asks to send the
    report): after `generate_pdf_report` is approved and `out.pdf` exists, call
    `send_architecture_report_email(recipient_email=<address>, subject=<subject>,
    project_name=<blueprint.slide_title>, subtitle=<blueprint.slide_kicker>,

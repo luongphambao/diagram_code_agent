@@ -114,6 +114,7 @@ from .analysis_tools import (
     PdfReportConfig,
     PillarCoverage,
     ProposeTechStackArgs,
+    PptProposalConfig,
     ScalingPhase,
     SolutionAssumptions,
     TechAlternative,
@@ -134,6 +135,7 @@ from .analysis_tools import (
     _wants_structural,
     analyze_architecture_requirements,
     generate_pdf_report,
+    generate_ppt_proposal,
     inspect_diagram,
     propose_blueprint,
     propose_diagram_brief,
@@ -169,6 +171,7 @@ DIAGRAM_TOOLS = [
     submit_critique,
     finalize_diagram,
     generate_pdf_report,
+    generate_ppt_proposal,
 ]
 
 # Late imports (same as original tools.py bottom section)
@@ -188,6 +191,7 @@ MAIN_TOOLS = [
     list_saved_diagrams,
     finalize_diagram,
     generate_pdf_report,
+    generate_ppt_proposal,
     send_architecture_report_email,
     propose_meeting_slots,    # uses internal interrupt() — NOT in GATE_TOOL_NAMES
     create_client_meeting,    # interrupt_on gate — in GATE_TOOL_NAMES
@@ -211,6 +215,7 @@ GATE_TOOL_NAMES = [
     "propose_blueprint",
     "finalize_diagram",
     "generate_pdf_report",
+    "generate_ppt_proposal",
     "send_architecture_report_email",
     "create_client_meeting",
     "propose_wbs_skeleton",

@@ -8,6 +8,7 @@ interface ChatSidebarProps {
   pendingInterrupt: PendingInterrupt | null;
   isRunning: boolean;
   pdfBase64?: string;
+  pptxBase64?: string;
   wbsXlsxBase64?: string;
   wbsSummary?: WbsSummary;
   activity?: string | null;
@@ -21,6 +22,7 @@ interface ChatSidebarProps {
   onResolveBlueprint: (approved: boolean, modifications?: string) => void;
   onResolveResult: (satisfied: boolean, feedback?: string) => void;
   onResolvePdfReport: (approved: boolean, modifications?: string) => void;
+  onResolvePptProposal: (approved: boolean, modifications?: string) => void;
   onResolveEmail: (approved: boolean) => void;
   onResolveMeeting: (approved: boolean) => void;
   onResolveMeetingSlot: (approved: boolean, selectedSlot?: { start: string; end: string; display_day: string; display_time: string }) => void;
@@ -32,11 +34,11 @@ interface ChatSidebarProps {
 }
 
 export default function ChatSidebar({
-  messages, pendingInterrupt, isRunning, pdfBase64, wbsXlsxBase64, wbsSummary,
+  messages, pendingInterrupt, isRunning, pdfBase64, pptxBase64, wbsXlsxBase64, wbsSummary,
   activity, activeSubagent, error, iteration,
   uploadedFiles, isUploading,
   onSend, onResolveTechStack, onResolveBlueprint, onResolveResult, onResolvePdfReport,
-  onResolveEmail, onResolveMeeting, onResolveMeetingSlot,
+  onResolvePptProposal, onResolveEmail, onResolveMeeting, onResolveMeetingSlot,
   onResolveWbsSkeleton, onResolveWbs, onResolveWbsExcel,
   onUploadFile, onClearFiles,
 }: ChatSidebarProps) {
@@ -45,7 +47,7 @@ export default function ChatSidebar({
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, error, pendingInterrupt, pdfBase64, wbsXlsxBase64]);
+  }, [messages, error, pendingInterrupt, pdfBase64, pptxBase64, wbsXlsxBase64]);
 
   const createPdfUrl = () => {
     if (!pdfBase64) return null;
@@ -77,6 +79,15 @@ export default function ChatSidebar({
     URL.revokeObjectURL(url);
   };
 
+  const downloadPptx = () => {
+    if (!pptxBase64) return;
+    const bytes = Uint8Array.from(atob(pptxBase64), (c) => c.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = "architecture_proposal.pptx"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <aside className="flex h-full w-full flex-col border-r border-white/8 bg-[#0c1015]">
       <div className="flex items-center justify-between border-b border-white/8 px-5 py-3.5">
@@ -99,6 +110,7 @@ export default function ChatSidebar({
         pendingInterrupt={pendingInterrupt}
         isRunning={isRunning}
         pdfBase64={pdfBase64}
+        pptxBase64={pptxBase64}
         wbsXlsxBase64={wbsXlsxBase64}
         wbsSummary={wbsSummary}
         activity={activity}
@@ -108,6 +120,7 @@ export default function ChatSidebar({
         bottomRef={bottomRef}
         onPreviewPdf={previewPdf}
         onDownloadPdf={downloadPdf}
+        onDownloadPptx={downloadPptx}
         onDownloadWbsXlsx={downloadWbsXlsx}
         wbsPreviewOpen={wbsPreviewOpen}
         onToggleWbsPreview={() => setWbsPreviewOpen((v) => !v)}
@@ -115,6 +128,7 @@ export default function ChatSidebar({
         onResolveBlueprint={onResolveBlueprint}
         onResolveResult={onResolveResult}
         onResolvePdfReport={onResolvePdfReport}
+        onResolvePptProposal={onResolvePptProposal}
         onResolveEmail={onResolveEmail}
         onResolveMeeting={onResolveMeeting}
         onResolveMeetingSlot={onResolveMeetingSlot}

@@ -3,7 +3,7 @@ import type { AgentState, LogEntry } from "../../hooks/useDiagramAgent";
 import ActivityRow from "./ActivityRow";
 import SubagentPanel from "../SubagentPanel";
 
-type Tab = "preview" | "pdf" | "wbs" | "code" | "activity" | "agents";
+type Tab = "preview" | "pdf" | "ppt" | "wbs" | "code" | "activity" | "agents";
 
 interface ArtifactTabsProps {
   agentState: AgentState;
@@ -16,7 +16,7 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
   const [tab, setTab] = useState<Tab>("preview");
   const [lightbox, setLightbox] = useState(false);
 
-  const { png_base64, pdf_base64, wbs_xlsx_base64, wbs_summary, drawio, summary, iteration, code, logs, delegations } = agentState;
+  const { png_base64, pdf_base64, pptx_base64, wbs_xlsx_base64, wbs_summary, drawio, summary, iteration, code, logs, delegations } = agentState;
   const hasDelegations = !!delegations && delegations.length > 0;
   const hasLiveAgentWork = isRunning || !!activeSubagent || hasDelegations || !!activity;
   const hasWbs = !!wbs_summary || !!wbs_xlsx_base64;
@@ -24,6 +24,7 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
   const tabs: Tab[] = [
     "preview",
     ...(pdf_base64 ? (["pdf"] as Tab[]) : []),
+    ...(pptx_base64 ? (["ppt"] as Tab[]) : []),
     ...(hasWbs ? (["wbs"] as Tab[]) : []),
     "code",
     "activity",
@@ -71,6 +72,17 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
     URL.revokeObjectURL(url);
   };
 
+  const downloadPptx = () => {
+    if (!pptx_base64) return;
+    const bytes = Uint8Array.from(atob(pptx_base64), (c) => c.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `architecture_proposal${iteration && iteration > 1 ? `_v${iteration}` : ""}.pptx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const openInDrawio = () => {
     if (!drawio) return;
     window.open(`https://app.diagrams.net/?src=about#U${encodeURIComponent(drawio)}`, "_blank");
@@ -106,6 +118,7 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
                   : t === "agents" && delegations && delegations.length > 0
                   ? `Agents (${delegations.length})`
                   : t === "pdf" ? "PDF"
+                  : t === "ppt" ? "PPT"
                   : t === "wbs" ? "WBS"
                   : t.charAt(0).toUpperCase() + t.slice(1)}
               </button>
@@ -114,9 +127,9 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
 
           {/* Download group */}
           <div className="flex items-center gap-2">
-            {(["PNG", ".drawio", "PDF"] as const).map((label) => {
-              const disabled = label === ".drawio" ? !drawio : label === "PDF" ? !pdf_base64 : false;
-              const handler = label === "PNG" ? downloadPng : label === ".drawio" ? downloadDrawio : downloadPdf;
+            {(["PNG", ".drawio", "PDF", "PPT"] as const).map((label) => {
+              const disabled = label === ".drawio" ? !drawio : label === "PDF" ? !pdf_base64 : label === "PPT" ? !pptx_base64 : false;
+              const handler = label === "PNG" ? downloadPng : label === ".drawio" ? downloadDrawio : label === "PDF" ? downloadPdf : downloadPptx;
               return (
                 <button key={label} onClick={handler} disabled={disabled}
                   className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/4 px-3 py-1.5 text-xs font-medium text-slate-400 transition-colors hover:bg-white/8 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30">
@@ -195,6 +208,27 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
                 <p className="text-sm text-slate-700">No PDF report available</p>
               </div>
             )}
+          </div>
+        )}
+
+        {tab === "ppt" && (
+          <div className="flex flex-1 flex-col overflow-hidden bg-[#0b0e14]">
+            <div className="flex items-center justify-between border-b border-white/8 px-4 py-2">
+              <span className="text-xs font-medium text-slate-400">BnK PowerPoint proposal</span>
+              <button onClick={downloadPptx} disabled={!pptx_base64}
+                className="flex items-center gap-1.5 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-xs font-medium text-orange-200 transition-colors hover:bg-orange-500/20 disabled:cursor-not-allowed disabled:opacity-30">
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download .pptx
+              </button>
+            </div>
+            <div className="flex flex-1 items-center justify-center p-8">
+              <div className="rounded-xl border border-orange-500/20 bg-orange-500/8 px-6 py-5 text-center">
+                <p className="text-sm font-semibold text-orange-100">Editable PowerPoint ready</p>
+                <p className="mt-1 text-xs text-slate-500">PowerPoint preview is not available in-browser. Download the deck to inspect and edit it.</p>
+              </div>
+            </div>
           </div>
         )}
 

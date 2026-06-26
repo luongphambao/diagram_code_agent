@@ -81,6 +81,7 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
       setAgentState((prev) => ({
         png_base64: prev.png_base64,
         pdf_base64: prev.pdf_base64,
+        pptx_base64: prev.pptx_base64,
         drawio: prev.drawio,
         code: prev.code,
         iteration: prev.iteration,
@@ -139,6 +140,13 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
   );
 
   const resolvePdfReport = useCallback(
+    async (approved: boolean, modifications?: string) => {
+      await _resolveWithPayload({ approved, modifications: modifications?.trim() || null });
+    },
+    [_resolveWithPayload]
+  );
+
+  const resolvePptProposal = useCallback(
     async (approved: boolean, modifications?: string) => {
       await _resolveWithPayload({ approved, modifications: modifications?.trim() || null });
     },
@@ -241,6 +249,7 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
     resolveBlueprint,
     resolveResultReview,
     resolvePdfReport,
+    resolvePptProposal,
     resolveEmail,
     resolveMeeting,
     resolveMeetingSlot,

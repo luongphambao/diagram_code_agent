@@ -3,6 +3,7 @@ import TechStackApproval from "../TechStackApproval";
 import BlueprintApproval from "../BlueprintApproval";
 import DiagramFeedback from "../DiagramFeedback";
 import PdfReportApproval from "../PdfReportApproval";
+import PptProposalApproval from "../PptProposalApproval";
 import EmailApproval from "../EmailApproval";
 import MeetingApproval from "../MeetingApproval";
 import MeetingSlotPicker from "../MeetingSlotPicker";
@@ -15,6 +16,7 @@ interface MessageListProps {
   pendingInterrupt: PendingInterrupt | null;
   isRunning: boolean;
   pdfBase64?: string;
+  pptxBase64?: string;
   wbsXlsxBase64?: string;
   wbsSummary?: WbsSummary;
   activity?: string | null;
@@ -24,6 +26,7 @@ interface MessageListProps {
   bottomRef: React.RefObject<HTMLDivElement | null>;
   onPreviewPdf: () => void;
   onDownloadPdf: () => void;
+  onDownloadPptx: () => void;
   onDownloadWbsXlsx: () => void;
   wbsPreviewOpen: boolean;
   onToggleWbsPreview: () => void;
@@ -31,6 +34,7 @@ interface MessageListProps {
   onResolveBlueprint: (approved: boolean, modifications?: string) => void;
   onResolveResult: (satisfied: boolean, feedback?: string) => void;
   onResolvePdfReport: (approved: boolean, modifications?: string) => void;
+  onResolvePptProposal: (approved: boolean, modifications?: string) => void;
   onResolveEmail: (approved: boolean) => void;
   onResolveMeeting: (approved: boolean) => void;
   onResolveMeetingSlot: (approved: boolean, selectedSlot?: { start: string; end: string; display_day: string; display_time: string }) => void;
@@ -40,12 +44,12 @@ interface MessageListProps {
 }
 
 export default function MessageList({
-  messages, pendingInterrupt, isRunning, pdfBase64, wbsXlsxBase64, wbsSummary,
+  messages, pendingInterrupt, isRunning, pdfBase64, pptxBase64, wbsXlsxBase64, wbsSummary,
   activity, activeSubagent, error, iteration, bottomRef,
-  onPreviewPdf, onDownloadPdf, onDownloadWbsXlsx,
+  onPreviewPdf, onDownloadPdf, onDownloadPptx, onDownloadWbsXlsx,
   wbsPreviewOpen, onToggleWbsPreview,
   onResolveTechStack, onResolveBlueprint, onResolveResult, onResolvePdfReport,
-  onResolveEmail, onResolveMeeting, onResolveMeetingSlot,
+  onResolvePptProposal, onResolveEmail, onResolveMeeting, onResolveMeetingSlot,
   onResolveWbsSkeleton, onResolveWbs, onResolveWbsExcel,
 }: MessageListProps) {
   return (
@@ -107,6 +111,9 @@ export default function MessageList({
       {pendingInterrupt?.data.type === "pdf_report_approval" && (
         <div className="mt-1"><PdfReportApproval interrupt={pendingInterrupt} onResolve={onResolvePdfReport} disabled={isRunning} /></div>
       )}
+      {pendingInterrupt?.data.type === "ppt_proposal_approval" && (
+        <div className="mt-1"><PptProposalApproval interrupt={pendingInterrupt} onResolve={onResolvePptProposal} disabled={isRunning} /></div>
+      )}
       {pendingInterrupt?.data.type === "email_approval" && (
         <div className="mt-1"><EmailApproval interrupt={pendingInterrupt} onResolve={onResolveEmail} disabled={isRunning} /></div>
       )}
@@ -146,6 +153,29 @@ export default function MessageList({
                 <button onClick={onDownloadPdf}
                   className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200 transition-colors hover:bg-white/10">
                   Download PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pptxBase64 && (
+        <div className="ml-9 max-w-[82%] rounded-2xl rounded-tl-sm border border-orange-500/20 bg-orange-950/20 px-4 py-3">
+          <div className="flex items-start gap-3">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-orange-500/15">
+              <svg className="h-4 w-4 text-orange-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4h16v16H4z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 8h8M8 12h5M8 16h3" />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-white">PPT proposal ready</p>
+              <p className="mt-1 text-xs text-slate-500">Download the editable BnK PowerPoint deck.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button onClick={onDownloadPptx}
+                  className="rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-xs font-semibold text-orange-200 transition-colors hover:bg-orange-500/20">
+                  Download PPT
                 </button>
               </div>
             </div>

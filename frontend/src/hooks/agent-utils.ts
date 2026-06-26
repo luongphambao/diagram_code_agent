@@ -180,6 +180,7 @@ export interface AgentState {
   iteration?: number;
   png_base64?: string;
   pdf_base64?: string;
+  pptx_base64?: string;
   wbs_xlsx_base64?: string;
   wbs_summary?: WbsSummary;
   drawio?: string;
@@ -201,6 +202,7 @@ export type InterruptType =
   | "blueprint_approval"
   | "result_review"
   | "pdf_report_approval"
+  | "ppt_proposal_approval"
   | "email_approval"
   | "slot_picker"
   | "meeting_approval"

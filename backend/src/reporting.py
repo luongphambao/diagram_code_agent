@@ -143,6 +143,7 @@ def record_artifact_inventory(workspace: Path) -> list[dict[str, Any]]:
         ("diagram.py", "Generated diagram code"),
         ("out.report.html", "Client report HTML"),
         ("out.pdf", "Client report PDF"),
+        ("out.pptx", "Client proposal PowerPoint"),
     ):
         path = workspace / name
         if path.exists():

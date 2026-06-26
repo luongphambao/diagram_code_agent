@@ -1,6 +1,6 @@
 """HITL Pydantic models + propose_diagram_brief, propose_tech_stack, propose_blueprint,
 analyze_architecture_requirements, web_research, inspect_diagram, submit_critique,
-generate_pdf_report."""
+generate_pdf_report, generate_ppt_proposal."""
 
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ from reporting import (
     record_artifact_inventory,
     record_report_step,
 )
+from ppt_reporting import DEFAULT_PPT_SECTIONS, PPTProposalError, generate_ppt_proposal_file
 from .constants import (
     CRITIC_REVISION_HARD_CAP,
     TAVILY_SEARCH_URL,
@@ -1076,6 +1077,82 @@ def generate_pdf_report(
                 f" NOTE: {len(missing)} section(s) were omitted from this run: "
                 + ", ".join(missing) + "."
             )
+    return msg
+
+
+class PptProposalConfig(BaseModel):
+    title: str = Field("", description="Override PPT cover title; defaults to blueprint.slide_title")
+    subtitle: str = Field("", description="Cover subtitle/kicker")
+    brand: str = Field("", description="Brand name shown on cover; defaults to blueprint.brand")
+    include_sections: list[str] = Field(
+        default_factory=lambda: DEFAULT_PPT_SECTIONS.copy(),
+        description=(
+            "Ordered list of PPT proposal sections to include. Valid names: cover, "
+            "executive_summary, solution_overview, scope, architecture_diagram, "
+            "technical_stack, key_decisions, delivery_plan, risks, appendix. "
+            "Leave EMPTY to include ALL sections (recommended). "
+            "Only pass a subset when the USER explicitly asked to omit sections."
+        ),
+    )
+    reason_for_subset: str = Field(
+        "",
+        description=(
+            "REQUIRED when include_sections is a subset of all sections: quote the user's "
+            "exact words that requested omitting sections. Leave empty when calling with all sections."
+        ),
+    )
+
+
+@tool(args_schema=PptProposalConfig)
+def generate_ppt_proposal(
+    title: str = "",
+    subtitle: str = "",
+    brand: str = "",
+    include_sections: list[str] | None = None,
+    reason_for_subset: str = "",
+) -> str:
+    """Generate an editable BnK PowerPoint proposal from approved artifacts.
+
+    Reads the staged architecture artifacts and rendered diagram, then renders
+    out.pptx using the BnK proposal template. Call this AFTER finalize_diagram is approved.
+    """
+    auto_expanded_msg = ""
+    if include_sections and len(include_sections) < len(DEFAULT_PPT_SECTIONS) and not reason_for_subset.strip():
+        auto_expanded_msg = (
+            f" NOTE: include_sections had only {len(include_sections)} section(s) but no "
+            "reason_for_subset was provided - auto-expanded to all sections to avoid a "
+            "truncated proposal."
+        )
+        include_sections = None
+
+    try:
+        pptx_path, sections, unrecognized = generate_ppt_proposal_file(
+            WORKSPACE,
+            title=title,
+            subtitle=subtitle,
+            brand=brand,
+            include_sections=include_sections,
+        )
+    except FileNotFoundError as exc:
+        return str(exc)
+    except PPTProposalError as exc:
+        return f"PPT proposal generation failed: {exc}"
+    _bump_tool_summary("generate_ppt_proposal", ppt_sections=len(sections))
+    msg = f"Wrote {pptx_path} ({len(sections)} sections)."
+    if auto_expanded_msg:
+        msg += auto_expanded_msg
+    if unrecognized:
+        msg += (
+            f" WARNING: {len(unrecognized)} unrecognized section name(s) were ignored: "
+            + ", ".join(f'"{n}"' for n in unrecognized)
+            + ". Valid names: "
+            + ", ".join(DEFAULT_PPT_SECTIONS)
+            + "."
+        )
+    if include_sections:
+        missing = [s for s in DEFAULT_PPT_SECTIONS if s not in sections]
+        if missing:
+            msg += f" NOTE: {len(missing)} section(s) were omitted from this run: " + ", ".join(missing) + "."
     return msg
 
 

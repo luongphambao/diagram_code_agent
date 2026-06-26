@@ -22,6 +22,7 @@ from session_state import (
     _card_for,
     _decision_from_payload,
     _is_pdf_followup,
+    _is_ppt_followup,
     _label,
     _last_tool_msg,
     _last_user_text,
@@ -106,18 +107,28 @@ async def agui_endpoint(request: Request):
                 # Fresh run.
                 from routers.upload import _attached_images, _attached_text
                 desc = _last_user_text(messages)
-                preserve_artifacts = _is_pdf_followup(desc) and (WORKSPACE / "out.png").exists()
+                is_pdf_followup = _is_pdf_followup(desc)
+                is_ppt_followup = _is_ppt_followup(desc)
+                preserve_artifacts = (is_pdf_followup or is_ppt_followup) and (WORKSPACE / "out.png").exists()
                 if not preserve_artifacts:
                     clear_stage_markers()
                 else:
+                    artifact_instruction = (
+                        "The user is asking for a PPT/proposal/PowerPoint deck. Do NOT "
+                        "redesign or re-render the diagram. Call `generate_ppt_proposal({})` "
+                        "now so the PPT approval gate is shown, then complete after `out.pptx` "
+                        "is created."
+                        if is_ppt_followup and not is_pdf_followup else
+                        "The user is asking for a PDF/report/document. Do NOT "
+                        "redesign or re-render the diagram. Call `generate_pdf_report({})` "
+                        "now so the PDF approval gate is shown, then complete after `out.pdf` "
+                        "is created."
+                    )
                     desc = (
                         (desc + "\n\n" if desc else "")
                         + "IMPORTANT: A rendered diagram already exists in the workspace "
                         "(`out.png`, `out.drawio`, `diagram.py`) with approved planning "
-                        "artifacts. The user is asking for a PDF/report/document. Do NOT "
-                        "redesign or re-render the diagram. Call `generate_pdf_report({})` "
-                        "now so the PDF approval gate is shown, then complete after `out.pdf` "
-                        "is created."
+                        f"artifacts. {artifact_instruction}"
                     )
                 attached = _attached_text(file_ids)
                 image_blocks = _attached_images(file_ids)
@@ -247,7 +258,7 @@ async def agui_endpoint(request: Request):
                                 if subagent:
                                     evt2["subagent"] = subagent
                                 yield _sse(evt2)
-                                if name == "generate_pdf_report" and ok:
+                                if name in {"generate_pdf_report", "generate_ppt_proposal"} and ok:
                                     artifact_delta = [
                                         {"op": "replace", "path": f"/{k}", "value": v}
                                         for k, v in _artifacts(WORKSPACE).items()

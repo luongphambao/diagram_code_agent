@@ -1,20 +1,20 @@
 import base64
 import json
 
-import server
+import session_state as server
 import tools
+import tools.analysis_tools as analysis_tools
 import reporting
 from tools import GATE_TOOL_NAMES
 
 
 def _use_workspace(monkeypatch, tmp_path) -> None:
-    monkeypatch.setattr(tools, "WORKSPACE", tmp_path)
-    monkeypatch.setattr(tools, "_ARCH_ANALYSIS_FILE", tmp_path / "architecture_analysis.json")
-    monkeypatch.setattr(tools, "_BRIEF_FILE", tmp_path / "diagram_brief.json")
-    monkeypatch.setattr(tools, "_TECHSTACK_FILE", tmp_path / "tech_stack.json")
-    monkeypatch.setattr(tools, "_BLUEPRINT_FILE", tmp_path / "blueprint.json")
-    monkeypatch.setattr(tools, "_CRITIQUE_FILE", tmp_path / "critique.json")
-    monkeypatch.setattr(tools, "_TOOL_SUMMARY_FILE", tmp_path / "tool_budget_summary.json")
+    monkeypatch.setattr(analysis_tools, "WORKSPACE", tmp_path)
+    monkeypatch.setattr(analysis_tools, "_ARCH_ANALYSIS_FILE", tmp_path / "architecture_analysis.json")
+    monkeypatch.setattr(analysis_tools, "_BRIEF_FILE", tmp_path / "diagram_brief.json")
+    monkeypatch.setattr(analysis_tools, "_TECHSTACK_FILE", tmp_path / "tech_stack.json")
+    monkeypatch.setattr(analysis_tools, "_BLUEPRINT_FILE", tmp_path / "blueprint.json")
+    monkeypatch.setattr(analysis_tools, "_CRITIQUE_FILE", tmp_path / "critique.json")
 
 
 def _fake_pdf_renderer(html: str, pdf_path) -> None:
@@ -59,11 +59,17 @@ def test_artifacts_includes_pdf_base64(monkeypatch, tmp_path):
     pdf_bytes = b"%PDF-1.4\n%test\n"
     (tmp_path / "out.pdf").write_bytes(pdf_bytes)
 
-    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
-
-    artifacts = server._artifacts()
+    artifacts = server._artifacts(tmp_path)
 
     assert artifacts["pdf_base64"] == base64.b64encode(pdf_bytes).decode("ascii")
+
+def test_artifacts_includes_pptx_base64(monkeypatch, tmp_path):
+    pptx_bytes = b"PK\x03\x04fake pptx"
+    (tmp_path / "out.pptx").write_bytes(pptx_bytes)
+
+    artifacts = server._artifacts(tmp_path)
+
+    assert artifacts["pptx_base64"] == base64.b64encode(pptx_bytes).decode("ascii")
 
 
 def test_generate_pdf_report_maps_to_hitl_card():
@@ -94,7 +100,44 @@ def test_generate_pdf_report_maps_to_hitl_card():
         "subtitle": "Solution Report",
         "brand": "Acme",
         "include_sections": ["cover", "diagram"],
+        "missing_sections": [
+            "executive_summary",
+            "requirements_analysis",
+            "traceability",
+            "solution",
+            "techstack",
+            "architecture_analysis",
+            "well_architected",
+            "step_results",
+            "risks",
+        ],
     }
+
+def test_generate_ppt_proposal_maps_to_hitl_card():
+    card, step, delta = server._card_for(
+        {
+            "action_requests": [
+                {
+                    "name": "generate_ppt_proposal",
+                    "args": {
+                        "title": "Architecture Proposal",
+                        "subtitle": "Solution Deck",
+                        "brand": "Acme",
+                        "include_sections": ["cover", "architecture_diagram"],
+                    },
+                }
+            ]
+        },
+        summary="",
+    )
+
+    assert "generate_ppt_proposal" in GATE_TOOL_NAMES
+    assert step == "awaiting_ppt_proposal"
+    assert delta == {}
+    assert card["type"] == "ppt_proposal_approval"
+    assert card["title"] == "Architecture Proposal"
+    assert card["include_sections"] == ["cover", "architecture_diagram"]
+    assert "technical_stack" in card["missing_sections"]
 
 
 def test_last_tool_msg_only_when_latest_message_is_tool():
@@ -117,6 +160,11 @@ def test_pdf_followup_detection():
     assert server._is_pdf_followup("tạo báo cáo PDF giúp tôi")
     assert not server._is_pdf_followup("please add redis to the diagram")
 
+def test_ppt_followup_detection():
+    assert server._is_ppt_followup("tạo PPT proposal theo template BnK")
+    assert server._is_ppt_followup("make a PowerPoint slide deck")
+    assert not server._is_ppt_followup("please add redis to the diagram")
+
 
 def test_generate_pdf_report_writes_pdf(monkeypatch, tmp_path):
     from PIL import Image
@@ -132,6 +180,22 @@ def test_generate_pdf_report_writes_pdf(monkeypatch, tmp_path):
     assert (tmp_path / "out.report.html").exists()
     assert (tmp_path / "out.pdf").exists()
     assert (tmp_path / "out.pdf").read_bytes().startswith(b"%PDF")
+
+def test_generate_ppt_proposal_writes_openable_pptx(monkeypatch, tmp_path):
+    from PIL import Image
+    from pptx import Presentation
+
+    _use_workspace(monkeypatch, tmp_path)
+    _write_report_inputs(tmp_path)
+    Image.new("RGB", (1280, 720), "white").save(tmp_path / "out.png")
+
+    result = tools.generate_ppt_proposal.func(include_sections=["cover", "architecture_diagram"])
+
+    assert "Wrote" in result
+    pptx_path = tmp_path / "out.pptx"
+    assert pptx_path.exists()
+    prs = Presentation(str(pptx_path))
+    assert len(prs.slides) >= 2
 
 
 def test_report_data_uses_step_results_and_section_aliases(tmp_path):

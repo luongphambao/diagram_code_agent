@@ -180,6 +180,7 @@ export default function App() {
             pendingInterrupt={diagramAgent.pendingInterrupt}
             isRunning={diagramAgent.isRunning}
             pdfBase64={diagramAgent.agentState.pdf_base64}
+            pptxBase64={diagramAgent.agentState.pptx_base64}
             wbsXlsxBase64={diagramAgent.agentState.wbs_xlsx_base64}
             wbsSummary={diagramAgent.agentState.wbs_summary}
             activity={diagramAgent.activity}
@@ -190,6 +191,7 @@ export default function App() {
             onResolveBlueprint={diagramAgent.resolveBlueprint}
             onResolveResult={diagramAgent.resolveResultReview}
             onResolvePdfReport={diagramAgent.resolvePdfReport}
+            onResolvePptProposal={diagramAgent.resolvePptProposal}
             onResolveEmail={diagramAgent.resolveEmail}
             onResolveMeeting={diagramAgent.resolveMeeting}
             onResolveMeetingSlot={diagramAgent.resolveMeetingSlot}
