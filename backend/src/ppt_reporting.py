@@ -11,8 +11,18 @@ from pathlib import Path
 from typing import Any
 
 from pptx import Presentation
-from pptx.enum.text import PP_ALIGN, MSO_AUTO_SIZE
+from pptx.dml.color import RGBColor
+from pptx.enum.text import PP_ALIGN, MSO_AUTO_SIZE, MSO_ANCHOR
 from pptx.util import Inches, Pt
+
+# --- BnK brand palette (Calibri + corporate blue, from template style guide) ---
+BNK_BLUE = RGBColor(0x1F, 0x4E, 0x78)   # primary corporate blue (header rows, dividers)
+BNK_CYAN = RGBColor(0x00, 0x9F, 0xDF)   # secondary accent
+BNK_LIGHT = RGBColor(0xE9, 0xF0, 0xF7)  # light tint for alternating table rows
+BNK_ACCENT = RGBColor(0xC0, 0x3A, 0x2B)  # red accent (required/important)
+BNK_WHITE = RGBColor(0xFF, 0xFF, 0xFF)
+BNK_TEXT = RGBColor(0x33, 0x33, 0x33)
+BNK_FONT = "Calibri"
 
 from reporting import (
     DEFAULT_REPORT_SECTIONS,
@@ -32,6 +42,7 @@ DEFAULT_PPT_SECTIONS = [
     "technical_stack",
     "key_decisions",
     "delivery_plan",
+    "pricing",
     "risks",
     "appendix",
 ]
@@ -45,11 +56,19 @@ SECTION_ALIASES = {
     "tech_stack": "technical_stack",
     "decisions": "key_decisions",
     "delivery": "delivery_plan",
+    "team": "delivery_plan",
     "wbs": "delivery_plan",
+    "price": "pricing",
+    "pricing": "pricing",
+    "capex": "pricing",
+    "cost": "pricing",
     "risk": "risks",
     "artifact": "appendix",
+    "reference": "appendix",
 }
 
+# Layout names below MUST match the actual layout names inside the BnK template
+# (verified via python-pptx). Note the double space in the separator layout name.
 VALID_LAYOUTS = frozenset({
     "Cover-01",
     "Head Page",
@@ -58,7 +77,22 @@ VALID_LAYOUTS = frozenset({
     "Overview-01",
     "Empty",
     "BnK",
-    "C2 - Separator/Dark",
+    "C2 -  Separator/ Dark",
+})
+
+# Closing/separator layouts that are appended via _append_thank_you, never rendered inline.
+CLOSING_LAYOUTS = frozenset({"BnK", "C2 -  Separator/ Dark"})
+
+# Structured content blocks an outline slide may carry (in addition to plain bullets).
+VALID_BLOCKS = frozenset({
+    "bullets",
+    "tech_stack_table",
+    "func_nfr",
+    "sdlc",
+    "delivery_effort",
+    "pricing",
+    "milestones",
+    "team",
 })
 
 OUTLINE_TARGET_MIN = 20
@@ -68,58 +102,74 @@ _OUTLINE_SYSTEM_PROMPT = """\
 You are a senior solution architect at BnK, a Vietnamese technology consultancy.
 Generate a professional PowerPoint proposal slide outline for a client project.
 
-OUTPUT FORMAT — each slide MUST have exactly these four fields:
+OUTPUT FORMAT — each slide MUST have these fields:
 {
   "title": "SECTION | Sub-topic",
   "layout": "<layout_name>",
+  "block": "<block_type>",
   "bullets": ["...", "..."],
   "asset_ref": null
 }
 
 VALID LAYOUT NAMES (use EXACTLY as written):
-  "Cover-01"            — Opening cover. Use ONCE as slide 1. Set title to "".
-  "Head Page"           — Major section divider with Roman numeral (I., II., III., …).
-  "Head-01"             — Secondary section header, no Roman numeral.
-  "Detail-01"           — Content slide with title + bullets. Most common. Use 15-20 times.
-  "Overview-01"         — Overview: put one subtitle string in bullets[0], no other bullets.
-  "Empty"               — Full-width image slide. Use with asset_ref: "architecture_diagram".
-  "BnK"                 — Closing brand slide. Use ONCE as the last slide. title "" bullets [].
-  "C2 - Separator/Dark" — Dark separator. Optional, once before BnK.
+  "Cover-01"              — Opening cover. Use ONCE as slide 1. Set title to "".
+  "Head Page"            — Major section divider with Roman numeral (I., II., III., …).
+  "Head-01"              — Secondary section header, no Roman numeral.
+  "Detail-01"            — Content slide with title + bullets. Most common.
+  "Overview-01"          — Overview: put one subtitle string in bullets[0], no other bullets.
+  "Empty"                — Full-width image slide. Use with asset_ref: "architecture_diagram".
+  "BnK"                  — Closing brand slide. Appended automatically; do NOT emit.
+  "C2 -  Separator/ Dark" — Dark separator. Appended automatically; do NOT emit.
+
+CONTENT BLOCKS — set "block" to render a professional table instead of bullets.
+For these, "layout" is ignored (always Detail-01) and "bullets" may be []:
+  "bullets"          — (default) plain bullet slide on the given layout.
+  "tech_stack_table" — table Layer | Technology | Description, built from TECH_STACK data.
+  "func_nfr"         — two columns: Functional vs Non-Functional Requirements.
+  "sdlc"             — SCOPE OF WORK SDLC phase table (Analysis→Maintenance).
+  "delivery_effort"  — effort table Code | Module | MD, built from WBS_SUMMARY.
+  "pricing"          — CAPEX cost table (NET, excluding taxes).
+  "milestones"       — payment milestones table (30/30/30/10).
+  "team"             — Client Team vs BnK Team table.
+When using a block, DO NOT also invent bullet content for that table — leave bullets [].
 
 SLIDE COUNT: Generate exactly 20-30 slides total.
 
-TYPICAL STRUCTURE (adapt to the actual project data):
-  1.   Cover-01          — cover
-  2.   Head Page         "I. Executive Summary"
-  3-4. Detail-01         executive highlights, business value
-  5.   Head Page         "II. Proposed Solution"
-  6.   Overview-01       solution scope overview (subtitle in bullets[0])
-  7-10. Detail-01        functional scope, NFRs, approach, key features
-  11.  Head Page         "III. Technical Architecture"
-  12.  Head-01           "Architecture Overview"
-  13.  Empty             architecture diagram (asset_ref: "architecture_diagram")
-  14-16. Detail-01       components, integration points, security
-  17.  Head Page         "IV. Technology Stack"
-  18-20. Detail-01       tech stack per layer (frontend/backend, data, infra)
-  21.  Head Page         "V. Project Delivery"
-  22.  Overview-01       delivery methodology
-  23-24. Detail-01       WBS effort & timeline, team structure
-  25.  Detail-01         risks & mitigations
-  26.  Head-01           "Key Design Decisions"
-  27.  Detail-01         key decisions and rationale
-  28.  BnK               closing
+TYPICAL STRUCTURE (adapt to the actual project data; use blocks where noted):
+  1.   Cover-01                          cover
+  2.   Head Page                         "I. Executive Summary"
+  3-4. Detail-01 (bullets)               executive highlights, business value
+  5.   Head Page                         "II. Proposed Solution"
+  6.   Overview-01                       solution scope overview (subtitle in bullets[0])
+  7.   block:"func_nfr"                  "PROPOSED SOLUTION | Requirements"
+  8-9. Detail-01 (bullets)               approach, key features
+  10.  Head-01                           "Architecture Overview"
+  11.  Empty (asset_ref diagram)         architecture diagram
+  12.  block:"tech_stack_table"          "PROPOSED SOLUTION | Technical Stack"
+  13.  Head Page                         "IV. Scope of Work"
+  14.  block:"sdlc"                      "SCOPE OF WORK | SDLC Phases"
+  15.  Detail-01 (bullets)               deliverables, assumptions, change request
+  16.  Head Page                         "V. Project Delivery"
+  17.  block:"delivery_effort"           "PROJECT DELIVERY | Estimated Effort"
+  18.  block:"team"                      "PROJECT DELIVERY | Team Structure"
+  19.  Detail-01 (bullets)               risks & mitigations
+  20.  Head Page                         "VI. Pricing"
+  21.  block:"pricing"                   "PRICING | CAPEX"
+  22.  block:"milestones"                "PRICING | Payment Milestones"
+  (BnK closing slide is appended automatically — do not include it.)
 
 TITLE FORMAT:
-  - Detail-01: "SECTION | Sub-topic"  e.g. "PROPOSED SOLUTION | Functional Scope"
-  - Head Page / Head-01: section name with Roman numeral  e.g. "III. Technical Architecture"
-  - Cover-01 and BnK: empty string ""
+  - Detail-01 / blocks: "SECTION | Sub-topic"  e.g. "PROPOSED SOLUTION | Technical Stack"
+  - Head Page / Head-01: section name with Roman numeral  e.g. "IV. Scope of Work"
+  - Cover-01: empty string ""
 
 RULES:
-  1. Use ONLY the 8 layout names listed — no other values.
-  2. Cover-01 must be slide 1; BnK must be last.
+  1. Use ONLY the layout names and block names listed — no other values.
+  2. Cover-01 must be slide 1; do NOT emit BnK / separator (appended automatically).
   3. Include the Empty/diagram slide ONLY if HAS_ARCHITECTURE_DIAGRAM is yes.
-  4. Base ALL bullet content on the actual project data — no generic placeholders.
-  5. OUTPUT: Return ONLY the JSON array. No code fences, no text outside the array.\
+  4. Include block:"delivery_effort" only if WBS_SUMMARY has data; otherwise use bullets.
+  5. Base ALL content on the actual project data — no generic placeholders.
+  6. OUTPUT: Return ONLY the JSON array. No code fences, no text outside the array.\
 """
 
 
@@ -178,12 +228,23 @@ def _roman(n: int) -> str:
 
 
 def _layout(prs: Presentation, *names: str):
-    wanted = {n.lower() for n in names}
-    for layout in prs.slide_layouts:
-        if layout.name.lower() in wanted:
-            return layout
-    import warnings
-    warnings.warn(f"PPT layout(s) {list(names)!r} not found in template; using layout[0] as fallback.", stacklevel=3)
+    wanted = [n.lower() for n in names]
+    by_name = {layout.name.lower(): layout for layout in prs.slide_layouts}
+    for name in wanted:  # honour caller priority order
+        if name in by_name:
+            return by_name[name]
+    # Prefer a neutral content/blank layout over slide_layouts[0] (which is the cover).
+    for safe in ("detail-01", "blank", "empty"):
+        if safe in by_name:
+            warnings.warn(
+                f"PPT layout(s) {list(names)!r} not found; using {by_name[safe].name!r} fallback.",
+                stacklevel=3,
+            )
+            return by_name[safe]
+    warnings.warn(
+        f"PPT layout(s) {list(names)!r} not found in template; using layout[0] as fallback.",
+        stacklevel=3,
+    )
     return prs.slide_layouts[0]
 
 
@@ -204,6 +265,43 @@ def _set_placeholder_text(slide, idx: int, text: str) -> bool:
         except Exception:
             continue
     return False
+
+
+def _body_placeholder(slide):
+    """Return the slide's BODY/content placeholder (idx 13 in Detail-01) if present."""
+    from pptx.enum.shapes import PP_PLACEHOLDER
+
+    for shape in slide.placeholders:
+        try:
+            ph_type = shape.placeholder_format.type
+        except Exception:
+            continue
+        if ph_type in (PP_PLACEHOLDER.BODY, PP_PLACEHOLDER.OBJECT):
+            return shape
+    return None
+
+
+def _fill_bullets_placeholder(slide, items: list[Any], *, font_size: int = 16, limit: int = 7) -> bool:
+    """Fill the template's body placeholder with bullets (inherits brand styling).
+
+    Returns True if a placeholder was used, False if none exists.
+    """
+    ph = _body_placeholder(slide)
+    if ph is None:
+        return False
+    tf = ph.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    bullets = [_clip(item, 180) for item in items[:limit] if str(item or "").strip()]
+    if not bullets:
+        bullets = ["Details will be confirmed during proposal review."]
+    for i, item in enumerate(bullets):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.text = item
+        p.level = 0
+        for run in p.runs:
+            run.font.size = Pt(font_size)
+    return True
 
 
 def _add_textbox(
@@ -305,7 +403,9 @@ def _section_slide(prs: Presentation, title: str, slide_no: int):
 def _detail_slide(prs: Presentation, title: str, bullets: list[Any], slide_no: int):
     slide = prs.slides.add_slide(_layout(prs, "Detail-01"))
     _add_title(slide, title)
-    _add_bullets(slide, bullets, 0.85, 1.35, 11.6, 4.95)
+    # Prefer the template's designed body placeholder; fall back to a positioned textbox.
+    if not _fill_bullets_placeholder(slide, bullets):
+        _add_bullets(slide, bullets, 0.85, 1.35, 11.6, 4.95)
     _add_footer(slide, slide_no)
     return slide
 
@@ -342,6 +442,202 @@ def _diagram_slide(prs: Presentation, report: dict[str, Any], workspace: Path, s
         _add_textbox(slide, "No diagram image is available.", 1.0, 2.8, 11.0, 0.4, font_size=16)
     _add_footer(slide, slide_no)
     return slide
+
+
+# --------------------------------------------------------------------------- #
+# Native (editable) brand-styled tables and the BnK-specific slide builders.
+# --------------------------------------------------------------------------- #
+
+_CONTENT_X = 0.6
+_CONTENT_Y = 1.35
+_CONTENT_W = 12.1
+_CONTENT_H = 5.35
+
+
+def _style_cell(cell, text: str, *, fill: RGBColor, color: RGBColor, bold: bool, size: int, align=PP_ALIGN.LEFT) -> None:
+    cell.fill.solid()
+    cell.fill.fore_color.rgb = fill
+    cell.vertical_anchor = MSO_ANCHOR.MIDDLE
+    cell.margin_left = Inches(0.08)
+    cell.margin_right = Inches(0.08)
+    cell.margin_top = Inches(0.03)
+    cell.margin_bottom = Inches(0.03)
+    tf = cell.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    p.alignment = align
+    p.text = _clip(text, 240)
+    for run in p.runs:
+        run.font.size = Pt(size)
+        run.font.bold = bold
+        run.font.name = BNK_FONT
+        run.font.color.rgb = color
+
+
+def _add_table(
+    slide,
+    headers: list[str],
+    rows: list[list[Any]],
+    *,
+    x: float = _CONTENT_X,
+    y: float = _CONTENT_Y,
+    w: float = _CONTENT_W,
+    h: float = _CONTENT_H,
+    col_widths: list[float] | None = None,
+    header_size: int = 13,
+    body_size: int = 11,
+    max_rows: int = 12,
+):
+    """Add a brand-styled, editable table. Header row = BnK blue; alternate body tint."""
+    rows = [r for r in rows if any(str(c or "").strip() for c in r)][:max_rows]
+    if not rows:
+        rows = [["—"] * len(headers)]
+    n_rows = len(rows) + 1
+    n_cols = len(headers)
+    gfx = slide.shapes.add_table(n_rows, n_cols, Inches(x), Inches(y), Inches(w), Inches(h))
+    table = gfx.table
+    table.first_row = False  # disable theme banding; we colour manually
+    table.horz_banding = False
+    if col_widths and len(col_widths) == n_cols:
+        for i, cw in enumerate(col_widths):
+            table.columns[i].width = Inches(cw)
+    for c, head in enumerate(headers):
+        _style_cell(table.cell(0, c), str(head), fill=BNK_BLUE, color=BNK_WHITE, bold=True, size=header_size)
+    for r, row in enumerate(rows, start=1):
+        fill = BNK_LIGHT if r % 2 == 0 else BNK_WHITE
+        for c in range(n_cols):
+            value = row[c] if c < len(row) else ""
+            _style_cell(table.cell(r, c), str(value), fill=fill, color=BNK_TEXT, bold=False, size=body_size)
+    return table
+
+
+def _table_slide(prs: Presentation, title: str, headers, rows, slide_no: int, **kw):
+    """A Detail-01 slide whose content area holds a brand-styled table."""
+    slide = prs.slides.add_slide(_layout(prs, "Detail-01"))
+    _add_title(slide, title)
+    _add_table(slide, headers, rows, **kw)
+    _add_footer(slide, slide_no)
+    return slide
+
+
+# Top-level tech_stack scalar keys that _tech_items may surface as bogus "layers".
+_TECH_META_KEYS = frozenset({
+    "estimated_total_monthly_cost_usd", "assumptions", "scaling_roadmap", "notes", "summary",
+})
+
+
+def _tech_stack_table_slide(prs: Presentation, report: dict[str, Any], slide_no: int, title: str = "PROPOSED SOLUTION | Technical Stack"):
+    rows = []
+    for item in report.get("tech_items", [])[:12]:
+        layer = item.get("layer") or "Layer"
+        if str(layer).strip().lower() in _TECH_META_KEYS:
+            continue
+        choice = item.get("choice") or item.get("name") or "TBD"
+        rationale = _clip(item.get("rationale") or "", 140)
+        rows.append([layer, choice, rationale])
+    if not rows:
+        rows = [["Frontend", "TBD", ""], ["Backend", "TBD", ""], ["Database", "TBD", ""]]
+    return _table_slide(
+        prs, title, ["Layer", "Technology", "Description"], rows, slide_no,
+        col_widths=[2.4, 3.2, 6.5],
+    )
+
+
+def _functional_nfr_slide(prs: Presentation, report: dict[str, Any], slide_no: int, title: str = "PROPOSED SOLUTION | Requirements"):
+    brief = report.get("brief") or {}
+    func = _as_list(brief.get("functional_requirements"))[:8]
+    nfr = _as_list(brief.get("non_functional_requirements"))[:8]
+    slide = prs.slides.add_slide(_layout(prs, "Detail-01"))
+    _add_title(slide, title)
+    half_w = (_CONTENT_W - 0.4) / 2
+    _add_table(
+        slide, ["Functional Requirements"], [[r] for r in func] or [["To be confirmed"]],
+        x=_CONTENT_X, y=_CONTENT_Y, w=half_w, h=_CONTENT_H, header_size=13, body_size=11,
+    )
+    _add_table(
+        slide, ["Non-Functional Requirements"], [[r] for r in nfr] or [["To be confirmed"]],
+        x=_CONTENT_X + half_w + 0.4, y=_CONTENT_Y, w=half_w, h=_CONTENT_H, header_size=13, body_size=11,
+    )
+    _add_footer(slide, slide_no)
+    return slide
+
+
+_SDLC_DEFAULT = [
+    ("Analysis", "Collect & validate requirements with client; wireframing", "BRD, Wireframes"),
+    ("Design", "System architecture and UI/UX design", "System Design, UI/UX"),
+    ("Development", "Implementation in agile sprints", "Source Code"),
+    ("Testing", "Manual QC, SIT & UAT support, load & security test", "Test Report"),
+    ("Deployment", "Deploy to DEV / UAT / PROD environments", "Deployment Guide"),
+    ("Maintenance", "Post go-live support to fix defects", "Support"),
+]
+
+
+def _sdlc_scope_slide(prs: Presentation, report: dict[str, Any], workspace: Path, slide_no: int, title: str = "SCOPE OF WORK | SDLC Phases"):
+    rows = [[p, d, dl] for (p, d, dl) in _SDLC_DEFAULT]
+    return _table_slide(
+        prs, title, ["Phase", "Activities", "Deliverables"], rows, slide_no,
+        col_widths=[2.2, 6.4, 3.5],
+    )
+
+
+def _delivery_effort_slide(prs: Presentation, workspace: Path, slide_no: int, title: str = "PROJECT DELIVERY | Estimated Effort"):
+    wbs = read_json_file(workspace / "wbs.json", {})
+    headers = ["Code", "Module", "Effort (MD)"]
+    rows: list[list[Any]] = []
+    if isinstance(wbs, dict) and wbs:
+        for mod in _as_list(wbs.get("effort_by_module"))[:10]:
+            if isinstance(mod, dict):
+                rows.append([mod.get("code", ""), mod.get("name", "Module"), mod.get("total_md", 0)])
+        totals = wbs.get("effort_totals") or {}
+        if totals:
+            rows.append(["", "TOTAL", totals.get("total_mandays", 0)])
+    if not rows:
+        rows = [["", "Effort will be finalized after WBS approval.", ""]]
+    return _table_slide(
+        prs, title, headers, rows, slide_no, col_widths=[1.6, 7.5, 3.0],
+    )
+
+
+def _pricing_slide(prs: Presentation, report: dict[str, Any], slide_no: int, title: str = "PRICING | CAPEX"):
+    total = report.get("tech_total_cost")
+    rows: list[list[Any]] = []
+    for item in report.get("tech_items", [])[:8]:
+        layer = item.get("layer") or "Item"
+        if str(layer).strip().lower() in _TECH_META_KEYS:
+            continue
+        choice = item.get("choice") or item.get("name") or ""
+        rows.append([f"{layer}: {choice}".strip(": "), "—"])
+    rows.append(["Total (NET, excluding taxes/VAT)", f"{total} USD" if total else "XXX USD"])
+    return _table_slide(
+        prs, title, ["Cost Item", "Amount"], rows, slide_no, col_widths=[8.5, 3.6],
+    )
+
+
+_DEFAULT_MILESTONES = [
+    ("1", "Contract sign-off / Analysis complete", "30%"),
+    ("2", "Completion of Development", "30%"),
+    ("3", "Completion of UAT", "30%"),
+    ("4", "Completion of Nursing Period", "10%"),
+]
+
+
+def _payment_milestones_slide(prs: Presentation, slide_no: int, title: str = "PRICING | Payment Milestones"):
+    rows = [[n, name, pct] for (n, name, pct) in _DEFAULT_MILESTONES]
+    return _table_slide(
+        prs, title, ["#", "Milestone", "Payment"], rows, slide_no, col_widths=[1.0, 8.6, 2.5],
+    )
+
+
+def _team_slide(prs: Presentation, report: dict[str, Any], slide_no: int, title: str = "PROJECT DELIVERY | Team Structure"):
+    rows = [
+        ["Technical Lead", "Technical Lead"],
+        ["Business Analyst", "Developer(s)"],
+        ["Project Manager", "BA / Tester"],
+        ["", "Project Manager"],
+    ]
+    return _table_slide(
+        prs, title, ["Client Team", "BnK Delivery Team"], rows, slide_no, col_widths=[6.0, 6.1],
+    )
 
 
 def _tech_bullets(report: dict[str, Any]) -> list[str]:
@@ -506,10 +802,14 @@ def _parse_outline(raw_text: str) -> list[dict[str, Any]] | None:
             for b in _as_list(item.get("bullets") or [])[:7]
             if str(b or "").strip()
         ]
+        block = str(item.get("block") or "bullets")
+        if block not in VALID_BLOCKS:
+            block = "bullets"
         valid.append(
             {
                 "title": _clip(str(item.get("title") or ""), 80),
                 "layout": layout,
+                "block": block,
                 "bullets": bullets,
                 "asset_ref": item.get("asset_ref") or None,
             }
@@ -573,6 +873,12 @@ def _render_slide(
     title = spec.get("title") or ""
     bullets = spec.get("bullets") or []
     asset_ref = spec.get("asset_ref")
+    block = spec.get("block") or "bullets"
+
+    # Structured content blocks take precedence over the plain layout dispatch.
+    if block != "bullets":
+        _render_block(prs, block, title, report, workspace, slide_no)
+        return
 
     if layout == "Cover-01":
         _cover_slide(prs, report, slide_no)
@@ -596,17 +902,47 @@ def _render_slide(
             if title:
                 _add_title(slide, title)
             _add_footer(slide, slide_no)
-    elif layout in ("BnK", "C2 - Separator/Dark"):
+    elif layout in CLOSING_LAYOUTS:
         pass  # Closing slides are always appended via _append_thank_you after the loop.
     else:
         _detail_slide(prs, title, bullets, slide_no)
 
 
+def _render_block(
+    prs: Presentation,
+    block: str,
+    title: str,
+    report: dict[str, Any],
+    workspace: Path,
+    slide_no: int,
+) -> None:
+    """Render a structured (table-based) BnK slide from a block type."""
+    if block == "tech_stack_table":
+        _tech_stack_table_slide(prs, report, slide_no, title or "PROPOSED SOLUTION | Technical Stack")
+    elif block == "func_nfr":
+        _functional_nfr_slide(prs, report, slide_no, title or "PROPOSED SOLUTION | Requirements")
+    elif block == "sdlc":
+        _sdlc_scope_slide(prs, report, workspace, slide_no, title or "SCOPE OF WORK | SDLC Phases")
+    elif block == "delivery_effort":
+        _delivery_effort_slide(prs, workspace, slide_no, title or "PROJECT DELIVERY | Estimated Effort")
+    elif block == "pricing":
+        _pricing_slide(prs, report, slide_no, title or "PRICING | CAPEX")
+    elif block == "milestones":
+        _payment_milestones_slide(prs, slide_no, title or "PRICING | Payment Milestones")
+    elif block == "team":
+        _team_slide(prs, report, slide_no, title or "PROJECT DELIVERY | Team Structure")
+    else:  # safety net
+        _detail_slide(prs, title, [], slide_no)
+
+
 def _append_thank_you(prs: Presentation, thank_you_elements: list) -> None:
-    """Append the BnK closing slide using shape elements extracted from the template."""
-    if not thank_you_elements:
-        return
-    slide = prs.slides.add_slide(_layout(prs, "C2 -  Separator/ Dark", "Blank"))
+    """Append the BnK closing slide.
+
+    Uses the template's dedicated "BnK" closing layout (which carries the brand
+    design) so a closing slide is always produced — even when the template's last
+    slide had no overlay shapes. Any captured shapes are layered on top.
+    """
+    slide = prs.slides.add_slide(_layout(prs, "BnK", "C2 -  Separator/ Dark", "Blank"))
     for el in thank_you_elements:
         slide.shapes._spTree.insert_element_before(el, "p:extLst")  # noqa: SLF001
 
@@ -653,7 +989,7 @@ def generate_ppt_proposal_file(
     if outline:
         slide_no = 1
         for spec in outline:
-            if spec.get("layout") in ("BnK", "C2 - Separator/Dark"):
+            if spec.get("layout") in CLOSING_LAYOUTS:
                 continue  # skip — closing is always appended via _append_thank_you below
             _render_slide(prs, spec, report, workspace, slide_no)
             slide_no += 1
@@ -691,19 +1027,15 @@ def generate_ppt_proposal_file(
             )
             slide_no += 1
         if "scope" in sections:
-            _detail_slide(
-                prs,
-                "SCOPE OF WORK",
-                _as_list(report["brief"].get("functional_requirements"))[:5]
-                + _as_list(report["brief"].get("non_functional_requirements"))[:5],
-                slide_no,
-            )
+            _functional_nfr_slide(prs, report, slide_no, "PROPOSED SOLUTION | Requirements")
+            slide_no += 1
+            _sdlc_scope_slide(prs, report, workspace, slide_no)
             slide_no += 1
         if "architecture_diagram" in sections:
             _diagram_slide(prs, report, workspace, slide_no)
             slide_no += 1
         if "technical_stack" in sections:
-            _detail_slide(prs, "PROPOSED SOLUTION | Technical Stack", _tech_bullets(report), slide_no)
+            _tech_stack_table_slide(prs, report, slide_no)
             slide_no += 1
         if "key_decisions" in sections:
             _detail_slide(prs, "PROPOSED SOLUTION | Key Decisions", _as_list(report["blueprint"].get("key_decisions")), slide_no)
@@ -712,7 +1044,17 @@ def generate_ppt_proposal_file(
             sec += 1
             _section_slide(prs, f"{_roman(sec)}. Project Delivery", slide_no)
             slide_no += 1
-            _detail_slide(prs, "PROJECT DELIVERY | Estimated Effort", _delivery_bullets(workspace), slide_no)
+            _delivery_effort_slide(prs, workspace, slide_no)
+            slide_no += 1
+            _team_slide(prs, report, slide_no)
+            slide_no += 1
+        if "pricing" in sections:
+            sec += 1
+            _section_slide(prs, f"{_roman(sec)}. Pricing", slide_no)
+            slide_no += 1
+            _pricing_slide(prs, report, slide_no)
+            slide_no += 1
+            _payment_milestones_slide(prs, slide_no)
             slide_no += 1
         if "risks" in sections:
             risk_bullets = [

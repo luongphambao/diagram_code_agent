@@ -198,6 +198,31 @@ def test_generate_ppt_proposal_writes_openable_pptx(monkeypatch, tmp_path):
     assert len(prs.slides) >= 2
 
 
+def test_generate_ppt_proposal_renders_brand_tables(monkeypatch, tmp_path):
+    """The fallback path (no LLM) must emit native, brand-styled tables, not just bullets."""
+    from PIL import Image
+    from pptx import Presentation
+
+    _use_workspace(monkeypatch, tmp_path)
+    _write_report_inputs(tmp_path)
+    Image.new("RGB", (1280, 720), "white").save(tmp_path / "out.png")
+
+    result = tools.generate_ppt_proposal.func(
+        include_sections=["cover", "technical_stack", "scope", "pricing"]
+    )
+
+    assert "Wrote" in result
+    prs = Presentation(str(tmp_path / "out.pptx"))
+    # At least one slide must contain a real table (graphic frame), proving table builders ran.
+    tables = [
+        shape
+        for slide in prs.slides
+        for shape in slide.shapes
+        if shape.has_table
+    ]
+    assert tables, "expected at least one native table in the proposal"
+
+
 def test_report_data_uses_step_results_and_section_aliases(tmp_path):
     from PIL import Image
 
