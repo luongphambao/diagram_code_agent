@@ -369,16 +369,20 @@ def export_drawio() -> str:
         summary=f"Created editable draw.io artifact ({out.stat().st_size} bytes).",
         data={"artifacts": record_artifact_inventory(WORKSPACE)},
     )
-    # Structural lint — fast pre-check before visual review.
+    # Structural + design lint — fast pre-check before the (slow) visual critic.
     lint = ""
     try:
         from validate_drawio import validate_file
         report = validate_file(str(out))
-        lint = (f"\nLint: {report['error_count']} error(s), {report['warning_count']} warning(s).")
+        lint = (f"\nLint: {report['error_count']} error(s), "
+                f"{report['warning_count']} warning(s), "
+                f"{report.get('advice_count', 0)} advice.")
         if report["errors"]:
             lint += f" Errors: {'; '.join(report['errors'][:5])}"
         elif report["warnings"]:
             lint += f" Warnings: {'; '.join(report['warnings'][:3])}"
+        if report.get("advice"):
+            lint += f"\nDesign advice: {'; '.join(report['advice'][:5])}"
     except Exception:  # noqa: BLE001
         pass
 
