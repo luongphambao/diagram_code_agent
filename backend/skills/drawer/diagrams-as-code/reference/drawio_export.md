@@ -52,9 +52,34 @@ prettygraph is an architecture / flow tool. Map type requests onto its `kind`s:
 ## Layout & correctness
 The transferable principles (spacing to avoid overlap, short labelled edges, one
 concern per edge, every node in a cluster, mandatory cross-cluster edges) all live
-in `pro-style/SKILL.md` — follow those. After `export_drawio()`, read the
-**Lint** line it returns (from `validate_drawio`); resolve any reported errors
-before `finalize_diagram`.
+in `pro-style/SKILL.md` — follow those.
+
+After `export_drawio()`, read the **Lint** line it returns (from `validate_drawio`).
+It now reports three buckets: **errors** (must fix before `finalize_diagram` —
+e.g. an invented stencil name or a dangling edge), **warnings**, and **design
+advice** (a deterministic pre-critic check, ported from drawio-ai-kit). The advice
+catches, WITHOUT a render, the same "looks auto-generated" tells the visual critic
+would flag — act on it before re-rendering so you don't burn render/vision passes:
+
+- **Recolored icon** → keep each icon's category colour (Compute orange, Storage
+  green, Database pink/magenta, Security red, Networking purple). Don't override it.
+- **Too many font sizes / oversized text** → ≤ 4 distinct sizes, label text ≤ 14px;
+  put the title in its own area, not as a giant in-canvas label.
+- **Palette too scattered** → ≤ ~8 background fill colours; reserve strong colour
+  for notes/accents. Prefer `light-dark(...)` tokens so it reads in dark mode too.
+- **Fan-out branch should be sharp + pinned** → for one-source→many-targets, use
+  `rounded=0` and pin `exitX/exitY`+`entryX/entryY` so the parallel lines align.
+  This is the single biggest hand-made-vs-auto tell.
+- **Edge label on a bent (L/Z) route** → add one waypoint in the middle of the
+  corridor so the label sits centred on a straight segment.
+- **Stacked arrowheads (fan-in)** / **overlap** / **child spills its frame** /
+  **edge runs through an unrelated node** / **long detour connectors** → these are
+  PLACEMENT smells: move nodes closer, keep shared resources next to their
+  consumers, and give edges a clear lane.
+
+`validate_drawio --profile aws_native|generic|auto` controls which audits run; the
+export uses `auto` (AWS-convention checks only fire when the diagram uses
+`mxgraph.aws4.*` stencils).
 
 ## Appendix — raw mxgraph styles (reference only, NOT auto-applied)
 If a future raw-XML export or manual draw.io edit is needed, these are the official

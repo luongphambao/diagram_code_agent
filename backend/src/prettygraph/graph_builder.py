@@ -16,6 +16,15 @@ from .constants import (
     PRO_TITLE,
 )
 
+try:
+    from ..drawio_catalog import load_catalog as _load_catalog, get_icon as _catalog_get_icon
+except (ImportError, ValueError):
+    try:
+        from drawio_catalog import load_catalog as _load_catalog, get_icon as _catalog_get_icon  # type: ignore[no-redef]
+    except ImportError:
+        _load_catalog = None  # type: ignore[assignment]
+        _catalog_get_icon = None  # type: ignore[assignment]
+
 
 def _est_text_w(s: str, size: int, *, bold: bool = False) -> float:
     """Approx Helvetica text width in pts (~0.62em/char bold, ~0.54em regular)."""
@@ -456,13 +465,22 @@ class Pretty:
         return png_path
 
     def _write_sidecar(self, path: str) -> None:
+        _cat = _load_catalog() if _load_catalog else None
+
         node_meta = {}
         for n in self.nodes.values():
             fill, stroke, _, _ = self._node_style(n)
+            icon_path = self._icon_path(n.icon)
+            stencil_name: str | None = None
+            if _cat and _catalog_get_icon and icon_path:
+                stem = Path(icon_path).stem.lower()
+                if _catalog_get_icon(_cat, stem):
+                    stencil_name = stem
             node_meta[n.id] = {
                 "label": n.label, "sublabel": n.sublabel, "kind": n.kind,
-                "fill": fill, "stroke": stroke, "icon": self._icon_path(n.icon),
+                "fill": fill, "stroke": stroke, "icon": icon_path,
                 "shadow": 1 if self.theme == "pro" else 0,
+                "stencil_name": stencil_name,
             }
         cluster_meta = {}
         for c in self.clusters.values():

@@ -69,7 +69,12 @@ from a senior solutions architect and produce a production-quality diagram.
    finding before rendering.
 7. Call `render_diagram(code=<complete script>)`, inspect the returned PNG,
    refine until clean (≤3 renders total).
-8. Call `export_drawio()`.
+8. Call `export_drawio()`. Read its **Lint** line: fix every reported error
+   (e.g. invented stencil, dangling edge) and act on the high-value **design
+   advice** (recolored icon, fan-out not sharp/pinned, scattered palette, edge
+   label on a bent route) — these are a cheap pre-critic check, so resolving them
+   here avoids extra render/vision passes. See `diagrams-as-code`
+   `reference/drawio_export.md` for what each advisory means.
 9. **Return ONLY a short summary** — one paragraph, no images, no step-by-step
    log: confirm `out.png` + `out.drawio` are ready and list the main icons used.
    Example: "Done. out.png + out.drawio ready. Icons: ALB, ECS, RDS Aurora,

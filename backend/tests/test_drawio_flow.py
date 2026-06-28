@@ -131,6 +131,135 @@ def test_audit_profile_generic_skips_aws_conventions(tmp_path):
 # Audits on the committed AWS sample (regression against known findings)
 # --------------------------------------------------------------------------- #
 
+# --------------------------------------------------------------------------- #
+# _write_sidecar: stencil_name resolution
+# --------------------------------------------------------------------------- #
+
+def test_sidecar_stencil_name_for_known_icon(tmp_path):
+    """_write_sidecar should emit stencil_name when the icon stem is in the catalog."""
+    from prettygraph.graph_builder import Pretty
+
+    # Create a fake icon whose stem matches a real catalog entry.
+    icon_dir = tmp_path / "icons"
+    icon_dir.mkdir()
+    (icon_dir / "ec2.png").write_bytes(b"")
+
+    g = Pretty("Test", icons_root=str(icon_dir))
+    g.box("n1", "EC2 Instance", kind="compute", icon="ec2.png")
+    g.box("n2", "Unknown Node", kind="process", icon="some_unknown_icon.png")
+    g.box("n3", "No Icon", kind="neutral")
+
+    sidecar_path = tmp_path / "out.nodes.json"
+    g._write_sidecar(str(sidecar_path))
+
+    import json
+    data = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    nodes = data["nodes"]
+
+    assert nodes["n1"]["stencil_name"] == "ec2", (
+        "ec2.png stem should resolve to catalog entry 'ec2'"
+    )
+    assert nodes["n2"]["stencil_name"] is None, (
+        "unknown icon should produce stencil_name=None"
+    )
+    assert nodes["n3"]["stencil_name"] is None, (
+        "node with no icon should produce stencil_name=None"
+    )
+
+
+def test_dot_to_drawio_uses_native_stencil(tmp_path, monkeypatch):
+    """dot_to_drawio should emit resIcon stencil style when sidecar has stencil_name."""
+    import json
+    import subprocess
+    from prettygraph.drawio import dot_to_drawio
+
+    # Minimal Graphviz JSON output for one node (pos in pts, bb in pts).
+    gv_json = json.dumps({
+        "bb": "0,0,200,100",
+        "objects": [
+            {"_gvid": 1, "name": "n1", "pos": "100,50", "width": "1.5", "height": "0.8"}
+        ],
+        "edges": [],
+    })
+
+    # Patch subprocess so no real Graphviz is needed.
+    def _fake_run(cmd, **kw):
+        class _R:
+            stdout = gv_json
+            returncode = 0
+        return _R()
+
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+
+    sidecar = {
+        "nodes": {
+            "n1": {
+                "label": "EC2", "sublabel": None, "kind": "compute",
+                "fill": "#f0f0f0", "stroke": "#aaaaaa", "icon": None,
+                "shadow": 0, "stencil_name": "ec2",
+            }
+        },
+        "clusters": {},
+        "style": {},
+    }
+    sidecar_path = tmp_path / "out.nodes.json"
+    sidecar_path.write_text(json.dumps(sidecar), encoding="utf-8")
+    out_path = tmp_path / "out.drawio"
+
+    xml = dot_to_drawio("fake.dot", str(sidecar_path), str(out_path))
+
+    # Native stencil must appear; base64 must not.
+    assert "resIcon=mxgraph.aws4.ec2" in xml, "native resIcon not found in output XML"
+    assert "data:image/png" not in xml, "base64 embed should not appear for stencil node"
+
+
+def test_dot_to_drawio_fallback_to_b64(tmp_path, monkeypatch):
+    """dot_to_drawio falls back to base64 when stencil_name is absent."""
+    import json
+    import subprocess
+    from prettygraph.drawio import dot_to_drawio
+
+    gv_json = json.dumps({
+        "bb": "0,0,200,100",
+        "objects": [
+            {"_gvid": 1, "name": "n1", "pos": "100,50", "width": "1.5", "height": "0.8"}
+        ],
+        "edges": [],
+    })
+
+    def _fake_run(cmd, **kw):
+        class _R:
+            stdout = gv_json
+            returncode = 0
+        return _R()
+
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+
+    # Write a minimal 1-byte fake PNG so _b64 can read it.
+    fake_icon = tmp_path / "custom.png"
+    fake_icon.write_bytes(b"\x89PNG")
+
+    sidecar = {
+        "nodes": {
+            "n1": {
+                "label": "Custom", "sublabel": None, "kind": "process",
+                "fill": "#f0f0f0", "stroke": "#aaaaaa", "icon": str(fake_icon),
+                "shadow": 0, "stencil_name": None,
+            }
+        },
+        "clusters": {},
+        "style": {},
+    }
+    sidecar_path = tmp_path / "out.nodes.json"
+    sidecar_path.write_text(json.dumps(sidecar), encoding="utf-8")
+    out_path = tmp_path / "out.drawio"
+
+    xml = dot_to_drawio("fake.dot", str(sidecar_path), str(out_path))
+
+    assert "data:image/png" in xml, "base64 fallback expected when no stencil_name"
+    assert "resIcon" not in xml
+
+
 def test_audits_on_committed_sample():
     sample = _REPO_ROOT / "out_aws_drawio.drawio"
     if not sample.exists():

@@ -11,6 +11,15 @@ from pathlib import Path
 
 from .constants import EDGE_COLOR, EDGE_FONTCOLOR
 
+try:
+    from ..drawio_catalog import load_catalog as _load_catalog, style_for_icon as _style_for_icon
+except (ImportError, ValueError):
+    try:
+        from drawio_catalog import load_catalog as _load_catalog, style_for_icon as _style_for_icon  # type: ignore[no-redef]
+    except ImportError:
+        _load_catalog = None  # type: ignore[assignment]
+        _style_for_icon = None  # type: ignore[assignment]
+
 
 def _b64(path: str | None) -> str | None:
     if not path:
@@ -23,6 +32,8 @@ def _b64(path: str | None) -> str | None:
 
 def dot_to_drawio(dot_path: str, sidecar_path: str, out_path: str) -> str:
     """Lay out the .dot with Graphviz and emit a styled, editable .drawio."""
+    _cat = _load_catalog() if _load_catalog else None
+
     js = subprocess.run(["dot", "-Tjson", dot_path],
                         capture_output=True, text=True, check=True).stdout
     g = json.loads(js)
@@ -71,27 +82,42 @@ def dot_to_drawio(dot_path: str, sidecar_path: str, out_path: str) -> str:
         cid = f"n{o['_gvid']}"
         gvid_to_cell[o["_gvid"]] = cid
         lbl = meta["label"] + (("\n" + meta["sublabel"]) if meta.get("sublabel") else "")
-        b64 = _b64(meta.get("icon"))
         shadow = ";shadow=1" if meta.get("shadow") else ""
-        if b64:
-            style = (
-                f"shape=label;html=1;rounded=1;arcSize=12;whiteSpace=wrap;"
-                f"image={b64};imageAlign=left;imageVerticalAlign=middle;"
-                f"imageWidth={icon_px};imageHeight={icon_px};spacingLeft={icon_px + 10};align=left;"
-                f"fontSize={title_fs};fontStyle=1;fontColor=#222222;"
-                f"fillColor={meta['fill']};strokeColor={meta['stroke']}{shadow};"
+
+        # Prefer native draw.io stencil when the catalog has an entry for this icon.
+        stencil_name = meta.get("stencil_name")
+        stencil_obj = (_style_for_icon(_cat, stencil_name) if _cat and stencil_name else None)
+        if stencil_obj:
+            sw = stencil_obj.get("width", 48)
+            sh = stencil_obj.get("height", 48)
+            gx_s = cx - sw / 2.0
+            gy_s = (H - cy) - sh / 2.0
+            cells.append(
+                f'<mxCell id="{cid}" value="{html.escape(lbl)}" style="{stencil_obj["style"]}" '
+                f'vertex="1" parent="1"><mxGeometry x="{gx_s:.0f}" y="{gy_s:.0f}" '
+                f'width="{sw}" height="{sh}" as="geometry"/></mxCell>'
             )
         else:
-            style = (
-                f"rounded=1;whiteSpace=wrap;html=1;fontSize={title_fs};fontStyle=1;"
-                f"fontColor=#222222;fillColor={meta['fill']};"
-                f"strokeColor={meta['stroke']};"
+            b64 = _b64(meta.get("icon"))
+            if b64:
+                style = (
+                    f"shape=label;html=1;rounded=1;arcSize=12;whiteSpace=wrap;"
+                    f"image={b64};imageAlign=left;imageVerticalAlign=middle;"
+                    f"imageWidth={icon_px};imageHeight={icon_px};spacingLeft={icon_px + 10};align=left;"
+                    f"fontSize={title_fs};fontStyle=1;fontColor=#222222;"
+                    f"fillColor={meta['fill']};strokeColor={meta['stroke']}{shadow};"
+                )
+            else:
+                style = (
+                    f"rounded=1;whiteSpace=wrap;html=1;fontSize={title_fs};fontStyle=1;"
+                    f"fontColor=#222222;fillColor={meta['fill']};"
+                    f"strokeColor={meta['stroke']};"
+                )
+            cells.append(
+                f'<mxCell id="{cid}" value="{html.escape(lbl)}" style="{style}" '
+                f'vertex="1" parent="1"><mxGeometry x="{gx:.0f}" y="{gy:.0f}" '
+                f'width="{max(w, 130):.0f}" height="{max(h, 52):.0f}" as="geometry"/></mxCell>'
             )
-        cells.append(
-            f'<mxCell id="{cid}" value="{html.escape(lbl)}" style="{style}" '
-            f'vertex="1" parent="1"><mxGeometry x="{gx:.0f}" y="{gy:.0f}" '
-            f'width="{max(w, 130):.0f}" height="{max(h, 52):.0f}" as="geometry"/></mxCell>'
-        )
 
     for i, e in enumerate(g.get("edges", [])):
         src, tgt = gvid_to_cell.get(e.get("tail")), gvid_to_cell.get(e.get("head"))
