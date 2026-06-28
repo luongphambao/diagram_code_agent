@@ -42,7 +42,8 @@ _TOOL_LABELS = {
     "submit_critique": "Recording the diagram review",
     "finalize_diagram": "Finalizing the diagram",
     "generate_pdf_report": "Generating the PDF report",
-    "generate_ppt_proposal": "Generating the PPT proposal",
+    "generate_ppt_proposal": "Presenting the PPT proposal for approval",
+    "create_pptx": "Generating the PowerPoint deck",
     "send_architecture_report_email": "Sending the architecture report email",
     "write_todos": "Planning the steps",
     "task": "Delegating to subagent",
@@ -65,6 +66,7 @@ _TOOL_TO_SUBAGENT: dict[str, str] = {
     "export_drawio": "drawer",
     "inspect_diagram": "critic",
     "submit_critique": "critic",
+    "create_pptx": "ppt_generator",
 }
 
 

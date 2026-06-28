@@ -42,6 +42,41 @@ logger = logging.getLogger("diagram-agent")
 
 router = APIRouter()
 
+_RESTORABLE_FILES = {
+    "architecture_analysis": "architecture_analysis.json",
+    "diagram_brief":         "diagram_brief.json",
+    "tech_stack":            "tech_stack.json",
+    "blueprint":             "blueprint.json",
+}
+
+
+async def _restore_workspace_from_db(pool, thread_id: str, workspace) -> None:
+    """Write stage JSON files back to disk if they are missing but present in DB state.
+
+    This guards against the shared-workspace race: any fresh run calls
+    clear_stage_markers() which deletes JSON files for all threads.  When a
+    PPT/PDF followup comes in for a thread whose files were wiped by another
+    thread, we recover them from the snapshot saved in conversations.state_json.
+    """
+    from pathlib import Path
+    ws = Path(workspace)
+    missing = [k for k, f in _RESTORABLE_FILES.items() if not (ws / f).exists()]
+    if not missing:
+        return
+    history = await conv_db.get_history(pool, thread_id)
+    if not history:
+        return
+    state = history.get("state") or {}
+    ws.mkdir(parents=True, exist_ok=True)
+    for key in missing:
+        filename = _RESTORABLE_FILES[key]
+        value = state.get(key)
+        if value:
+            (ws / filename).write_text(
+                json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+            logger.info("restored %s from DB state for thread %s", filename, thread_id)
+
 
 @router.post("/agui")
 async def agui_endpoint(request: Request):
@@ -113,6 +148,7 @@ async def agui_endpoint(request: Request):
                 if not preserve_artifacts:
                     clear_stage_markers()
                 else:
+                    await _restore_workspace_from_db(request.app.state.pool, thread_id, WORKSPACE)
                     artifact_instruction = (
                         "The user is asking for a PPT/proposal/PowerPoint deck. Do NOT "
                         "redesign or re-render the diagram. Call `generate_ppt_proposal({})` "

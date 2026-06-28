@@ -48,6 +48,7 @@ from prompts import (
     build_critic_prompt,
     build_drawer_prompt,
     build_icon_resolver_prompt,
+    build_ppt_generator_prompt,
     build_pretty_system_prompt,
     build_system_prompt,
     build_wbs_planner_prompt,
@@ -55,7 +56,7 @@ from prompts import (
 from context import SessionContext
 from tools import (
     CRITIC_TOOLS, DRAWER_TOOLS, GATE_TOOL_NAMES, ICON_RESOLVER_TOOLS, MAIN_TOOLS,
-    WBS_PLANNER_TOOLS,
+    PPT_GENERATOR_TOOLS, WBS_PLANNER_TOOLS,
 )
 
 logger = logging.getLogger(__name__)
@@ -366,6 +367,9 @@ DRAWER_SKILL_PATHS = [
 WBS_PLANNER_SKILL_PATHS = [
     str(SKILLS_DIR / "wbs-planning"),
 ]
+PPT_GENERATOR_SKILL_PATHS = [
+    str(SKILLS_DIR / "ppt-generator"),
+]
 
 # Context-management: the conversation is re-sent every turn, so stale tool
 # outputs (read_file of skill docs, repeated search_icons, old render images)
@@ -512,6 +516,23 @@ def _critic_subagent(style: str) -> dict:
     }
 
 
+def _ppt_generator_subagent(workdir: str) -> dict:
+    """Config for the ppt_generator subagent: read workspace context + write out.pptx."""
+    return {
+        "name": "ppt_generator",
+        "description": (
+            "Reads approved workspace artifacts (blueprint.json, diagram_brief.json, "
+            "tech_stack.json, out.png) and generates out.pptx using the BnK proposal "
+            "template.  Called BEFORE the generate_ppt_proposal gate so the main agent "
+            "can pass rich defaults (title, subtitle, brand, sections) to the user. "
+            "Returns a short status."
+        ),
+        "system_prompt": build_ppt_generator_prompt(workdir),
+        "tools": PPT_GENERATOR_TOOLS,
+        "skills": PPT_GENERATOR_SKILL_PATHS,
+    }
+
+
 def _wbs_planner_subagent(workdir: str) -> dict:
     """Config for the wbs_planner subagent: decompose + estimate the WBS.
 
@@ -555,10 +576,11 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
     from config import get_model, get_system_prompt_prefix
 
     main_model           = model or get_model("main",          DEFAULT_MODEL)
-    icon_resolver_model  = get_model("icon_resolver", main_model)
-    drawer_model         = get_model("drawer",         main_model)
-    critic_model         = get_model("critic",         main_model)
-    wbs_planner_model    = get_model("wbs_planner",     main_model)
+    icon_resolver_model  = get_model("icon_resolver",   main_model)
+    drawer_model         = get_model("drawer",           main_model)
+    critic_model         = get_model("critic",           main_model)
+    wbs_planner_model    = get_model("wbs_planner",      main_model)
+    ppt_generator_model  = get_model("ppt_generator",    main_model)
 
     workdir = str(WORKSPACE)
     prefix = get_system_prompt_prefix(main_model)
@@ -567,10 +589,11 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
     else:
         system_prompt = prefix + build_system_prompt(workdir, LOCAL_ICONS, LOCAL_MANIFEST)
 
-    icon_resolver_prefix = get_system_prompt_prefix(icon_resolver_model)
-    drawer_prefix        = get_system_prompt_prefix(drawer_model)
-    critic_prefix        = get_system_prompt_prefix(critic_model)
-    wbs_planner_prefix   = get_system_prompt_prefix(wbs_planner_model)
+    icon_resolver_prefix  = get_system_prompt_prefix(icon_resolver_model)
+    drawer_prefix         = get_system_prompt_prefix(drawer_model)
+    critic_prefix         = get_system_prompt_prefix(critic_model)
+    wbs_planner_prefix    = get_system_prompt_prefix(wbs_planner_model)
+    ppt_generator_prefix  = get_system_prompt_prefix(ppt_generator_model)
 
     if not os.getenv("TAVILY_API_KEY"):
         logger.warning(
@@ -598,22 +621,25 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
     else:
         os.environ.setdefault("RENDER_INCLUDES_IMAGE", "1")
 
-    llm                = _make_llm(main_model)
-    icon_resolver_llm  = _make_llm(icon_resolver_model)
-    drawer_llm         = _make_llm(drawer_model)
-    critic_llm         = _make_llm(critic_model)
-    wbs_planner_llm    = _make_llm(wbs_planner_model)
+    llm                 = _make_llm(main_model)
+    icon_resolver_llm   = _make_llm(icon_resolver_model)
+    drawer_llm          = _make_llm(drawer_model)
+    critic_llm          = _make_llm(critic_model)
+    wbs_planner_llm     = _make_llm(wbs_planner_model)
+    ppt_generator_llm   = _make_llm(ppt_generator_model)
     backend = make_local_backend()
 
     # Pre-compile subagents so their internal steps are visible in the outer stream.
-    icon_resolver_spec = _icon_resolver_subagent(workdir, LOCAL_ICONS, LOCAL_MANIFEST)
-    drawer_spec        = _drawer_subagent(workdir, LOCAL_ICONS, LOCAL_MANIFEST, style)
-    critic_spec        = _critic_subagent(style)
-    wbs_planner_spec   = _wbs_planner_subagent(workdir)
+    icon_resolver_spec  = _icon_resolver_subagent(workdir, LOCAL_ICONS, LOCAL_MANIFEST)
+    drawer_spec         = _drawer_subagent(workdir, LOCAL_ICONS, LOCAL_MANIFEST, style)
+    critic_spec         = _critic_subagent(style)
+    wbs_planner_spec    = _wbs_planner_subagent(workdir)
+    ppt_generator_spec  = _ppt_generator_subagent(workdir)
     icon_resolver_spec["system_prompt"] = icon_resolver_prefix + icon_resolver_spec["system_prompt"]
     drawer_spec["system_prompt"]        = drawer_prefix + drawer_spec["system_prompt"]
     critic_spec["system_prompt"]        = critic_prefix + critic_spec["system_prompt"]
     wbs_planner_spec["system_prompt"]   = wbs_planner_prefix + wbs_planner_spec["system_prompt"]
+    ppt_generator_spec["system_prompt"] = ppt_generator_prefix + ppt_generator_spec["system_prompt"]
 
     icon_resolver_compiled: dict = {
         "name": icon_resolver_spec["name"],
@@ -682,6 +708,23 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
             "wbs_planner",
         ),
     }
+    ppt_generator_compiled: dict = {
+        "name": ppt_generator_spec["name"],
+        "description": ppt_generator_spec["description"],
+        "runnable": _StreamingSubAgentRunnable(
+            create_deep_agent(
+                model=ppt_generator_llm,
+                tools=ppt_generator_spec["tools"],
+                system_prompt=ppt_generator_spec["system_prompt"],
+                backend=backend,
+                memory=[MEMORY_PATH],
+                skills=ppt_generator_spec.get("skills"),
+                middleware=_middleware(run_limit=_CRITIC_CALL_LIMIT, agent_name="ppt_generator"),
+                store=store,
+            ),
+            "ppt_generator",
+        ),
+    }
 
     # Each gate tool pauses for human review/approval before it runs.
     interrupt_on = {
@@ -697,7 +740,10 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
         backend=backend,
         memory=[MEMORY_PATH],
         skills=MAIN_SKILL_PATHS,
-        subagents=[icon_resolver_compiled, drawer_compiled, critic_compiled, wbs_planner_compiled],
+        subagents=[
+            icon_resolver_compiled, drawer_compiled, critic_compiled,
+            wbs_planner_compiled, ppt_generator_compiled,
+        ],
         middleware=_middleware(agent_name="main"),
         checkpointer=checkpointer,
         store=store,

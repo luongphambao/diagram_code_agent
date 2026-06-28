@@ -177,12 +177,9 @@ class PPTProposalError(RuntimeError):
     """Raised when PPT proposal generation cannot complete."""
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[2]
-
-
 def _template_path() -> Path:
-    return _repo_root() / "DATA" / "SLIDE" / "[BnK] Template - Proposal.pptx"
+    # parents[0]=src/, parents[1]=backend/ — bundled alongside the package
+    return Path(__file__).resolve().parents[1] / "templates" / "bnk_proposal_template.pptx"
 
 
 def _clip(text: Any, limit: int = 220) -> str:

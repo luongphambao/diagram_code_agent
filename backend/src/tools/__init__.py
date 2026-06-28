@@ -134,6 +134,7 @@ from .analysis_tools import (
     _validate_req_coverage,
     _wants_structural,
     analyze_architecture_requirements,
+    create_pptx,
     generate_pdf_report,
     generate_ppt_proposal,
     inspect_diagram,
@@ -208,6 +209,9 @@ DRAWER_TOOLS = [plan_style_sizes, fit_labels, declare_poster_grid, audit_diagram
 
 # Critic subagent tools: read-only review of the rendered diagram.
 CRITIC_TOOLS = [inspect_diagram, submit_critique]
+
+# PPT generator subagent tools: generate the slide deck from workspace artifacts.
+PPT_GENERATOR_TOOLS = [create_pptx]
 
 # Tools that require human approval before they run (interrupt_on in agent.py).
 GATE_TOOL_NAMES = [

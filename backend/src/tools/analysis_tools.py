@@ -1157,6 +1157,47 @@ def generate_ppt_proposal(
 
 
 @tool(parse_docstring=True)
+def create_pptx(
+    title: str = "",
+    subtitle: str = "",
+    brand: str = "",
+    include_sections: list[str] | None = None,
+) -> str:
+    """Write out.pptx from the approved workspace artifacts.
+
+    Called by the ppt_generator subagent to produce the slide deck from
+    context files already present in the workspace (blueprint.json,
+    diagram_brief.json, tech_stack.json, out.png).  Unlike the gate tool
+    generate_ppt_proposal, this tool runs silently without pausing for
+    human approval — it is invoked only after the user has already agreed
+    to the proposed section list.
+
+    Args:
+        title: Deck title (falls back to blueprint slide_title if empty).
+        subtitle: Subtitle / kicker line.
+        brand: Client brand name shown on the cover.
+        include_sections: Section keys to render; leave empty for all sections.
+    """
+    try:
+        pptx_path, sections, unrecognized = generate_ppt_proposal_file(
+            WORKSPACE,
+            title=title,
+            subtitle=subtitle,
+            brand=brand,
+            include_sections=include_sections or None,
+        )
+    except FileNotFoundError as exc:
+        return f"ERROR: {exc}"
+    except PPTProposalError as exc:
+        return f"ERROR: PPT generation failed: {exc}"
+    _bump_tool_summary("generate_ppt_proposal", ppt_sections=len(sections))
+    msg = f"Wrote {pptx_path} ({len(sections)} slides rendered)."
+    if unrecognized:
+        msg += f" Ignored unrecognised sections: {', '.join(unrecognized)}."
+    return msg
+
+
+@tool(parse_docstring=True)
 def web_research(query: str, topic: str = "general") -> str:
     """Run ONE live web search to verify time-sensitive facts via Tavily.
 

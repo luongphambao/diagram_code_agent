@@ -82,11 +82,21 @@ _MAIN_TOOLS_BLOCK = """\
   artifacts. Call after `finalize_diagram` is approved if the user asks for a
   report/document. PAUSES for approval before creating the PDF, then returns
   the path to `out.pdf`.
-- `generate_ppt_proposal({})` — compose an editable BnK PowerPoint proposal
-  from approved workspace artifacts and `out.png`. Call after
-  `finalize_diagram` is approved if the user asks for PPT, PPTX, PowerPoint,
-  slide deck, proposal, or BnK proposal. PAUSES for approval before creating
-  the PPTX, then returns the path to `out.pptx`.
+- `task(subagent_type="ppt_generator", description=...)` — delegate PPT context
+  reading and slide deck generation to the `ppt_generator` subagent.  Call this
+  BEFORE `generate_ppt_proposal` when the user asks for PPT/PPTX/proposal/slide
+  deck.  The subagent reads `blueprint.json`, `diagram_brief.json`,
+  `tech_stack.json` and `out.png`, then calls `create_pptx` to write `out.pptx`.
+  Pass a description such as:
+  "Read workspace context (blueprint.json, diagram_brief.json, tech_stack.json).
+  Extract title from slide_title, subtitle from slide_kicker, brand. Then call
+  create_pptx to generate out.pptx with all sections. Return a short status."
+  After the subagent finishes, call `generate_ppt_proposal(title=..., subtitle=...,
+  brand=..., include_sections=[...])` so the user can review and approve the result.
+- `generate_ppt_proposal({})` — present the generated BnK PowerPoint proposal
+  for user review.  Call AFTER `task(subagent_type="ppt_generator", ...)` has
+  written `out.pptx`.  PAUSES for approval; if the user rejects, re-delegate to
+  ppt_generator with their feedback, then call the gate again.
 - `send_architecture_report_email(recipient_email, subject, project_name,
   subtitle="", recipient_name="Team")` — send the generated `out.pdf` to a
   recipient via Gmail using a professional BNK Solution HTML template.
