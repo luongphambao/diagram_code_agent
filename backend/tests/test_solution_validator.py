@@ -91,6 +91,60 @@ def test_validate_solution_reads_workspace(tmp_path):
     assert summary.startswith("VALIDATION: BLOCK")
 
 
+def test_evaluate_solution_model_none_backcompat():
+    """The pure path (no model) keeps the original titles and empty semantic ids."""
+    findings = evaluate_solution(BRIEF, BLUEPRINT, WBS, model=None)
+    unmapped = [f for f in findings if f.dimension == "coverage"]
+    assert unmapped and all(f.entity_ids == [] for f in unmapped)
+
+
+def test_validate_solution_uses_csm_ids(tmp_path):
+    (tmp_path / "diagram_brief.json").write_text(json.dumps(BRIEF))
+    (tmp_path / "blueprint.json").write_text(json.dumps(BLUEPRINT))
+    (tmp_path / "wbs.json").write_text(json.dumps(WBS))
+    findings, _ = validate_solution(tmp_path)
+    # building the CSM is a side effect of validate_solution
+    assert (tmp_path / "solution_model.json").exists()
+    ids = {i for f in findings for i in f.entity_ids}
+    assert any(i.startswith("REQ-") for i in ids)   # unmapped requirement anchored
+    assert any(i.startswith("WBS-") for i in ids)   # orphan WBS anchored
+
+
+def test_write_trace_links_projects_csm(tmp_path):
+    """The core 1.3 goal: ids in trace_links.json all exist in solution_model.json."""
+    (tmp_path / "diagram_brief.json").write_text(json.dumps(BRIEF))
+    (tmp_path / "blueprint.json").write_text(json.dumps(BLUEPRINT))
+    (tmp_path / "wbs.json").write_text(json.dumps(WBS))
+    graph = write_trace_links(tmp_path)
+
+    model = json.loads((tmp_path / "solution_model.json").read_text(encoding="utf-8"))
+    model_ids = {
+        e["id"]
+        for group in ("requirements", "constraints", "assumptions", "decisions",
+                      "components", "risks", "work_items")
+        for e in model.get(group, [])
+    }
+    endpoints = {l["from"] for l in graph["links"]} | {l["to"] for l in graph["links"]}
+    assert endpoints, "expected at least one trace link"
+    assert endpoints <= model_ids
+
+
+def test_write_trace_links_fallback(tmp_path, monkeypatch):
+    """If the CSM can't be built, the legacy artifact path still emits the file."""
+    import csm_adapter
+
+    def _boom(*_a, **_k):
+        raise RuntimeError("CSM unavailable")
+
+    monkeypatch.setattr(csm_adapter, "build_solution_model", _boom)
+    (tmp_path / "diagram_brief.json").write_text(json.dumps(BRIEF))
+    (tmp_path / "blueprint.json").write_text(json.dumps(BLUEPRINT))
+    (tmp_path / "wbs.json").write_text(json.dumps(WBS))
+    graph = write_trace_links(tmp_path)
+    assert (tmp_path / "trace_links.json").exists()
+    assert graph["links"]
+
+
 # --- traceability sidecar ----------------------------------------------------
 
 def test_trace_links_connect_req_to_component_and_wbs():

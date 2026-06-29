@@ -1028,14 +1028,46 @@ class PdfReportConfig(BaseModel):
     )
 
 
+def _epistemic_note(model, *, cap: int = 8) -> str:
+    """Render the CSM's epistemic split (docx §4.2) as a compact, display-only block.
+
+    Shows what is known vs. what still needs a human: confirmed facts, pending
+    assumptions (flagged for customer confirmation), open decisions, and hard
+    constraints. Empty sections are omitted. This is surfacing only — there is no
+    accept/risk interrupt tool yet (HITL v2 is out of scope).
+    """
+    try:
+        summ = model.epistemic_summary()
+    except Exception:
+        return ""
+    sections = [
+        ("Known facts", [f["statement"] for f in summ["known_facts"]]),
+        ("Assumptions (needs customer confirmation)",
+         [a["statement"] for a in summ["assumptions_needing_confirmation"]]),
+        ("Open decisions", [d["title"] for d in summ["open_decisions"]]),
+        ("Constraints", [f'{c["statement"]} [{c["kind"]}]' for c in summ["constraints"]]),
+    ]
+    lines: list[str] = []
+    for title, items in sections:
+        if not items:
+            continue
+        lines.append(f"{title}:")
+        lines.extend(f"  - {it}" for it in items[:cap])
+        if len(items) > cap:
+            lines.append(f"  - … (+{len(items) - cap} more)")
+    if not lines:
+        return ""
+    return "\n\nEPISTEMIC SUMMARY (display-only):\n" + "\n".join(lines)
+
+
 def _solution_gate_note() -> str:
     """Run the cross-artifact validator + refresh trace_links.json before an export.
 
     Warnings-first: never blocks the export, but appends any cross-artifact
     contradictions (unmapped requirement, dangling edge, zero-effort WBS, orphan
-    task, missing decisions) so the agent/user sees drift before the deck/report
-    leaves the building. Promote to blocking by passing block=True once the rules
-    have proven stable in real runs.
+    task, missing decisions) plus an epistemic summary so the agent/user sees drift
+    and open assumptions before the deck/report leaves the building. Promote to
+    blocking by passing block=True once the rules have proven stable in real runs.
     """
     try:
         model = build_solution_model(WORKSPACE)   # materialize/refresh the CSM projection
@@ -1049,6 +1081,7 @@ def _solution_gate_note() -> str:
         f"{len(model.work_items)} task, {len(model.trace_links)} trace link(s) "
         "(solution_model.json)."
     )
+    csm_note += _epistemic_note(model)
     if not findings:
         return csm_note
     return csm_note + "\n\nCROSS-ARTIFACT CHECK — " + summary
