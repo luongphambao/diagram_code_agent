@@ -198,6 +198,7 @@ export default function App() {
             onResolveWbsSkeleton={diagramAgent.resolveWbsSkeleton}
             onResolveWbs={diagramAgent.resolveWbs}
             onResolveWbsExcel={diagramAgent.resolveWbsExcel}
+            onResolveDecision={diagramAgent.resolveDecision}
             iteration={diagramAgent.agentState.iteration}
             uploadedFiles={diagramAgent.uploadedFiles}
             isUploading={diagramAgent.isUploading}

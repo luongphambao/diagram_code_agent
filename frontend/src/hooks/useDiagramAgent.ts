@@ -10,6 +10,8 @@ export type {
   ChatMessage,
   CostRange,
   DataAssumptions,
+  DecisionAction,
+  DecisionPayload,
   Delegation,
   DiagramBrief,
   InterruptType,
@@ -30,6 +32,7 @@ export type {
 import type {
   AgentState,
   ChatMessage,
+  DecisionPayload,
   PendingInterrupt,
   UploadedFile,
   WireMessage,
@@ -189,6 +192,12 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
     [_resolveWithPayload]
   );
 
+  // HITL v2: post a structured trade-off decision (accept_risk, request_evidence, ...).
+  const resolveDecision = useCallback(
+    async (payload: DecisionPayload) => { await _resolveWithPayload({ ...payload }); },
+    [_resolveWithPayload]
+  );
+
   const uploadFile = useCallback(async (file: File) => {
     setIsUploading(true);
     setError(null);
@@ -256,6 +265,7 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
     resolveWbsSkeleton,
     resolveWbs,
     resolveWbsExcel,
+    resolveDecision,
     uploadFile,
     clearFiles,
     restore,

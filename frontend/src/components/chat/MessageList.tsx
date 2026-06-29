@@ -1,4 +1,4 @@
-import type { ChatMessage, PendingInterrupt, WbsSummary } from "../../hooks/useDiagramAgent";
+import type { ChatMessage, DecisionPayload, PendingInterrupt, WbsSummary } from "../../hooks/useDiagramAgent";
 import TechStackApproval from "../TechStackApproval";
 import BlueprintApproval from "../BlueprintApproval";
 import DiagramFeedback from "../DiagramFeedback";
@@ -41,6 +41,7 @@ interface MessageListProps {
   onResolveWbsSkeleton: (approved: boolean, modifications?: string) => void;
   onResolveWbs: (approved: boolean, modifications?: string) => void;
   onResolveWbsExcel: (approved: boolean) => void;
+  onResolveDecision: (payload: DecisionPayload) => void;
 }
 
 export default function MessageList({
@@ -50,7 +51,7 @@ export default function MessageList({
   wbsPreviewOpen, onToggleWbsPreview,
   onResolveTechStack, onResolveBlueprint, onResolveResult, onResolvePdfReport,
   onResolvePptProposal, onResolveEmail, onResolveMeeting, onResolveMeetingSlot,
-  onResolveWbsSkeleton, onResolveWbs, onResolveWbsExcel,
+  onResolveWbsSkeleton, onResolveWbs, onResolveWbsExcel, onResolveDecision,
 }: MessageListProps) {
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-5">
@@ -100,7 +101,7 @@ export default function MessageList({
         <div className="mt-1"><TechStackApproval interrupt={pendingInterrupt} onResolve={onResolveTechStack} disabled={isRunning} /></div>
       )}
       {pendingInterrupt?.data.type === "blueprint_approval" && (
-        <div className="mt-1"><BlueprintApproval interrupt={pendingInterrupt} onResolve={onResolveBlueprint} disabled={isRunning} /></div>
+        <div className="mt-1"><BlueprintApproval interrupt={pendingInterrupt} onResolve={onResolveBlueprint} onDecision={onResolveDecision} disabled={isRunning} /></div>
       )}
       {pendingInterrupt?.data.type === "result_review" && (
         <div className="mt-1">

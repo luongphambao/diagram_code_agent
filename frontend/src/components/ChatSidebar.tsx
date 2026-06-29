@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { ChatMessage, PendingInterrupt, UploadedFile, WbsSummary } from "../hooks/useDiagramAgent";
+import type { ChatMessage, DecisionPayload, PendingInterrupt, UploadedFile, WbsSummary } from "../hooks/useDiagramAgent";
 import MessageList from "./chat/MessageList";
 import ChatInput from "./chat/ChatInput";
 
@@ -29,6 +29,7 @@ interface ChatSidebarProps {
   onResolveWbsSkeleton: (approved: boolean, modifications?: string) => void;
   onResolveWbs: (approved: boolean, modifications?: string) => void;
   onResolveWbsExcel: (approved: boolean) => void;
+  onResolveDecision: (payload: DecisionPayload) => void;
   onUploadFile: (file: File) => void;
   onClearFiles: () => void;
 }
@@ -39,7 +40,7 @@ export default function ChatSidebar({
   uploadedFiles, isUploading,
   onSend, onResolveTechStack, onResolveBlueprint, onResolveResult, onResolvePdfReport,
   onResolvePptProposal, onResolveEmail, onResolveMeeting, onResolveMeetingSlot,
-  onResolveWbsSkeleton, onResolveWbs, onResolveWbsExcel,
+  onResolveWbsSkeleton, onResolveWbs, onResolveWbsExcel, onResolveDecision,
   onUploadFile, onClearFiles,
 }: ChatSidebarProps) {
   const [wbsPreviewOpen, setWbsPreviewOpen] = useState(false);
@@ -135,6 +136,7 @@ export default function ChatSidebar({
         onResolveWbsSkeleton={onResolveWbsSkeleton}
         onResolveWbs={onResolveWbs}
         onResolveWbsExcel={onResolveWbsExcel}
+        onResolveDecision={onResolveDecision}
       />
 
       <ChatInput

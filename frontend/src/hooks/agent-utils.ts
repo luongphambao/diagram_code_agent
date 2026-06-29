@@ -257,7 +257,33 @@ export interface PendingInterrupt {
     timeline_months?: number;
     effort_by_role?: Record<string, number>;
     effort_by_module?: Array<{code: string; name: string; total_md: number}>;
+    // HITL v2: the trade-off actions this gate offers (drives DecisionActions).
+    allowed_decisions?: DecisionAction[];
   };
+}
+
+// HITL v2 decision actions (mirror backend tools.GATE_DECISIONS).
+export type DecisionAction =
+  | "approve"
+  | "reject"
+  | "approve_with_assumptions"
+  | "accept_risk"
+  | "request_evidence"
+  | "request_alternative";
+
+// Payload posted back to the gate for a HITL v2 action.
+export interface DecisionPayload {
+  action: DecisionAction;
+  approved?: boolean;
+  comment?: string;
+  assumption_ids?: string[];
+  statement?: string;
+  owner?: string;
+  mitigation?: string;
+  claim?: string;
+  source_expectation?: string;
+  option_comparison?: string;
+  constraint_change?: string;
 }
 
 export interface UploadedFile {
