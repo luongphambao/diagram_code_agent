@@ -1,0 +1,12 @@
+{
+  "id": "diamond",
+  "requirements": ["Ingest", "Transform", "Enrich", "Publish"],
+  "items": [
+    {"ref_code": "BNK-1", "name": "Ingest pipeline", "total": 2, "predecessors": []},
+    {"ref_code": "BNK-2", "name": "Transform stage", "total": 5, "predecessors": ["BNK-1"]},
+    {"ref_code": "BNK-3", "name": "Enrich stage", "total": 3, "predecessors": ["BNK-1"]},
+    {"ref_code": "BNK-4", "name": "Publish results", "total": 4, "predecessors": ["BNK-2", "BNK-3"]}
+  ],
+  "expect_dependency_valid": true,
+  "expected_critical_path": ["BNK-1", "BNK-2", "BNK-4"]
+}

@@ -1,0 +1,68 @@
+[
+  {
+    "case_id": "linear_chain",
+    "scores": {
+      "coverage_ok": 1.0,
+      "dependency_ok": 1.0,
+      "critical_path_ok": 1.0,
+      "rollup_ok": 1.0,
+      "micro": 1.0,
+      "project_duration_md": 10.0
+    }
+  },
+  {
+    "case_id": "diamond",
+    "scores": {
+      "coverage_ok": 1.0,
+      "dependency_ok": 1.0,
+      "critical_path_ok": 1.0,
+      "rollup_ok": 1.0,
+      "micro": 1.0,
+      "project_duration_md": 11.0
+    }
+  },
+  {
+    "case_id": "isolated_tasks",
+    "scores": {
+      "coverage_ok": 1.0,
+      "dependency_ok": 1.0,
+      "critical_path_ok": 1.0,
+      "rollup_ok": 1.0,
+      "micro": 1.0,
+      "project_duration_md": 4.0
+    }
+  },
+  {
+    "case_id": "broken_dependency",
+    "scores": {
+      "coverage_ok": 1.0,
+      "dependency_ok": 1.0,
+      "critical_path_ok": 1.0,
+      "rollup_ok": 1.0,
+      "micro": 1.0,
+      "project_duration_md": 9.0
+    }
+  },
+  {
+    "case_id": "three_point_pert",
+    "scores": {
+      "coverage_ok": 1.0,
+      "dependency_ok": 1.0,
+      "critical_path_ok": 1.0,
+      "rollup_ok": 1.0,
+      "micro": 1.0,
+      "project_duration_md": 9.0
+    }
+  },
+  {
+    "case_id": "full_delivery",
+    "scores": {
+      "coverage_ok": 1.0,
+      "dependency_ok": 1.0,
+      "critical_path_ok": 1.0,
+      "rollup_ok": 1.0,
+      "micro": 1.0,
+      "project_duration_md": 19.0
+    }
+  }
+]

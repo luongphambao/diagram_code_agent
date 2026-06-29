@@ -1,0 +1,66 @@
+[
+  {
+    "case_id": "clean",
+    "scores": {
+      "finding_recall": 1.0,
+      "block_ok": 1.0,
+      "n_findings": 0,
+      "dimensions": []
+    }
+  },
+  {
+    "case_id": "dangling_edge",
+    "scores": {
+      "finding_recall": 1.0,
+      "block_ok": 1.0,
+      "n_findings": 1,
+      "dimensions": [
+        "correctness"
+      ]
+    }
+  },
+  {
+    "case_id": "ghost_cluster",
+    "scores": {
+      "finding_recall": 1.0,
+      "block_ok": 1.0,
+      "n_findings": 1,
+      "dimensions": [
+        "correctness"
+      ]
+    }
+  },
+  {
+    "case_id": "unmapped_requirement",
+    "scores": {
+      "finding_recall": 1.0,
+      "block_ok": 1.0,
+      "n_findings": 1,
+      "dimensions": [
+        "coverage"
+      ]
+    }
+  },
+  {
+    "case_id": "orphan_wbs",
+    "scores": {
+      "finding_recall": 1.0,
+      "block_ok": 1.0,
+      "n_findings": 1,
+      "dimensions": [
+        "traceability"
+      ]
+    }
+  },
+  {
+    "case_id": "zero_effort",
+    "scores": {
+      "finding_recall": 1.0,
+      "block_ok": 1.0,
+      "n_findings": 1,
+      "dimensions": [
+        "completeness"
+      ]
+    }
+  }
+]

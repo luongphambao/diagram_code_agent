@@ -1,0 +1,35 @@
+{
+  "id": "ecommerce_scale",
+  "brief": {
+    "functional_requirements": [
+      "Browse a product catalogue with search and filters",
+      "Manage a shopping cart and checkout flow",
+      "Process orders asynchronously via an event bus"
+    ],
+    "non_functional_requirements": [
+      "Handle 10x traffic spikes during flash sales"
+    ],
+    "assumptions": [
+      "Assume 1 million active users",
+      "Assume payments are handled by an external PSP"
+    ],
+    "layout_constraints": []
+  },
+  "analysis": {"constraints": ["resilience_required", "production_focused"]},
+  "expected_requirements": [
+    "product catalogue",
+    "shopping cart",
+    "checkout",
+    "event bus",
+    "traffic spikes"
+  ],
+  "expected_assumptions": [
+    "1 million active users",
+    "external PSP"
+  ],
+  "expected_constraints": [
+    "resilience required",
+    "production focused"
+  ],
+  "must_ask": ["external PSP"]
+}

@@ -1,0 +1,31 @@
+name: evals
+
+# Regression gate (docx §4.5): the deterministic eval suites + unit tests run on
+# every push/PR. No API key needed — the intake/architecture/wbs suites and the
+# pytest suite score the adapter/validator/WBS math against committed baselines.
+# The diagram suite (LLM/vision) is intentionally excluded; run it locally.
+
+on:
+  push:
+    paths:
+      - "backend/**"
+  pull_request:
+    paths:
+      - "backend/**"
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Sync deps
+        run: uv sync --frozen || uv sync
+      - name: Unit tests
+        run: uv run python -m pytest tests/ -q
+      - name: Eval regression gate
+        run: uv run python -m evals.run_all --gate

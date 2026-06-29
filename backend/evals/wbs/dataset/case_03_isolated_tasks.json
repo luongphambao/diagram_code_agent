@@ -1,0 +1,9 @@
+{
+  "id": "isolated_tasks",
+  "requirements": ["Logging", "Monitoring"],
+  "items": [
+    {"ref_code": "BNK-1", "name": "Logging setup", "total": 3, "predecessors": []},
+    {"ref_code": "BNK-2", "name": "Monitoring setup", "total": 4, "predecessors": []}
+  ],
+  "expect_dependency_valid": true
+}

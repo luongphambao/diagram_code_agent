@@ -1,0 +1,10 @@
+{
+  "id": "three_point_pert",
+  "requirements": ["Search", "Index"],
+  "items": [
+    {"ref_code": "BNK-1", "name": "Index builder", "total": 6, "pert_expected_md": 5, "predecessors": []},
+    {"ref_code": "BNK-2", "name": "Search service", "total": 4, "pert_expected_md": 4, "predecessors": ["BNK-1"]}
+  ],
+  "expect_dependency_valid": true,
+  "expected_critical_path": ["BNK-1", "BNK-2"]
+}

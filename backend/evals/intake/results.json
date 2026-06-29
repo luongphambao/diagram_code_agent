@@ -1,0 +1,68 @@
+[
+  {
+    "case_id": "fintech_payments",
+    "scores": {
+      "requirements_f1": 1.0,
+      "assumptions_f1": 1.0,
+      "constraints_f1": 1.0,
+      "must_ask_recall": 1.0,
+      "micro_f1": 1.0,
+      "n_assumptions_pending": 2
+    }
+  },
+  {
+    "case_id": "ml_pipeline",
+    "scores": {
+      "requirements_f1": 1.0,
+      "assumptions_f1": 1.0,
+      "constraints_f1": 1.0,
+      "must_ask_recall": 1.0,
+      "micro_f1": 1.0,
+      "n_assumptions_pending": 2
+    }
+  },
+  {
+    "case_id": "healthcare_hipaa",
+    "scores": {
+      "requirements_f1": 1.0,
+      "assumptions_f1": 1.0,
+      "constraints_f1": 1.0,
+      "must_ask_recall": 1.0,
+      "micro_f1": 1.0,
+      "n_assumptions_pending": 2
+    }
+  },
+  {
+    "case_id": "ecommerce_scale",
+    "scores": {
+      "requirements_f1": 1.0,
+      "assumptions_f1": 1.0,
+      "constraints_f1": 1.0,
+      "must_ask_recall": 1.0,
+      "micro_f1": 1.0,
+      "n_assumptions_pending": 2
+    }
+  },
+  {
+    "case_id": "gov_private_cloud",
+    "scores": {
+      "requirements_f1": 1.0,
+      "assumptions_f1": 1.0,
+      "constraints_f1": 1.0,
+      "must_ask_recall": 1.0,
+      "micro_f1": 1.0,
+      "n_assumptions_pending": 2
+    }
+  },
+  {
+    "case_id": "iot_telemetry",
+    "scores": {
+      "requirements_f1": 1.0,
+      "assumptions_f1": 1.0,
+      "constraints_f1": 1.0,
+      "must_ask_recall": 1.0,
+      "micro_f1": 1.0,
+      "n_assumptions_pending": 2
+    }
+  }
+]

@@ -308,6 +308,12 @@ def build_solution_model(
         tech_stack=_read_json(workspace / "tech_stack.json", {}) or {},
     )
 
+    # Fold any HITL v2 decisions (accepted risks, confirmed assumptions, ...) into
+    # the model so the validator / change-impact / epistemic summary see them. A new
+    # decision changes the content hash and therefore bumps the revision below.
+    from decisions import project_into_csm, read_decisions
+    project_into_csm(model, read_decisions(workspace))
+
     prev = _read_json(workspace / SOLUTION_MODEL_NAME, {}) or {}
     new_hash = model.content_hash()
     if prev.get("sha256") == new_hash:

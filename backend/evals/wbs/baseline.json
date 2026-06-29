@@ -1,0 +1,10 @@
+{
+  "metrics": {
+    "scores.micro": 1.0,
+    "scores.coverage_ok": 1.0,
+    "scores.dependency_ok": 1.0,
+    "scores.critical_path_ok": 1.0,
+    "scores.rollup_ok": 1.0
+  },
+  "n_cases": 6
+}

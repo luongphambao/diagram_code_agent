@@ -1,0 +1,20 @@
+{
+  "id": "orphan_wbs",
+  "brief": {"functional_requirements": ["API Gateway routes requests"]},
+  "blueprint": {
+    "nodes": [{"id": "api_gw", "label": "API Gateway", "cluster": "edge"}],
+    "clusters": [{"id": "edge", "label": "Edge"}],
+    "edges": [],
+    "key_decisions": ["Use a managed API gateway for routing and auth."]
+  },
+  "wbs": {
+    "items": [
+      {"id": "1.1", "name": "API Gateway setup"},
+      {"id": "9.9", "name": "Holographic telepresence spike"}
+    ],
+    "effort_totals": {"total_mandays": 12}
+  },
+  "expect_clean": false,
+  "expect_block": false,
+  "expected_dimensions": ["traceability"]
+}

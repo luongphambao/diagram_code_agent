@@ -1,0 +1,36 @@
+{
+  "id": "ml_pipeline",
+  "brief": {
+    "functional_requirements": [
+      "Ingest document uploads and run OCR text extraction",
+      "Train and serve a document classification model",
+      "Provide a review queue for low-confidence predictions"
+    ],
+    "non_functional_requirements": [
+      "Batch retraining must complete within 6 hours"
+    ],
+    "assumptions": [
+      "Assume 50k documents ingested per day",
+      "Assume labelled training data is supplied by the client"
+    ],
+    "layout_constraints": [
+      "Must run on the client's existing GCP organisation"
+    ]
+  },
+  "analysis": {"constraints": ["budget_sensitive"]},
+  "expected_requirements": [
+    "OCR text extraction",
+    "document classification model",
+    "review queue",
+    "retraining"
+  ],
+  "expected_assumptions": [
+    "50k documents",
+    "labelled training data"
+  ],
+  "expected_constraints": [
+    "GCP organisation",
+    "budget sensitive"
+  ],
+  "must_ask": ["labelled training data"]
+}

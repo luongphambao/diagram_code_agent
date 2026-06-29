@@ -1,0 +1,13 @@
+{
+  "id": "full_delivery",
+  "requirements": ["Onboarding", "Catalogue", "Checkout", "Notifications", "Admin console"],
+  "items": [
+    {"ref_code": "BNK-1", "name": "Onboarding flow", "total": 4, "predecessors": []},
+    {"ref_code": "BNK-2", "name": "Catalogue service", "total": 6, "predecessors": ["BNK-1"]},
+    {"ref_code": "BNK-3", "name": "Checkout service", "total": 5, "predecessors": ["BNK-2"]},
+    {"ref_code": "BNK-4", "name": "Notifications worker", "total": 3, "predecessors": ["BNK-1"]},
+    {"ref_code": "BNK-5", "name": "Admin console", "total": 4, "predecessors": ["BNK-3", "BNK-4"]}
+  ],
+  "expect_dependency_valid": true,
+  "expected_critical_path": ["BNK-1", "BNK-2", "BNK-3", "BNK-5"]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "broken_dependency",
+  "requirements": ["Core API", "Worker"],
+  "items": [
+    {"ref_code": "BNK-1", "name": "Core API service", "total": 5, "predecessors": []},
+    {"ref_code": "BNK-2", "name": "Worker pool", "total": 4, "predecessors": ["BNK-1"]},
+    {"ref_code": "BNK-3", "name": "Reporting job", "total": 2, "predecessors": ["BNK-99"]}
+  ],
+  "expect_dependency_valid": false
+}

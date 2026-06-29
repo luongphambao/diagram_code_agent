@@ -1,0 +1,38 @@
+{
+  "id": "iot_telemetry",
+  "brief": {
+    "functional_requirements": [
+      "Ingest telemetry from field IoT devices over MQTT",
+      "Store time-series readings for trend dashboards",
+      "Raise alerts when readings cross configured thresholds"
+    ],
+    "non_functional_requirements": [
+      "Ingest pipeline must handle 100k messages per second"
+    ],
+    "assumptions": [
+      "Assume 250k connected devices",
+      "Assume devices firmware can be updated remotely"
+    ],
+    "layout_constraints": [
+      "Edge gateways deployed on-premise at each site"
+    ]
+  },
+  "analysis": {"constraints": ["resilience_required"]},
+  "expected_requirements": [
+    "telemetry",
+    "MQTT",
+    "time-series",
+    "dashboards",
+    "alerts",
+    "100k messages per second"
+  ],
+  "expected_assumptions": [
+    "250k connected devices",
+    "firmware can be updated remotely"
+  ],
+  "expected_constraints": [
+    "on-premise",
+    "resilience required"
+  ],
+  "must_ask": ["firmware can be updated remotely"]
+}

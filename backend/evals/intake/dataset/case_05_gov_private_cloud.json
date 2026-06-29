@@ -1,0 +1,39 @@
+{
+  "id": "gov_private_cloud",
+  "brief": {
+    "functional_requirements": [
+      "Provide a citizen portal for permit applications",
+      "Route applications through a multi-step approval workflow",
+      "Generate signed PDF certificates on approval"
+    ],
+    "non_functional_requirements": [
+      "All services must run in an air-gapped private cloud"
+    ],
+    "assumptions": [
+      "Assume 10k applications per month",
+      "Assume the agency provides the PKI for document signing"
+    ],
+    "layout_constraints": [
+      "No public cloud providers permitted",
+      "Deployment limited to the national data centre"
+    ]
+  },
+  "analysis": {"constraints": ["governance_required", "compliance_sensitive"]},
+  "expected_requirements": [
+    "citizen portal",
+    "approval workflow",
+    "PDF certificates",
+    "air-gapped private cloud"
+  ],
+  "expected_assumptions": [
+    "10k applications per month",
+    "PKI for document signing"
+  ],
+  "expected_constraints": [
+    "No public cloud",
+    "national data centre",
+    "governance required",
+    "compliance sensitive"
+  ],
+  "must_ask": ["PKI for document signing"]
+}

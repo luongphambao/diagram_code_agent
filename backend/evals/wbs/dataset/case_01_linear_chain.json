@@ -1,0 +1,11 @@
+{
+  "id": "linear_chain",
+  "requirements": ["API gateway", "Auth service", "Billing service"],
+  "items": [
+    {"ref_code": "BNK-1", "name": "API gateway setup", "total": 5, "predecessors": []},
+    {"ref_code": "BNK-2", "name": "Auth service implementation", "total": 3, "predecessors": ["BNK-1"]},
+    {"ref_code": "BNK-3", "name": "Billing service implementation", "total": 2, "predecessors": ["BNK-2"]}
+  ],
+  "expect_dependency_valid": true,
+  "expected_critical_path": ["BNK-1", "BNK-2", "BNK-3"]
+}

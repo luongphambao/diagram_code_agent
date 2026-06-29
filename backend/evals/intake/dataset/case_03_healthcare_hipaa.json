@@ -1,0 +1,39 @@
+{
+  "id": "healthcare_hipaa",
+  "brief": {
+    "functional_requirements": [
+      "Store and retrieve patient electronic health records",
+      "Let clinicians book and view appointments",
+      "Send appointment reminders by SMS"
+    ],
+    "non_functional_requirements": [
+      "HIPAA compliant audit logging of all PHI access",
+      "Encryption at rest and in transit for PHI"
+    ],
+    "assumptions": [
+      "Assume 200 concurrent clinician users",
+      "Assume an existing identity provider for SSO"
+    ],
+    "layout_constraints": [
+      "PHI must remain within US data centres"
+    ]
+  },
+  "analysis": {"constraints": ["compliance_sensitive", "governance_required"]},
+  "expected_requirements": [
+    "patient electronic health records",
+    "appointments",
+    "SMS",
+    "audit logging",
+    "Encryption"
+  ],
+  "expected_assumptions": [
+    "200 concurrent clinician users",
+    "identity provider for SSO"
+  ],
+  "expected_constraints": [
+    "US data centres",
+    "compliance sensitive",
+    "governance required"
+  ],
+  "must_ask": ["identity provider for SSO"]
+}

@@ -1,0 +1,39 @@
+{
+  "id": "fintech_payments",
+  "brief": {
+    "functional_requirements": [
+      "Process card payments via a third-party gateway",
+      "Provide real-time fraud scoring on each transaction",
+      "Expose a merchant dashboard for settlement reports"
+    ],
+    "non_functional_requirements": [
+      "99.95% availability for the payment API",
+      "PCI-DSS compliant handling of card data"
+    ],
+    "assumptions": [
+      "Assume 500 transactions per second at peak",
+      "Assume the client already has a Stripe merchant account"
+    ],
+    "layout_constraints": [
+      "Single-region deployment in eu-west to meet data residency"
+    ]
+  },
+  "analysis": {"constraints": ["compliance_sensitive", "resilience_required"]},
+  "expected_requirements": [
+    "card payments",
+    "fraud scoring",
+    "merchant dashboard",
+    "availability",
+    "PCI-DSS"
+  ],
+  "expected_assumptions": [
+    "500 transactions per second",
+    "Stripe merchant account"
+  ],
+  "expected_constraints": [
+    "eu-west",
+    "compliance sensitive",
+    "resilience required"
+  ],
+  "must_ask": ["500 transactions per second", "Stripe merchant account"]
+}
