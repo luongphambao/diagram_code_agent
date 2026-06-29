@@ -89,3 +89,60 @@ def test_project_is_deterministic_and_idempotent():
     # Re-projecting onto an already-projected model does not duplicate.
     project_into_csm(m1, [rec])
     assert sum(1 for _ in m1.decisions) == 1
+
+
+# --- HITL v2 payload -> decision mapping (session_state) ----------------------
+
+def test_rich_actions_map_onto_approve_reject():
+    import session_state as ss
+    assert ss._decision_from_payload({"action": "accept_risk"}, "propose_blueprint")["type"] == "approve"
+    assert ss._decision_from_payload({"action": "approve_with_assumptions"}, "propose_wbs")["type"] == "approve"
+    ev = ss._decision_from_payload({"action": "request_evidence", "claim": "Kafka scales"}, "propose_blueprint")
+    assert ev["type"] == "reject" and "evidence" in ev["message"].lower()
+    alt = ss._decision_from_payload({"action": "request_alternative"}, "propose_wbs")
+    assert alt["type"] == "reject" and "alternative" in alt["message"].lower()
+
+
+def test_legacy_payload_is_back_compatible():
+    import session_state as ss
+    assert ss._decision_from_payload({"approved": True}, "propose_wbs")["type"] == "approve"
+    assert ss._decision_from_payload({"approved": False, "modifications": "x"}, "propose_wbs")["type"] == "reject"
+    assert ss._decision_from_payload({"satisfied": True}, "finalize_diagram")["type"] == "approve"
+    assert ss._decision_from_payload({"satisfied": False}, "finalize_diagram")["type"] == "reject"
+
+
+def test_build_solution_model_projects_decision_log(tmp_path):
+    """End-to-end: a persisted decision shows up in the rebuilt CSM (+ bumps revision)."""
+    import json as _json
+
+    from csm_adapter import build_solution_model
+
+    # Minimal artifacts so from_artifacts has something to project.
+    (tmp_path / "diagram_brief.json").write_text(
+        _json.dumps({"functional_requirements": ["API Gateway routes requests"]}), encoding="utf-8")
+    (tmp_path / "blueprint.json").write_text(
+        _json.dumps({"nodes": [{"id": "api_gw", "label": "API Gateway"}],
+                     "key_decisions": ["Use a managed gateway"]}), encoding="utf-8")
+
+    base = build_solution_model(tmp_path, created_at="2026-06-29T00:00:00Z")
+    assert not any(d.provenance == "human" for d in base.decisions)
+
+    append_decision(new_decision_record(
+        "propose_blueprint", "accept_risk", seq=1, approver="alice",
+        payload={"statement": "Vendor quota backlog", "owner": "alice"}), workspace=tmp_path)
+
+    rebuilt = build_solution_model(tmp_path, created_at="2026-06-29T00:00:00Z")
+    assert any(d.provenance == "human" for d in rebuilt.decisions)
+    assert any(r.statement == "Vendor quota backlog" for r in rebuilt.risks)
+    assert rebuilt.revision == base.revision + 1   # a human decision is a real change
+
+
+def test_record_builder_only_for_rich_actions():
+    import session_state as ss
+    assert ss.decision_record_from_payload({"approved": True}, "propose_wbs", seq=1) is None
+    rec = ss.decision_record_from_payload(
+        {"action": "accept_risk", "owner": "bob", "statement": "quota"},
+        "propose_blueprint", seq=1, approver="alice", timestamp="t")
+    assert rec is not None and rec.action == "accept_risk" and rec.payload["owner"] == "bob"
+    # routing keys are stripped from the persisted payload
+    assert "action" not in rec.payload and "approved" not in rec.payload

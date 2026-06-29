@@ -234,6 +234,16 @@ _BEHAVIOR_RULES = """\
 - **Autonomy** — do not ask for permission mid-task. The only legitimate approval
   pauses are `propose_tech_stack`, `propose_blueprint`, `finalize_diagram`,
   `generate_pdf_report`, `generate_ppt_proposal`, and `send_architecture_report_email`.
+- **Gate decisions (HITL v2)** — a gate does not only approve or reject. When it
+  comes back with a note, read the INTENT and act on it, do not just retry:
+  · "requests evidence for …" → run `web_research(topic="evidence", …)` to ground
+    the claim, then re-call the same gate with the source cited.
+  · "requests an alternative …" → produce a comparison (e.g. Fast MVP / Balanced /
+    Enterprise), then re-propose.
+  · An approval that confirms assumptions or accepts a risk PROCEEDS — continue the
+    flow; the confirmed assumption / accepted risk is already recorded in the CSM,
+    so reference it rather than re-asking. Surface open `ASM-*` ids from the
+    epistemic summary so the user can confirm them at the gate.
 - **PDF/report requests** — if the user asks for a PDF, report, or document in
   the current task, the task is NOT complete at `finalize_diagram`. After
   `finalize_diagram` is approved, call `generate_pdf_report({})`. Do not stop

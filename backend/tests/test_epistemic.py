@@ -15,11 +15,13 @@ def _model() -> SolutionModel:
 
 def test_epistemic_note_renders_each_section():
     note = _epistemic_note(_model())
-    assert "EPISTEMIC SUMMARY (display-only)" in note
-    assert "Known facts" in note and "Confirmed need" in note
-    assert "needs customer confirmation" in note and "Assume 500 rps" in note
-    assert "Open decisions" in note and "Pick managed k8s" in note
-    assert "Constraints" in note and "EU region only [region]" in note
+    # HITL v2: the header now points the user to the gate actions, and each line is
+    # prefixed with its stable CSM id so approve_with_assumptions can reference it.
+    assert "EPISTEMIC SUMMARY" in note and "approve_with_assumptions" in note
+    assert "Known facts" in note and "REQ-1: Confirmed need" in note
+    assert "needs customer confirmation" in note and "ASM-1: Assume 500 rps" in note
+    assert "Open decisions" in note and "DEC-1: Pick managed k8s" in note
+    assert "Constraints" in note and "CON-1: EU region only [region]" in note
 
 
 def test_epistemic_note_omits_empty_sections_and_empty_model():

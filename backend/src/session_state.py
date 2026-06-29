@@ -554,19 +554,88 @@ def _card_for(val, summary: str):
     return None, None, {}
 
 
+# HITL v2 actions that PROCEED (run the tool) vs. send the agent back to REVISE.
+# Everything maps onto the langchain HITL vocabulary (approve/reject); the rich
+# intent is persisted separately as a DecisionRecord (decisions.py).
+_PROCEED_ACTIONS = {"approve", "approve_with_assumptions", "accept_risk"}
+_REVISE_ACTIONS = {"reject", "request_evidence", "request_alternative"}
+# Actions worth persisting as a structured decision record + CSM projection.
+HITL_V2_ACTIONS = {
+    "approve_with_assumptions", "accept_risk", "request_evidence",
+    "request_alternative", "edit_entity",
+}
+
+
+def _revise_message(action: str, payload: dict) -> str:
+    """Build the guiding message the agent sees when a gate sends it back to revise."""
+    if action == "request_evidence":
+        claim = payload.get("claim") or payload.get("comment") or "the flagged claim"
+        src = payload.get("source_expectation")
+        msg = f"User requests evidence for: {claim}. Gather a credible source, then re-propose."
+        return msg + (f" Preferred source: {src}." if src else "")
+    if action == "request_alternative":
+        ask = payload.get("constraint_change") or payload.get("option_comparison") or ""
+        base = "User requests an alternative option (e.g. Fast MVP / Balanced / Enterprise)."
+        return (base + f" {ask}").strip()
+    return payload.get("modifications") or payload.get("comment") or \
+        "Please revise based on the user's feedback."
+
+
 def _decision_from_payload(payload: dict, pending_name: str | None) -> dict:
-    if pending_name == "finalize_diagram":
-        ok = bool(payload.get("satisfied", True))
-        msg = payload.get("feedback")
+    """Map a gate payload to the langchain HITL decision dict (approve/reject).
+
+    Back-compatible: a payload without an explicit `action` is interpreted exactly as
+    before (finalize_diagram uses `satisfied`; other gates use `approved`). A HITL v2
+    `action` (accept_risk, request_evidence, ...) maps onto approve/reject here; the
+    structured record is created separately by `decision_record_from_payload`.
+    """
+    action = payload.get("action")
+    if action is None:
+        if pending_name == "finalize_diagram":
+            ok = bool(payload.get("satisfied", True))
+            msg = payload.get("feedback")
+        else:
+            ok = bool(payload.get("approved", False))
+            msg = payload.get("modifications")
+        action = "approve" if ok else "reject"
     else:
-        ok = bool(payload.get("approved", False))
-        msg = payload.get("modifications")
-    if ok:
+        msg = payload.get("modifications") or payload.get("comment")
+
+    if action in _PROCEED_ACTIONS:
         decision: dict = {"type": "approve"}
         if "selected_slot" in payload:
             decision["selected_slot"] = payload["selected_slot"]
         return decision
-    return {"type": "reject", "message": msg or "Please revise based on the user's feedback."}
+    # Revise path (reject / request_evidence / request_alternative / unknown).
+    return {"type": "reject", "message": _revise_message(action, payload) if action in _REVISE_ACTIONS
+            else (msg or "Please revise based on the user's feedback.")}
+
+
+def decision_record_from_payload(
+    payload: dict,
+    gate: str,
+    *,
+    seq: int,
+    approver: str = "",
+    timestamp: str = "",
+    revision: int = 0,
+):
+    """Build a DecisionRecord for a HITL v2 action, or None for plain approve/reject.
+
+    Plain approve/reject are already captured by the gate-outcome log + DB; only the
+    richer trade-off actions become structured records projected into the CSM.
+    """
+    action = payload.get("action")
+    if action not in HITL_V2_ACTIONS:
+        return None
+    from decisions import new_decision_record
+    # Carry the action-specific fields through verbatim (minus routing keys).
+    body = {k: v for k, v in payload.items()
+            if k not in ("action", "approved", "satisfied", "modifications", "feedback")}
+    return new_decision_record(
+        gate, action, seq=seq, approver=approver, timestamp=timestamp,
+        revision=revision, comment=payload.get("comment", ""), payload=body,
+    )
 
 
 # ---------------------------------------------------------------------------

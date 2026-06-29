@@ -229,3 +229,33 @@ GATE_TOOL_NAMES = [
     "propose_wbs",
     "export_wbs_excel",
 ]
+
+# HITL v2 decision menu (docx §5.3): the trade-off ACTIONS each gate offers the user,
+# beyond binary approve/reject. This is the *product* vocabulary that drives the
+# frontend decision card and is persisted as a DecisionRecord (decisions.py).
+#
+# Note: the underlying langchain HITL middleware only understands approve/edit/reject/
+# respond, so each action maps onto one of those at resume time (session_state.
+# _decision_from_payload). "accept_risk"/"approve_with_assumptions" proceed (approve);
+# "request_evidence"/"request_alternative" send the agent back to revise (reject with a
+# guiding message). The structured intent is captured in the persisted record + CSM.
+GATE_DECISIONS: dict[str, list[str]] = {
+    "propose_tech_stack": ["approve", "approve_with_assumptions", "accept_risk",
+                           "request_evidence", "request_alternative", "reject"],
+    "propose_blueprint": ["approve", "approve_with_assumptions", "accept_risk",
+                          "request_alternative", "request_evidence", "reject"],
+    "finalize_diagram": ["approve", "reject"],
+    "generate_pdf_report": ["approve", "request_evidence", "reject"],
+    "generate_ppt_proposal": ["approve", "request_evidence", "reject"],
+    "send_architecture_report_email": ["approve", "reject"],
+    "create_client_meeting": ["approve", "reject"],
+    "propose_wbs_skeleton": ["approve", "request_alternative", "reject"],
+    "propose_wbs": ["approve", "approve_with_assumptions", "accept_risk",
+                    "request_alternative", "reject"],
+    "export_wbs_excel": ["approve", "reject"],
+}
+
+
+def allowed_decisions_for(gate: str) -> list[str]:
+    """The HITL v2 action menu for a gate (defaults to binary approve/reject)."""
+    return GATE_DECISIONS.get(gate, ["approve", "reject"])

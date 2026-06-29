@@ -1031,23 +1031,29 @@ class PdfReportConfig(BaseModel):
 
 
 def _epistemic_note(model, *, cap: int = 8) -> str:
-    """Render the CSM's epistemic split (docx §4.2) as a compact, display-only block.
+    """Render the CSM's epistemic split (docx §4.2) as a compact block with entity IDs.
 
     Shows what is known vs. what still needs a human: confirmed facts, pending
     assumptions (flagged for customer confirmation), open decisions, and hard
-    constraints. Empty sections are omitted. This is surfacing only — there is no
-    accept/risk interrupt tool yet (HITL v2 is out of scope).
+    constraints. Each item is prefixed with its stable CSM id so the user can act on
+    it at a gate via HITL v2 — `approve_with_assumptions` (confirm specific ASM-* ids)
+    or `request_evidence` — and the confirmed/accepted state flows back into the CSM.
     """
     try:
         summ = model.epistemic_summary()
     except Exception:
         return ""
+
+    def _ids(items, text_key):
+        return [f'{it.get("id", "?")}: {it[text_key]}' for it in items]
+
     sections = [
-        ("Known facts", [f["statement"] for f in summ["known_facts"]]),
-        ("Assumptions (needs customer confirmation)",
-         [a["statement"] for a in summ["assumptions_needing_confirmation"]]),
-        ("Open decisions", [d["title"] for d in summ["open_decisions"]]),
-        ("Constraints", [f'{c["statement"]} [{c["kind"]}]' for c in summ["constraints"]]),
+        ("Known facts", _ids(summ["known_facts"], "statement")),
+        ("Assumptions (needs customer confirmation — confirm via approve_with_assumptions)",
+         _ids(summ["assumptions_needing_confirmation"], "statement")),
+        ("Open decisions", _ids(summ["open_decisions"], "title")),
+        ("Constraints",
+         [f'{c.get("id", "?")}: {c["statement"]} [{c["kind"]}]' for c in summ["constraints"]]),
     ]
     lines: list[str] = []
     for title, items in sections:
@@ -1059,7 +1065,7 @@ def _epistemic_note(model, *, cap: int = 8) -> str:
             lines.append(f"  - … (+{len(items) - cap} more)")
     if not lines:
         return ""
-    return "\n\nEPISTEMIC SUMMARY (display-only):\n" + "\n".join(lines)
+    return "\n\nEPISTEMIC SUMMARY (confirm assumptions / request evidence at the gate):\n" + "\n".join(lines)
 
 
 def _solution_gate_note() -> str:

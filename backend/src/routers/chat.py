@@ -15,7 +15,7 @@ from agent import RECURSION_LIMIT
 from backends import WORKSPACE
 from context import SessionContext
 from reporting import record_report_step
-from tools import GATE_TOOL_NAMES, clear_stage_markers
+from tools import GATE_TOOL_NAMES, allowed_decisions_for, clear_stage_markers
 import session_state as ss
 from session_state import (
     _artifacts,
@@ -41,6 +41,30 @@ from session_state import (
 logger = logging.getLogger("diagram-agent")
 
 router = APIRouter()
+
+
+def _persist_decision_record(payload: dict, gate: str | None, approver: str) -> None:
+    """Append a HITL v2 DecisionRecord to the workspace log (no-op for plain
+    approve/reject or on any failure — must never break the resume)."""
+    if not gate or payload.get("action") not in ss.HITL_V2_ACTIONS:
+        return
+    try:
+        from datetime import datetime, timezone
+
+        from decisions import append_decision, next_seq
+        from session_state import decision_record_from_payload
+
+        rec = decision_record_from_payload(
+            payload, gate,
+            seq=next_seq(WORKSPACE),
+            approver=approver,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+        )
+        if rec is not None:
+            append_decision(rec, WORKSPACE)
+            logger.info("persisted decision %s (%s) at %s", rec.id, rec.action, gate)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("failed to persist decision record: %s", exc)
 
 _RESTORABLE_FILES = {
     "architecture_analysis": "architecture_analysis.json",
@@ -113,7 +137,12 @@ async def agui_endpoint(request: Request):
                     payload = {}
                 pending_name = _pending_action_name(await _pending_interrupt(config))
                 decision = _decision_from_payload(payload, pending_name)
-                logger.info("resume %s → %s", pending_name, decision["type"])
+                logger.info("resume %s → %s (action=%s)", pending_name, decision["type"],
+                            payload.get("action"))
+                # HITL v2: persist a structured decision record for trade-off actions
+                # (accept_risk, approve_with_assumptions, request_evidence, ...). It is
+                # projected into the CSM on the next build_solution_model.
+                _persist_decision_record(payload, pending_name, session_ctx.user_email)
                 if pending_name in GATE_TOOL_NAMES:
                     note = payload.get("feedback") or payload.get("modifications") or ""
                     record_report_step(
@@ -353,6 +382,10 @@ async def agui_endpoint(request: Request):
             if val is not None:
                 card, step, delta = _card_for(val, summary)
                 if card is not None:
+                    # HITL v2: tell the UI which trade-off actions this gate offers.
+                    gate_name = _pending_action_name(val)
+                    if gate_name:
+                        card.setdefault("allowed_decisions", allowed_decisions_for(gate_name))
                     logger.info("PAUSED at gate: %s", card["type"])
                     state_delta = [{"op": "replace", "path": "/current_step", "value": step}]
                     for k, v in _stage_artifacts(WORKSPACE).items():
