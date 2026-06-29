@@ -54,6 +54,10 @@ DEFAULT_LOGO = Path(__file__).resolve().parent / "data" / "logo.png"
 # ── Column map for the "2. WBS" sheet (1-based) ──────────────────────────────
 C_NUM, C_REF, C_FEAT, C_DESC, C_TOTAL = 2, 3, 4, 5, 6
 C_BE, C_FEMOB, C_RA, C_TEST, C_PM, C_REMARK = 7, 8, 9, 10, 11, 12
+# Optional WBS v2 3-point estimate columns (Optimistic / Most-likely / Pessimistic),
+# written only when a project supplies them — left untouched otherwise. They sit AFTER
+# the template's columns (B..L) so the Effort sheet's VLOOKUP range ($B$5:$L$) is unaffected.
+C_OPT, C_LIK, C_PES = 13, 14, 15
 
 # Master Data cell refs the template formulas point at.
 MD = "'4. Master Data'"
@@ -122,6 +126,20 @@ def _build_wbs_sheet(ws: Worksheet, wbs: dict, snap: dict) -> dict:
     seq = 0
     r = 7  # row 5 header, row 6 grand total, body starts at 7
 
+    # Only surface the 3-point columns when the project actually estimated them, so a
+    # plain WBS stays visually identical to the template.
+    has_pert = any(
+        float(leaf.get("likely") or 0) > 0
+        for phase in wbs.get("phases", [])
+        for module in phase.get("modules", [])
+        for group in module.get("groups", [])
+        for leaf in group.get("items", [])
+    )
+    if has_pert:
+        for col, label in ((C_OPT, "Optimistic (O)"), (C_LIK, "Most-likely (M)"),
+                           (C_PES, "Pessimistic (P)")):
+            ws.cell(5, col).value = label
+
     for phase in wbs.get("phases", []):
         phase_row = r
         _apply_style(ws, r, "phase", snap)
@@ -162,6 +180,10 @@ def _build_wbs_sheet(ws: Worksheet, wbs: dict, snap: dict) -> dict:
                     ws.cell(r, C_TOTAL).value = f"=SUM(G{r}:K{r})"
                     ws.cell(r, C_REMARK).value = leaf.get("remark")
                     _write_leaf_effort(ws, r, leaf, pt)
+                    if has_pert and float(leaf.get("likely") or 0) > 0:
+                        ws.cell(r, C_OPT).value = leaf.get("optimistic") or None
+                        ws.cell(r, C_LIK).value = leaf.get("likely") or None
+                        ws.cell(r, C_PES).value = leaf.get("pessimistic") or None
                     r += 1
 
             # module roll-up over its full contiguous block (label rows are empty).

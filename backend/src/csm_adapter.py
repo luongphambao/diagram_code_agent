@@ -38,6 +38,7 @@ from csm import (
 from solution_validator import _as_list, _read_json, _soft_match
 
 SOLUTION_MODEL_NAME = "solution_model.json"
+SOLUTION_MODEL_PREV_NAME = "solution_model.prev.json"
 
 
 def _src(ref: str) -> list[SourceRef]:
@@ -207,6 +208,8 @@ def _work_items(wbs: dict[str, Any]) -> list[WorkItem]:
         out.append(WorkItem(
             id=mint_id("work_item", key), name=name, effort_mandays=md,
             parent=str(it.get("module") or it.get("phase") or ""),
+            predecessors=[str(p) for p in _as_list(it.get("predecessors"))],
+            pert_expected_md=float(it.get("pert_expected_md") or 0),
             provenance="agent", source_refs=_src("wbs.json"),
         ))
     return out
@@ -312,6 +315,11 @@ def build_solution_model(
         model.revision = int(prev.get("revision") or 1)
         model.created_at = prev.get("created_at")
     else:
+        # Content changed — snapshot the prior model as the change-impact "before".
+        src = workspace / SOLUTION_MODEL_NAME
+        if src.exists():
+            (workspace / SOLUTION_MODEL_PREV_NAME).write_text(
+                src.read_text(encoding="utf-8"), encoding="utf-8")
         model.revision = int(prev.get("revision") or 0) + 1
         model.created_at = created_at if created_at is not None else prev.get("created_at")
 

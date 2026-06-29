@@ -141,6 +141,7 @@ from .analysis_tools import (
     propose_blueprint,
     propose_diagram_brief,
     propose_tech_stack,
+    query_change_impact,
     submit_critique,
     web_research,
 )
@@ -173,6 +174,7 @@ DIAGRAM_TOOLS = [
     finalize_diagram,
     generate_pdf_report,
     generate_ppt_proposal,
+    query_change_impact,
 ]
 
 # Late imports (same as original tools.py bottom section)
@@ -199,6 +201,7 @@ MAIN_TOOLS = [
     propose_wbs_skeleton,     # WBS structure approval gate
     propose_wbs,              # WBS plan/effort approval gate
     export_wbs_excel,         # WBS .xlsx deliverable gate
+    query_change_impact,      # report blast radius of a requirement change (CSM diff)
 ]
 
 # Icon resolver subagent tools: node search + icon resolution (runs before drawer).

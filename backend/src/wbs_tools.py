@@ -29,7 +29,7 @@ from backends import WORKSPACE
 import wbs_excel
 from wbs_effort import (
     RATIOS, Ratios, derive_leaf_effort, rollup, make_ref_code, delivery_grid,
-    MANDAYS_PER_MONTH,
+    critical_path, MANDAYS_PER_MONTH,
 )
 
 # ── state files (registered in tools.clear_stage_markers) ────────────────────
@@ -242,6 +242,12 @@ class LeafIn(BaseModel):
     mobile: float = Field(0, description="Mobile dev man-days")
     ai: float = Field(0, description="AI/ML dev man-days")
     ba: float = Field(0, description="ONLY for phase_type=requirement: the analysis man-days")
+    optimistic: float = Field(0, description="PERT optimistic man-days (O); scheduling only")
+    likely: float = Field(0, description="PERT most-likely man-days (M); >0 enables 3-point scheduling")
+    pessimistic: float = Field(0, description="PERT pessimistic man-days (P); scheduling only")
+    predecessors: list[str] = Field(
+        default_factory=list,
+        description="ref_code(s) that must finish before this task starts, e.g. ['BNK-3']")
     remark: str = ""
 
 
@@ -275,6 +281,8 @@ def add_wbs_items(items: list[LeafIn]) -> str:
         seq += 1
         eff = derive_leaf_effort(be=it.be, fe=it.fe, mobile=it.mobile, ai=it.ai,
                                  ba=it.ba, phase_type=it.phase_type, ratios=r)
+        # PERT is for scheduling only — it does NOT feed the BnK effort/ratio model.
+        pert = round((it.optimistic + 4 * it.likely + it.pessimistic) / 6, 4) if it.likely > 0 else 0.0
         existing.append({
             "seq": seq, "ref_code": make_ref_code(pc, seq),
             "phase_code": it.phase_code, "module_code": it.module_code,
@@ -283,6 +291,9 @@ def add_wbs_items(items: list[LeafIn]) -> str:
             "be": eff["be"], "fe": eff["fe"], "mobile": eff["mobile"], "ai": eff["ai"],
             "fe_mobile": round(eff["fe"] + eff["mobile"] + eff["ai"], 4),
             "ba": eff["ba"], "qc": eff["qc"], "pm": eff["pm"], "total": eff["total"],
+            "optimistic": it.optimistic, "likely": it.likely, "pessimistic": it.pessimistic,
+            "pert_expected_md": pert,
+            "predecessors": [str(p).strip() for p in (it.predecessors or [])],
         })
         added += 1
     _write_json(_WBS_FILE, wbs)
@@ -322,6 +333,9 @@ def _assemble_nested(wbs: dict) -> dict:
                     "be": it["be"], "fe": it["fe"], "mobile": it["mobile"], "ai": it["ai"],
                     "fe_mobile": it.get("fe_mobile", round(it["fe"] + it["mobile"] + it["ai"], 4)),
                     "ba": it["ba"], "qc": it["qc"], "pm": it["pm"], "total": it["total"],
+                    # WBS v2 scheduling (carried through so the Excel export can show O/M/P)
+                    "optimistic": it.get("optimistic", 0), "likely": it.get("likely", 0),
+                    "pessimistic": it.get("pessimistic", 0),
                 })
             modules_out.append({"code": m["code"], "name": m["name"],
                                 "groups": [{"name": g, "items": groups[g]} for g in order]})
@@ -353,6 +367,21 @@ def compute_wbs_rollup() -> str:
     wbs["phases_nested"] = nested
     wbs["effort_by_module"] = by_mod
     wbs["effort_totals"] = totals
+    # Critical path (only when the agent supplied dependencies or 3-point estimates).
+    cp_msg = ""
+    if any(it.get("predecessors") or it.get("pert_expected_md") for it in wbs["items"]):
+        cp = critical_path(wbs["items"])
+        sched = {s["ref_code"]: s for s in cp["items"]}
+        sched_keys = ("early_start", "early_finish", "late_start", "late_finish",
+                      "float_md", "critical")
+        for it in wbs["items"]:
+            s = sched.get(it["ref_code"])
+            if s:
+                it.update({k: s[k] for k in sched_keys})
+        wbs["critical_path"] = {"project_duration_md": cp["project_duration_md"],
+                                "ref_codes": cp["critical_path_ref_codes"]}
+        cp_msg = (f" Critical path: {len(cp['critical_path_ref_codes'])} tasks, "
+                  f"{cp['project_duration_md']} MD.")
     # the builder reads wbs["phases"] as the nested tree → swap it in for export,
     # but keep the skeleton meta under phases_meta so add_wbs_items stays valid.
     wbs["phases_meta"] = wbs["phases"]
@@ -362,7 +391,7 @@ def compute_wbs_rollup() -> str:
     return (f"Roll-up complete: {totals['total_mandays']} MD "
             f"(~{totals['total_manmonths']} man-months) across {len(by_mod)} modules. "
             f"By role — BE {br['BE']}, FE/Mobile {br['FE_Mobile']}, BA {br['BA']}, "
-            f"QC {br['QC']}, PM {br['PM']}.")
+            f"QC {br['QC']}, PM {br['PM']}." + cp_msg)
 
 
 # ════════════════════════════════════════════════════════════════════════════

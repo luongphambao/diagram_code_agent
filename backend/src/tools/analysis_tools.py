@@ -15,7 +15,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from architecture_advisor import analyze_requirements
 from backends import WORKSPACE
-from csm_adapter import build_solution_model
+from csm import SolutionModel
+from csm_adapter import build_solution_model, SOLUTION_MODEL_NAME, SOLUTION_MODEL_PREV_NAME
+from csm_diff import diff_solution_models
 from findings import DiagramFinding, format_critique, prune, verdict_for
 from solution_validator import validate_solution
 from traceability import write_trace_links
@@ -1085,6 +1087,68 @@ def _solution_gate_note() -> str:
     if not findings:
         return csm_note
     return csm_note + "\n\nCROSS-ARTIFACT CHECK — " + summary
+
+
+def _impact_ids(dumps: list[dict], cap: int = 8) -> str:
+    ids = [str(d.get("id") or "?") for d in dumps]
+    head = ", ".join(ids[:cap])
+    return head + (f" … (+{len(ids) - cap} more)" if len(ids) > cap else "")
+
+
+@tool(parse_docstring=True)
+def query_change_impact() -> str:
+    """Compare the current CSM revision to the previous snapshot and report what changed.
+
+    Reads solution_model.json (current) and solution_model.prev.json (previous, written
+    automatically when a revision bumps), diffs them by stable CSM id, and returns a
+    compact report: a greppable summary line, then added/removed/changed entities per
+    type and trace-link deltas. Call this after the user revises a requirement (and the
+    solution model has been refreshed) to see the blast radius of the change. Returns
+    CHANGE_IMPACT: NONE when there is no previous snapshot or nothing changed.
+    """
+    cur_raw = _read_json_file(WORKSPACE / SOLUTION_MODEL_NAME, None)
+    prev_raw = _read_json_file(WORKSPACE / SOLUTION_MODEL_PREV_NAME, None)
+    if cur_raw is None:
+        return "CHANGE_IMPACT: NONE — no solution model yet (run the pipeline first)."
+    if prev_raw is None:
+        return "CHANGE_IMPACT: NONE — no previous snapshot yet (model has not changed since first build)."
+    try:
+        new = SolutionModel.model_validate(cur_raw)
+        old = SolutionModel.model_validate(prev_raw)
+    except Exception as exc:  # noqa: BLE001
+        return f"CHANGE_IMPACT: ERROR — could not parse solution model: {exc}"
+
+    d = diff_solution_models(old, new)
+    s = d["summary"]
+    total_added = s["entities_added"]
+    total_removed = s["entities_removed"]
+    total_changed = s["entities_changed"]
+    head = (f"CHANGE_IMPACT: REV {d['revision']['from']}→{d['revision']['to']} | "
+            f"+{total_added} -{total_removed} ~{total_changed} entities")
+    if not (total_added or total_removed or total_changed
+            or s["links_added"] or s["links_removed"]):
+        return f"CHANGE_IMPACT: NONE — REV {d['revision']['from']}→{d['revision']['to']}, no entity or link changes."
+
+    lines = [head]
+    for label, _attr in (
+        ("requirements", "requirements"), ("constraints", "constraints"),
+        ("assumptions", "assumptions"), ("decisions", "decisions"),
+        ("components", "components"), ("risks", "risks"), ("work_items", "work_items"),
+    ):
+        part = d[label]
+        if not (part["added"] or part["removed"] or part["changed"]):
+            continue
+        lines.append(f"{label}: +{len(part['added'])} -{len(part['removed'])} ~{len(part['changed'])}")
+        if part["added"]:
+            lines.append(f"  added:   {_impact_ids(part['added'])}")
+        if part["removed"]:
+            lines.append(f"  removed: {_impact_ids(part['removed'])}")
+        if part["changed"]:
+            lines.append(f"  changed: {_impact_ids(part['changed'])}")
+    links = d["trace_links"]
+    if links["added"] or links["removed"]:
+        lines.append(f"trace_links: +{len(links['added'])} -{len(links['removed'])}")
+    return "\n".join(lines)
 
 
 @tool(args_schema=PdfReportConfig)

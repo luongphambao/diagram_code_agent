@@ -171,3 +171,41 @@ def test_build_writes_file_and_bumps_revision_only_on_change(tmp_path):
     written = json.loads((tmp_path / "solution_model.json").read_text(encoding="utf-8"))
     assert written["sha256"] == m3.content_hash()
     assert written["revision"] == 2
+
+
+def test_work_item_predecessors_and_pert_roundtrip():
+    """WBS v2 fields project through from_artifacts onto the WorkItem."""
+    wbs = {
+        "items": [
+            {"id": "1.1", "name": "OCR Service implementation", "total_md": 12,
+             "pert_expected_md": 9.0, "predecessors": ["BNK-1", "BNK-2"]},
+        ],
+    }
+    m = from_artifacts(BRIEF, BLUEPRINT, wbs)
+    wi = m.by_id("WBS-1_1")
+    assert wi.pert_expected_md == 9.0
+    assert wi.predecessors == ["BNK-1", "BNK-2"]
+    # defaults when absent: legacy items get empty predecessors / 0 pert
+    legacy = from_artifacts(BRIEF, BLUEPRINT, WBS).by_id("WBS-1_1")
+    assert legacy.predecessors == [] and legacy.pert_expected_md == 0.0
+
+
+def test_build_writes_prev_snapshot_only_on_change(tmp_path):
+    _write_artifacts(tmp_path)
+
+    # First build: no prior model -> no snapshot.
+    build_solution_model(tmp_path)
+    assert not (tmp_path / "solution_model.prev.json").exists()
+
+    # Idempotent re-run: still no snapshot (content unchanged).
+    build_solution_model(tmp_path)
+    assert not (tmp_path / "solution_model.prev.json").exists()
+
+    # Real change -> the prior model is snapshotted as the change-impact "before".
+    changed = dict(BLUEPRINT)
+    changed["key_decisions"] = BLUEPRINT["key_decisions"] + ["Single-region first, DR in phase 2"]
+    (tmp_path / "blueprint.json").write_text(json.dumps(changed), encoding="utf-8")
+    build_solution_model(tmp_path)
+    prev = tmp_path / "solution_model.prev.json"
+    assert prev.exists()
+    assert json.loads(prev.read_text(encoding="utf-8"))["revision"] == 1  # the prior rev

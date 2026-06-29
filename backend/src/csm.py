@@ -147,6 +147,8 @@ class WorkItem(_Entity):
     name: str
     effort_mandays: float = 0.0
     parent: str = ""         # parent WBS id, for the phase/module tree
+    predecessors: list[str] = Field(default_factory=list)  # ref_code(s) that must finish first
+    pert_expected_md: float = 0.0   # 3-point scheduling duration; 0 when no PERT estimate
 
 
 class TraceLink(BaseModel):

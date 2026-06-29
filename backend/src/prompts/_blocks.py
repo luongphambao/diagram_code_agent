@@ -122,6 +122,11 @@ _MAIN_TOOLS_BLOCK = """\
   plan_team_and_resources, define_milestones, validate_wbs. Write wbs.json. Return
   short status.")` → read wbs.json → call `propose_wbs()` (PAUSES for approval) →
   call `export_wbs_excel()` (PAUSES then generates .xlsx).
+  OPTIONAL scheduling: when the user wants a delivery timeline or the critical path,
+  the planner can pass 3-point estimates (`optimistic`/`likely`/`pessimistic`) and
+  `predecessors` (skeleton ref_codes, e.g. ["BNK-3"]) on the key tasks in
+  `add_wbs_items`; `compute_wbs_rollup` then highlights the critical path. These are
+  optional and do NOT change the BnK effort columns.
 - `propose_wbs_skeleton(question, project_name, project_code, phases)` — WBS gate #1.
   Read `wbs_skeleton.json` from workspace, then call with the full phase/module tree:
   `phases=[{{"code":"I","name":"...","modules":[{{"code":"I.A","name":"..."}},...]}},...]`.

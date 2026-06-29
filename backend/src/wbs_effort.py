@@ -186,6 +186,99 @@ def rollup(items: list[dict]) -> dict:
     }
 
 
+def critical_path(items: list[dict]) -> dict:
+    """CPM forward/backward pass over leaf items linked by ``ref_code`` predecessors.
+
+    Each item's duration is ``item['pert_expected_md']`` when a 3-point estimate was
+    supplied (>0), else its derived ``item['total']``. Predecessors are read from
+    ``item['predecessors']`` (a list of ref_codes); unknown refs are silently skipped
+    so a partial/loose DAG is fine. A dependency cycle does NOT raise — the schedule
+    degrades to "no float info" rather than crashing the roll-up (the items come from
+    an LLM and cannot be trusted to be acyclic).
+
+    Returns::
+
+        {"project_duration_md": float,
+         "critical_path_ref_codes": [ref_code, ...],
+         "items": [{"ref_code", "early_start", "early_finish",
+                    "late_start", "late_finish", "float_md", "critical"}, ...]}
+
+    Isolated tasks (no predecessors and no successors) get ``float_md=None`` and
+    ``critical=False`` — there is no dependency structure to place them on a path.
+    """
+    nodes = [it for it in items if it.get("ref_code")]
+    by_ref = {it["ref_code"]: it for it in nodes}
+    dur = {r: (float(it.get("pert_expected_md") or 0) or float(it.get("total") or 0))
+           for r, it in by_ref.items()}
+
+    # preds[r] = valid predecessor refs of r; succs[r] = refs that depend on r.
+    preds: dict[str, list[str]] = {}
+    succs: dict[str, list[str]] = {r: [] for r in by_ref}
+    indeg: dict[str, int] = {}
+    for r, it in by_ref.items():
+        ps = [str(p).strip() for p in (it.get("predecessors") or [])]
+        ps = [p for p in ps if p in by_ref and p != r]      # drop unknown + self refs
+        preds[r] = ps
+        indeg[r] = len(ps)
+        for p in ps:
+            succs[p].append(r)
+
+    def _bare(reason_no_path: bool) -> dict:
+        # Fallback when we can't schedule (cycle): no float, longest single task as duration.
+        out = [{"ref_code": r, "early_start": None, "early_finish": None,
+                "late_start": None, "late_finish": None, "float_md": None,
+                "critical": False} for r in by_ref]
+        return {"project_duration_md": _round(max(dur.values(), default=0.0)),
+                "critical_path_ref_codes": [], "items": out}
+
+    # Kahn topological order.
+    queue = [r for r in by_ref if indeg[r] == 0]
+    topo: list[str] = []
+    rem = dict(indeg)
+    while queue:
+        r = queue.pop()
+        topo.append(r)
+        for s in succs[r]:
+            rem[s] -= 1
+            if rem[s] == 0:
+                queue.append(s)
+    if len(topo) != len(by_ref):
+        return _bare(reason_no_path=True)            # cycle — bail gracefully
+
+    # Forward pass: ES = max EF of predecessors; EF = ES + duration.
+    es: dict[str, float] = {}
+    ef: dict[str, float] = {}
+    for r in topo:
+        es[r] = max((ef[p] for p in preds[r]), default=0.0)
+        ef[r] = es[r] + dur[r]
+    project_ef = max(ef.values(), default=0.0)
+
+    # Backward pass: LF = project_ef for sinks, else min LS of successors; LS = LF - dur.
+    lf: dict[str, float] = {}
+    ls: dict[str, float] = {}
+    for r in reversed(topo):
+        lf[r] = min((ls[s] for s in succs[r]), default=project_ef)
+        ls[r] = lf[r] - dur[r]
+
+    out = []
+    crit: list[str] = []
+    for it in nodes:                                 # preserve original item order
+        r = it["ref_code"]
+        isolated = not preds[r] and not succs[r]
+        flt = None if isolated else _round(ls[r] - es[r])
+        is_crit = (flt is not None and flt <= 0.001)
+        if is_crit:
+            crit.append(r)
+        out.append({
+            "ref_code": r,
+            "early_start": _round(es[r]), "early_finish": _round(ef[r]),
+            "late_start": _round(ls[r]), "late_finish": _round(lf[r]),
+            "float_md": flt, "critical": is_crit,
+        })
+    return {"project_duration_md": _round(project_ef),
+            "critical_path_ref_codes": crit, "items": out}
+
+
 def delivery_grid(duration_weeks: int) -> dict:
     """Compute the Delivery-Plan calendar grid from a project duration.
 
