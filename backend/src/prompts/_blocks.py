@@ -22,13 +22,14 @@ _MAIN_TOOLS_BLOCK = """\
   tech stack. Returns top-k projects with their technology stack, key modules, and
   total mandays. Call this BEFORE `web_research` and `propose_tech_stack` to ground
   the proposal in BnK's real delivery experience. Writes `similar_solutions.json`.
-- `web_research(query, topic="general")` — ONE live Tavily web search returning a
-  synthesized answer + sources. HARD CAP: 3 calls per WHOLE session. ALWAYS call it
-  ONCE before `propose_tech_stack` to verify: current managed-service pricing, latest
-  stable versions/EOL dates, and reference architectures — batch all questions into
-  ONE rich query. NEVER call it after tech-stack step (icon/render/critic/report/
-  email/calendar). Returns `BUDGET_EXHAUSTED` when quota is gone — proceed from
-  existing knowledge.
+- `web_research(query, topic="tech_stack")` — ONE live Tavily web search returning a
+  synthesized answer + sources. Session budget: 10 searches total, split into per-stage
+  sub-budgets selected by `topic`: `tech_stack` (4 — pricing, versions/EOL), `architecture`
+  (2 — reference patterns), `wbs` (1 — effort benchmarks), `evidence` (2 — compliance/
+  claim grounding), `general` (1). Pick the topic that matches WHY you search; batch
+  related questions into ONE rich query. Returns `CATEGORY_EXHAUSTED` (that stage's
+  sub-budget is spent — others may remain) or `BUDGET_EXHAUSTED` (whole session spent)
+  — then proceed from existing knowledge and flag unverified facts as assumptions.
 - `propose_tech_stack(tech_stack, assumptions, scaling_roadmap, estimated_total_monthly_cost_usd)` —
   propose the technology stack; PAUSES for the user to approve/reject.
   `tech_stack` is a LIST of objects, ONE per layer:
@@ -278,13 +279,14 @@ You design the solution step by step; the user reviews and approves the gated st
      solution type, and key capabilities. Read `similar_solutions.json` and note
      which tech stacks BnK has used in comparable projects — these should anchor
      your proposal.
-   - **Verify time-sensitive facts (mandatory).** ALWAYS call `web_research` ONCE
-     immediately after, with ONE batched query covering: current managed-service
+   - **Verify time-sensitive facts (mandatory).** ALWAYS call `web_research` here with
+     `topic="tech_stack"` and ONE batched query covering: current managed-service
      pricing for the top candidates, latest stable versions/EOL dates, and any
      compliance reference architecture. Cite returned numbers/versions in `rationale`,
      `estimated_monthly_cost_usd`, and `capacity_sizing`; anything unverified goes in
-     `assumptions.confirm_with_customer`. You have AT MOST 3 `web_research` calls per
-     session — spend them here; NEVER call after the tech-stack step.
+     `assumptions.confirm_with_customer`. The `tech_stack` sub-budget is 4 searches —
+     spend them deliberately here. Other stages have their own budgets (use
+     `topic="architecture"`, `"wbs"`, or `"evidence"` when researching for those steps).
    Call `propose_tech_stack(...)` with:
    - `assumptions` — ALWAYS include: budget_tier, monthly_budget_range_usd,
      users (MAU/DAU/peak_concurrent/peak_rps derived from signals), data

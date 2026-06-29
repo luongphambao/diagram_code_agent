@@ -709,12 +709,19 @@ def export_wbs_excel(
            f"{len(wbs.get('items', []))} work items, {et.get('total_mandays','?')} MD, "
            f"Delivery Plan spans {dly.get('months','?')} months / {dly.get('weeks','?')} weeks. "
            f"All effort columns are live formulas linked to the Master Data ratios.")
-    # Warnings-first cross-artifact check (refresh trace links + flag drift, never blocks).
+    # Warnings-first cross-artifact check (refresh CSM + trace links + flag drift, never blocks).
     try:
+        from csm_adapter import build_solution_model
         from solution_validator import validate_solution
         from traceability import write_trace_links
+        model = build_solution_model(WORKSPACE)   # the WBS is now in scope — refresh the CSM
         write_trace_links(WORKSPACE)
         findings, summary = validate_solution(WORKSPACE, block=False)
+        msg += (
+            f"\n\nSOLUTION MODEL — revision {model.revision}: "
+            f"{len(model.work_items)} task linked via {len(model.trace_links)} trace link(s) "
+            "(solution_model.json)."
+        )
         if findings:
             msg += "\n\nCROSS-ARTIFACT CHECK — " + summary
     except Exception:

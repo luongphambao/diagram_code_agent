@@ -185,7 +185,7 @@ MAIN_TOOLS = [
     analyze_architecture_requirements,
     propose_diagram_brief,
     # find_similar_solutions,   # DISABLED: focus on WBS testing
-    web_research,             # ≤3 Tavily calls/session — for tech-stack fact-checking
+    web_research,             # 10 Tavily calls/session, split per stage (topic=tech_stack/architecture/wbs/evidence)
     propose_tech_stack,
     propose_blueprint,
     visualize_code_structure,

@@ -36,8 +36,22 @@ NODE_SINGLE_SEARCH_WARN = 3
 NODE_SINGLE_SEARCH_HARD_CAP = 6
 CRITIC_REVISION_HARD_CAP = 2
 
-# Tavily web search is metered at a hard 3 calls per session (very limited quota).
-WEB_SEARCH_SESSION_CAP = 3
+# Tavily web search is metered per session. The total cap is split into per-stage
+# sub-budgets (the `topic`/category argument to web_research) so a single stage
+# can't drain the whole quota: research is spread across tech-stack, architecture,
+# WBS and evidence/compliance instead of being dumped into one step.
+#
+# Sum of WEB_SEARCH_CATEGORY_CAPS == WEB_SEARCH_SESSION_CAP. Keep them in sync.
+WEB_SEARCH_SESSION_CAP = 10
+WEB_SEARCH_CATEGORY_CAPS: dict[str, int] = {
+    "tech_stack": 4,    # managed-service pricing, latest stable versions / EOL (heaviest)
+    "architecture": 2,  # reference architectures / patterns for the chosen design
+    "wbs": 1,           # effort benchmarks / delivery norms
+    "evidence": 2,      # compliance / claim grounding (feeds the evidence store)
+    "general": 1,       # fallback bucket for anything that doesn't fit above
+}
+# Tavily's own `topic` hint only accepts these; category is mapped onto one of them.
+WEB_SEARCH_TAVILY_TOPICS: frozenset[str] = frozenset({"general", "news"})
 _WEB_SEARCH_BUDGET_FILE = WORKSPACE / "web_search_budget.json"
 TAVILY_SEARCH_URL = "https://api.tavily.com/search"
 

@@ -91,17 +91,49 @@ def build_trace_links(
     }
 
 
+def _graph_from_model(model: Any) -> dict[str, Any]:
+    """Project a `SolutionModel` into the same {requirements, links, coverage} shape
+    `build_trace_links` returns — but using the CSM's STABLE ids, so `trace_links.json`
+    and `solution_model.json` agree on every id (the whole point of step 1.3)."""
+    reqs = [{"id": r.id, "kind": r.kind, "text": r.statement} for r in model.requirements]
+    links = [
+        {"from": l.from_id, "to": l.to_id, "relation": l.relation, "provenance": l.provenance}
+        for l in model.trace_links
+    ]
+    covered = {l["from"] for l in links if l["relation"] == "satisfies"}
+    total = len(reqs)
+    return {
+        "requirements": reqs,
+        "links": links,
+        "coverage": {
+            "requirements_total": total,
+            "requirements_covered": len(covered),
+            "ratio": round(len(covered) / total, 3) if total else 1.0,
+        },
+    }
+
+
 def write_trace_links(workspace: Optional[Path] = None) -> dict[str, Any]:
-    """Read the workspace artifacts, build trace links, write `trace_links.json`."""
+    """Read the workspace artifacts, build trace links, write `trace_links.json`.
+
+    Projects from the CSM (`solution_model.json`) so ids match the canonical model;
+    falls back to the legacy artifact-derived graph if the CSM can't be built.
+    """
     if workspace is None:
         from backends import WORKSPACE
         workspace = WORKSPACE
     workspace = Path(workspace)
-    graph = build_trace_links(
-        _read_json(workspace / "diagram_brief.json", {}) or {},
-        _read_json(workspace / "blueprint.json", {}) or {},
-        _read_json(workspace / "wbs.json", {}) or {},
-    )
+
+    try:
+        from csm_adapter import build_solution_model
+        graph = _graph_from_model(build_solution_model(workspace))
+    except Exception:
+        graph = build_trace_links(
+            _read_json(workspace / "diagram_brief.json", {}) or {},
+            _read_json(workspace / "blueprint.json", {}) or {},
+            _read_json(workspace / "wbs.json", {}) or {},
+        )
+
     workspace.mkdir(parents=True, exist_ok=True)
     (workspace / "trace_links.json").write_text(
         json.dumps(graph, indent=2, ensure_ascii=False), encoding="utf-8"

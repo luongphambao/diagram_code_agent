@@ -122,12 +122,28 @@ def evaluate_solution(
     brief: dict[str, Any],
     blueprint: dict[str, Any],
     wbs: dict[str, Any],
+    *,
+    model: Any = None,
 ) -> list[SolutionFinding]:
     """Run all cross-artifact rules over already-loaded artifact dicts.
 
     Pure function (no I/O) so it is trivially unit-testable. `validate_solution`
     is the workspace-reading wrapper around it.
+
+    `model` is an optional `SolutionModel`: when given, the SEMANTIC rules (unmapped
+    requirement, orphan WBS) anchor their findings to the CSM's STABLE ids instead of
+    leaving `entity_ids` empty. `model=None` reproduces the original behavior exactly,
+    so positional callers (and the structural rules, which need the blueprint edge
+    graph the CSM doesn't store) are unaffected.
     """
+    # CSM lookups for stable-id anchoring (empty when model is absent).
+    req_id_by_text: dict[str, str] = (
+        {r.statement: r.id for r in model.requirements} if model else {}
+    )
+    wbs_id_by_name: dict[str, str] = (
+        {w.name: w.id for w in model.work_items} if model else {}
+    )
+
     findings: list[SolutionFinding] = []
 
     nodes = [n for n in _as_list(blueprint.get("nodes")) if isinstance(n, dict)]
@@ -182,9 +198,10 @@ def evaluate_solution(
         if not text.strip():
             continue
         if not _soft_match(text, coverage_candidates):
+            rid = req_id_by_text.get(text) or req_id_by_text.get(text.strip())
             findings.append(SolutionFinding(
                 severity="medium", dimension="coverage", artifact_type="requirement",
-                entity_ids=[], requires_human_decision=True,
+                entity_ids=[rid] if rid else [], requires_human_decision=True,
                 title=f"Unmapped {kind} requirement",
                 detail=f"Requirement \"{text[:90]}\" is not addressed by any blueprint "
                        f"component, cluster, decision or NFR mechanism.",
@@ -200,9 +217,10 @@ def evaluate_solution(
             continue
         if trace_targets and not _soft_match(name, trace_targets):
             ref = str(it.get("id") or it.get("ref_code") or it.get("code") or name[:24])
+            wid = wbs_id_by_name.get(name) or f"WBS-{ref}"
             findings.append(SolutionFinding(
                 severity="low", confidence="medium", dimension="traceability",
-                artifact_type="wbs", entity_ids=[f"WBS-{ref}"],
+                artifact_type="wbs", entity_ids=[wid],
                 title="WBS task traces to no requirement or component",
                 detail=f"Task '{name}' does not soft-match any requirement or blueprint "
                        f"component; it may be internal-only work or scope creep.",
@@ -298,5 +316,12 @@ def validate_solution(
     brief = _read_json(workspace / "diagram_brief.json", {}) or {}
     blueprint = _read_json(workspace / "blueprint.json", {}) or {}
     wbs = _read_json(workspace / "wbs.json", {}) or {}
-    findings = evaluate_solution(brief, blueprint, wbs)
+    # Build the CSM so semantic findings carry stable ids. Function-local import keeps
+    # this module importable standalone and avoids the cycle (csm_adapter imports us).
+    try:
+        from csm_adapter import build_solution_model
+        model = build_solution_model(workspace)
+    except Exception:
+        model = None
+    findings = evaluate_solution(brief, blueprint, wbs, model=model)
     return findings, format_validation(findings, block=block)
