@@ -16,6 +16,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from architecture_advisor import analyze_requirements
 from backends import WORKSPACE
 from findings import DiagramFinding, format_critique, prune, verdict_for
+from solution_validator import validate_solution
+from traceability import write_trace_links
 from reporting import (
     DEFAULT_REPORT_SECTIONS,
     ReportRenderError,
@@ -1023,6 +1025,25 @@ class PdfReportConfig(BaseModel):
     )
 
 
+def _solution_gate_note() -> str:
+    """Run the cross-artifact validator + refresh trace_links.json before an export.
+
+    Warnings-first: never blocks the export, but appends any cross-artifact
+    contradictions (unmapped requirement, dangling edge, zero-effort WBS, orphan
+    task, missing decisions) so the agent/user sees drift before the deck/report
+    leaves the building. Promote to blocking by passing block=True once the rules
+    have proven stable in real runs.
+    """
+    try:
+        write_trace_links(WORKSPACE)
+        findings, summary = validate_solution(WORKSPACE, block=False)
+    except Exception:
+        return ""
+    if not findings:
+        return ""
+    return "\n\nCROSS-ARTIFACT CHECK — " + summary
+
+
 @tool(args_schema=PdfReportConfig)
 def generate_pdf_report(
     title: str = "",
@@ -1077,6 +1098,7 @@ def generate_pdf_report(
                 f" NOTE: {len(missing)} section(s) were omitted from this run: "
                 + ", ".join(missing) + "."
             )
+    msg += _solution_gate_note()
     return msg
 
 
@@ -1153,6 +1175,7 @@ def generate_ppt_proposal(
         missing = [s for s in DEFAULT_PPT_SECTIONS if s not in sections]
         if missing:
             msg += f" NOTE: {len(missing)} section(s) were omitted from this run: " + ", ".join(missing) + "."
+    msg += _solution_gate_note()
     return msg
 
 

@@ -704,11 +704,22 @@ def export_wbs_excel(
         return f"ERROR building WBS workbook: {exc}"
     dly = layout.get("delivery", {})
     et = wbs.get("effort_totals", {})
-    return (f"WBS exported to {_WBS_XLSX.name} "
-            f"({_WBS_XLSX.stat().st_size:,} bytes). "
-            f"{len(wbs.get('items', []))} work items, {et.get('total_mandays','?')} MD, "
-            f"Delivery Plan spans {dly.get('months','?')} months / {dly.get('weeks','?')} weeks. "
-            f"All effort columns are live formulas linked to the Master Data ratios.")
+    msg = (f"WBS exported to {_WBS_XLSX.name} "
+           f"({_WBS_XLSX.stat().st_size:,} bytes). "
+           f"{len(wbs.get('items', []))} work items, {et.get('total_mandays','?')} MD, "
+           f"Delivery Plan spans {dly.get('months','?')} months / {dly.get('weeks','?')} weeks. "
+           f"All effort columns are live formulas linked to the Master Data ratios.")
+    # Warnings-first cross-artifact check (refresh trace links + flag drift, never blocks).
+    try:
+        from solution_validator import validate_solution
+        from traceability import write_trace_links
+        write_trace_links(WORKSPACE)
+        findings, summary = validate_solution(WORKSPACE, block=False)
+        if findings:
+            msg += "\n\nCROSS-ARTIFACT CHECK — " + summary
+    except Exception:
+        pass
+    return msg
 
 
 # ── tool collections (imported by tools.py) ──────────────────────────────────
