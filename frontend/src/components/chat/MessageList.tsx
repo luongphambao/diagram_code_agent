@@ -98,7 +98,7 @@ export default function MessageList({
 
       {/* HITL gate cards */}
       {pendingInterrupt?.data.type === "techstack_approval" && (
-        <div className="mt-1"><TechStackApproval interrupt={pendingInterrupt} onResolve={onResolveTechStack} disabled={isRunning} /></div>
+        <div className="mt-1"><TechStackApproval interrupt={pendingInterrupt} onResolve={onResolveTechStack} onDecision={onResolveDecision} disabled={isRunning} /></div>
       )}
       {pendingInterrupt?.data.type === "blueprint_approval" && (
         <div className="mt-1"><BlueprintApproval interrupt={pendingInterrupt} onResolve={onResolveBlueprint} onDecision={onResolveDecision} disabled={isRunning} /></div>
@@ -110,10 +110,10 @@ export default function MessageList({
         </div>
       )}
       {pendingInterrupt?.data.type === "pdf_report_approval" && (
-        <div className="mt-1"><PdfReportApproval interrupt={pendingInterrupt} onResolve={onResolvePdfReport} disabled={isRunning} /></div>
+        <div className="mt-1"><PdfReportApproval interrupt={pendingInterrupt} onResolve={onResolvePdfReport} onDecision={onResolveDecision} disabled={isRunning} /></div>
       )}
       {pendingInterrupt?.data.type === "ppt_proposal_approval" && (
-        <div className="mt-1"><PptProposalApproval interrupt={pendingInterrupt} onResolve={onResolvePptProposal} disabled={isRunning} /></div>
+        <div className="mt-1"><PptProposalApproval interrupt={pendingInterrupt} onResolve={onResolvePptProposal} onDecision={onResolveDecision} disabled={isRunning} /></div>
       )}
       {pendingInterrupt?.data.type === "email_approval" && (
         <div className="mt-1"><EmailApproval interrupt={pendingInterrupt} onResolve={onResolveEmail} disabled={isRunning} /></div>
@@ -125,13 +125,13 @@ export default function MessageList({
         <div className="mt-1"><MeetingApproval interrupt={pendingInterrupt} onResolve={onResolveMeeting} disabled={isRunning} /></div>
       )}
       {pendingInterrupt?.data.type === "wbs_skeleton_approval" && (
-        <div className="mt-1"><WbsSkeletonApproval interrupt={pendingInterrupt} onResolve={onResolveWbsSkeleton} disabled={isRunning} /></div>
+        <div className="mt-1"><WbsSkeletonApproval interrupt={pendingInterrupt} onResolve={onResolveWbsSkeleton} onDecision={onResolveDecision} disabled={isRunning} /></div>
       )}
       {pendingInterrupt?.data.type === "wbs_approval" && (
-        <div className="mt-1"><WbsApproval interrupt={pendingInterrupt} onResolve={onResolveWbs} disabled={isRunning} /></div>
+        <div className="mt-1"><WbsApproval interrupt={pendingInterrupt} onResolve={onResolveWbs} onDecision={onResolveDecision} disabled={isRunning} /></div>
       )}
       {pendingInterrupt?.data.type === "wbs_excel_approval" && (
-        <div className="mt-1"><WbsExcelApproval interrupt={pendingInterrupt} onResolve={onResolveWbsExcel} disabled={isRunning} /></div>
+        <div className="mt-1"><WbsExcelApproval interrupt={pendingInterrupt} onResolve={onResolveWbsExcel} onDecision={onResolveDecision} disabled={isRunning} /></div>
       )}
 
       {pdfBase64 && (

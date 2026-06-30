@@ -135,6 +135,7 @@ from .analysis_tools import (
     _wants_structural,
     analyze_architecture_requirements,
     create_pptx,
+    edit_entity,
     generate_pdf_report,
     generate_ppt_proposal,
     inspect_diagram,
@@ -182,6 +183,7 @@ DIAGRAM_TOOLS = [
     propose_deck_plan,
     generate_ppt_proposal,
     query_change_impact,
+    edit_entity,
 ]
 
 # Late imports (same as original tools.py bottom section)
@@ -198,6 +200,7 @@ MAIN_TOOLS = [
     record_evidence,          # persist a grounded claim -> evidence_log.json -> CSM Evidence + supports links
     waive_finding,            # accept a cross-artifact finding as a trade-off -> findings_log.json
     resolve_finding,          # mark a cross-artifact finding fixed -> findings_log.json
+    edit_entity,              # patch a single field on a CSM entity -> solution_model.json
     propose_tech_stack,
     propose_blueprint,
     visualize_code_structure,

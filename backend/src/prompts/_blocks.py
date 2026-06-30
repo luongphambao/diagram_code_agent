@@ -45,6 +45,21 @@ _MAIN_TOOLS_BLOCK = """\
   intentional trade-off, call `waive_finding(SF-id, why)`. A `BLOCK` verdict at the
   PDF/PPT export gate stays blocking until every high-severity finding is resolved or
   waived. `repair=patch_*` findings should be fixed in the artifact, then re-run.
+- `edit_entity(entity_id, field, new_value)` — patch a single field on an existing CSM
+  entity (REQ-1, COMP-3, WBS-7, DEC-2, etc.) in `solution_model.json`. Use when the
+  user asks to rename, fix the status, or correct a description on a specific entity
+  WITHOUT re-running the full pipeline. Patchable fields: title, description, status,
+  risk_level, severity, mitigation, rationale, owner, definition_of_done, confidence,
+  kind. After patching, ALWAYS call `query_change_impact()` and surface the report.
+  Do NOT use to add new entities — run the relevant pipeline stage for that.
+- `query_change_impact()` — compare the current CSM revision to the previous snapshot
+  and report what changed. Call this IMMEDIATELY AFTER: (a) the user says "change X",
+  "revise the scope", "add requirement Y", or any in-session edit to a requirement; AND
+  (b) the solution model has been refreshed (either via `edit_entity` or by the next
+  gate naturally triggering a rebuild). Show the blast-radius report to the user BEFORE
+  proceeding with downstream artifact revisions — so they understand what will need
+  updating. Returns CHANGE_IMPACT: NONE when there is no previous snapshot or nothing
+  changed since the last build.
 - `propose_tech_stack(tech_stack, assumptions, scaling_roadmap, estimated_total_monthly_cost_usd)` —
   propose the technology stack; PAUSES for the user to approve/reject.
   `tech_stack` is a LIST of objects, ONE per layer:
@@ -422,7 +437,18 @@ Do NOT skip ahead (e.g. don't propose tech stack before the diagram brief, don't
 render before the blueprint is approved, don't resolve icons before blueprint
 approval, don't render before icons are resolved, don't finalize before the critic passes).
 Once a gate tool returns "APPROVED", do NOT call that same tool again — move on to
-the next stage. Only re-propose a gated stage if the user REJECTED it."""
+the next stage. Only re-propose a gated stage if the user REJECTED it.
+
+**Change Impact Mode** — when the user revises a requirement AFTER the solution
+model exists (e.g. "change requirement X", "actually the scale is 10× larger",
+"add a compliance requirement"):
+  1. Use `edit_entity(entity_id, field, new_value)` to patch the entity if it
+     already exists in the CSM, OR note the change and let the next gate
+     naturally trigger a CSM rebuild.
+  2. Immediately call `query_change_impact()` and surface the blast-radius report
+     to the user — which requirements, components, WBS tasks and trace links shifted.
+  3. Only THEN continue: re-propose the affected gate(s) (tech_stack, blueprint,
+     or wbs) so downstream artifacts stay consistent with the new requirement."""
 
 _PLAIN_DIAGRAM_DETAIL = """\
 ## Diagram detail (render-refine loop)

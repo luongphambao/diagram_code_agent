@@ -1,9 +1,11 @@
 import { useState } from "react";
-import type { PendingInterrupt } from "../hooks/useDiagramAgent";
+import type { PendingInterrupt, DecisionPayload } from "../hooks/useDiagramAgent";
+import DecisionActions from "./DecisionActions";
 
 interface PptProposalApprovalProps {
   interrupt: PendingInterrupt;
   onResolve: (approved: boolean, modifications?: string) => void;
+  onDecision?: (payload: DecisionPayload) => void;
   disabled?: boolean;
 }
 
@@ -33,10 +35,14 @@ const DEFAULT_PPT_SECTIONS = [
   "appendix",
 ];
 
-export default function PptProposalApproval({ interrupt, onResolve, disabled = false }: PptProposalApprovalProps) {
+export default function PptProposalApproval({ interrupt, onResolve, onDecision, disabled = false }: PptProposalApprovalProps) {
   const [mode, setMode] = useState<"idle" | "feedback">("idle");
   const [modifications, setModifications] = useState("");
   const [decided, setDecided] = useState(false);
+
+  const allowedDecisions = interrupt.data.allowed_decisions ?? [];
+  const useDecisionMenu = onDecision != null &&
+    allowedDecisions.some((a: string) => a !== "approve" && a !== "reject");
 
   const title = interrupt.data.title?.trim() || "Architecture Proposal";
   const subtitle = interrupt.data.subtitle?.trim() || "BnK PowerPoint Proposal";
@@ -111,22 +117,33 @@ export default function PptProposalApproval({ interrupt, onResolve, disabled = f
               </div>
             </div>
           )}
-          <div className="flex gap-2.5">
-            <button
-              onClick={approve}
+          {useDecisionMenu ? (
+            <DecisionActions
+              allowedDecisions={allowedDecisions}
               disabled={disabled}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-orange-700 px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-orange-900/30 transition-all hover:bg-orange-600 active:scale-98 disabled:opacity-50"
-            >
-              Generate PPT
-            </button>
-            <button
-              onClick={() => setMode("feedback")}
-              disabled={disabled}
-              className="rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-xs font-semibold text-slate-300 transition-all hover:bg-white/8 disabled:opacity-50"
-            >
-              Change settings
-            </button>
-          </div>
+              approveLabel="Generate PPT"
+              onApprove={approve}
+              onReject={(t) => { setDecided(true); onResolve(false, t || undefined); }}
+              onDecision={onDecision!}
+            />
+          ) : (
+            <div className="flex gap-2.5">
+              <button
+                onClick={approve}
+                disabled={disabled}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-orange-700 px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-orange-900/30 transition-all hover:bg-orange-600 active:scale-98 disabled:opacity-50"
+              >
+                Generate PPT
+              </button>
+              <button
+                onClick={() => setMode("feedback")}
+                disabled={disabled}
+                className="rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-xs font-semibold text-slate-300 transition-all hover:bg-white/8 disabled:opacity-50"
+              >
+                Change settings
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="flex flex-col gap-3 px-4 py-4">

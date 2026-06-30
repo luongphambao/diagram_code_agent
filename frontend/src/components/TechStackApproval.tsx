@@ -1,9 +1,11 @@
 import { useState } from "react";
-import type { PendingInterrupt, TechAlternative, CostRange, ScalingPhase, TechRisk } from "../hooks/useDiagramAgent";
+import type { PendingInterrupt, TechAlternative, CostRange, ScalingPhase, TechRisk, DecisionPayload } from "../hooks/useDiagramAgent";
+import DecisionActions from "./DecisionActions";
 
 interface TechStackApprovalProps {
   interrupt: PendingInterrupt;
   onResolve: (approved: boolean, modifications?: string) => void;
+  onDecision?: (payload: DecisionPayload) => void;
   disabled?: boolean;
 }
 
@@ -19,9 +21,13 @@ function fmtUsd(r?: CostRange | null): string {
   return `${fmt(r.min_usd)}–${fmt(r.max_usd)}/mo`;
 }
 
-export default function TechStackApproval({ interrupt, onResolve, disabled = false }: TechStackApprovalProps) {
+export default function TechStackApproval({ interrupt, onResolve, onDecision, disabled = false }: TechStackApprovalProps) {
   const [modifications, setModifications] = useState("");
   const [decided, setDecided] = useState(false);
+
+  const allowedDecisions = interrupt.data.allowed_decisions ?? [];
+  const useDecisionMenu = onDecision != null &&
+    allowedDecisions.some((a: string) => a !== "approve" && a !== "reject");
 
   const techStack = interrupt.data.tech_stack ?? {};
   const assumptions = interrupt.data.assumptions;
@@ -213,6 +219,17 @@ export default function TechStackApproval({ interrupt, onResolve, disabled = fal
       {decided ? (
         <div className="border-t border-white/8 px-4 py-3">
           <p className="text-xs text-slate-600">Response sent — designing architecture...</p>
+        </div>
+      ) : useDecisionMenu ? (
+        <div className="border-t border-white/8 px-4 py-3">
+          <DecisionActions
+            allowedDecisions={allowedDecisions}
+            disabled={disabled}
+            approveLabel="Approve Stack"
+            onApprove={approve}
+            onReject={(t) => { setDecided(true); onResolve(false, t || undefined); }}
+            onDecision={onDecision!}
+          />
         </div>
       ) : (
         <>

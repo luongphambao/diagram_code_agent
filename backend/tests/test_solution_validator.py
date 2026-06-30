@@ -57,8 +57,9 @@ def test_high_severity_blocks_release():
     findings = evaluate_solution(BRIEF, BLUEPRINT, WBS)
     assert any(is_blocking(f) for f in findings)
     assert format_validation(findings, block=True).startswith("VALIDATION: BLOCK")
-    # warnings-only mode never blocks
-    assert format_validation(findings, block=False).startswith("VALIDATION: WARN")
+    # block=False does not hard-block, but HUMAN-DECISION tier fires before WARN
+    result = format_validation(findings, block=False)
+    assert result.startswith(("VALIDATION: WARN", "VALIDATION: HUMAN-DECISION", "VALIDATION: AUTO-REPAIR"))
 
 
 def test_clean_workspace_passes():

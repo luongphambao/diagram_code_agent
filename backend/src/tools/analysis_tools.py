@@ -1787,3 +1787,94 @@ def resolve_finding(finding_id: str, fix_applied: str) -> str:
         fix_applied: What you changed to fix it.
     """
     return _settle_finding(finding_id, "resolved", fix_applied, action="resolve_finding")
+
+
+# ---------------------------------------------------------------------------
+# edit_entity — in-place CSM entity patch (docx §5.3 HITL v2)
+# ---------------------------------------------------------------------------
+
+_PATCHABLE_FIELDS = frozenset({
+    "title", "description", "source", "provenance_note", "status",
+    "risk_level", "severity", "mitigation", "rationale", "owner",
+    "definition_of_done", "kind", "confidence",
+})
+
+_CSM_COLLECTIONS = [
+    "requirements", "constraints", "assumptions", "decisions",
+    "components", "risks", "work_items", "evidence", "deliverables",
+]
+
+
+@tool(parse_docstring=True)
+def edit_entity(entity_id: str, field: str, new_value: str) -> str:
+    """Patch a single field on a CSM entity in solution_model.json.
+
+    Reads the current solution model, locates the entity by its stable id,
+    applies the field update, copies the old model to solution_model.prev.json
+    (enabling query_change_impact), bumps the revision, and writes back.
+    Call query_change_impact() immediately after to surface the blast radius.
+
+    Args:
+        entity_id: Stable CSM id of the entity to update
+            (e.g. REQ-1, COMP-3, WBS-7, DEC-2, ASM-1).
+        field: Field name to update. Patchable string fields: title, description,
+            source, provenance_note, status, risk_level, severity, mitigation,
+            rationale, owner, definition_of_done, kind, confidence.
+        new_value: New string value for the field.
+    """
+    import json as _json
+    from csm import SolutionModel
+    from csm_adapter import SOLUTION_MODEL_NAME, SOLUTION_MODEL_PREV_NAME
+
+    if field not in _PATCHABLE_FIELDS:
+        return (
+            f"EDIT_ENTITY: ERROR — field '{field}' is not patchable. "
+            f"Allowed: {sorted(_PATCHABLE_FIELDS)}."
+        )
+
+    cur_path = WORKSPACE / SOLUTION_MODEL_NAME
+    cur_raw = _read_json_file(cur_path, None)
+    if cur_raw is None:
+        return "EDIT_ENTITY: ERROR — no solution_model.json yet (run the pipeline first)."
+
+    # Find and patch the entity in the raw dict
+    old_val = None
+    found = False
+    for coll in _CSM_COLLECTIONS:
+        for item in cur_raw.get(coll, []):
+            if item.get("id") == entity_id:
+                old_val = item.get(field)
+                item[field] = new_value
+                found = True
+                break
+        if found:
+            break
+
+    if not found:
+        return (
+            f"EDIT_ENTITY: ERROR — entity '{entity_id}' not found in solution model. "
+            f"Searched collections: {_CSM_COLLECTIONS}."
+        )
+
+    # Validate the patched model before writing
+    try:
+        SolutionModel.model_validate(cur_raw)
+    except Exception as exc:  # noqa: BLE001
+        return f"EDIT_ENTITY: ERROR — validation failed after patch: {exc}"
+
+    # Snapshot the current file as .prev (enables query_change_impact)
+    prev_path = WORKSPACE / SOLUTION_MODEL_PREV_NAME
+    prev_path.write_text(cur_path.read_text(encoding="utf-8"), encoding="utf-8")
+
+    # Bump revision and write back
+    cur_raw["revision"] = cur_raw.get("revision", 0) + 1
+    cur_path.write_text(
+        _json.dumps(cur_raw, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+    return (
+        f"EDIT_ENTITY: {entity_id}.{field} updated "
+        f"({repr(old_val)!s} → {repr(new_value)!s}), "
+        f"revision bumped to {cur_raw['revision']}. "
+        "Call query_change_impact() to see the blast radius."
+    )

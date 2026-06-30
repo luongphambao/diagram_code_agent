@@ -1,9 +1,11 @@
 import { useState } from "react";
-import type { PendingInterrupt } from "../hooks/useDiagramAgent";
+import type { PendingInterrupt, DecisionPayload } from "../hooks/useDiagramAgent";
+import DecisionActions from "./DecisionActions";
 
 interface WbsApprovalProps {
   interrupt: PendingInterrupt;
   onResolve: (approved: boolean, modifications?: string) => void;
+  onDecision?: (payload: DecisionPayload) => void;
   disabled?: boolean;
 }
 
@@ -23,10 +25,14 @@ const ROLE_LABELS: Record<string, string> = {
   PM: "PM",
 };
 
-export default function WbsApproval({ interrupt, onResolve, disabled = false }: WbsApprovalProps) {
+export default function WbsApproval({ interrupt, onResolve, onDecision, disabled = false }: WbsApprovalProps) {
   const [modifications, setModifications] = useState("");
   const [decided, setDecided] = useState(false);
   const [decision, setDecision] = useState<"approved" | "rejected" | null>(null);
+
+  const allowedDecisions = interrupt.data.allowed_decisions ?? [];
+  const useDecisionMenu = onDecision != null &&
+    allowedDecisions.some((a: string) => a !== "approve" && a !== "reject");
 
   const {
     question,
@@ -164,25 +170,36 @@ export default function WbsApproval({ interrupt, onResolve, disabled = false }: 
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2.5">
-            <button
-              onClick={approve}
+          {useDecisionMenu ? (
+            <DecisionActions
+              allowedDecisions={allowedDecisions}
               disabled={disabled}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-700 px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-amber-900/30 transition-all hover:bg-amber-600 active:scale-98 disabled:opacity-50"
-            >
-              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-              Approve Plan
-            </button>
-            <button
-              onClick={reject}
-              disabled={disabled}
-              className="rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-xs font-semibold text-slate-300 transition-all hover:bg-white/8 disabled:opacity-50"
-            >
-              Reject
-            </button>
-          </div>
+              approveLabel="Approve Plan"
+              onApprove={approve}
+              onReject={(t) => { setDecided(true); setDecision("rejected"); onResolve(false, t || undefined); }}
+              onDecision={onDecision!}
+            />
+          ) : (
+            <div className="flex gap-2.5">
+              <button
+                onClick={approve}
+                disabled={disabled}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-700 px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-amber-900/30 transition-all hover:bg-amber-600 active:scale-98 disabled:opacity-50"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Approve Plan
+              </button>
+              <button
+                onClick={reject}
+                disabled={disabled}
+                className="rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-xs font-semibold text-slate-300 transition-all hover:bg-white/8 disabled:opacity-50"
+              >
+                Reject
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
