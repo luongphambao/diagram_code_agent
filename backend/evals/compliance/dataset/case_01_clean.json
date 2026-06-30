@@ -1,0 +1,28 @@
+{
+  "id": "clean",
+  "pack": "generic_security",
+  "components": [
+    {"id": "COMP-api_gw", "name": "API Gateway", "purpose": "public oauth token auth boundary"}
+  ],
+  "work_items": [
+    {"id": "WBS-1", "name": "Audit logging and SIEM retention setup"}
+  ],
+  "evidence": [
+    {"id": "EVD-1", "claim": "TLS 1.3 enforced for all traffic in transit"},
+    {"id": "EVD-2", "claim": "PII data encrypted at rest in the database via KMS"},
+    {"id": "EVD-3", "claim": "OAuth token auth enforced at the public API gateway"},
+    {"id": "EVD-4", "claim": "Audit log retention configured with SIEM"},
+    {"id": "EVD-5", "claim": "RBAC access review performed quarterly for IAM roles"},
+    {"id": "EVD-6", "claim": "Backup and disaster recovery with RPO/RTO replication tested"},
+    {"id": "EVD-7", "claim": "Runtime monitoring and alerting configured with metrics"}
+  ],
+  "risks": [],
+  "expected_gap_controls": [],
+  "expected_grounded_controls": [
+    "CTRL-generic_security_encryption_in_transit",
+    "CTRL-generic_security_authn_boundary",
+    "CTRL-generic_security_audit_logging",
+    "CTRL-generic_security_backup_dr",
+    "CTRL-generic_security_monitoring"
+  ]
+}

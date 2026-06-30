@@ -217,6 +217,17 @@ def export_proposal_package(
             shutil.copy2(src, dest)
             copied.append(art.filename)
 
+    # Bundle the ADR / decision-log pack (docx §8.6) so an enterprise engagement ships
+    # the auditable "why" with the proposal. Best-effort: never block an export.
+    try:
+        from adr_export import write_adr_pack
+        adr_path, n_adr = write_adr_pack(ws)
+        if n_adr or adr_path.exists():
+            shutil.copy2(adr_path, safe_workspace_path(export_path, adr_path.name))
+            copied.append(adr_path.name)
+    except Exception:  # noqa: BLE001
+        pass
+
     # Record this export in the manifest
     manifest.exports.append({
         "exported_at": datetime.now(timezone.utc).isoformat(),

@@ -61,6 +61,7 @@ ID_PREFIX = {
     "evidence": "EVD",
     "deliverable": "ART",
     "slide": "SLIDE",
+    "control": "CTRL",
 }
 
 
@@ -183,6 +184,27 @@ class Evidence(_Entity):
     supersedes_evidence_id: Optional[str] = None
 
 
+class Control(_Entity):
+    """A security/compliance control mapped to a standard (docx §4.4, §13.2, §4 P2).
+
+    A compliance pack declares the controls a given standard requires (encryption,
+    audit logging, access review, ...). `apply_pack` mints these as Control entities;
+    `mitigates` trace links connect a control to the RISK it addresses and `implements`
+    links connect the WBS work that delivers it. A control with no `evidence_ids` and
+    no implementing work is an *evidence gap* the validator flags before a client claim
+    like "SOC 2 ready" can ship.
+    """
+    statement: str
+    kind: Literal[
+        "encryption", "authentication", "authorization", "audit_logging",
+        "data_retention", "backup_dr", "monitoring", "access_review", "other"
+    ] = "other"
+    standard_ref: str = ""        # e.g. "SOC2-CC6.1", "PCI-3.4"; pack-defined locator
+    status: Literal["required", "implemented", "waived"] = "required"
+    implemented_by_ids: list[str] = Field(default_factory=list)  # COMP/WBS ids
+    evidence_ids: list[str] = Field(default_factory=list)
+
+
 class Deliverable(_Entity):
     """A rendered output artifact (a deck, a report, or one slide) projected from the
     CSM (docx §6.1: `deliverables[] -> ART-### / SLIDE-###`, §6.3 artifact manifest).
@@ -224,6 +246,7 @@ class SolutionModel(BaseModel):
     risks: list[Risk] = Field(default_factory=list)
     work_items: list[WorkItem] = Field(default_factory=list)
     evidence: list[Evidence] = Field(default_factory=list)
+    controls: list[Control] = Field(default_factory=list)
     deliverables: list[Deliverable] = Field(default_factory=list)
     trace_links: list[TraceLink] = Field(default_factory=list)
 
@@ -237,6 +260,7 @@ class SolutionModel(BaseModel):
         yield from self.risks
         yield from self.work_items
         yield from self.evidence
+        yield from self.controls
         yield from self.deliverables
 
     def by_id(self, entity_id: str) -> Optional[_Entity]:
@@ -296,6 +320,12 @@ class SolutionModel(BaseModel):
                 {"id": e.id, "claim": e.claim, "source_url": e.source_url,
                  "confidence": e.confidence}
                 for e in self.evidence
+            ],
+            "controls": [
+                {"id": c.id, "statement": c.statement, "kind": c.kind,
+                 "standard_ref": c.standard_ref, "status": c.status,
+                 "grounded": bool(c.evidence_ids)}
+                for c in self.controls
             ],
             "deliverables": [
                 {"id": d.id, "kind": d.kind, "title": d.title,

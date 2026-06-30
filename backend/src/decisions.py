@@ -68,6 +68,7 @@ class DecisionRecord(BaseModel):
     gate: str = ""                 # gate tool name, e.g. "propose_blueprint"
     action: DecisionAction
     approver: str = ""
+    approver_role: str = ""        # role the approver acted in (architect/pm/reviewer/...) §8.6
     timestamp: str = ""            # ISO 8601; injected by the caller
     revision: int = 0              # CSM revision the decision was made against
     comment: str = ""
@@ -80,6 +81,7 @@ def new_decision_record(
     *,
     seq: int,
     approver: str = "",
+    approver_role: str = "",
     timestamp: str = "",
     revision: int = 0,
     comment: str = "",
@@ -95,6 +97,7 @@ def new_decision_record(
         gate=gate,
         action=action,
         approver=approver,
+        approver_role=approver_role,
         timestamp=timestamp,
         revision=revision,
         comment=comment,

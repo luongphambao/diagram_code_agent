@@ -392,6 +392,16 @@ CONTEXT_TRIGGER_TOKENS = 30_000   # main context is lean (no images/icons), can 
 _RUN_CALL_LIMIT = int(os.getenv("RUN_CALL_LIMIT", "120"))         # main + drawer
 _CRITIC_CALL_LIMIT = int(os.getenv("CRITIC_CALL_LIMIT", "40"))    # inspect+critique only
 
+# Per-stage (per-subagent) model-call budgets (§4.10 "per-stage budget"). Each
+# subagent is a separate run with its own ceiling so a single stage can't burn
+# the whole session; tune independently via env without touching the others.
+# Token/cost per stage is recorded separately by UsageLoggingMiddleware → usage.json
+# (keyed by agent_name), which the quality dashboard reads for spend-to-quality.
+_ICON_CALL_LIMIT = int(os.getenv("ICON_CALL_LIMIT", str(_CRITIC_CALL_LIMIT)))
+_DRAWER_CALL_LIMIT = int(os.getenv("DRAWER_CALL_LIMIT", str(_RUN_CALL_LIMIT)))
+_WBS_CALL_LIMIT = int(os.getenv("WBS_CALL_LIMIT", str(_RUN_CALL_LIMIT)))
+_PPT_CALL_LIMIT = int(os.getenv("PPT_CALL_LIMIT", "60"))
+
 
 def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
                 use_vision_relay: bool = False):
@@ -651,7 +661,7 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
                 system_prompt=icon_resolver_spec["system_prompt"],
                 backend=backend,
                 memory=[MEMORY_PATH],
-                middleware=_middleware(run_limit=_CRITIC_CALL_LIMIT, agent_name="icon_resolver"),
+                middleware=_middleware(run_limit=_ICON_CALL_LIMIT, agent_name="icon_resolver"),
                 store=store,
             ),
             "icon_resolver",
@@ -668,7 +678,8 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
                 backend=backend,
                 memory=[MEMORY_PATH],
                 skills=drawer_spec.get("skills"),
-                middleware=_middleware(agent_name="drawer", use_vision_relay=drawer_vision_relay),
+                middleware=_middleware(run_limit=_DRAWER_CALL_LIMIT, agent_name="drawer",
+                                     use_vision_relay=drawer_vision_relay),
                 store=store,
             ),
             "drawer",
@@ -702,7 +713,7 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
                 backend=backend,
                 memory=[MEMORY_PATH],
                 skills=wbs_planner_spec.get("skills"),
-                middleware=_middleware(agent_name="wbs_planner"),
+                middleware=_middleware(run_limit=_WBS_CALL_LIMIT, agent_name="wbs_planner"),
                 store=store,
             ),
             "wbs_planner",
@@ -719,7 +730,7 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
                 backend=backend,
                 memory=[MEMORY_PATH],
                 skills=ppt_generator_spec.get("skills"),
-                middleware=_middleware(run_limit=_CRITIC_CALL_LIMIT, agent_name="ppt_generator"),
+                middleware=_middleware(run_limit=_PPT_CALL_LIMIT, agent_name="ppt_generator"),
                 store=store,
             ),
             "ppt_generator",

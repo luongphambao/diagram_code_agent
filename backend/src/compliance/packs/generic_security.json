@@ -1,0 +1,57 @@
+{
+  "name": "generic_security",
+  "title": "Generic Security & Controls",
+  "standard": "generic",
+  "description": "A baseline security-control pack (docx §13.5: start with generic security/control entities; add high-value standard packs later). Each control is mapped to risks/work by keyword so a proposal can show coverage and evidence gaps.",
+  "controls": [
+    {
+      "key": "encryption_in_transit",
+      "kind": "encryption",
+      "statement": "All network traffic is encrypted in transit (TLS/mTLS).",
+      "standard_ref": "SEC-ENC-1",
+      "keywords": ["tls", "https", "encrypt", "transit", "ssl"]
+    },
+    {
+      "key": "encryption_at_rest",
+      "kind": "encryption",
+      "statement": "Sensitive/PII data is encrypted at rest.",
+      "standard_ref": "SEC-ENC-2",
+      "keywords": ["pii", "personal data", "encrypt", "at rest", "database", "storage", "kms"]
+    },
+    {
+      "key": "authn_boundary",
+      "kind": "authentication",
+      "statement": "Public-facing entrypoints enforce authentication.",
+      "standard_ref": "SEC-AUTH-1",
+      "keywords": ["auth", "identity", "login", "oauth", "token", "api gateway", "public"]
+    },
+    {
+      "key": "audit_logging",
+      "kind": "audit_logging",
+      "statement": "Security-relevant events are logged and retained.",
+      "standard_ref": "SEC-LOG-1",
+      "keywords": ["audit", "log", "siem", "trace", "retention"]
+    },
+    {
+      "key": "access_review",
+      "kind": "access_review",
+      "statement": "Privileged access is reviewed on a defined cadence.",
+      "standard_ref": "SEC-AC-1",
+      "keywords": ["access review", "rbac", "least privilege", "iam", "role"]
+    },
+    {
+      "key": "backup_dr",
+      "kind": "backup_dr",
+      "statement": "Backups and disaster recovery are in place and tested.",
+      "standard_ref": "SEC-DR-1",
+      "keywords": ["backup", "disaster recovery", "dr", "rpo", "rto", "replication"]
+    },
+    {
+      "key": "monitoring",
+      "kind": "monitoring",
+      "statement": "Runtime monitoring and alerting are configured.",
+      "standard_ref": "SEC-MON-1",
+      "keywords": ["monitor", "alert", "observability", "metrics", "health"]
+    }
+  ]
+}

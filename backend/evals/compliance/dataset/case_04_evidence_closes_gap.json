@@ -1,0 +1,16 @@
+{
+  "id": "evidence_closes_gap",
+  "pack": "generic_security",
+  "components": [],
+  "work_items": [],
+  "evidence": [
+    {"id": "EVD-1", "claim": "TLS 1.3 enforced for all traffic in transit"}
+  ],
+  "risks": [],
+  "expected_gap_controls": [
+    "CTRL-generic_security_backup_dr"
+  ],
+  "expected_grounded_controls": [
+    "CTRL-generic_security_encryption_in_transit"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "ungrounded_implemented",
+  "pack": "generic_security",
+  "components": [],
+  "work_items": [
+    {"id": "WBS-1", "name": "Audit logging and SIEM retention pipeline"}
+  ],
+  "evidence": [],
+  "risks": [],
+  "expected_gap_controls": [
+    "CTRL-generic_security_audit_logging"
+  ],
+  "expected_grounded_controls": []
+}

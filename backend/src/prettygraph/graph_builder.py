@@ -5,10 +5,11 @@ from __future__ import annotations
 import html
 import json
 import re
-import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from xml.sax.saxutils import escape as xml_escape
+
+from subprocess_utils import run_graphviz
 
 from .constants import (
     CLUSTER_KINDS, EDGE_COLOR, EDGE_FONTCOLOR, FLOW_COLORS, FLOW_GRID_MIN,
@@ -460,7 +461,7 @@ class Pretty:
         cmd = ["dot", "-Tpng", dot_path, "-o", png_path]
         if dpi_override:
             cmd.append(f"-Gdpi={dpi_override}")
-        subprocess.run(cmd, check=True, capture_output=True, text=True)
+        run_graphviz(cmd, check=True, capture_output=True, text=True)
         self._write_sidecar(f"{out_basename}.nodes.json")
         return png_path
 

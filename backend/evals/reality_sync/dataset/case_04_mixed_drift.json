@@ -1,0 +1,8 @@
+{
+  "id": "mixed_drift",
+  "desired_components": ["web", "api", "cache", "search"],
+  "current_components": ["web", "api", "worker", "queue"],
+  "expected_design_only": ["cache", "search"],
+  "expected_reality_only": ["worker", "queue"],
+  "expected_matched": ["web", "api"]
+}

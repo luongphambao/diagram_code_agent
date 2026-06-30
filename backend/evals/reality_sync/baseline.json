@@ -1,0 +1,8 @@
+{
+  "metrics": {
+    "scores.design_only_recall": 1.0,
+    "scores.reality_only_recall": 1.0,
+    "scores.matched_ok": 1.0
+  },
+  "n_cases": 6
+}

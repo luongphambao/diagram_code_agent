@@ -39,6 +39,10 @@ from evals.wbs.run_eval import _run_one as wbs_run  # noqa: E402
 from evals.deck.run_eval import ALL_METRIC_KEYS as DECK_KEYS, _run_one as deck_run  # noqa: E402
 from evals.diagram_quality.judge import METRIC_KEYS as DQ_KEYS  # noqa: E402
 from evals.diagram_quality.run_eval import _run_one as dq_run  # noqa: E402
+from evals.compliance.judge import METRIC_KEYS as COMPLIANCE_KEYS  # noqa: E402
+from evals.compliance.run_eval import _run_one as compliance_run  # noqa: E402
+from evals.reality_sync.judge import METRIC_KEYS as REALITY_KEYS  # noqa: E402
+from evals.reality_sync.run_eval import _run_one as reality_run  # noqa: E402
 
 _SUITES = [
     ("intake", _BACKEND / "evals" / "intake", intake_run, INTAKE_KEYS),
@@ -46,6 +50,8 @@ _SUITES = [
     ("wbs", _BACKEND / "evals" / "wbs", wbs_run, WBS_KEYS),
     ("deck", _BACKEND / "evals" / "deck", deck_run, DECK_KEYS),
     ("diagram_quality", _BACKEND / "evals" / "diagram_quality", dq_run, DQ_KEYS),
+    ("compliance", _BACKEND / "evals" / "compliance", compliance_run, COMPLIANCE_KEYS),
+    ("reality_sync", _BACKEND / "evals" / "reality_sync", reality_run, REALITY_KEYS),
 ]
 
 

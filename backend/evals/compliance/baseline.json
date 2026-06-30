@@ -1,0 +1,9 @@
+{
+  "metrics": {
+    "scores.gap_recall": 1.0,
+    "scores.grounded_ok": 1.0,
+    "scores.repair_contract_ok": 1.0,
+    "scores.dims_ok": 1.0
+  },
+  "n_cases": 6
+}

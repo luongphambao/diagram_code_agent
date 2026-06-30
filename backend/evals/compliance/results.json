@@ -1,0 +1,62 @@
+[
+  {
+    "case_id": "clean",
+    "scores": {
+      "gap_recall": 1.0,
+      "grounded_ok": 1.0,
+      "repair_contract_ok": 1.0,
+      "dims_ok": 1.0,
+      "n_findings": 0
+    }
+  },
+  {
+    "case_id": "missing_control",
+    "scores": {
+      "gap_recall": 1.0,
+      "grounded_ok": 1.0,
+      "repair_contract_ok": 1.0,
+      "dims_ok": 1.0,
+      "n_findings": 6
+    }
+  },
+  {
+    "case_id": "ungrounded_implemented",
+    "scores": {
+      "gap_recall": 1.0,
+      "grounded_ok": 1.0,
+      "repair_contract_ok": 1.0,
+      "dims_ok": 1.0,
+      "n_findings": 7
+    }
+  },
+  {
+    "case_id": "evidence_closes_gap",
+    "scores": {
+      "gap_recall": 1.0,
+      "grounded_ok": 1.0,
+      "repair_contract_ok": 1.0,
+      "dims_ok": 1.0,
+      "n_findings": 6
+    }
+  },
+  {
+    "case_id": "multi_defect",
+    "scores": {
+      "gap_recall": 1.0,
+      "grounded_ok": 1.0,
+      "repair_contract_ok": 1.0,
+      "dims_ok": 1.0,
+      "n_findings": 6
+    }
+  },
+  {
+    "case_id": "all_gaps",
+    "scores": {
+      "gap_recall": 1.0,
+      "grounded_ok": 1.0,
+      "repair_contract_ok": 1.0,
+      "dims_ok": 1.0,
+      "n_findings": 7
+    }
+  }
+]

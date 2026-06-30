@@ -133,9 +133,14 @@ from .analysis_tools import (
     _validate_pillar_coverage,
     _validate_req_coverage,
     _wants_structural,
+    add_comment,
     analyze_architecture_requirements,
+    apply_compliance_pack,
+    compare_revisions,
     create_pptx,
     edit_entity,
+    export_adr_pack,
+    export_to_delivery,
     generate_pdf_report,
     generate_ppt_proposal,
     inspect_diagram,
@@ -145,7 +150,9 @@ from .analysis_tools import (
     propose_diagram_brief,
     propose_tech_stack,
     query_change_impact,
+    reality_sync,
     record_evidence,
+    resolve_comment,
     resolve_finding,
     quality_summary,
     submit_critique,
@@ -186,6 +193,13 @@ DIAGRAM_TOOLS = [
     query_change_impact,
     edit_entity,
     quality_summary,
+    apply_compliance_pack,
+    compare_revisions,
+    add_comment,
+    resolve_comment,
+    export_adr_pack,
+    export_to_delivery,
+    reality_sync,
 ]
 
 # Late imports (same as original tools.py bottom section)
@@ -204,6 +218,13 @@ MAIN_TOOLS = [
     resolve_finding,          # mark a cross-artifact finding fixed -> findings_log.json
     edit_entity,              # patch a single field on a CSM entity -> solution_model.json
     quality_summary,          # aggregate quality health snapshot (findings/evidence/assumptions/score)
+    apply_compliance_pack,    # activate a compliance control pack -> CSM Control entities + compliance findings
+    compare_revisions,        # diff current CSM vs an approved revision snapshot (§8.6)
+    add_comment,              # anchor a review comment to a CSM entity -> comment_log.json
+    resolve_comment,          # close a review comment
+    export_adr_pack,          # render decisions -> adr_pack.md for the proposal package
+    export_to_delivery,       # idempotent sync of WBS work items to Jira/Linear/Confluence (gate)
+    reality_sync,             # diff design vs a real repo/infra source -> drift_report.json (§5.2)
     propose_tech_stack,
     propose_blueprint,
     visualize_code_structure,
@@ -246,6 +267,7 @@ GATE_TOOL_NAMES = [
     "propose_wbs_skeleton",
     "propose_wbs",
     "export_wbs_excel",
+    "export_to_delivery",
 ]
 
 # HITL v2 decision menu (docx §5.3): the trade-off ACTIONS each gate offers the user,
@@ -272,9 +294,44 @@ GATE_DECISIONS: dict[str, list[str]] = {
     "propose_wbs": ["approve", "approve_with_assumptions", "accept_risk",
                     "request_alternative", "reject"],
     "export_wbs_excel": ["approve", "reject"],
+    "export_to_delivery": ["approve", "reject"],
 }
 
 
 def allowed_decisions_for(gate: str) -> list[str]:
     """The HITL v2 action menu for a gate (defaults to binary approve/reject)."""
     return GATE_DECISIONS.get(gate, ["approve", "reject"])
+
+
+# Role-based approval (docx §8.6, §12.2 "human actions map to persisted entities").
+# Which roles may sign off at which gate. A gate not listed here is open to any role.
+# Technical design gates require an architect; client-facing sends require a PM/lead.
+ROLE_GATE_PERMISSIONS: dict[str, set[str]] = {
+    "propose_tech_stack": {"architect", "lead", "admin"},
+    "propose_blueprint": {"architect", "lead", "admin"},
+    "finalize_diagram": {"architect", "lead", "admin"},
+    "propose_wbs": {"pm", "lead", "architect", "admin"},
+    "export_wbs_excel": {"pm", "lead", "admin"},
+    "generate_pdf_report": {"pm", "lead", "architect", "admin"},
+    "generate_ppt_proposal": {"pm", "lead", "architect", "admin"},
+    "send_architecture_report_email": {"pm", "lead", "admin"},
+    "create_client_meeting": {"pm", "lead", "admin"},
+    "export_to_delivery": {"pm", "lead", "admin"},
+}
+
+
+def can_approve(role: str, gate: str) -> bool:
+    """Whether ``role`` is permitted to sign off ``gate``.
+
+    Permissive by default: an empty/unknown role (the current frontend does not yet send
+    one) or a gate with no role restriction returns True, so enabling roles never blocks
+    an existing flow. Enforcement tightens only when a real role is supplied AND the gate
+    restricts it.
+    """
+    allowed = ROLE_GATE_PERMISSIONS.get(gate)
+    if not allowed:
+        return True
+    role = (role or "").strip().lower()
+    if not role:
+        return True
+    return role in allowed

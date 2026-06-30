@@ -40,6 +40,7 @@ Dimension = Literal[
     "security",          # public flow no auth boundary; PII flow unprotected (§4.3)
     "reliability",       # async flow without retry/DLQ/idempotency
     "feasibility",       # schedule not deliverable under resource capacity (§4.4)
+    "compliance",        # a required control (from a compliance pack) is missing/ungrounded (§4 P2)
     "diagram_structural",  # drawio error: dangling edge, duplicate id, broken geometry, wrong stencil
     "diagram_layout",      # drawio warning: node overlap, negative coords, missing aspect=fixed
     "diagram_style",       # drawio advice: font sizes, palette, AWS hierarchy, edge routing

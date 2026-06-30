@@ -40,6 +40,42 @@ from solution_validator import _as_list, _read_json, _soft_match
 
 SOLUTION_MODEL_NAME = "solution_model.json"
 SOLUTION_MODEL_PREV_NAME = "solution_model.prev.json"
+APPROVED_DIR_NAME = "approved"
+
+
+def archive_approved_revision(workspace: Optional[Path] = None) -> Optional[Path]:
+    """Snapshot the current `solution_model.json` as an immutable approved revision.
+
+    Called when a human approves a gate (§4.10 "immutable approved revisions"). Copies
+    the current model to ``approved/REV-<n>.json`` and marks it read-only so the exact
+    state a stakeholder signed off on can always be reproduced/audited. Idempotent: if a
+    snapshot for the current revision already exists it is left untouched. Never raises —
+    archival must not break a HITL resume.
+    """
+    if workspace is None:
+        from backends import WORKSPACE
+        workspace = WORKSPACE
+    workspace = Path(workspace)
+    src = workspace / SOLUTION_MODEL_NAME
+    if not src.exists():
+        return None
+    try:
+        raw = _read_json(src, {}) or {}
+        revision = int(raw.get("revision") or 1)
+        approved_dir = workspace / APPROVED_DIR_NAME
+        approved_dir.mkdir(parents=True, exist_ok=True)
+        dest = approved_dir / f"REV-{revision}.json"
+        if dest.exists():
+            return dest  # already archived this revision — keep the original sign-off
+        dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+        try:
+            import stat
+            dest.chmod(stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)  # read-only marker
+        except OSError:
+            pass  # chmod is best-effort (e.g. restrictive Windows ACLs)
+        return dest
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def _src(ref: str) -> list[SourceRef]:
@@ -358,6 +394,12 @@ def build_solution_model(
     # the revision below.
     from deck import load_deck_plan, project_into_csm as project_deck
     project_deck(model, load_deck_plan(workspace))
+
+    # Fold the active compliance pack (if one was selected via apply_compliance_pack)
+    # into the model as Control entities + implements/mitigates/supports links. No-op
+    # until `compliance_pack.json` marks a pack; a new/changed pack bumps the revision.
+    from compliance import project_into_csm as project_compliance
+    project_compliance(model, workspace)
 
     prev = _read_json(workspace / SOLUTION_MODEL_NAME, {}) or {}
     new_hash = model.content_hash()

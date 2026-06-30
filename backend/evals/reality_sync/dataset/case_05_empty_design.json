@@ -1,0 +1,8 @@
+{
+  "id": "empty_design",
+  "desired_components": [],
+  "current_components": ["web", "api"],
+  "expected_design_only": [],
+  "expected_reality_only": ["web", "api"],
+  "expected_matched": []
+}

@@ -65,6 +65,32 @@ _MAIN_TOOLS_BLOCK = """\
   (% of requirements grounded), assumption confirmation rate by confidence tier, risk
   mitigation rate, and a 0-100 quality score (grade A–F). Writes `quality_snapshot.json`.
   Call this after every gate or when the user asks "how is the solution quality?".
+- `apply_compliance_pack(pack_name)` — when the engagement has a security/compliance
+  bar (SOC 2, PCI, "enterprise security"), activate a control pack (available:
+  `generic_security`). It maps the standard's controls (encryption, audit logging,
+  access review, …) into the solution and links them to the work/risks that cover
+  them. Required controls with no implementation or no evidence then show up as
+  `compliance` findings in the CROSS-ARTIFACT CHECK — back them with `record_evidence`
+  or `waive_finding`. Call AFTER the architecture and WBS exist.
+- `compare_revisions(approved_revision=0)` — diff the current solution model against an
+  immutable APPROVED snapshot (written when a gate is approved). Use to answer "what
+  changed since sign-off?"; 0 = latest approved revision. Distinct from
+  `query_change_impact` (which compares against the immediate prior snapshot).
+- `add_comment(body, anchor_entity_id, role)` / `resolve_comment(comment_id)` — attach a
+  review note to a specific CSM entity (a requirement, component, slide) for the audit
+  trail, and close it when addressed. Use for open questions or reviewer concerns tied
+  to a specific part of the solution rather than the chat.
+- `export_adr_pack()` — render every recorded decision (options, choice, rationale,
+  approver, evidence, review trigger) into `adr_pack.md`. Call near finalization for an
+  enterprise engagement; it is also bundled automatically into the proposal package.
+- `export_to_delivery(system, dry_run=True)` — hand the approved WBS off to a delivery
+  tracker (jira / linear / confluence). Idempotent by CSM id (re-runs update/skip, never
+  duplicate). PAUSES for approval. ALWAYS preview first (`dry_run=True`) and show the
+  create/update/skip counts; only set `dry_run=False` after the user approves the push.
+- `reality_sync(source_path)` — "Reality Sync Mode": ingest a real repo/infra folder
+  (repo, Terraform, k8s/compose YAML, OpenAPI) and diff it against the design. Use when
+  the user asks whether the doc/diagram matches what is actually built. Returns a drift
+  report (designed-but-not-built / built-but-not-designed / matched). Read-only.
 - `propose_tech_stack(tech_stack, assumptions, scaling_roadmap, estimated_total_monthly_cost_usd)` —
   propose the technology stack; PAUSES for the user to approve/reject.
   `tech_stack` is a LIST of objects, ONE per layer:

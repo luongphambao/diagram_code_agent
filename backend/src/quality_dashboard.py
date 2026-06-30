@@ -74,6 +74,14 @@ class QualitySnapshot(BaseModel):
     risks_mitigated: int = 0
     risk_mitigation_pct: float = 0.0
 
+    # --- cost / spend-to-quality (§4.10 observability) ------------------
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
+    total_tokens: int = 0
+    model_calls: int = 0
+    tokens_by_stage: dict[str, int] = Field(default_factory=dict)
+    calls_by_stage: dict[str, int] = Field(default_factory=dict)
+
     # --- quality score --------------------------------------------------
     quality_score: float = 0.0
     quality_grade: str = "?"
@@ -322,6 +330,24 @@ def build_quality_snapshot(workspace: Path) -> QualitySnapshot:
         snap.deck_visual_medium = visual_raw.get("medium_count", 0)
         snap.deck_visual_passed = visual_raw.get("passed")
 
+    # --- usage.json (cost per stage, §4.10 spend-to-quality) ------------
+    # UsageLoggingMiddleware appends one record per model call: {agent, input_tokens,
+    # output_tokens, total_tokens}.  Aggregate into per-stage totals so the team can
+    # correlate token spend with the quality score above.
+    usage_raw = _read_json(ws / "usage.json")
+    if isinstance(usage_raw, list):
+        for rec in usage_raw:
+            if not isinstance(rec, dict):
+                continue
+            stage = rec.get("agent", "unknown")
+            tot = int(rec.get("total_tokens", 0) or 0)
+            snap.total_input_tokens += int(rec.get("input_tokens", 0) or 0)
+            snap.total_output_tokens += int(rec.get("output_tokens", 0) or 0)
+            snap.total_tokens += tot
+            snap.model_calls += 1
+            snap.tokens_by_stage[stage] = snap.tokens_by_stage.get(stage, 0) + tot
+            snap.calls_by_stage[stage] = snap.calls_by_stage.get(stage, 0) + 1
+
     # --- score ----------------------------------------------------------
     snap.quality_score, snap.score_breakdown = _compute_score(snap)
     snap.quality_grade = _grade(snap.quality_score)
@@ -402,6 +428,19 @@ def format_snapshot(snap: QualitySnapshot) -> str:
     # Decisions
     if snap.total_decisions:
         lines.append(f"  HITL decisions: {snap.total_decisions} total")
+
+    # Cost / spend-to-quality (§4.10)
+    if snap.total_tokens:
+        stage_str = " | ".join(
+            f"{stage}:{tok:,}"
+            for stage, tok in sorted(snap.tokens_by_stage.items(), key=lambda kv: -kv[1])
+        )
+        lines.append(
+            f"  Cost: {snap.total_tokens:,} tokens over {snap.model_calls} model call(s) "
+            f"(in {snap.total_input_tokens:,} / out {snap.total_output_tokens:,})"
+        )
+        if stage_str:
+            lines.append(f"    By stage: {stage_str}")
 
     # Score breakdown
     bd = snap.score_breakdown

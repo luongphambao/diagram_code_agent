@@ -1,0 +1,18 @@
+{
+  "id": "all_gaps",
+  "pack": "generic_security",
+  "components": [],
+  "work_items": [],
+  "evidence": [],
+  "risks": [],
+  "expected_gap_controls": [
+    "CTRL-generic_security_encryption_in_transit",
+    "CTRL-generic_security_encryption_at_rest",
+    "CTRL-generic_security_authn_boundary",
+    "CTRL-generic_security_audit_logging",
+    "CTRL-generic_security_access_review",
+    "CTRL-generic_security_backup_dr",
+    "CTRL-generic_security_monitoring"
+  ],
+  "expected_grounded_controls": []
+}

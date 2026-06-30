@@ -1,0 +1,56 @@
+[
+  {
+    "case_id": "aligned",
+    "scores": {
+      "design_only_recall": 1.0,
+      "reality_only_recall": 1.0,
+      "matched_ok": 1.0,
+      "n_drift": 0
+    }
+  },
+  {
+    "case_id": "design_only",
+    "scores": {
+      "design_only_recall": 1.0,
+      "reality_only_recall": 1.0,
+      "matched_ok": 1.0,
+      "n_drift": 1
+    }
+  },
+  {
+    "case_id": "reality_only",
+    "scores": {
+      "design_only_recall": 1.0,
+      "reality_only_recall": 1.0,
+      "matched_ok": 1.0,
+      "n_drift": 1
+    }
+  },
+  {
+    "case_id": "mixed_drift",
+    "scores": {
+      "design_only_recall": 1.0,
+      "reality_only_recall": 1.0,
+      "matched_ok": 1.0,
+      "n_drift": 4
+    }
+  },
+  {
+    "case_id": "empty_design",
+    "scores": {
+      "design_only_recall": 1.0,
+      "reality_only_recall": 1.0,
+      "matched_ok": 1.0,
+      "n_drift": 2
+    }
+  },
+  {
+    "case_id": "empty_reality",
+    "scores": {
+      "design_only_recall": 1.0,
+      "reality_only_recall": 1.0,
+      "matched_ok": 1.0,
+      "n_drift": 2
+    }
+  }
+]

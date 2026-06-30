@@ -6,8 +6,9 @@ import base64
 import html
 import json
 import re
-import subprocess
 from pathlib import Path
+
+from subprocess_utils import run_graphviz
 
 from .constants import EDGE_COLOR, EDGE_FONTCOLOR
 
@@ -34,8 +35,8 @@ def dot_to_drawio(dot_path: str, sidecar_path: str, out_path: str) -> str:
     """Lay out the .dot with Graphviz and emit a styled, editable .drawio."""
     _cat = _load_catalog() if _load_catalog else None
 
-    js = subprocess.run(["dot", "-Tjson", dot_path],
-                        capture_output=True, text=True, check=True).stdout
+    js = run_graphviz(["dot", "-Tjson", dot_path],
+                      capture_output=True, text=True, check=True).stdout
     g = json.loads(js)
     side = json.loads(Path(sidecar_path).read_text(encoding="utf-8"))
     snodes, sclusters = side.get("nodes", {}), side.get("clusters", {})

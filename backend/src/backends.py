@@ -14,6 +14,7 @@ Paths are resolved relative to this repo so the project is self-contained:
 
 from __future__ import annotations
 
+import contextvars
 from pathlib import Path
 
 from deepagents.backends import CompositeBackend, FilesystemBackend
@@ -26,6 +27,51 @@ AGENT_SPACE    = _BACKEND_ROOT / "agent_space"
 WORKSPACE      = AGENT_SPACE / "workspace"
 MEMORIES_DIR   = AGENT_SPACE / "memories"
 OUTPUTS_DIR    = AGENT_SPACE / "outputs"
+
+# Per-thread workspace isolation (§4.10 multi-tenancy).
+#
+# `WORKSPACE` above is the single shared scratch dir the compiled agent graph and
+# its FilesystemBackend are rooted at (one graph per process). The helpers below
+# give each thread/tenant its OWN artifact directory under agent_space/workspaces/
+# so router-side stores (decision_log, evidence_log, solution_model, …) can be
+# read/written per thread without collision. They are additive: nothing resolves a
+# per-thread workspace until a caller opts in by passing the resolved path (every
+# store already accepts an explicit `workspace=` argument). Fully isolating the
+# agent's own file tools additionally requires per-thread backend construction.
+WORKSPACES_DIR = AGENT_SPACE / "workspaces"
+
+# Context-local "current workspace" — defaults to the shared WORKSPACE so existing
+# code paths are unchanged. A request handler can set it for the duration of a
+# thread's work via `set_current_workspace(...)`.
+_current_workspace: contextvars.ContextVar[Path] = contextvars.ContextVar(
+    "current_workspace", default=WORKSPACE
+)
+
+
+def resolve_workspace(thread_id: str | None) -> Path:
+    """Return the isolated workspace directory for ``thread_id`` (created if needed).
+
+    Falls back to the shared ``WORKSPACE`` for an empty/None thread id (dev default).
+    The thread id is sanitised with ``safe_filename`` so a hostile id cannot escape
+    ``WORKSPACES_DIR``.
+    """
+    if not thread_id or thread_id == "thread-default":
+        WORKSPACE.mkdir(parents=True, exist_ok=True)
+        return WORKSPACE
+    from safe_path import safe_filename
+    ws = WORKSPACES_DIR / safe_filename(thread_id)
+    ws.mkdir(parents=True, exist_ok=True)
+    return ws
+
+
+def current_workspace() -> Path:
+    """The workspace bound to the current execution context (shared by default)."""
+    return _current_workspace.get()
+
+
+def set_current_workspace(workspace: Path) -> contextvars.Token:
+    """Bind ``workspace`` as the current-context workspace; returns a reset token."""
+    return _current_workspace.set(Path(workspace))
 
 # Procedural skills bundled with the repo (loaded by the deep agent).
 SKILLS_DIR     = _BACKEND_ROOT / "skills"

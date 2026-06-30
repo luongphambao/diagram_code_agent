@@ -44,9 +44,15 @@ logger = logging.getLogger("diagram-agent")
 router = APIRouter()
 
 
-def _persist_decision_record(payload: dict, gate: str | None, approver: str) -> None:
+def _persist_decision_record(payload: dict, gate: str | None, approver: str,
+                             approver_role: str = "") -> None:
     """Append a HITL v2 DecisionRecord to the workspace log (no-op for plain
-    approve/reject or on any failure — must never break the resume)."""
+    approve/reject or on any failure — must never break the resume).
+
+    Records the approver's role (§8.6) and, when a role is supplied, checks it against
+    the gate's role policy (can_approve): a disallowed role is logged as a warning but
+    still recorded for the audit trail (advisory enforcement — the streaming resume must
+    not hard-fail until the frontend reliably supplies roles)."""
     if not gate or payload.get("action") not in ss.HITL_V2_ACTIONS:
         return
     try:
@@ -54,7 +60,11 @@ def _persist_decision_record(payload: dict, gate: str | None, approver: str) -> 
 
         from decisions import append_decision, next_seq
         from session_state import decision_record_from_payload
+        from tools import can_approve
 
+        if approver_role and not can_approve(approver_role, gate):
+            logger.warning("role %r is not permitted to approve gate %s (recorded anyway)",
+                           approver_role, gate)
         rec = decision_record_from_payload(
             payload, gate,
             seq=next_seq(WORKSPACE),
@@ -62,8 +72,10 @@ def _persist_decision_record(payload: dict, gate: str | None, approver: str) -> 
             timestamp=datetime.now(timezone.utc).isoformat(),
         )
         if rec is not None:
+            rec.approver_role = approver_role
             append_decision(rec, WORKSPACE)
-            logger.info("persisted decision %s (%s) at %s", rec.id, rec.action, gate)
+            logger.info("persisted decision %s (%s) at %s by role=%s",
+                        rec.id, rec.action, gate, approver_role or "-")
     except Exception as exc:  # noqa: BLE001
         logger.warning("failed to persist decision record: %s", exc)
 
@@ -143,7 +155,16 @@ async def agui_endpoint(request: Request):
                 # HITL v2: persist a structured decision record for trade-off actions
                 # (accept_risk, approve_with_assumptions, request_evidence, ...). It is
                 # projected into the CSM on the next build_solution_model.
-                _persist_decision_record(payload, pending_name, session_ctx.user_email)
+                _persist_decision_record(payload, pending_name, session_ctx.user_email,
+                                         approver_role=body.get("userRole", "") or "")
+                # §4.10: on a gate approval, snapshot the signed-off solution model as an
+                # immutable approved revision (approved/REV-<n>.json) for audit/repro.
+                if decision.get("type") == "approve" and pending_name in GATE_TOOL_NAMES:
+                    try:
+                        from csm_adapter import archive_approved_revision
+                        archive_approved_revision(WORKSPACE)
+                    except Exception as exc:  # noqa: BLE001
+                        logger.debug("approved-revision archive skipped: %s", exc)
                 if pending_name in GATE_TOOL_NAMES:
                     note = payload.get("feedback") or payload.get("modifications") or ""
                     record_report_step(

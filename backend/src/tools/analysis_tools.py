@@ -1130,6 +1130,13 @@ def _solution_gate_note(stage: str = "export", *, block: bool = False) -> str:
         findings, _ = validate_solution(WORKSPACE, block=block)
     except Exception:
         return ""
+    # Merge compliance-pack findings (required controls missing/ungrounded, §4 P2).
+    # No-op unless a pack was selected via apply_compliance_pack.
+    try:
+        from compliance import compliance_findings
+        findings = list(findings) + compliance_findings(model)
+    except Exception:
+        pass
     # Persist the lifecycle and drop findings a human already waived/resolved, so the
     # gate reflects open work only. Best-effort: a store hiccup must not break the gate.
     try:
@@ -1243,11 +1250,17 @@ def query_change_impact() -> str:
             or s["links_added"] or s["links_removed"]):
         return f"CHANGE_IMPACT: NONE — REV {d['revision']['from']}→{d['revision']['to']}, no entity or link changes."
 
-    lines = [head]
-    for label, _attr in (
-        ("requirements", "requirements"), ("constraints", "constraints"),
-        ("assumptions", "assumptions"), ("decisions", "decisions"),
-        ("components", "components"), ("risks", "risks"), ("work_items", "work_items"),
+    return "\n".join([head] + _render_model_diff_body(d))
+
+
+def _render_model_diff_body(d: dict) -> list[str]:
+    """Render the per-entity-type + trace-link delta lines of a `diff_solution_models`
+    result. Shared by query_change_impact (vs prev snapshot) and compare_revisions
+    (vs an approved revision)."""
+    lines: list[str] = []
+    for label in (
+        "requirements", "constraints", "assumptions", "decisions",
+        "components", "risks", "work_items",
     ):
         part = d[label]
         if not (part["added"] or part["removed"] or part["changed"]):
@@ -1262,7 +1275,54 @@ def query_change_impact() -> str:
     links = d["trace_links"]
     if links["added"] or links["removed"]:
         lines.append(f"trace_links: +{len(links['added'])} -{len(links['removed'])}")
-    return "\n".join(lines)
+    return lines
+
+
+@tool(parse_docstring=True)
+def compare_revisions(approved_revision: int = 0) -> str:
+    """Compare the current solution model to a previously APPROVED revision (docx §8.6).
+
+    Enterprise audit/collaboration view: diff the live CSM against the immutable snapshot
+    a stakeholder signed off on (approved/REV-<n>.json, written when a gate is approved),
+    so a reviewer can see exactly what changed since approval — added/removed/changed
+    entities per type plus trace-link deltas. With no argument it compares against the
+    most recent approved revision. Returns COMPARE: NONE when there is no approved
+    snapshot or nothing changed.
+
+    Args:
+        approved_revision: The approved revision number to compare against; 0 = latest.
+    """
+    approved_dir = WORKSPACE / "approved"
+    if not approved_dir.exists():
+        return "COMPARE: NONE — no approved revision yet (approve a gate first)."
+    snaps = sorted(approved_dir.glob("REV-*.json"),
+                   key=lambda p: int(p.stem.split("-")[1]) if p.stem.split("-")[1].isdigit() else 0)
+    if not snaps:
+        return "COMPARE: NONE — no approved revision snapshots found."
+    if approved_revision:
+        target = approved_dir / f"REV-{approved_revision}.json"
+        if not target.exists():
+            avail = ", ".join(p.stem for p in snaps)
+            return f"COMPARE: NONE — approved REV-{approved_revision} not found. Available: {avail}."
+    else:
+        target = snaps[-1]
+    cur_raw = _read_json_file(WORKSPACE / SOLUTION_MODEL_NAME, None)
+    old_raw = _read_json_file(target, None)
+    if cur_raw is None or old_raw is None:
+        return "COMPARE: NONE — missing current or approved model."
+    try:
+        new = SolutionModel.model_validate(cur_raw)
+        old = SolutionModel.model_validate(old_raw)
+    except Exception as exc:  # noqa: BLE001
+        return f"COMPARE: ERROR — could not parse a model: {exc}"
+    d = diff_solution_models(old, new)
+    s = d["summary"]
+    total = s["entities_added"] + s["entities_removed"] + s["entities_changed"]
+    head = (f"COMPARE: approved {target.stem} → current REV {d['revision']['to']} | "
+            f"+{s['entities_added']} -{s['entities_removed']} ~{s['entities_changed']} entities")
+    if not (total or s["links_added"] or s["links_removed"]):
+        return f"COMPARE: NONE — current model is unchanged from approved {target.stem}."
+    return "\n".join([head] + _render_model_diff_body(d))
 
 
 @tool(args_schema=PdfReportConfig)
@@ -1966,6 +2026,172 @@ def resolve_finding(finding_id: str, fix_applied: str) -> str:
         fix_applied: What you changed to fix it.
     """
     return _settle_finding(finding_id, "resolved", fix_applied, action="resolve_finding")
+
+
+@tool(parse_docstring=True)
+def apply_compliance_pack(pack_name: str) -> str:
+    """Activate a reusable compliance control pack for this proposal (docx §4 P2, §13.2).
+
+    Maps a standard's controls (encryption, audit logging, access review, …) onto the
+    solution: each control becomes a CSM entity linked to the work/components that
+    implement it and the risks it mitigates. Required controls that have no
+    implementation or no evidence then surface as `compliance` findings in the
+    CROSS-ARTIFACT CHECK, so a client claim like "SOC 2 ready" is blocked until it is
+    backed by evidence. Call this once the architecture and WBS exist. Available packs:
+    generic_security.
+
+    Args:
+        pack_name: Name of the pack to activate (e.g. "generic_security").
+    """
+    from compliance import evidence_gaps, list_packs, load_pack, set_active_pack
+    available = list_packs()
+    if not load_pack(pack_name):
+        return (f"Unknown compliance pack {pack_name!r}. "
+                f"Available: {', '.join(available) or '(none)'}.")
+    set_active_pack(pack_name, WORKSPACE)
+    try:
+        model = build_solution_model(WORKSPACE)  # rebuild so controls + findings appear now
+        gaps = evidence_gaps(model)
+        n_controls = len(model.controls)
+    except Exception:
+        n_controls, gaps = 0, []
+    _bump_tool_summary("apply_compliance_pack")
+    gap_note = (f" {len(gaps)} control(s) still need implementation/evidence."
+                if gaps else " all controls covered.")
+    return (f"Compliance pack '{pack_name}' active: {n_controls} control(s) mapped into the "
+            f"solution model.{gap_note} Re-run the export gate to see compliance findings; "
+            "attach proof with record_evidence or waive with rationale.")
+
+
+@tool(parse_docstring=True)
+def add_comment(body: str, anchor_entity_id: str = "", role: str = "reviewer") -> str:
+    """Attach a review comment to a CSM entity for the audit trail (docx §8.6).
+
+    Anchors a note to a stable entity id (REQ-/COMP-/WBS-/SLIDE-/DEC-…) instead of a
+    chat message, so the review thread survives a rename and ships with the proposal
+    package. Use to flag an open question, a decision rationale, or a reviewer concern
+    against a specific part of the solution.
+
+    Args:
+        body: The comment text.
+        anchor_entity_id: The CSM entity id the comment is about ("" for a general note).
+        role: The commenter's role (architect / pm / reviewer / client).
+    """
+    from datetime import datetime, timezone
+    from comments import append_comment, new_comment_record, next_seq
+
+    rec = new_comment_record(
+        body=body,
+        seq=next_seq(WORKSPACE),
+        anchor_entity_id=(anchor_entity_id or "").strip(),
+        author="agent",
+        role=(role or "reviewer").strip(),
+        timestamp=datetime.now(timezone.utc).isoformat(),
+    )
+    append_comment(rec, WORKSPACE)
+    _bump_tool_summary("add_comment")
+    anchor = f" on {rec.anchor_entity_id}" if rec.anchor_entity_id else ""
+    return f"Comment {rec.id} added{anchor} (comment_log.json). Resolve it with resolve_comment({rec.id})."
+
+
+@tool(parse_docstring=True)
+def resolve_comment(comment_id: str) -> str:
+    """Mark a review comment as resolved (docx §8.6).
+
+    Args:
+        comment_id: The CMT-xxx id of the comment to close.
+    """
+    from datetime import datetime, timezone
+    from comments import resolve_comment as _resolve
+
+    rec = _resolve(comment_id, resolved_by="agent",
+                   resolved_at=datetime.now(timezone.utc).isoformat(), workspace=WORKSPACE)
+    if rec is None:
+        return f"No comment {comment_id!r} found in comment_log.json."
+    _bump_tool_summary("resolve_comment")
+    return f"Comment {comment_id} marked resolved."
+
+
+@tool(parse_docstring=True)
+def export_to_delivery(system: str, dry_run: bool = True) -> str:
+    """Export the WBS work items to a delivery tracker (Jira/Linear/Confluence) (docx §8.6).
+
+    Syncs each CSM work item to one external issue, keyed by its stable id, so a re-run
+    creates new items, updates changed ones and skips unchanged ones (idempotent — never
+    duplicates). PAUSES for human approval before running (explicit send gate, §12.3).
+    Default `dry_run=True` writes a reviewable preview and pushes nothing; set
+    `dry_run=False` to actually sync. With no tracker credentials configured a real sync
+    is simulated with deterministic ids so the flow is testable.
+
+    Args:
+        system: One of jira, linear, confluence.
+        dry_run: True (default) = preview only; False = perform the sync.
+    """
+    sys_l = (system or "").strip().lower()
+    if sys_l not in ("jira", "linear", "confluence"):
+        return f"Unknown delivery system {system!r}. Use jira, linear, or confluence."
+    try:
+        model = build_solution_model(WORKSPACE)
+    except Exception as exc:  # noqa: BLE001
+        return f"Could not build solution model: {exc}"
+    if not model.work_items:
+        return "No WBS work items to export — run the WBS pipeline first."
+    from delivery_export import sync_work_items
+    res = sync_work_items(model, sys_l, dry_run=dry_run, workspace=WORKSPACE)  # type: ignore[arg-type]
+    _bump_tool_summary("export_to_delivery")
+    c = res["counts"]
+    mode = "PREVIEW (dry-run)" if res["dry_run"] else "SYNCED"
+    tail = (" Preview written to delivery_export_preview.json — set dry_run=false to push."
+            if res["dry_run"] else " Mapping saved to delivery_sync_log.json.")
+    return (f"Delivery export to {sys_l} [{mode}]: {c['create']} create, {c['update']} update, "
+            f"{c['skip']} skip (of {len(model.work_items)} work item(s)).{tail}")
+
+
+@tool(parse_docstring=True)
+def reality_sync(source_path: str) -> str:
+    """Compare the design to a real codebase/infra and report drift (docx §5.2).
+
+    "Reality Sync Mode": ingests a source folder (a repo, Terraform, k8s/compose YAML, or
+    an OpenAPI spec) into a current-state model and diffs it against the approved design,
+    so you can answer "does the proposal match what is actually built?". Writes
+    current_state_model.json + drift_report.json and returns a summary: components
+    designed-but-not-built, built-but-not-designed (drift), and matched. Read-only — it
+    never changes the solution model.
+
+    Args:
+        source_path: Path to the repo/infra folder to ingest.
+    """
+    from pathlib import Path as _Path
+    from reality_sync import format_drift, run_reality_sync
+
+    src = _Path(source_path)
+    if not src.exists():
+        return f"Source path not found: {source_path!r}."
+    try:
+        report = run_reality_sync(src, WORKSPACE)
+    except Exception as exc:  # noqa: BLE001
+        return f"Reality sync failed: {exc}"
+    _bump_tool_summary("reality_sync")
+    return format_drift(report)
+
+
+@tool(parse_docstring=True)
+def export_adr_pack() -> str:
+    """Export the decision log as a Markdown ADR pack for the proposal (docx §8.6).
+
+    Renders every recorded decision (options, choice, rationale, approver, evidence,
+    review trigger) into `adr_pack.md` so an enterprise engagement ships with an
+    auditable Architecture Decision Record set. Call near finalization.
+    """
+    try:
+        from adr_export import write_adr_pack
+        path, n = write_adr_pack(WORKSPACE)
+    except Exception as exc:  # noqa: BLE001
+        return f"ADR export failed: {exc}"
+    _bump_tool_summary("export_adr_pack")
+    if n == 0:
+        return "ADR pack: no decisions recorded yet — nothing to export."
+    return f"ADR pack written ({n} decision record(s)) → adr_pack.md."
 
 
 # ---------------------------------------------------------------------------
