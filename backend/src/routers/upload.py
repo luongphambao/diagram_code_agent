@@ -9,6 +9,7 @@ from fastapi import APIRouter, File, UploadFile
 
 from backends import AGENT_SPACE
 from document_parsers import parse_file
+from safe_path import safe_filename
 
 router = APIRouter(tags=["upload"])
 
@@ -19,7 +20,7 @@ UPLOADS_DIR = AGENT_SPACE / "uploads"
 async def upload(file: UploadFile = File(...)):
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
     file_id = uuid.uuid4().hex[:12]
-    raw_path = UPLOADS_DIR / f"{file_id}_{file.filename}"
+    raw_path = UPLOADS_DIR / f"{file_id}_{safe_filename(file.filename)}"
     raw_path.write_bytes(await file.read())
 
     doc = parse_file(raw_path)

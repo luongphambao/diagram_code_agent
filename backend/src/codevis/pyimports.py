@@ -17,7 +17,8 @@ import ast
 import json
 import os
 import re
-import subprocess
+
+from subprocess_utils import run_tred
 import sys
 
 
@@ -85,11 +86,8 @@ def _edges_of(name: str, path: str, modules: dict) -> set[str]:
 def _transitive_reduce(nodes: list[str], edges: list[tuple[str, str]]) -> list[tuple[str, str]]:
     idx = {n: i for i, n in enumerate(nodes)}
     dot = "digraph{" + "".join(f"{idx[s]}->{idx[t]};" for s, t in edges) + "}"
-    try:
-        out = subprocess.run(["tred"], input=dot, capture_output=True,
-                             text=True, check=True).stdout
-    except (FileNotFoundError, subprocess.CalledProcessError) as exc:
-        sys.stderr.write(f"warning: tred unavailable, keeping all edges ({exc})\n")
+    out = run_tred(dot)
+    if out is None:
         return edges
     rev = {i: n for n, i in idx.items()}
     return [(rev[int(a)], rev[int(b)]) for a, b in re.findall(r"(\d+)\s*->\s*(\d+)", out)]

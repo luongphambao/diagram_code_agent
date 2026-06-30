@@ -13,6 +13,7 @@ from langgraph.types import Command
 import conversations as conv_db
 from agent import RECURSION_LIMIT
 from backends import WORKSPACE
+from safe_path import safe_workspace_path
 from context import SessionContext
 from reporting import record_report_step
 from tools import GATE_TOOL_NAMES, allowed_decisions_for, clear_stage_markers
@@ -96,7 +97,7 @@ async def _restore_workspace_from_db(pool, thread_id: str, workspace) -> None:
         filename = _RESTORABLE_FILES[key]
         value = state.get(key)
         if value:
-            (ws / filename).write_text(
+            safe_workspace_path(ws, filename).write_text(
                 json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8"
             )
             logger.info("restored %s from DB state for thread %s", filename, thread_id)

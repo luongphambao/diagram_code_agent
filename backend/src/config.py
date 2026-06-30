@@ -76,6 +76,31 @@ def get_system_prompt_prefix(model: str) -> str:
     return pcfg.get("system_prompt_prefix", "")
 
 
+# ---------------------------------------------------------------------------
+# Per-stage cost budget (advisory — not a hard block at this tier).
+# Set to 0 to disable.  Values are in USD cents (1 = $0.01).
+# Override via environment variables of the same name.
+# ---------------------------------------------------------------------------
+
+def _budget_cents(stage: str, default: int) -> int:
+    """Return the advisory budget in USD cents for *stage*."""
+    return int(os.getenv(f"STAGE_BUDGET_USDCENT_{stage.upper()}", default))
+
+
+STAGE_BUDGETS_USDCENT: dict[str, int] = {
+    "intake":     _budget_cents("INTAKE",     50),   # $0.50
+    "blueprint":  _budget_cents("BLUEPRINT",  100),  # $1.00
+    "wbs":        _budget_cents("WBS",        100),  # $1.00
+    "ppt":        _budget_cents("PPT",        100),  # $1.00
+    "research":   _budget_cents("RESEARCH",   50),   # $0.50
+}
+
+
+def stage_budget_cents(stage: str) -> int:
+    """Return the advisory cost budget in USD cents for *stage* (0 = unlimited)."""
+    return STAGE_BUDGETS_USDCENT.get(stage.lower(), 0)
+
+
 def vision_in_tools(model: str) -> bool:
     """Return True if the provider for *model* accepts image blocks in tool messages."""
     _, pcfg = resolve_provider(model)

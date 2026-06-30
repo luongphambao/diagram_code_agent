@@ -5,8 +5,9 @@ from __future__ import annotations
 import json
 import math
 import re
-import subprocess
 from pathlib import Path
+
+from subprocess_utils import run_graphviz
 
 from .graph_builder import _est_text_w
 
@@ -14,9 +15,9 @@ from .graph_builder import _est_text_w
 def audit_layout(dot_path: str, png_path: str | None = None) -> str:
     """Objective post-render layout check — surfaced to the agent each render."""
     try:
-        g = json.loads(subprocess.run(["dot", "-Tjson", dot_path],
-                                      capture_output=True, text=True,
-                                      check=True).stdout)
+        g = json.loads(run_graphviz(["dot", "-Tjson", dot_path],
+                                    capture_output=True, text=True,
+                                    check=True).stdout)
     except Exception:  # noqa: BLE001
         return ""
     try:

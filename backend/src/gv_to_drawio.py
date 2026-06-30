@@ -16,9 +16,10 @@ from __future__ import annotations
 import base64
 import html
 import json
-import subprocess
 import sys
 from pathlib import Path
+
+from subprocess_utils import run_graphviz
 
 
 def _b64_image(path: str) -> str | None:
@@ -35,7 +36,7 @@ def _num(s: str) -> float:
 
 def convert(dot_path: str, out_path: str) -> str:
     """Lay out ``dot_path`` and write a .drawio to ``out_path``; return the XML."""
-    js = subprocess.run(
+    js = run_graphviz(
         ["dot", "-Tjson", dot_path], capture_output=True, text=True, check=True
     ).stdout
     g = json.loads(js)

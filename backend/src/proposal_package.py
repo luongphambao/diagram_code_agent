@@ -18,6 +18,8 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
+from safe_path import safe_workspace_path
+
 
 # ---------------------------------------------------------------------------
 # Data models
@@ -211,7 +213,8 @@ def export_proposal_package(
     for art in manifest.artifacts:
         src = ws / art.filename
         if src.exists():
-            shutil.copy2(src, export_path / art.filename)
+            dest = safe_workspace_path(export_path, art.filename)
+            shutil.copy2(src, dest)
             copied.append(art.filename)
 
     # Record this export in the manifest
