@@ -197,16 +197,33 @@ def sync_work_items(
                 "preview": str(preview_path)}
 
     # Real sync: apply create/update, persist refs (skip leaves the ref untouched).
+    # Jira pushes for real when credentials are configured; otherwise (and for
+    # linear/confluence) we fall back to a deterministic simulated id so the idempotent
+    # flow is exercised offline / in CI without touching the network (docx §5.4, §12.3).
+    creds = None
+    if system == "jira":
+        try:
+            from jira_adapter import jira_credentials
+            creds = jira_credentials()
+        except Exception:  # noqa: BLE001 — never let adapter import break the sync
+            creds = None
+
     refs = {(_ref_key(r.csm_id, r.system)): r for r in read_refs(workspace)}
     for row in plan:
         if row["action"] == "skip":
             continue
         key = _ref_key(row["csm_id"], system)
         existing = refs.get(key)
-        external_id = (existing.external_id if existing and existing.external_id
-                       else _simulate_external_id(system, row["csm_id"]))
+        prior_id = existing.external_id if existing and existing.external_id else ""
+        if creds is not None:
+            from jira_adapter import push_issue
+            external_id = push_issue(creds, row["payload"], action=row["action"],
+                                     external_id=prior_id)
+        else:
+            external_id = prior_id or _simulate_external_id(system, row["csm_id"])
         refs[key] = ExternalRef(csm_id=row["csm_id"], system=system,
                                 external_id=external_id, last_synced_hash=row["hash"])
         row["external_id"] = external_id
     _write_refs(refs.values(), workspace)
-    return {"system": system, "dry_run": False, "counts": counts, "plan": plan}
+    return {"system": system, "dry_run": False, "counts": counts, "plan": plan,
+            "pushed": creds is not None}

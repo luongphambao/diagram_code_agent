@@ -2,33 +2,40 @@ import { useState } from "react";
 import type { AgentState, LogEntry } from "../../hooks/useDiagramAgent";
 import ActivityRow from "./ActivityRow";
 import SubagentPanel from "../SubagentPanel";
+import QualityPanel from "./QualityPanel";
+import CommentThread from "./CommentThread";
 
-type Tab = "preview" | "pdf" | "ppt" | "wbs" | "code" | "activity" | "agents";
+type Tab = "preview" | "pdf" | "ppt" | "wbs" | "quality" | "code" | "activity" | "agents" | "comments";
 
 interface ArtifactTabsProps {
   agentState: AgentState;
   isRunning: boolean;
   activeSubagent?: string | null;
   activity?: string | null;
+  threadId: string;
+  userRole: string;
 }
 
-export default function ArtifactTabs({ agentState, isRunning, activeSubagent, activity }: ArtifactTabsProps) {
+export default function ArtifactTabs({ agentState, isRunning, activeSubagent, activity, threadId, userRole }: ArtifactTabsProps) {
   const [tab, setTab] = useState<Tab>("preview");
   const [lightbox, setLightbox] = useState(false);
 
-  const { png_base64, pdf_base64, pptx_base64, wbs_xlsx_base64, wbs_summary, drawio, summary, iteration, code, logs, delegations } = agentState;
+  const { png_base64, pdf_base64, pptx_base64, wbs_xlsx_base64, wbs_summary, drawio, summary, iteration, code, logs, delegations, quality, compliance, drift } = agentState;
   const hasDelegations = !!delegations && delegations.length > 0;
   const hasLiveAgentWork = isRunning || !!activeSubagent || hasDelegations || !!activity;
   const hasWbs = !!wbs_summary || !!wbs_xlsx_base64;
+  const hasQuality = !!quality || !!compliance || !!drift;
 
   const tabs: Tab[] = [
     "preview",
     ...(pdf_base64 ? (["pdf"] as Tab[]) : []),
     ...(pptx_base64 ? (["ppt"] as Tab[]) : []),
     ...(hasWbs ? (["wbs"] as Tab[]) : []),
+    ...(hasQuality ? (["quality"] as Tab[]) : []),
     "code",
     "activity",
     "agents",
+    "comments",
   ];
 
   const downloadPng = () => {
@@ -291,6 +298,22 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
               </div>
             )}
           </div>
+        )}
+
+        {tab === "quality" && (
+          <div className="flex flex-1 flex-col overflow-hidden bg-[#0b0e14]">
+            <div className="flex items-center justify-between border-b border-white/8 px-4 py-2">
+              <span className="text-xs font-medium text-slate-400">Governance &amp; quality</span>
+              {quality?.solution_revision != null && (
+                <span className="text-[11px] text-slate-600">CSM rev {quality.solution_revision}</span>
+              )}
+            </div>
+            <QualityPanel quality={quality} compliance={compliance} drift={drift} />
+          </div>
+        )}
+
+        {tab === "comments" && (
+          <CommentThread threadId={threadId} userRole={userRole} />
         )}
 
         {tab === "activity" && (

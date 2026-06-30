@@ -29,6 +29,7 @@ interface ChatSidebarProps {
   onResolveWbsSkeleton: (approved: boolean, modifications?: string) => void;
   onResolveWbs: (approved: boolean, modifications?: string) => void;
   onResolveWbsExcel: (approved: boolean) => void;
+  onResolveDeliveryExport: (approved: boolean) => void;
   onResolveDecision: (payload: DecisionPayload) => void;
   onUploadFile: (file: File) => void;
   onClearFiles: () => void;
@@ -40,7 +41,7 @@ export default function ChatSidebar({
   uploadedFiles, isUploading,
   onSend, onResolveTechStack, onResolveBlueprint, onResolveResult, onResolvePdfReport,
   onResolvePptProposal, onResolveEmail, onResolveMeeting, onResolveMeetingSlot,
-  onResolveWbsSkeleton, onResolveWbs, onResolveWbsExcel, onResolveDecision,
+  onResolveWbsSkeleton, onResolveWbs, onResolveWbsExcel, onResolveDeliveryExport, onResolveDecision,
   onUploadFile, onClearFiles,
 }: ChatSidebarProps) {
   const [wbsPreviewOpen, setWbsPreviewOpen] = useState(false);
@@ -136,6 +137,7 @@ export default function ChatSidebar({
         onResolveWbsSkeleton={onResolveWbsSkeleton}
         onResolveWbs={onResolveWbs}
         onResolveWbsExcel={onResolveWbsExcel}
+        onResolveDeliveryExport={onResolveDeliveryExport}
         onResolveDecision={onResolveDecision}
       />
 

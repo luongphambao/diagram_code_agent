@@ -175,6 +175,61 @@ export interface WbsSummary {
   effort_by_module: Array<{ code: string; name: string; total_md: number }>;
 }
 
+// Governance read-outs surfaced in the canvas "Quality" tab (display-only).
+export interface QualitySnapshot {
+  solution_revision?: number;
+  quality_score?: number;
+  quality_grade?: string;
+  score_breakdown?: Record<string, number>;
+  total_findings?: number;
+  findings_open?: number;
+  findings_waived?: number;
+  findings_resolved?: number;
+  findings_by_dimension?: Record<string, number>;
+  findings_by_severity?: Record<string, number>;
+  total_decisions?: number;
+  total_evidence?: number;
+  evidence_coverage_pct?: number;
+  total_assumptions?: number;
+  assumptions_confirmed?: number;
+  assumption_confirmation_pct?: number;
+  total_risks?: number;
+  risk_mitigation_pct?: number;
+  total_tokens?: number;
+  model_calls?: number;
+}
+
+export interface DriftEntry { id: string; name: string; kind: string }
+
+export interface DriftReport {
+  summary?: {
+    designed?: number;
+    observed?: number;
+    matched?: number;
+    in_design_not_in_reality?: number;
+    in_reality_not_in_design?: number;
+  };
+  in_design_not_in_reality?: DriftEntry[];
+  in_reality_not_in_design?: DriftEntry[];
+  matched?: DriftEntry[];
+  remediation?: string[];
+}
+
+export interface ComplianceControl {
+  id: string;
+  name: string;
+  kind: string;
+  standard_ref: string;
+  status: string;
+  grounded: boolean;
+  implemented: boolean;
+}
+
+export interface ComplianceState {
+  pack: string;
+  controls: ComplianceControl[];
+}
+
 export interface AgentState {
   current_step?: string;
   iteration?: number;
@@ -194,6 +249,9 @@ export interface AgentState {
   blueprint?: Blueprint;
   delegations?: Delegation[];
   activeSubagent?: string;
+  quality?: QualitySnapshot;
+  drift?: DriftReport;
+  compliance?: ComplianceState;
 }
 
 export type InterruptType =
@@ -208,7 +266,8 @@ export type InterruptType =
   | "meeting_approval"
   | "wbs_skeleton_approval"
   | "wbs_approval"
-  | "wbs_excel_approval";
+  | "wbs_excel_approval"
+  | "delivery_export_approval";
 
 export interface PendingInterrupt {
   toolCallId: string;
@@ -257,10 +316,17 @@ export interface PendingInterrupt {
     timeline_months?: number;
     effort_by_role?: Record<string, number>;
     effort_by_module?: Array<{code: string; name: string; total_md: number}>;
+    // Delivery export gate (export_to_delivery).
+    system?: string;
+    dry_run?: boolean;
     // HITL v2: the trade-off actions this gate offers (drives DecisionActions).
     allowed_decisions?: DecisionAction[];
   };
 }
+
+// Role the user acts in at a gate (mirrors backend tools.ROLE_GATE_PERMISSIONS, §8.6).
+// Sent on every /agui request as `userRole`; the backend enforces gate role policy.
+export type UserRole = "viewer" | "pm" | "lead" | "admin";
 
 // HITL v2 decision actions (mirror backend tools.GATE_DECISIONS).
 export type DecisionAction =

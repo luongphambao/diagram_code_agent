@@ -2140,7 +2140,12 @@ def export_to_delivery(system: str, dry_run: bool = True) -> str:
     res = sync_work_items(model, sys_l, dry_run=dry_run, workspace=current_workspace())  # type: ignore[arg-type]
     _bump_tool_summary("export_to_delivery")
     c = res["counts"]
-    mode = "PREVIEW (dry-run)" if res["dry_run"] else "SYNCED"
+    if res["dry_run"]:
+        mode = "PREVIEW (dry-run)"
+    elif res.get("pushed"):
+        mode = "SYNCED (live)"
+    else:
+        mode = "SYNCED (simulated — no credentials)"
     tail = (" Preview written to delivery_export_preview.json — set dry_run=false to push."
             if res["dry_run"] else " Mapping saved to delivery_sync_log.json.")
     return (f"Delivery export to {sys_l} [{mode}]: {c['create']} create, {c['update']} update, "

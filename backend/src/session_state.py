@@ -551,6 +551,22 @@ def _card_for(val, summary: str):
             "awaiting_wbs_excel",
             {},
         )
+    if name == "export_to_delivery":
+        sys_l = str(args.get("system", "")).strip().lower()
+        dry_run = bool(args.get("dry_run", True))
+        return (
+            {
+                "type": "delivery_export_approval",
+                "question": (
+                    f"Push the WBS work items to {sys_l or 'the delivery tracker'}"
+                    + (" (preview / dry-run)?" if dry_run else " — live sync?")
+                ),
+                "system": sys_l,
+                "dry_run": dry_run,
+            },
+            "awaiting_delivery_export",
+            {},
+        )
     return None, None, {}
 
 
@@ -736,6 +752,31 @@ def _stage_artifacts(workspace) -> dict:
             "months": timeline.get("months", 0),
             "effort_by_module": (wbs.get("effort_by_module") or [])[:12],
         }
+
+    # Governance read-outs for the canvas "Quality" tab (display-only; present only once
+    # the agent has run quality_summary / reality_sync / apply_compliance_pack).
+    quality = _read_json(workspace / "quality_snapshot.json")
+    if quality:
+        out["quality"] = quality
+    drift = _read_json(workspace / "drift_report.json")
+    if drift:
+        out["drift"] = drift
+    pack = _read_json(workspace / "compliance_pack.json")
+    if pack and pack.get("pack"):
+        model = _read_json(workspace / "solution_model.json") or {}
+        controls = [
+            {
+                "id": c.get("id", ""),
+                "name": c.get("name", ""),
+                "kind": c.get("kind", ""),
+                "standard_ref": c.get("standard_ref", ""),
+                "status": c.get("status", "required"),
+                "grounded": bool(c.get("evidence_ids")),
+                "implemented": bool(c.get("implemented_by_ids")),
+            }
+            for c in (model.get("controls") or [])
+        ]
+        out["compliance"] = {"pack": pack.get("pack"), "controls": controls}
     return out
 
 

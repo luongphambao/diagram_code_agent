@@ -9,9 +9,11 @@ interface DiagramCanvasProps {
   isRunning: boolean;
   activeSubagent?: string | null;
   activity?: string | null;
+  threadId: string;
+  userRole: string;
 }
 
-export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning, activeSubagent, activity }: DiagramCanvasProps) {
+export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning, activeSubagent, activity, threadId, userRole }: DiagramCanvasProps) {
   const { current_step, png_base64, error, iteration, delegations, logs } = agentState;
 
   // Empty / idle
@@ -43,6 +45,8 @@ export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning,
         isRunning={isRunning}
         activeSubagent={activeSubagent}
         activity={activity}
+        threadId={threadId}
+        userRole={userRole}
       />
     );
   }

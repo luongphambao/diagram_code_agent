@@ -10,6 +10,7 @@ import MeetingSlotPicker from "../MeetingSlotPicker";
 import WbsSkeletonApproval from "../WbsSkeletonApproval";
 import WbsApproval from "../WbsApproval";
 import WbsExcelApproval from "../WbsExcelApproval";
+import DeliveryExportApproval from "../DeliveryExportApproval";
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -41,6 +42,7 @@ interface MessageListProps {
   onResolveWbsSkeleton: (approved: boolean, modifications?: string) => void;
   onResolveWbs: (approved: boolean, modifications?: string) => void;
   onResolveWbsExcel: (approved: boolean) => void;
+  onResolveDeliveryExport: (approved: boolean) => void;
   onResolveDecision: (payload: DecisionPayload) => void;
 }
 
@@ -51,7 +53,7 @@ export default function MessageList({
   wbsPreviewOpen, onToggleWbsPreview,
   onResolveTechStack, onResolveBlueprint, onResolveResult, onResolvePdfReport,
   onResolvePptProposal, onResolveEmail, onResolveMeeting, onResolveMeetingSlot,
-  onResolveWbsSkeleton, onResolveWbs, onResolveWbsExcel, onResolveDecision,
+  onResolveWbsSkeleton, onResolveWbs, onResolveWbsExcel, onResolveDeliveryExport, onResolveDecision,
 }: MessageListProps) {
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-5">
@@ -132,6 +134,9 @@ export default function MessageList({
       )}
       {pendingInterrupt?.data.type === "wbs_excel_approval" && (
         <div className="mt-1"><WbsExcelApproval interrupt={pendingInterrupt} onResolve={onResolveWbsExcel} onDecision={onResolveDecision} disabled={isRunning} /></div>
+      )}
+      {pendingInterrupt?.data.type === "delivery_export_approval" && (
+        <div className="mt-1"><DeliveryExportApproval interrupt={pendingInterrupt} onResolve={onResolveDeliveryExport} onDecision={onResolveDecision} disabled={isRunning} /></div>
       )}
 
       {pdfBase64 && (

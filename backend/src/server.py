@@ -27,6 +27,7 @@ import conversations as conv_db
 import session_state
 
 from routers.chat import router as chat_router
+from routers.comments import router as comments_router
 from routers.conversations import router as conversations_router
 from routers.upload import router as upload_router
 
@@ -85,6 +86,7 @@ app.add_middleware(
 app.include_router(chat_router)
 app.include_router(upload_router)
 app.include_router(conversations_router)
+app.include_router(comments_router)
 
 
 @app.get("/health", tags=["ops"])

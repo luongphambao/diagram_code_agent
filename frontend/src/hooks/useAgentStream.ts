@@ -11,6 +11,7 @@ import {
 
 interface UseAgentStreamOptions {
   threadIdRef: React.MutableRefObject<string>;
+  userRoleRef: React.MutableRefObject<string>;
   uploadedFileIds: () => string[];
   setAgentState: React.Dispatch<React.SetStateAction<AgentState>>;
   setIsRunning: React.Dispatch<React.SetStateAction<boolean>>;
@@ -25,6 +26,7 @@ interface UseAgentStreamOptions {
 
 export function useAgentStream({
   threadIdRef,
+  userRoleRef,
   uploadedFileIds,
   setAgentState,
   setIsRunning,
@@ -52,6 +54,7 @@ export function useAgentStream({
           runId,
           messages,
           file_ids: uploadedFileIds(),
+          userRole: userRoleRef.current,
         }),
       });
 

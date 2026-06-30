@@ -8,13 +8,18 @@ export type {
   ArchitectureAnalysis,
   Blueprint,
   ChatMessage,
+  ComplianceControl,
+  ComplianceState,
   CostRange,
   DataAssumptions,
   DecisionAction,
   DecisionPayload,
   Delegation,
   DiagramBrief,
+  DriftEntry,
+  DriftReport,
   InterruptType,
+  QualitySnapshot,
   LogEntry,
   PendingInterrupt,
   ScalingPhase,
@@ -38,7 +43,7 @@ import type {
   WireMessage,
 } from "./agent-utils";
 
-export function useDiagramAgent({ threadId }: { threadId: string }) {
+export function useDiagramAgent({ threadId, userRole = "" }: { threadId: string; userRole?: string }) {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [agentState, setAgentState] = useState<AgentState>({});
   const [pendingInterrupt, setPendingInterrupt] = useState<PendingInterrupt | null>(null);
@@ -51,11 +56,16 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
 
   const wireMessagesRef = useRef<WireMessage[]>([]);
   const threadIdRef = useRef(threadId);
+  const userRoleRef = useRef(userRole);
   const lastTcIdRef = useRef<string>("");
 
   useEffect(() => {
     threadIdRef.current = threadId;
   }, [threadId]);
+
+  useEffect(() => {
+    userRoleRef.current = userRole;
+  }, [userRole]);
 
   const uploadedFileIds = useCallback(
     () => uploadedFiles.map((f) => f.file_id),
@@ -64,6 +74,7 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
 
   const { runAgent } = useAgentStream({
     threadIdRef,
+    userRoleRef,
     uploadedFileIds,
     setAgentState,
     setIsRunning,
@@ -192,6 +203,11 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
     [_resolveWithPayload]
   );
 
+  const resolveDeliveryExport = useCallback(
+    async (approved: boolean) => { await _resolveWithPayload({ approved }); },
+    [_resolveWithPayload]
+  );
+
   // HITL v2: post a structured trade-off decision (accept_risk, request_evidence, ...).
   const resolveDecision = useCallback(
     async (payload: DecisionPayload) => { await _resolveWithPayload({ ...payload }); },
@@ -265,6 +281,7 @@ export function useDiagramAgent({ threadId }: { threadId: string }) {
     resolveWbsSkeleton,
     resolveWbs,
     resolveWbsExcel,
+    resolveDeliveryExport,
     resolveDecision,
     uploadFile,
     clearFiles,
