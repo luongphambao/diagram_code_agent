@@ -380,6 +380,110 @@ def load_deck_plan(workspace: Optional[Path] = None) -> Optional[DeckPlan]:
         return None
 
 
+# --- structural quality scorer -----------------------------------------------
+
+# Thresholds for per-slide rules.
+_MAX_BULLETS = 8          # more → "wall of text"
+_MAX_TITLE_LEN = 80       # characters
+_MIN_BULLETS_CONTENT = 1  # section covers + cover may have 0 bullets legitimately
+
+
+def score_deck_structure(plan: DeckPlan) -> dict:
+    """Rule-based structural quality score (0-100).
+
+    Scores the deck plan without visual rendering or an LLM.  Every rule is a
+    deterministic check on the storyboard shape (slide count, title length,
+    bullet density, source coverage).
+
+    Returns a dict with keys:
+      * ``score``          — float [0, 100]
+      * ``grade``          — letter A/B/C/D/F
+      * ``issues``         — list[str] of human-readable violation messages
+      * ``slide_scores``   — list[dict] with per-slide breakdown
+    """
+    issues: list[str] = []
+    slide_scores: list[dict] = []
+    deduct: float = 0.0
+
+    # Layout names that are decoration / section dividers (allow 0 bullets).
+    _section_layouts = {"Cover-01", "Head Page", "cover", "section"}
+
+    for s in plan.slides:
+        slide_issues: list[str] = []
+        is_section = s.layout in _section_layouts or s.block == "section"
+
+        # Title length
+        if len(s.title) > _MAX_TITLE_LEN:
+            msg = f"slide {s.slide_no}: title too long ({len(s.title)} chars > {_MAX_TITLE_LEN})"
+            issues.append(msg)
+            slide_issues.append(msg)
+            deduct += 2.0
+
+        # Bullet density
+        n_bullets = len(s.bullets)
+        if n_bullets > _MAX_BULLETS:
+            msg = f"slide {s.slide_no}: too many bullets ({n_bullets} > {_MAX_BULLETS})"
+            issues.append(msg)
+            slide_issues.append(msg)
+            deduct += 2.0
+
+        # Empty content slides
+        if not is_section and n_bullets < _MIN_BULLETS_CONTENT and not s.asset_ref:
+            msg = f"slide {s.slide_no}: content slide has no bullets and no asset_ref"
+            issues.append(msg)
+            slide_issues.append(msg)
+            deduct += 1.0
+
+        # Ungrounded client-facing slide
+        if s.client_facing and not s.source_refs:
+            msg = f"slide {s.slide_no}: client-facing slide has no source_refs (ungrounded)"
+            issues.append(msg)
+            slide_issues.append(msg)
+            deduct += 5.0
+
+        # Non-section slide without any source_refs
+        elif not is_section and not s.source_refs:
+            msg = f"slide {s.slide_no}: content slide has no source_refs"
+            issues.append(msg)
+            slide_issues.append(msg)
+            deduct += 2.0
+
+        slide_scores.append({
+            "slide_no": s.slide_no,
+            "title": s.title,
+            "issues": slide_issues,
+        })
+
+    # Overall deck rules
+    n_slides = len(plan.slides)
+    if n_slides < 5:
+        msg = f"deck has too few slides ({n_slides} < 5)"
+        issues.append(msg)
+        deduct += 10.0
+    elif n_slides > 30:
+        msg = f"deck is very long ({n_slides} slides > 30)"
+        issues.append(msg)
+        deduct += 5.0
+
+    missing_roles = [r for r in REQUIRED_ROLES if r not in plan.roles()]
+    if missing_roles:
+        for role in missing_roles:
+            msg = f"missing required narrative role: {role}"
+            issues.append(msg)
+            deduct += 8.0
+
+    score = max(0.0, min(100.0, 100.0 - deduct))
+    grade = "A" if score >= 90 else "B" if score >= 75 else "C" if score >= 60 else "D" if score >= 45 else "F"
+
+    return {
+        "score": round(score, 1),
+        "grade": grade,
+        "issues": issues,
+        "slide_scores": slide_scores,
+        "deductions": round(deduct, 1),
+    }
+
+
 # --- projection into the CSM -------------------------------------------------
 
 def project_into_csm(model: SolutionModel, plan: Optional[DeckPlan]) -> SolutionModel:

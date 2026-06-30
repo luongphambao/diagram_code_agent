@@ -36,8 +36,7 @@ from evals.architecture.judge import METRIC_KEYS as ARCH_KEYS  # noqa: E402
 from evals.architecture.run_eval import _run_one as arch_run  # noqa: E402
 from evals.wbs.judge import METRIC_KEYS as WBS_KEYS  # noqa: E402
 from evals.wbs.run_eval import _run_one as wbs_run  # noqa: E402
-from evals.deck.judge import METRIC_KEYS as DECK_KEYS  # noqa: E402
-from evals.deck.run_eval import _run_one as deck_run  # noqa: E402
+from evals.deck.run_eval import ALL_METRIC_KEYS as DECK_KEYS, _run_one as deck_run  # noqa: E402
 from evals.diagram_quality.judge import METRIC_KEYS as DQ_KEYS  # noqa: E402
 from evals.diagram_quality.run_eval import _run_one as dq_run  # noqa: E402
 

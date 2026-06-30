@@ -49,6 +49,18 @@ def score_intake(model: Any, golden: dict) -> dict:
     must_ask = golden.get("must_ask", [])
     ask_recall = _prf(produced_asm, must_ask)["recall"] if must_ask else 1.0
 
+    # Tier classifier: assumptions the golden case flags as must_confirm should
+    # receive confidence_tier="must_confirm". Vacuously 1.0 when not specified.
+    expected_must = golden.get("expected_must_confirm", [])
+    if expected_must:
+        produced_must = [
+            a.statement for a in model.assumptions
+            if a.confidence_tier == "must_confirm"
+        ]
+        tier_recall = _prf(produced_must, expected_must)["recall"]
+    else:
+        tier_recall = 1.0
+
     return {
         "requirements_f1": reqs["f1"],
         "assumptions_f1": asm["f1"],
@@ -56,6 +68,7 @@ def score_intake(model: Any, golden: dict) -> dict:
         "must_ask_recall": round(ask_recall, 4),
         "micro_f1": round(f1(tp, fp, fn), 4),
         "n_assumptions_pending": len(produced_asm),
+        "tier_recall": round(tier_recall, 4),
     }
 
 
@@ -66,4 +79,5 @@ METRIC_KEYS = [
     "scores.assumptions_f1",
     "scores.constraints_f1",
     "scores.must_ask_recall",
+    "scores.tier_recall",
 ]

@@ -1,0 +1,40 @@
+{
+  "id": "tier_classifier_mixed",
+  "brief": {
+    "functional_requirements": [
+      "User registration and login",
+      "Product catalog with search",
+      "Shopping cart and checkout"
+    ],
+    "non_functional_requirements": [
+      "System must be available 99.9% of the time",
+      "PCI-DSS compliance for payment handling"
+    ],
+    "assumptions": [
+      "Budget for cloud infrastructure is $5,000/month",
+      "Go-live deadline is Q3 2025",
+      "The client has an existing Stripe account",
+      "We will follow standard REST API best practices",
+      "Team size is 4 developers"
+    ],
+    "layout_constraints": [
+      "Deploy to AWS ap-southeast-1 region"
+    ]
+  },
+  "analysis": {"constraints": ["budget_sensitive", "compliance_sensitive"]},
+  "expected_requirements": [
+    "registration", "login", "product catalog", "shopping cart", "checkout",
+    "availability", "PCI-DSS"
+  ],
+  "expected_assumptions": [
+    "$5,000/month", "Q3 2025", "Stripe account", "REST API best practices", "4 developers"
+  ],
+  "expected_constraints": [
+    "ap-southeast-1", "budget sensitive", "compliance sensitive"
+  ],
+  "must_ask": ["$5,000/month", "Q3 2025"],
+  "expected_must_confirm": [
+    "$5,000/month",
+    "Go-live deadline is Q3 2025"
+  ]
+}

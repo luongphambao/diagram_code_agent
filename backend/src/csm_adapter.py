@@ -18,8 +18,9 @@ Design choices that keep it safe to drop in:
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from csm import (
     Assumption,
@@ -67,6 +68,32 @@ def _requirements(brief: dict[str, Any]) -> list[Requirement]:
     return out
 
 
+_MUST_CONFIRM_RE = re.compile(
+    r"(\$|budget|cost\b|costs\b|pricing|fee\b|fees\b|eur\b|usd\b|sgd\b|myr\b|rm\b)"
+    r"|(deadline|go.?live|launch date|due date|by q[1-4]\b|by (jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))"
+    r"|(hipaa|gdpr|pci.?dss?|soc\s?2|iso\s?27|sox\b|fda\b|compliance|regulatory|legal\s+require|audit)"
+    r"|(sla\b|uptime|latency|p99\b|p95\b|response.?time|throughput|availability|99\.\d+%)",
+    re.IGNORECASE,
+)
+
+_NICE_CONFIRM_RE = re.compile(
+    r"\b(best practice|typically|usually|standard approach|conventional|by default|prefer)",
+    re.IGNORECASE,
+)
+
+
+def _classify_assumption_tier(
+    statement: str,
+) -> Literal["must_confirm", "should_confirm", "nice_to_confirm"]:
+    """Keyword-based tier: must_confirm (financial/deadline/compliance/SLA),
+    nice_to_confirm (generic best-practice), should_confirm (everything else)."""
+    if _MUST_CONFIRM_RE.search(statement):
+        return "must_confirm"
+    if _NICE_CONFIRM_RE.search(statement):
+        return "nice_to_confirm"
+    return "should_confirm"
+
+
 def _assumptions(brief: dict[str, Any]) -> list[Assumption]:
     out: list[Assumption] = []
     for i, item in enumerate(_as_list(brief.get("assumptions")), start=1):
@@ -74,6 +101,7 @@ def _assumptions(brief: dict[str, Any]) -> list[Assumption]:
         if text:
             out.append(Assumption(
                 id=mint_id("assumption", i), statement=text, status="pending",
+                confidence_tier=_classify_assumption_tier(text),
                 provenance="agent", source_refs=_src("diagram_brief.json"),
             ))
     return out

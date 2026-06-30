@@ -97,6 +97,7 @@ def clear_stage_markers() -> None:
         WORKSPACE / "solution_model.json", WORKSPACE / "trace_links.json",
         WORKSPACE / "evidence_log.json",
         WORKSPACE / "deck_plan.json", WORKSPACE / "deck_qa_result.json",
+        WORKSPACE / "quality_snapshot.json",
     ):
         if f.exists():
             f.unlink()

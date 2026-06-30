@@ -147,6 +147,7 @@ from .analysis_tools import (
     query_change_impact,
     record_evidence,
     resolve_finding,
+    quality_summary,
     submit_critique,
     waive_finding,
     web_research,
@@ -184,6 +185,7 @@ DIAGRAM_TOOLS = [
     generate_ppt_proposal,
     query_change_impact,
     edit_entity,
+    quality_summary,
 ]
 
 # Late imports (same as original tools.py bottom section)
@@ -201,6 +203,7 @@ MAIN_TOOLS = [
     waive_finding,            # accept a cross-artifact finding as a trade-off -> findings_log.json
     resolve_finding,          # mark a cross-artifact finding fixed -> findings_log.json
     edit_entity,              # patch a single field on a CSM entity -> solution_model.json
+    quality_summary,          # aggregate quality health snapshot (findings/evidence/assumptions/score)
     propose_tech_stack,
     propose_blueprint,
     visualize_code_structure,

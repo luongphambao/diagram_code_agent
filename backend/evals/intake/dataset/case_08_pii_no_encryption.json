@@ -1,0 +1,41 @@
+{
+  "id": "tier_classifier_compliance",
+  "brief": {
+    "functional_requirements": [
+      "Patient record management",
+      "Appointment scheduling",
+      "Lab result integration"
+    ],
+    "non_functional_requirements": [
+      "HIPAA-compliant data handling",
+      "99.99% uptime SLA for the patient portal"
+    ],
+    "assumptions": [
+      "Total budget does not exceed $200,000 USD",
+      "HIPAA compliance audit must be completed before launch",
+      "The client uses Azure as their cloud provider",
+      "We will typically follow microservices best practices",
+      "Response time under 200ms for patient-facing APIs"
+    ],
+    "layout_constraints": [
+      "All PHI must remain in the US-East region"
+    ]
+  },
+  "analysis": {"constraints": ["compliance_sensitive", "resilience_required"]},
+  "expected_requirements": [
+    "patient record", "appointment scheduling", "lab result",
+    "HIPAA", "uptime SLA"
+  ],
+  "expected_assumptions": [
+    "$200,000 USD", "HIPAA compliance audit", "Azure", "microservices best practices", "200ms"
+  ],
+  "expected_constraints": [
+    "US-East", "compliance sensitive", "resilience required"
+  ],
+  "must_ask": ["$200,000 USD", "HIPAA compliance audit", "200ms"],
+  "expected_must_confirm": [
+    "Total budget does not exceed $200,000 USD",
+    "HIPAA compliance audit must be completed before launch",
+    "Response time under 200ms for patient-facing APIs"
+  ]
+}

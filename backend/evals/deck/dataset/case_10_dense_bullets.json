@@ -1,0 +1,9 @@
+{
+  "id": "case_10_dense_bullets",
+  "description": "Slide with 12 bullet paragraphs triggers too_many_bullets finding.",
+  "case_type": "visual_audit",
+  "slide_title": "Dense Content Slide",
+  "defects": ["dense_bullets"],
+  "expected_issue_types": ["too_many_bullets"],
+  "expected_passed": true
+}

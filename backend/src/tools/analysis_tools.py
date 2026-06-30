@@ -22,8 +22,27 @@ from deck import (
     DECK_QA_NAME,
     build_deck_plan,
     load_deck_plan,
+    score_deck_structure,
     validate_deck,
     write_deck_plan,
+)
+from deck_visual_qa import (
+    VISUAL_AUDIT_NAME,
+    audit_pptx_deterministic,
+    format_visual_audit,
+    patch_pptx_overflow,
+    write_visual_audit,
+)
+from proposal_package import (
+    build_manifest,
+    export_proposal_package as _export_proposal_package,
+    format_manifest,
+)
+from quality_dashboard import (
+    SNAPSHOT_NAME as QUALITY_SNAPSHOT_NAME,
+    build_quality_snapshot,
+    format_snapshot,
+    write_snapshot,
 )
 from findings import DiagramFinding, format_critique, prune, verdict_for
 from solution_validator import format_validation, validate_solution
@@ -1057,10 +1076,26 @@ def _epistemic_note(model, *, cap: int = 8) -> str:
     def _ids(items, text_key):
         return [f'{it.get("id", "?")}: {it[text_key]}' for it in items]
 
-    sections = [
+    pending = summ.get("assumptions_needing_confirmation", [])
+    must   = [a for a in pending if a.get("tier") == "must_confirm"]
+    should = [a for a in pending if a.get("tier") == "should_confirm"]
+    nice   = [a for a in pending if a.get("tier") == "nice_to_confirm"]
+
+    asm_sections: list[tuple[str, list]] = []
+    if must:
+        asm_sections.append(("Assumptions — MUST CONFIRM (financial/deadline/compliance/SLA)", must))
+    if should:
+        asm_sections.append(("Assumptions — should confirm", should))
+    if nice:
+        asm_sections.append(("Assumptions — nice to confirm", nice))
+
+    sections: list[tuple[str, list]] = [
         ("Known facts", _ids(summ["known_facts"], "statement")),
-        ("Assumptions (needs customer confirmation — confirm via approve_with_assumptions)",
-         _ids(summ["assumptions_needing_confirmation"], "statement")),
+    ]
+    for tier_title, tier_items in asm_sections:
+        sections.append((tier_title + " — confirm via approve_with_assumptions",
+                         _ids(tier_items, "statement")))
+    sections += [
         ("Open decisions", _ids(summ["open_decisions"], "title")),
         ("Constraints",
          [f'{c.get("id", "?")}: {c["statement"]} [{c["kind"]}]' for c in summ["constraints"]]),
@@ -1363,6 +1398,7 @@ def generate_ppt_proposal(
             msg += f" NOTE: {len(missing)} section(s) were omitted from this run: " + ", ".join(missing) + "."
     msg += _solution_gate_note("ppt_export", block=True)
     msg += _deck_qa_note()
+    msg += _visual_audit_note(pptx_path)
     return msg
 
 
@@ -1424,7 +1460,7 @@ def _refresh_deck_plan(title: str = "", subtitle: str = "", brand: str = ""):
 
 
 def _deck_qa_note(model=None) -> str:
-    """Run validate_deck over the stored plan, write deck_qa_result.json, render a note."""
+    """Run validate_deck + score_deck_structure over the stored plan, write deck_qa_result.json."""
     plan = load_deck_plan(WORKSPACE)
     if plan is None:
         return ""
@@ -1434,10 +1470,16 @@ def _deck_qa_note(model=None) -> str:
         except Exception:
             return ""
     findings = validate_deck(plan, model)
+    struct = score_deck_structure(plan)
     try:
         (WORKSPACE / DECK_QA_NAME).write_text(
-            json.dumps({"deck_revision": plan.revision, "findings": findings},
-                       indent=2, ensure_ascii=False),
+            json.dumps({
+                "deck_revision": plan.revision,
+                "findings": findings,
+                "structural_score": struct["score"],
+                "structural_grade": struct["grade"],
+                "structural_issues": struct["issues"],
+            }, indent=2, ensure_ascii=False),
             encoding="utf-8",
         )
     except Exception:
@@ -1446,20 +1488,113 @@ def _deck_qa_note(model=None) -> str:
     trace_total = sum(len(s.source_refs) for s in plan.slides)
     head = (
         f"\n\nDECK QA — storyboard revision {plan.revision}: {len(plan.slides)} slides, "
-        f"{grounded} grounded in {trace_total} CSM source ref(s)."
+        f"{grounded} grounded in {trace_total} CSM source ref(s). "
+        f"Structural score: {struct['score']}/100 [{struct['grade']}]."
     )
-    if not findings:
-        return head + " No traceability/consistency/evidence issues."
-    by_sev: dict[str, int] = {}
-    for f in findings:
-        by_sev[f["severity"]] = by_sev.get(f["severity"], 0) + 1
-    lines = [
-        f"  ⚠ [{f['severity']}/{f['dimension']}] slide {f['slide_no']}: {f['evidence']}"
-        for f in findings[:8]
-    ]
-    extra = f"\n  … (+{len(findings) - 8} more)" if len(findings) > 8 else ""
-    sev = ", ".join(f"{k}:{v}" for k, v in sorted(by_sev.items()))
-    return head + f" {len(findings)} finding(s) ({sev}):\n" + "\n".join(lines) + extra
+    parts: list[str] = []
+    if findings:
+        by_sev: dict[str, int] = {}
+        for f in findings:
+            by_sev[f["severity"]] = by_sev.get(f["severity"], 0) + 1
+        lines = [
+            f"  ⚠ [{f['severity']}/{f['dimension']}] slide {f['slide_no']}: {f['evidence']}"
+            for f in findings[:8]
+        ]
+        extra = f"\n  … (+{len(findings) - 8} more)" if len(findings) > 8 else ""
+        sev = ", ".join(f"{k}:{v}" for k, v in sorted(by_sev.items()))
+        parts.append(f"{len(findings)} traceability finding(s) ({sev}):\n" + "\n".join(lines) + extra)
+    else:
+        parts.append("No traceability/consistency/evidence issues.")
+    if struct["issues"]:
+        struct_lines = [f"  ⚠ {iss}" for iss in struct["issues"][:6]]
+        extra2 = f"\n  … (+{len(struct['issues']) - 6} more)" if len(struct["issues"]) > 6 else ""
+        parts.append(f"Structural issues ({struct['deductions']} pts deducted):\n" + "\n".join(struct_lines) + extra2)
+    return head + " " + " | ".join(parts)
+
+
+def _visual_audit_note(pptx_path: str | None) -> str:
+    """Run deterministic visual audit on *pptx_path*, auto-patch HIGH issues,
+    write deck_visual_audit.json, and return a human-readable summary string."""
+    if not pptx_path:
+        return ""
+    try:
+        from pathlib import Path as _Path
+        result = audit_pptx_deterministic(pptx_path)
+        if result.high_count > 0:
+            high_issues = [i for i in result.issues if i.severity == "high"]
+            patched_path = patch_pptx_overflow(pptx_path, high_issues)
+            result_after = audit_pptx_deterministic(patched_path)
+            write_visual_audit(result_after, WORKSPACE)
+            return (
+                format_visual_audit(result_after)
+                + f"\n  AUTO-PATCHED {len(high_issues)} HIGH issue(s) → saved as {_Path(patched_path).name}"
+            )
+        write_visual_audit(result, WORKSPACE)
+        return format_visual_audit(result)
+    except Exception as exc:  # noqa: BLE001
+        return f"\n  Visual audit skipped: {exc}"
+
+
+@tool(parse_docstring=True)
+def audit_deck_visual() -> str:
+    """Run deterministic visual audit on the rendered out.pptx.
+
+    Checks every slide for title length, bullet density, table overflow, tiny fonts,
+    and brand font drift. Writes deck_visual_audit.json. HIGH-severity issues are
+    automatically patched (title truncation, bullet trimming) and saved as
+    out_patched.pptx. No LLM, no rendering — reads the PPTX XML model directly.
+    Call this after create_pptx or generate_ppt_proposal to get a layout QA report.
+    """
+    pptx_path = WORKSPACE / "out.pptx"
+    if not pptx_path.exists():
+        return "ERROR: out.pptx not found. Run create_pptx or generate_ppt_proposal first."
+    _bump_tool_summary("audit_deck_visual")
+    return _visual_audit_note(str(pptx_path))
+
+
+@tool(parse_docstring=True)
+def export_proposal_package(title: str = "") -> str:
+    """Assemble the proposal package — manifest + all artifacts — into an export folder.
+
+    Reads workspace stores (deck_plan.json, solution_model.json, decision_log.json,
+    findings_log.json, deck_visual_audit.json) and copies the deliverable files
+    (out.pptx, out.png, out.drawio, wbs_output.xlsx) into
+    workspace/exports/<timestamp>/ together with a manifest.json.
+
+    The manifest records artifact status, slide trace coverage, structure score,
+    visual audit result, open findings, and HITL decision count.
+
+    PAUSES for human review: shows the package summary and warns if HIGH findings
+    or unresolved visual issues are present before the user sends to the client.
+
+    Args:
+        title: Override the project title shown on the manifest (defaults to
+               diagram_brief.slide_title or the existing project title).
+    """
+    try:
+        export_dir, manifest = _export_proposal_package(WORKSPACE, title=title)
+    except Exception as exc:  # noqa: BLE001
+        return f"ERROR: could not assemble package: {exc}"
+
+    _bump_tool_summary("export_proposal_package")
+
+    summary = format_manifest(manifest)
+    summary += f"\n\nPackage written to: {export_dir}"
+
+    if manifest.open_findings_high:
+        summary += (
+            "\n\n⛔ BLOCKED: there are HIGH-severity findings open. "
+            "Resolve or waive them before sending to the client, "
+            "or confirm you accept the risk."
+        )
+    elif manifest.open_findings:
+        summary += (
+            f"\n\n⚠ {manifest.open_findings} finding(s) still open — review before sending."
+        )
+    else:
+        summary += "\n\nAll quality gates clear. Ready to send to client."
+
+    return summary
 
 
 @tool(parse_docstring=True)
@@ -1922,3 +2057,25 @@ def edit_entity(entity_id: str, field: str, new_value: str) -> str:
         f"revision bumped to {cur_raw['revision']}. "
         "Call query_change_impact() to see the blast radius."
     )
+
+
+@tool
+def quality_summary() -> str:
+    """Compute and return the quality dashboard for the current workspace.
+
+    Reads findings_log.json, decision_log.json, evidence_log.json, and
+    solution_model.json, then computes a QualitySnapshot: open/waived/resolved
+    findings by dimension and severity, HITL decision counts, evidence coverage
+    (% of requirements grounded in at least one evidence record), assumption
+    confirmation rate by confidence tier, risk mitigation rate, and a 0-100
+    quality score (grade A-F).
+
+    The snapshot is written to quality_snapshot.json in the workspace. Call this
+    after any gate to see the current quality health of the solution proposal.
+    """
+    try:
+        snap = build_quality_snapshot(WORKSPACE)
+        write_snapshot(snap, WORKSPACE)
+        return format_snapshot(snap)
+    except Exception as exc:
+        return f"QUALITY_SUMMARY: ERROR — {exc}"

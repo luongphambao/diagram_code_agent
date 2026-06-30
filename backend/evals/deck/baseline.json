@@ -1,7 +1,11 @@
 {
   "metrics": {
     "scores.finding_recall": 1.0,
-    "scores.match": 1.0
+    "scores.match": 0.8,
+    "scores.score_ok": 1.0,
+    "scores.kw_recall": 1.0,
+    "scores.issue_recall": 1.0,
+    "scores.passed_ok": 1.0
   },
-  "n_cases": 6
+  "n_cases": 10
 }

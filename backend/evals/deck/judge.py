@@ -41,7 +41,75 @@ def score_deck(findings: list[dict[str, Any]], golden: dict) -> dict:
     }
 
 
+def score_structure(struct_result: dict, golden: dict) -> dict:
+    """Score the structural scorer output against golden expectations.
+
+    `struct_result` is the dict from `deck.score_deck_structure`.
+    Golden fields (all optional):
+      * ``expected_max_score``  — structure score must be at or below this (defect cases)
+      * ``expected_min_score``  — structure score must be at or above this (clean cases)
+      * ``expected_issue_keywords`` — list of substrings that must appear in some issue
+    """
+    score = struct_result.get("score", 100.0)
+    issues = struct_result.get("issues", [])
+    issue_text = " | ".join(issues).lower()
+
+    # score_ok: 1.0 when the score is within the golden bounds.
+    max_s = golden.get("expected_max_score")
+    min_s = golden.get("expected_min_score")
+    score_ok = 1.0
+    if max_s is not None and score > max_s:
+        score_ok = 0.0
+    if min_s is not None and score < min_s:
+        score_ok = 0.0
+
+    # keyword_recall: fraction of expected keywords found in the combined issues text.
+    keywords = golden.get("expected_issue_keywords", [])
+    if keywords:
+        hits = sum(1 for kw in keywords if kw.lower() in issue_text)
+        kw_recall = round(hits / len(keywords), 4)
+    else:
+        kw_recall = 1.0
+
+    return {
+        "score_ok": score_ok,
+        "kw_recall": kw_recall,
+        "structural_score": score,
+        "structural_grade": struct_result.get("grade", "?"),
+        "n_issues": len(issues),
+    }
+
+
 METRIC_KEYS = ["scores.finding_recall", "scores.match"]
+STRUCTURE_METRIC_KEYS = ["scores.score_ok", "scores.kw_recall"]
+VISUAL_AUDIT_METRIC_KEYS = ["scores.issue_recall", "scores.passed_ok"]
+
+
+def score_visual_audit(audit_result: dict, golden: dict) -> dict:
+    """Score a DeckVisualAuditResult dict against golden expectations.
+
+    Golden fields (all optional):
+      * ``expected_issue_types`` — list of issue_type strings that must appear
+      * ``expected_passed``      — expected value of audit_result["passed"]
+    """
+    found_types = {i.get("issue_type") for i in audit_result.get("issues", [])}
+    expected = golden.get("expected_issue_types", [])
+    if expected:
+        hit = sum(1 for t in expected if t in found_types)
+        issue_recall = round(hit / len(expected), 4)
+    else:
+        issue_recall = 1.0
+
+    expected_passed = golden.get("expected_passed", True)
+    passed_ok = 1.0 if audit_result.get("passed") == expected_passed else 0.0
+
+    return {
+        "issue_recall": issue_recall,
+        "passed_ok": passed_ok,
+        "high_count": audit_result.get("high_count", 0),
+        "medium_count": audit_result.get("medium_count", 0),
+        "threshold_score": audit_result.get("threshold_score", 100),
+    }
 
 
 # --- opt-in vision/coherence judge (NOT in the gate) -------------------------

@@ -1,0 +1,27 @@
+{
+  "id": "struct_text_dense",
+  "brief": {
+    "objective": "A data analytics platform.",
+    "functional_requirements": ["Dashboard reporting", "ETL pipeline", "ML scoring"],
+    "non_functional_requirements": ["Scalable to 1M rows/sec"],
+    "slide_title": "ANALYTICS PLATFORM",
+    "brand": "BnK"
+  },
+  "blueprint": {
+    "nodes": [
+      {"id": "etl", "label": "ETL Engine", "cluster": "data"},
+      {"id": "db", "label": "Data Warehouse", "cluster": "data"}
+    ],
+    "clusters": [{"id": "data", "label": "Data Layer"}],
+    "key_decisions": ["Use dbt for transformation", "Snowflake as the warehouse"]
+  },
+  "wbs": {
+    "items": [{"id": "1.1", "name": "ETL setup", "total_md": 30}],
+    "effort_totals": {"total_mandays": 30, "total_manmonths": 1.5},
+    "timeline": {"weeks": 10, "months": 2.5, "sprints": 5}
+  },
+  "make_text_dense": true,
+  "expected_dimensions": [],
+  "expected_max_score": 98,
+  "expected_issue_keywords": ["too many bullets"]
+}

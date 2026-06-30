@@ -1,0 +1,27 @@
+{
+  "id": "struct_long_title",
+  "brief": {
+    "objective": "A clinic management platform.",
+    "functional_requirements": ["Patient management", "Sales order entry"],
+    "non_functional_requirements": ["Mobile responsive"],
+    "slide_title": "CLINIC PLATFORM",
+    "brand": "BnK"
+  },
+  "blueprint": {
+    "nodes": [
+      {"id": "api_gw", "label": "API Gateway", "cluster": "edge"},
+      {"id": "app", "label": "App Server", "cluster": "app"}
+    ],
+    "clusters": [{"id": "edge", "label": "Edge"}, {"id": "app", "label": "Application"}],
+    "key_decisions": ["Use Odoo ERP as core platform"]
+  },
+  "wbs": {
+    "items": [{"id": "1.1", "name": "Setup", "total_md": 20}],
+    "effort_totals": {"total_mandays": 20, "total_manmonths": 1.0},
+    "timeline": {"weeks": 8, "months": 2, "sprints": 4}
+  },
+  "make_long_title": true,
+  "expected_dimensions": [],
+  "expected_max_score": 98,
+  "expected_issue_keywords": ["title too long"]
+}

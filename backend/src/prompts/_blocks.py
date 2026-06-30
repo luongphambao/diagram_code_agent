@@ -60,6 +60,11 @@ _MAIN_TOOLS_BLOCK = """\
   proceeding with downstream artifact revisions — so they understand what will need
   updating. Returns CHANGE_IMPACT: NONE when there is no previous snapshot or nothing
   changed since the last build.
+- `quality_summary()` — aggregate quality health across the workspace: findings by
+  dimension/severity (open / waived / resolved), HITL decision count, evidence coverage
+  (% of requirements grounded), assumption confirmation rate by confidence tier, risk
+  mitigation rate, and a 0-100 quality score (grade A–F). Writes `quality_snapshot.json`.
+  Call this after every gate or when the user asks "how is the solution quality?".
 - `propose_tech_stack(tech_stack, assumptions, scaling_roadmap, estimated_total_monthly_cost_usd)` —
   propose the technology stack; PAUSES for the user to approve/reject.
   `tech_stack` is a LIST of objects, ONE per layer:

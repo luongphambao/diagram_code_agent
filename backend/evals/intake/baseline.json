@@ -1,10 +1,11 @@
 {
   "metrics": {
-    "scores.micro_f1": 1.0,
-    "scores.requirements_f1": 1.0,
+    "scores.micro_f1": 0.9956875000000001,
+    "scores.requirements_f1": 0.9903875,
     "scores.assumptions_f1": 1.0,
     "scores.constraints_f1": 1.0,
-    "scores.must_ask_recall": 1.0
+    "scores.must_ask_recall": 1.0,
+    "scores.tier_recall": 1.0
   },
-  "n_cases": 6
+  "n_cases": 8
 }

@@ -110,6 +110,7 @@ class Assumption(_Entity):
     statement: str
     owner: str = ""
     status: Literal["pending", "confirmed", "rejected"] = "pending"
+    confidence_tier: Literal["must_confirm", "should_confirm", "nice_to_confirm"] = "should_confirm"
 
 
 class DecisionOption(BaseModel):
@@ -267,15 +268,22 @@ class SolutionModel(BaseModel):
         known facts (confirmed requirements), assumptions needing confirmation,
         open decisions, and hard constraints. A v0 derived purely from entity status
         — the deeper fact/assumption classifier at intake builds on this shape."""
+        pending_asms = [a for a in self.assumptions if a.status == "pending"]
         return {
             "known_facts": [
                 {"id": r.id, "statement": r.statement}
                 for r in self.requirements if r.status == "confirmed"
             ],
             "assumptions_needing_confirmation": [
-                {"id": a.id, "statement": a.statement, "owner": a.owner}
-                for a in self.assumptions if a.status == "pending"
+                {"id": a.id, "statement": a.statement, "owner": a.owner,
+                 "tier": a.confidence_tier}
+                for a in pending_asms
             ],
+            "assumptions_by_tier": {
+                "must_confirm": sum(1 for a in pending_asms if a.confidence_tier == "must_confirm"),
+                "should_confirm": sum(1 for a in pending_asms if a.confidence_tier == "should_confirm"),
+                "nice_to_confirm": sum(1 for a in pending_asms if a.confidence_tier == "nice_to_confirm"),
+            },
             "open_decisions": [
                 {"id": d.id, "title": d.title}
                 for d in self.decisions if d.status in ("proposed", "deferred")

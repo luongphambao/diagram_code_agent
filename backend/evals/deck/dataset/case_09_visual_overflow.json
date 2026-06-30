@@ -1,0 +1,9 @@
+{
+  "id": "case_09_visual_overflow",
+  "description": "Slide with a 90-char title triggers title_too_long finding.",
+  "case_type": "visual_audit",
+  "slide_title": "Short",
+  "defects": ["long_title"],
+  "expected_issue_types": ["title_too_long"],
+  "expected_passed": true
+}
