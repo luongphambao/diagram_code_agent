@@ -1,0 +1,7 @@
+{
+  "id": "case_04_overlap",
+  "description": "Two sibling leaf vertices overlap each other — layout warning",
+  "drawio_xml": "<mxfile><diagram name=\"Page-1\"><mxGraphModel><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"node-a\" value=\"A\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"10\" y=\"10\" width=\"120\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"node-b\" value=\"B\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"60\" y=\"30\" width=\"120\" height=\"60\" as=\"geometry\"/></mxCell></root></mxGraphModel></diagram></mxfile>",
+  "expected_dimensions": ["diagram_layout"],
+  "expect_clean": false
+}

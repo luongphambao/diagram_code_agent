@@ -620,5 +620,49 @@ def main() -> None:
         sys.exit(1)
 
 
+def findings_from_validation(result: dict) -> list:
+    """Convert validate_file() result → list[SolutionFinding] for the finding_store lifecycle.
+
+    Errors become diagram_structural/patch_blueprint (high severity — must fix).
+    Warnings become diagram_layout/auto_repair (medium — can auto-fix or waive).
+    Advice becomes diagram_style/none (low — informational, no action required).
+    entity_ids is intentionally empty; stable_finding_id keys on dimension+title so
+    the same defect produces the same SF- id across runs.
+    """
+    from solution_validator import SolutionFinding
+    findings = []
+    for msg in result.get("errors", []):
+        findings.append(SolutionFinding(
+            severity="high",
+            dimension="diagram_structural",
+            artifact_type="blueprint",
+            entity_ids=[],
+            title=msg[:120],
+            detail=msg,
+            repair_strategy="patch_blueprint",
+        ))
+    for msg in result.get("warnings", []):
+        findings.append(SolutionFinding(
+            severity="medium",
+            dimension="diagram_layout",
+            artifact_type="blueprint",
+            entity_ids=[],
+            title=msg[:120],
+            detail=msg,
+            repair_strategy="auto_repair",
+        ))
+    for msg in result.get("advice", []):
+        findings.append(SolutionFinding(
+            severity="low",
+            dimension="diagram_style",
+            artifact_type="blueprint",
+            entity_ids=[],
+            title=msg[:120],
+            detail=msg,
+            repair_strategy="none",
+        ))
+    return findings
+
+
 if __name__ == "__main__":
     main()

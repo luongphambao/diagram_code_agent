@@ -1,0 +1,7 @@
+{
+  "id": "case_01_clean",
+  "description": "Valid drawio with 2 nodes and 1 edge — no defects expected",
+  "drawio_xml": "<mxfile><diagram name=\"Page-1\"><mxGraphModel><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"node-1\" value=\"Server\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"100\" y=\"100\" width=\"120\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"node-2\" value=\"Database\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"320\" y=\"100\" width=\"120\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"edge-1\" edge=\"1\" source=\"node-1\" target=\"node-2\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell></root></mxGraphModel></diagram></mxfile>",
+  "expected_dimensions": [],
+  "expect_clean": true
+}

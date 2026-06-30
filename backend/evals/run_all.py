@@ -38,12 +38,15 @@ from evals.wbs.judge import METRIC_KEYS as WBS_KEYS  # noqa: E402
 from evals.wbs.run_eval import _run_one as wbs_run  # noqa: E402
 from evals.deck.judge import METRIC_KEYS as DECK_KEYS  # noqa: E402
 from evals.deck.run_eval import _run_one as deck_run  # noqa: E402
+from evals.diagram_quality.judge import METRIC_KEYS as DQ_KEYS  # noqa: E402
+from evals.diagram_quality.run_eval import _run_one as dq_run  # noqa: E402
 
 _SUITES = [
     ("intake", _BACKEND / "evals" / "intake", intake_run, INTAKE_KEYS),
     ("architecture", _BACKEND / "evals" / "architecture", arch_run, ARCH_KEYS),
     ("wbs", _BACKEND / "evals" / "wbs", wbs_run, WBS_KEYS),
     ("deck", _BACKEND / "evals" / "deck", deck_run, DECK_KEYS),
+    ("diagram_quality", _BACKEND / "evals" / "diagram_quality", dq_run, DQ_KEYS),
 ]
 
 

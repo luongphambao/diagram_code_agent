@@ -1,0 +1,7 @@
+{
+  "id": "case_02_dangling_edge",
+  "description": "Edge references a target cell that does not exist — structural error",
+  "drawio_xml": "<mxfile><diagram name=\"Page-1\"><mxGraphModel><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"node-1\" value=\"Server\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"100\" y=\"100\" width=\"120\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"edge-bad\" edge=\"1\" source=\"node-1\" target=\"nonexistent-cell-99\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell></root></mxGraphModel></diagram></mxfile>",
+  "expected_dimensions": ["diagram_structural"],
+  "expect_clean": false
+}

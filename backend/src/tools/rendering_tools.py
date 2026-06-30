@@ -395,7 +395,15 @@ def export_drawio() -> str:
     except Exception:  # noqa: BLE001
         pass
 
-    return f"Wrote out.drawio ({out.stat().st_size} bytes).{lint}{archive_note}"
+    # Diagram quality gate — convert lint findings to SolutionFindings, persist lifecycle.
+    gate_note = ""
+    try:
+        from .analysis_tools import _diagram_gate_note
+        gate_note = _diagram_gate_note(block=False)
+    except Exception:  # noqa: BLE001
+        pass
+
+    return f"Wrote out.drawio ({out.stat().st_size} bytes).{lint}{archive_note}{gate_note}"
 
 
 @tool

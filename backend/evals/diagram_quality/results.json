@@ -1,0 +1,67 @@
+[
+  {
+    "case_id": "case_01_clean",
+    "scores": {
+      "finding_recall": 1.0,
+      "repair_contract_ok": 1.0,
+      "n_findings": 0,
+      "dimensions": []
+    }
+  },
+  {
+    "case_id": "case_02_dangling_edge",
+    "scores": {
+      "finding_recall": 1.0,
+      "repair_contract_ok": 1.0,
+      "n_findings": 1,
+      "dimensions": [
+        "diagram_structural"
+      ]
+    }
+  },
+  {
+    "case_id": "case_03_duplicate_id",
+    "scores": {
+      "finding_recall": 1.0,
+      "repair_contract_ok": 1.0,
+      "n_findings": 1,
+      "dimensions": [
+        "diagram_structural"
+      ]
+    }
+  },
+  {
+    "case_id": "case_04_overlap",
+    "scores": {
+      "finding_recall": 1.0,
+      "repair_contract_ok": 1.0,
+      "n_findings": 2,
+      "dimensions": [
+        "diagram_layout",
+        "diagram_style"
+      ]
+    }
+  },
+  {
+    "case_id": "case_05_broken_parent",
+    "scores": {
+      "finding_recall": 1.0,
+      "repair_contract_ok": 1.0,
+      "n_findings": 1,
+      "dimensions": [
+        "diagram_structural"
+      ]
+    }
+  },
+  {
+    "case_id": "case_06_many_fonts",
+    "scores": {
+      "finding_recall": 1.0,
+      "repair_contract_ok": 1.0,
+      "n_findings": 2,
+      "dimensions": [
+        "diagram_style"
+      ]
+    }
+  }
+]

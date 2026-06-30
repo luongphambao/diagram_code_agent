@@ -1,0 +1,7 @@
+{
+  "id": "case_03_duplicate_id",
+  "description": "Two cells share the same id — structural error",
+  "drawio_xml": "<mxfile><diagram name=\"Page-1\"><mxGraphModel><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"dup-cell\" value=\"Node A\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"100\" y=\"100\" width=\"120\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"dup-cell\" value=\"Node B\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"300\" y=\"100\" width=\"120\" height=\"60\" as=\"geometry\"/></mxCell></root></mxGraphModel></diagram></mxfile>",
+  "expected_dimensions": ["diagram_structural"],
+  "expect_clean": false
+}

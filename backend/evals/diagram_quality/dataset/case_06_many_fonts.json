@@ -1,0 +1,7 @@
+{
+  "id": "case_06_many_fonts",
+  "description": "5 distinct font sizes in one diagram triggers style advice (>4 unique sizes)",
+  "drawio_xml": "<mxfile><diagram name=\"Page-1\"><mxGraphModel><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"n1\" value=\"A\" vertex=\"1\" parent=\"1\" style=\"fontSize=8;\"><mxGeometry x=\"10\" y=\"10\" width=\"80\" height=\"40\" as=\"geometry\"/></mxCell><mxCell id=\"n2\" value=\"B\" vertex=\"1\" parent=\"1\" style=\"fontSize=10;\"><mxGeometry x=\"110\" y=\"10\" width=\"80\" height=\"40\" as=\"geometry\"/></mxCell><mxCell id=\"n3\" value=\"C\" vertex=\"1\" parent=\"1\" style=\"fontSize=12;\"><mxGeometry x=\"210\" y=\"10\" width=\"80\" height=\"40\" as=\"geometry\"/></mxCell><mxCell id=\"n4\" value=\"D\" vertex=\"1\" parent=\"1\" style=\"fontSize=14;\"><mxGeometry x=\"10\" y=\"70\" width=\"80\" height=\"40\" as=\"geometry\"/></mxCell><mxCell id=\"n5\" value=\"E\" vertex=\"1\" parent=\"1\" style=\"fontSize=18;\"><mxGeometry x=\"110\" y=\"70\" width=\"80\" height=\"40\" as=\"geometry\"/></mxCell></root></mxGraphModel></diagram></mxfile>",
+  "expected_dimensions": ["diagram_style"],
+  "expect_clean": false
+}

@@ -32,11 +32,14 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 Severity = Literal["low", "medium", "high", "critical"]
 Confidence = Literal["low", "medium", "high"]
 Dimension = Literal[
-    "traceability",   # an entity has no valid link to its source/target
-    "consistency",    # two artifacts disagree (drift)
-    "correctness",    # an internal reference is broken (dangling edge, bad cluster)
-    "coverage",       # a requirement is not addressed by any component/task
-    "completeness",   # an expected piece is missing (no decisions, no effort)
+    "traceability",      # an entity has no valid link to its source/target
+    "consistency",       # two artifacts disagree (drift)
+    "correctness",       # an internal reference is broken (dangling edge, bad cluster)
+    "coverage",          # a requirement is not addressed by any component/task
+    "completeness",      # an expected piece is missing (no decisions, no effort)
+    "diagram_structural",  # drawio error: dangling edge, duplicate id, broken geometry, wrong stencil
+    "diagram_layout",      # drawio warning: node overlap, negative coords, missing aspect=fixed
+    "diagram_style",       # drawio advice: font sizes, palette, AWS hierarchy, edge routing
 ]
 # How a finding gets resolved (docx §4.3 repair contract). `patch_*` and
 # `auto_repair` can be fixed mechanically (an agent/tool owns the fix);

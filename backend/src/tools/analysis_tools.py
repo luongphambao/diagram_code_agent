@@ -1124,6 +1124,50 @@ def _solution_gate_note(stage: str = "export", *, block: bool = False) -> str:
     return note
 
 
+def _diagram_gate_note(*, block: bool = False) -> str:
+    """Lint out.drawio → SolutionFindings → persist lifecycle → 3-outcome summary.
+
+    Mirrors _solution_gate_note() but scoped to the rendered diagram artifact.
+    Findings go into findings_log.json so waive_finding/resolve_finding apply
+    to diagram defects just like blueprint/WBS defects (docx §4.7).
+    """
+    from validate_drawio import validate_file, findings_from_validation
+    from finding_store import active_findings, upsert_findings
+    from solution_validator import format_validation
+
+    drawio_path = WORKSPACE / "out.drawio"
+    if not drawio_path.exists():
+        return ""
+    try:
+        result = validate_file(str(drawio_path))
+        findings = findings_from_validation(result)
+    except Exception:
+        return ""
+    try:
+        revision = "0"
+        try:
+            from csm_adapter import build_solution_model
+            m = build_solution_model(WORKSPACE)
+            revision = str(m.revision)
+        except Exception:
+            pass
+        upsert_findings(findings, revision=revision)
+        findings = active_findings(findings)
+    except Exception:
+        pass
+    if not findings:
+        return "\n\nDIAGRAM LINT: PASS — no structural errors, warnings, or style advice."
+    summary = format_validation(findings, block=block)
+    note = f"\n\nDIAGRAM LINT [{('blocking' if block else 'advisory')}] — {summary}"
+    if block and summary.startswith("VALIDATION: BLOCK"):
+        note += (
+            "\n\nRELEASE GATE: diagram has blocking defect(s). Fix and re-export, or call "
+            "waive_finding(finding_id, reason) / resolve_finding(finding_id, fix_applied) "
+            "to record the decision and clear the block."
+        )
+    return note
+
+
 def _impact_ids(dumps: list[dict], cap: int = 8) -> str:
     ids = [str(d.get("id") or "?") for d in dumps]
     head = ", ".join(ids[:cap])
