@@ -1,0 +1,26 @@
+{
+  "id": "pii_no_encryption",
+  "brief": {
+    "functional_requirements": ["Store and manage customer personal profiles"],
+    "non_functional_requirements": ["GDPR compliance required for all personal data"],
+    "constraints": ["GDPR residency: EU customer data must remain within EU region"]
+  },
+  "blueprint": {
+    "nodes": [
+      {"id": "user_db", "label": "User Database", "cluster": "data"}
+    ],
+    "clusters": [
+      {"id": "data", "label": "Data Layer"}
+    ],
+    "edges": [],
+    "key_decisions": ["PostgreSQL for user profile storage"],
+    "nfr_mapping": []
+  },
+  "wbs": {
+    "items": [{"id": "1.1", "name": "User database setup", "be": 3, "total": 3}],
+    "effort_totals": {"total_mandays": 3}
+  },
+  "expect_clean": false,
+  "expect_block": true,
+  "expected_dimensions": ["security"]
+}

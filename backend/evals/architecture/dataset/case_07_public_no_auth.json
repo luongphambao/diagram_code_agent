@@ -1,0 +1,27 @@
+{
+  "id": "public_no_auth",
+  "brief": {
+    "functional_requirements": ["Handle customer requests via REST API"],
+    "non_functional_requirements": ["security: all endpoints require authentication and authorization"]
+  },
+  "blueprint": {
+    "nodes": [
+      {"id": "client", "label": "Client", "cluster": "external"},
+      {"id": "order_svc", "label": "Order Service", "cluster": "app"}
+    ],
+    "clusters": [
+      {"id": "external", "label": "External"},
+      {"id": "app", "label": "Application"}
+    ],
+    "edges": [{"from": "client", "to": "order_svc"}],
+    "key_decisions": ["REST API for order management using Node.js"],
+    "nfr_mapping": []
+  },
+  "wbs": {
+    "items": [{"id": "1.1", "name": "Order API implementation", "be": 5, "total": 5}],
+    "effort_totals": {"total_mandays": 5}
+  },
+  "expect_clean": false,
+  "expect_block": false,
+  "expected_dimensions": ["security"]
+}

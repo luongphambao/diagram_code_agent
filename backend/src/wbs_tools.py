@@ -30,6 +30,7 @@ import wbs_excel
 from wbs_effort import (
     RATIOS, Ratios, derive_leaf_effort, rollup, make_ref_code, delivery_grid,
     critical_path, MANDAYS_PER_MONTH, pert_percentile, assign_sprints, MANDAYS_PER_WEEK,
+    level_resources,
 )
 
 # ── state files (registered in tools.clear_stage_markers) ────────────────────
@@ -465,15 +466,24 @@ def plan_timeline_and_sprints(duration_weeks: Optional[int] = None,
 # ════════════════════════════════════════════════════════════════════════════
 # 7. plan_team_and_resources
 # ════════════════════════════════════════════════════════════════════════════
-@tool(parse_docstring=True)
-def plan_team_and_resources() -> str:
+class RoleFTEArgs(_CoercingModel):
+    dev_fte: Optional[float] = Field(None, description="peak parallel dev FTE (BE+FE+Mobile); derived from effort if omitted")
+    ba_fte: Optional[float] = Field(None, description="BA FTE assumption; derived if omitted")
+    qc_fte: Optional[float] = Field(None, description="QC FTE assumption; derived if omitted")
+    pm_fte: Optional[float] = Field(None, description="PM FTE assumption; derived if omitted")
+
+
+@tool(args_schema=RoleFTEArgs)
+def plan_team_and_resources(dev_fte: Optional[float] = None, ba_fte: Optional[float] = None,
+                             qc_fte: Optional[float] = None, pm_fte: Optional[float] = None) -> str:
     """Derive a team composition reconciled to the role effort totals.
 
     Maps the rolled-up BE/FE/BA/QC/PM man-days to a default BnK team (PM, Technical
     Lead, Developer(s), Business Analyst, Quality Controller, Designer, DevOps) and
-    estimates headcount from man-days over the timeline. Call after
-    plan_timeline_and_sprints.
+    estimates headcount from man-days over the timeline. Runs resource leveling to
+    flag sprint overloads against team capacity. Call after plan_timeline_and_sprints.
     """
+    import math
     wbs = _read_json(_WBS_FILE)
     if not wbs or not wbs.get("effort_totals"):
         return "Roll up the WBS first (compute_wbs_rollup)."
@@ -493,11 +503,34 @@ def plan_team_and_resources() -> str:
         md = m["total_md"]
         m["est_headcount"] = round(md / workdays, 2) if md else None
     wbs["team_composition"] = team
+
+    # Derive FTE assumptions from effort totals when not explicitly provided.
+    # min 1 when a role has any effort; the ceil ensures the timeline is technically achievable.
+    def _derive(total_md: float) -> float:
+        if total_md and total_md > 0:
+            return float(max(1, math.ceil(total_md / max(1, weeks * MANDAYS_PER_WEEK))))
+        return 1.0
+
+    role_fte: dict[str, float] = {
+        "dev": dev_fte if dev_fte is not None else _derive(br.get("BE", 0) + br.get("FE_Mobile", 0)),
+        "ba": ba_fte if ba_fte is not None else _derive(br.get("BA", 0)),
+        "qc": qc_fte if qc_fte is not None else _derive(br.get("QC", 0)),
+        "pm": pm_fte if pm_fte is not None else _derive(br.get("PM", 0)),
+    }
+    rl = level_resources(wbs.get("items") or [], role_fte=role_fte, weeks_per_sprint=2)
+    wbs["resource_leveling"] = rl
+
     _write_json(_WBS_FILE, wbs)
     devs = next(t for t in team if t["role"] == "Developer")
-    return (f"Team: PM {br.get('PM',0)} MD, Developer {devs['total_md']} MD "
-            f"(~{devs['est_headcount']} FTE over {weeks} weeks), BA {br.get('BA',0)}, "
-            f"QC {br.get('QC',0)} MD + TL/Designer/DevOps as needed.")
+    n_over = len(rl.get("overloads") or [])
+    msg = (f"Team: PM {br.get('PM',0)} MD, Developer {devs['total_md']} MD "
+           f"(~{devs['est_headcount']} FTE over {weeks} weeks), BA {br.get('BA',0)}, "
+           f"QC {br.get('QC',0)} MD + TL/Designer/DevOps as needed. "
+           f"Assumed FTE: dev={role_fte['dev']}, ba={role_fte['ba']}, "
+           f"qc={role_fte['qc']}, pm={role_fte['pm']}.")
+    if n_over:
+        msg += f" WARNING: {n_over} sprint(s) overloaded — check resource_leveling in wbs.json."
+    return msg
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -588,6 +621,17 @@ def validate_wbs() -> str:
             warns.append(f"Delivery plan: module(s) overflow the calendar: {over}")
         if tl.get("months", 0) < 1:
             warns.append("Delivery plan has < 1 month — check the timeline.")
+
+    # resource leveling overloads (non-blocking warning — solution gate is the hard block).
+    rl_overloads = (wbs.get("resource_leveling") or {}).get("overloads") or []
+    if rl_overloads:
+        worst = max(rl_overloads, key=lambda o: float(o.get("overflow_md") or 0))
+        warns.append(
+            f"Resource leveling: {len(rl_overloads)} sprint(s) overloaded "
+            f"(worst: sprint {worst['sprint']} {worst['role']} "
+            f"+{float(worst['overflow_md']):.1f} MD over capacity). "
+            f"Increase FTE, reduce sprint scope, or extend the timeline."
+        )
 
     if not warns:
         return "Validation passed: no issues found."

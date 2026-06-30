@@ -68,5 +68,55 @@
         "completeness"
       ]
     }
+  },
+  {
+    "case_id": "public_no_auth",
+    "scores": {
+      "finding_recall": 1.0,
+      "block_ok": 1.0,
+      "repair_contract_ok": 1.0,
+      "n_findings": 2,
+      "dimensions": [
+        "coverage",
+        "security"
+      ]
+    }
+  },
+  {
+    "case_id": "pii_no_encryption",
+    "scores": {
+      "finding_recall": 1.0,
+      "block_ok": 1.0,
+      "repair_contract_ok": 1.0,
+      "n_findings": 1,
+      "dimensions": [
+        "security"
+      ]
+    }
+  },
+  {
+    "case_id": "async_no_dlq",
+    "scores": {
+      "finding_recall": 1.0,
+      "block_ok": 1.0,
+      "repair_contract_ok": 1.0,
+      "n_findings": 1,
+      "dimensions": [
+        "reliability"
+      ]
+    }
+  },
+  {
+    "case_id": "sprint_overload",
+    "scores": {
+      "finding_recall": 1.0,
+      "block_ok": 1.0,
+      "repair_contract_ok": 1.0,
+      "n_findings": 2,
+      "dimensions": [
+        "coverage",
+        "feasibility"
+      ]
+    }
   }
 ]

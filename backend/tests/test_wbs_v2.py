@@ -206,3 +206,68 @@ def test_dependency_edge_defaults():
     edge = DependencyEdge(predecessor_ref="BNK-1")
     assert edge.lag_days == 0.0
     assert edge.relationship == "FS"
+
+
+# ─── level_resources (§4.6 Resource leveling) ────────────────────────────────
+
+from wbs_effort import level_resources, MANDAYS_PER_WEEK  # noqa: E402
+
+
+def _sprint_item(sprint, be=0, fe_mobile=0, ba=0, qc=0, pm=0):
+    return {"assigned_sprint": sprint, "be": be, "fe_mobile": fe_mobile,
+            "ba": ba, "qc": qc, "pm": pm}
+
+
+def test_level_resources_no_overload():
+    """2 dev FTE × 2-week sprint = 10 MD capacity; 8 MD demand → no overload."""
+    items = [_sprint_item(1, be=4, fe_mobile=4)]
+    result = level_resources(items, role_fte={"dev": 2.0, "ba": 1.0, "qc": 1.0, "pm": 1.0})
+    assert result["overloads"] == []
+    assert result["by_sprint"]["1"]["dev"] == 8.0
+
+
+def test_level_resources_overload_when_demand_exceeds_capacity():
+    """1 dev FTE × 2-week sprint = 10 MD capacity; 30 MD demand → overflow."""
+    items = [_sprint_item(1, be=30)]
+    result = level_resources(items, role_fte={"dev": 1.0, "ba": 0.5, "qc": 0.5, "pm": 0.5})
+    overload = next((o for o in result["overloads"] if o["role"] == "dev"), None)
+    assert overload is not None
+    assert overload["sprint"] == 1
+    assert overload["overflow_md"] == 30.0 - 1.0 * 2 * MANDAYS_PER_WEEK
+
+
+def test_level_resources_capacity_math():
+    """capacity = fte × weeks_per_sprint × MANDAYS_PER_WEEK."""
+    result = level_resources([], role_fte={"dev": 3.0, "ba": 1.0, "qc": 1.0, "pm": 1.0},
+                             weeks_per_sprint=2)
+    assert result["capacity"]["dev"] == 3.0 * 2 * MANDAYS_PER_WEEK
+
+
+def test_level_resources_empty_items():
+    result = level_resources([], role_fte={"dev": 2.0, "ba": 1.0, "qc": 1.0, "pm": 1.0})
+    assert result["overloads"] == []
+    assert result["by_sprint"] == {}
+    assert result["peak_util"] == {"dev": None, "ba": None, "qc": None, "pm": None}
+
+
+def test_level_resources_skips_items_without_sprint():
+    """Items with assigned_sprint=None must be ignored (isolated CPM tasks)."""
+    items = [
+        {"assigned_sprint": None, "be": 50, "fe_mobile": 0, "ba": 0, "qc": 0, "pm": 0},
+        _sprint_item(1, be=5),
+    ]
+    result = level_resources(items, role_fte={"dev": 2.0, "ba": 1.0, "qc": 1.0, "pm": 1.0})
+    assert result["overloads"] == []  # only 5 MD in sprint 1, within 10 MD cap
+
+
+def test_level_resources_multi_sprint_aggregation():
+    """Demand aggregates per sprint; only the overloaded sprint reports."""
+    items = [
+        _sprint_item(1, be=15),  # over 10 MD cap (1 FTE × 2 weeks)
+        _sprint_item(2, be=5),   # under cap
+    ]
+    result = level_resources(items, role_fte={"dev": 1.0, "ba": 1.0, "qc": 1.0, "pm": 1.0})
+    overloads = result["overloads"]
+    assert len(overloads) == 1
+    assert overloads[0]["sprint"] == 1
+    assert result["by_sprint"]["2"]["dev"] == 5.0

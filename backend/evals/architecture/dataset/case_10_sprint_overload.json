@@ -1,0 +1,27 @@
+{
+  "id": "sprint_overload",
+  "brief": {
+    "functional_requirements": ["Build the core platform API"]
+  },
+  "blueprint": {
+    "nodes": [{"id": "api_svc", "label": "API Service", "cluster": "app"}],
+    "clusters": [{"id": "app", "label": "Application"}],
+    "edges": [],
+    "key_decisions": ["Use REST API with Node.js"]
+  },
+  "wbs": {
+    "items": [
+      {"id": "1.1", "name": "Core API implementation", "be": 30, "fe_mobile": 0,
+       "ba": 0, "qc": 0, "pm": 0, "total": 30, "assigned_sprint": 1}
+    ],
+    "effort_totals": {"total_mandays": 30},
+    "resource_leveling": {
+      "overloads": [
+        {"sprint": 1, "role": "dev", "demand_md": 30.0, "capacity_md": 10.0, "overflow_md": 20.0}
+      ]
+    }
+  },
+  "expect_clean": false,
+  "expect_block": true,
+  "expected_dimensions": ["feasibility"]
+}

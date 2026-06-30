@@ -361,3 +361,81 @@ def delivery_grid(duration_weeks: int) -> dict:
     months = (weeks + 3) // 4
     return {"weeks": weeks, "sprints": sprints, "months": months,
             "weeks_per_month": 4, "weeks_per_sprint": 2}
+
+
+def level_resources(
+    items: list[dict],
+    *,
+    role_fte: dict[str, float],
+    weeks_per_sprint: int = 2,
+    tolerance: float = 0.01,
+) -> dict:
+    """Check whether CPM-assigned sprints exceed team capacity per role pool.
+
+    Args:
+        items: WBS items with ``assigned_sprint`` and per-role MD columns
+               (be, fe_mobile, fe, mobile, ai, ba, qc, pm).
+        role_fte: staffing assumptions per pool: ``{"dev": x, "ba": y, "qc": z, "pm": w}``.
+            BE + FE/Mobile/AI → pool ``dev``; ba/qc/pm map directly.
+        weeks_per_sprint: sprint length in weeks (default 2 → 10 MD/FTE).
+        tolerance: overflow threshold in MD to avoid floating-point noise.
+
+    Returns a dict with ``by_sprint``, ``capacity``, ``overloads``,
+    ``peak_util``, and ``assumptions``. ``overloads`` is a list of
+    ``{sprint, role, demand_md, capacity_md, overflow_md}`` dicts.
+    """
+    cap_per_sprint: dict[str, float] = {
+        pool: float(fte) * weeks_per_sprint * MANDAYS_PER_WEEK
+        for pool, fte in role_fte.items()
+    }
+
+    by_sprint: dict[int, dict[str, float]] = {}
+    for it in items:
+        sprint = it.get("assigned_sprint")
+        if sprint is None:
+            continue
+        sprint = int(sprint)
+        # Collapse BE + FE/Mobile variants into dev pool.
+        dev_md = (float(it.get("be", 0) or 0)
+                  + float(it.get("fe_mobile", 0) or 0)
+                  + float(it.get("fe", 0) or 0)
+                  + float(it.get("mobile", 0) or 0)
+                  + float(it.get("ai", 0) or 0))
+        pool_md: dict[str, float] = {
+            "dev": dev_md,
+            "ba": float(it.get("ba", 0) or 0),
+            "qc": float(it.get("qc", 0) or 0),
+            "pm": float(it.get("pm", 0) or 0),
+        }
+        row = by_sprint.setdefault(sprint, {p: 0.0 for p in role_fte})
+        for pool in role_fte:
+            row[pool] = _round(row.get(pool, 0.0) + pool_md.get(pool, 0.0))
+
+    overloads: list[dict] = []
+    for sprint in sorted(by_sprint):
+        for pool, cap in cap_per_sprint.items():
+            demand = by_sprint[sprint].get(pool, 0.0)
+            if demand > cap + tolerance:
+                overloads.append({
+                    "sprint": sprint,
+                    "role": pool,
+                    "demand_md": _round(demand),
+                    "capacity_md": _round(cap),
+                    "overflow_md": _round(demand - cap),
+                })
+
+    peak_util: dict[str, float | None] = {}
+    for pool, cap in cap_per_sprint.items():
+        if cap > 0 and by_sprint:
+            peak_demand = max(by_sprint[s].get(pool, 0.0) for s in by_sprint)
+            peak_util[pool] = _round(peak_demand / cap, 3)
+        else:
+            peak_util[pool] = None
+
+    return {
+        "by_sprint": {str(k): v for k, v in sorted(by_sprint.items())},
+        "capacity": {pool: _round(cap) for pool, cap in cap_per_sprint.items()},
+        "overloads": overloads,
+        "peak_util": peak_util,
+        "assumptions": dict(role_fte),
+    }

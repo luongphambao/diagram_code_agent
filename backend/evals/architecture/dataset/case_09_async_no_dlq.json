@@ -1,0 +1,32 @@
+{
+  "id": "async_no_dlq",
+  "brief": {
+    "functional_requirements": ["Process orders asynchronously via message queue"]
+  },
+  "blueprint": {
+    "nodes": [
+      {"id": "order_api", "label": "Order API", "cluster": "app"},
+      {"id": "sqs_queue", "label": "SQS Queue", "cluster": "messaging"},
+      {"id": "order_worker", "label": "Order Worker", "cluster": "app"}
+    ],
+    "clusters": [
+      {"id": "app", "label": "Application"},
+      {"id": "messaging", "label": "Messaging"}
+    ],
+    "edges": [
+      {"from": "order_api", "to": "sqs_queue"},
+      {"from": "sqs_queue", "to": "order_worker"}
+    ],
+    "key_decisions": ["Use Amazon SQS for async order processing"],
+    "nfr_mapping": []
+  },
+  "wbs": {
+    "items": [
+      {"id": "1.1", "name": "Order processing service", "be": 8, "total": 8}
+    ],
+    "effort_totals": {"total_mandays": 8}
+  },
+  "expect_clean": false,
+  "expect_block": false,
+  "expected_dimensions": ["reliability"]
+}

@@ -165,3 +165,73 @@ def test_write_trace_links_emits_file(tmp_path):
     graph = write_trace_links(tmp_path)
     assert (tmp_path / "trace_links.json").exists()
     assert graph["links"]
+
+
+# ─── Rule 10: Feasibility (resource leveling overload) ───────────────────────
+
+_CLEAN_BRIEF = {"functional_requirements": ["Build core platform"]}
+_CLEAN_BLUEPRINT = {
+    "nodes": [{"id": "api", "label": "API Service", "cluster": "app"}],
+    "clusters": [{"id": "app", "label": "Application"}],
+    "edges": [],
+    "key_decisions": ["Use REST API"],
+}
+
+
+def test_feasibility_finding_when_overloads_present():
+    wbs_overloaded = {
+        "items": [{"id": "1.1", "name": "API implementation", "be": 30, "total": 30,
+                   "assigned_sprint": 1}],
+        "effort_totals": {"total_mandays": 30},
+        "resource_leveling": {
+            "overloads": [
+                {"sprint": 1, "role": "dev", "demand_md": 30.0,
+                 "capacity_md": 10.0, "overflow_md": 20.0}
+            ]
+        },
+    }
+    findings = evaluate_solution(_CLEAN_BRIEF, _CLEAN_BLUEPRINT, wbs_overloaded)
+    feas = [f for f in findings if f.dimension == "feasibility"]
+    assert feas, "Rule 10 should fire when resource_leveling.overloads is non-empty"
+    assert feas[0].severity == "high"
+    assert feas[0].requires_human_decision is True
+    assert feas[0].repair_strategy == "human_decision"
+    assert is_blocking(feas[0])
+
+
+def test_feasibility_no_finding_when_overloads_empty():
+    wbs_balanced = {
+        "items": [{"id": "1.1", "name": "API implementation", "be": 5, "total": 5}],
+        "effort_totals": {"total_mandays": 5},
+        "resource_leveling": {"overloads": []},
+    }
+    findings = evaluate_solution(_CLEAN_BRIEF, _CLEAN_BLUEPRINT, wbs_balanced)
+    assert not any(f.dimension == "feasibility" for f in findings)
+
+
+def test_feasibility_no_finding_when_no_resource_leveling_key():
+    """Old eval format without resource_leveling key must not regress."""
+    wbs_old = {
+        "items": [{"id": "1.1", "name": "API implementation", "be": 5, "total": 5}],
+        "effort_totals": {"total_mandays": 5},
+    }
+    findings = evaluate_solution(_CLEAN_BRIEF, _CLEAN_BLUEPRINT, wbs_old)
+    assert not any(f.dimension == "feasibility" for f in findings)
+
+
+def test_feasibility_detail_names_worst_sprint():
+    wbs_overloaded = {
+        "items": [],
+        "effort_totals": {"total_mandays": 0},
+        "resource_leveling": {
+            "overloads": [
+                {"sprint": 2, "role": "dev", "demand_md": 25.0, "capacity_md": 10.0, "overflow_md": 15.0},
+                {"sprint": 3, "role": "ba", "demand_md": 12.0, "capacity_md": 5.0, "overflow_md": 7.0},
+            ]
+        },
+    }
+    findings = evaluate_solution(_CLEAN_BRIEF, _CLEAN_BLUEPRINT, wbs_overloaded)
+    feas = [f for f in findings if f.dimension == "feasibility"]
+    assert feas
+    assert "sprint 2" in feas[0].detail.lower() or "2" in feas[0].detail
+    assert "2" in feas[0].title  # "2 sprint(s) overloaded"

@@ -37,6 +37,9 @@ Dimension = Literal[
     "correctness",       # an internal reference is broken (dangling edge, bad cluster)
     "coverage",          # a requirement is not addressed by any component/task
     "completeness",      # an expected piece is missing (no decisions, no effort)
+    "security",          # public flow no auth boundary; PII flow unprotected (§4.3)
+    "reliability",       # async flow without retry/DLQ/idempotency
+    "feasibility",       # schedule not deliverable under resource capacity (§4.4)
     "diagram_structural",  # drawio error: dangling edge, duplicate id, broken geometry, wrong stencil
     "diagram_layout",      # drawio warning: node overlap, negative coords, missing aspect=fixed
     "diagram_style",       # drawio advice: font sizes, palette, AWS hierarchy, edge routing
@@ -161,6 +164,40 @@ def _soft_match(text: str, candidates: list[str]) -> list[str]:
 
 def _edge_endpoints(edge: dict[str, Any]) -> tuple[str, str]:
     return str(edge.get("from") or edge.get("from_") or ""), str(edge.get("to") or "")
+
+
+def _corpus(blueprint: dict[str, Any]) -> str:
+    """All lowercased human-readable text in the blueprint for semantic substring matching."""
+    parts: list[str] = []
+    for d in _as_list(blueprint.get("key_decisions")):
+        parts.append(str(d).lower())
+    for m in _as_list(blueprint.get("nfr_mapping")):
+        if isinstance(m, dict):
+            parts.append(str(m.get("mechanism") or "").lower())
+    for n in _as_list(blueprint.get("nodes")):
+        if isinstance(n, dict):
+            parts.append(str(n.get("label") or "").lower())
+            parts.append(str(n.get("tech") or "").lower())
+            parts.append(str(n.get("type") or "").lower())
+    for c in _as_list(blueprint.get("clusters")):
+        if isinstance(c, dict):
+            parts.append(str(c.get("label") or "").lower())
+    return " ".join(parts)
+
+
+def _nfr_text(brief: dict[str, Any]) -> str:
+    """Lowercased NFR + constraints text from the brief."""
+    parts: list[str] = []
+    for r in _as_list(brief.get("non_functional_requirements")):
+        parts.append(str(r).lower())
+    for c in _as_list(brief.get("constraints")):
+        parts.append(str(c).lower())
+    return " ".join(parts)
+
+
+def _has(text: str, keywords: list[str]) -> bool:
+    """True if any keyword appears as a substring in text."""
+    return any(kw in text for kw in keywords)
 
 
 def _read_json(path: Path, default: Any) -> Any:
@@ -310,6 +347,117 @@ def evaluate_solution(
             detail="The approved blueprint lists components but no key_decisions, so the "
                    "deck/report can't answer \"why this?\".",
             recommendation="Add 3-6 explicit design decisions before client-facing export.",
+        ))
+
+    # --- Semantic lint (§4.7): architecture smell rules ----------------------
+    # All three rules gate on an activation condition to minimise false positives.
+    # severity=medium < BLOCKING_SEVERITY → advisory by default (won't hard-block export)
+    # except where noted. repair_strategy=human_decision → not in AUTO_REPAIR_STRATEGIES.
+
+    corpus = _corpus(blueprint)
+    nfr_txt = _nfr_text(brief)
+
+    # Rule 7 — Public ingress flow with no auth boundary (security, medium).
+    # Activation: ingress node exists AND has outbound edge AND NFR requires auth/security.
+    _PUBLIC_KW = ["internet", "user", "client", "cdn", "waf", "api gateway",
+                  "load balancer", "external"]
+    _AUTH_KW = ["auth", "oauth", "oidc", "jwt", "identity", "cognito", "iam",
+                "api key", "token", "sso", "waf", "keycloak", "authz", "authn"]
+    _SECURITY_NFR_KW = ["security", "auth", "access-control", "access control", "identity"]
+
+    public_nodes = [n for n in nodes
+                    if _has((n.get("label") or n.get("type") or "").lower(), _PUBLIC_KW)]
+    if public_nodes:
+        public_ids = {str(n.get("id")) for n in public_nodes}
+        has_edge_from_public = any(_edge_endpoints(e)[0] in public_ids for e in edges)
+        if has_edge_from_public and _has(nfr_txt, _SECURITY_NFR_KW):
+            if not _has(corpus, _AUTH_KW):
+                pub_comp_ids = [f"COMP-{n.get('id')}" for n in public_nodes[:3]]
+                findings.append(SolutionFinding(
+                    severity="medium", confidence="medium", dimension="security",
+                    artifact_type="blueprint", repair_strategy="human_decision",
+                    entity_ids=pub_comp_ids, requires_human_decision=True,
+                    title="Public-facing flow has no auth boundary",
+                    detail=(f"Blueprint has {len(public_nodes)} public ingress node(s) with "
+                            f"outbound edges and NFR requires auth/security, but no auth "
+                            f"mechanism (oauth/jwt/iam/etc.) found in decisions or NFR mapping."),
+                    recommendation="Add an auth boundary (JWT validator, IAM policy, API Gateway "
+                                   "auth) or record the mechanism in key_decisions.",
+                ))
+
+    # Rule 8 — PII/privacy flow with no data-protection mechanism (security).
+    # Activation: brief/constraints mention PII or privacy regulation.
+    # severity=high when a compliance/residency constraint is present, else medium.
+    _PII_KW = ["pii", "personal data", "gdpr", "ccpa", "hipaa", "pci", "residency",
+               "customer data", "sensitive", "data protection"]
+    _COMPLIANCE_KW = ["compliance", "residency", "gdpr", "ccpa", "hipaa", "pci"]
+    _PROTECTION_KW = ["encrypt", "kms", "tls", "at rest", "in transit", "classification",
+                      "retention", "masking", "tokeniz", "anonymiz", "vault"]
+
+    if _has(nfr_txt, _PII_KW):
+        if not _has(corpus, _PROTECTION_KW):
+            sev: Severity = "high" if _has(nfr_txt, _COMPLIANCE_KW) else "medium"
+            findings.append(SolutionFinding(
+                severity=sev, confidence="medium", dimension="security",
+                artifact_type="blueprint", repair_strategy="human_decision",
+                entity_ids=[], requires_human_decision=True,
+                title="PII flow has no data-protection mechanism",
+                detail=("Brief/constraints reference PII or privacy regulation but blueprint "
+                        "has no encryption, KMS, TLS, masking, or retention policy in "
+                        "decisions or NFR mapping."),
+                recommendation=("Add data-at-rest encryption, TLS in-transit, "
+                                "masking/tokenisation, or an explicit retention policy to "
+                                "key_decisions or nfr_mapping."),
+            ))
+
+    # Rule 9 — Async messaging node with no retry/DLQ/idempotency (reliability, medium).
+    # Activation: any node whose label/type/tech suggests a message broker, or an AMQP edge.
+    _ASYNC_KW = ["queue", "kafka", "sqs", "rabbitmq", "pubsub", "topic", "broker",
+                 "event bus", "kinesis", "eventbridge", "sns", "nats"]
+    _RESILIENCE_KW = ["retry", "dlq", "dead letter", "idempoten", "backoff",
+                      "redrive", "outbox", "at least once"]
+
+    async_nodes = [n for n in nodes
+                   if _has((n.get("label") or n.get("type") or n.get("tech") or "").lower(),
+                           _ASYNC_KW)]
+    has_amqp_edge = any(str(e.get("protocol") or "").upper() == "AMQP" for e in edges)
+    if async_nodes or has_amqp_edge:
+        if not _has(corpus, _RESILIENCE_KW):
+            async_ids = [f"COMP-{n.get('id')}" for n in async_nodes[:3]]
+            amqp_note = " and AMQP edge(s)" if has_amqp_edge else ""
+            findings.append(SolutionFinding(
+                severity="medium", confidence="medium", dimension="reliability",
+                artifact_type="blueprint", repair_strategy="human_decision",
+                entity_ids=async_ids, requires_human_decision=True,
+                title="Async flow has no retry/DLQ/idempotency mechanism",
+                detail=(f"Blueprint has {len(async_nodes)} async messaging node(s){amqp_note} "
+                        f"but decisions/NFR mapping do not mention retry, DLQ, idempotency, "
+                        f"or backoff."),
+                recommendation=("Add a dead-letter queue, retry policy, or idempotency key to "
+                                "the async consumer's design decision."),
+            ))
+
+    # Rule 10 — Sprint resource overload detected by resource leveling (feasibility, high).
+    # Reads the pre-computed resource_leveling.overloads written by plan_team_and_resources.
+    # high severity → blocks release gate (block=True). Architect must waive or fix.
+    # Case: no resource_leveling key (old eval) → rule does NOT fire → no regression.
+    overloads = (wbs.get("resource_leveling") or {}).get("overloads") or []
+    if overloads:
+        worst = max(overloads, key=lambda o: float(o.get("overflow_md") or 0))
+        detail_parts = [
+            f"Sprint {o['sprint']} {o['role']}: {o['demand_md']:.1f}>{o['capacity_md']:.1f} MD"
+            for o in overloads[:3]
+        ]
+        findings.append(SolutionFinding(
+            severity="high", confidence="medium", dimension="feasibility",
+            artifact_type="wbs", repair_strategy="human_decision",
+            entity_ids=[], requires_human_decision=True,
+            title=f"Schedule not deliverable: {len(overloads)} sprint(s) overloaded",
+            detail=("; ".join(detail_parts)
+                    + f" (worst: sprint {worst['sprint']} {worst['role']} "
+                    f"+{float(worst['overflow_md']):.1f} MD over capacity)."),
+            recommendation=("Increase FTE, reduce scope per sprint, or extend the timeline "
+                            "to distribute load across sprints."),
         ))
 
     return findings
