@@ -11,7 +11,34 @@ from __future__ import annotations
 
 from typing import Any
 
-from solution_validator import is_blocking
+from solution_validator import (
+    AUTO_REPAIR_STRATEGIES,
+    is_blocking,
+    requires_human,
+)
+
+# Every finding must carry a real repair contract (docx §4.3): a stable id and a
+# repair_strategy that routes to the right owner.
+_VALID_REPAIR = AUTO_REPAIR_STRATEGIES | {"request_evidence", "human_decision", "none"}
+
+
+def _repair_contract_ok(findings: list[Any]) -> bool:
+    """True when every finding has a stable SF- id and a coherent repair_strategy.
+
+    A human-routed finding (requires_human) must NOT claim a mechanical patch_* strategy,
+    and an auto-repair strategy must NOT be flagged as needing a human — otherwise the
+    gate's 3-outcome routing (pass / auto-repair / human-decision) is inconsistent.
+    """
+    for f in findings:
+        if not str(f.finding_id).startswith("SF-"):
+            return False
+        if f.repair_strategy not in _VALID_REPAIR:
+            return False
+        if requires_human(f) and f.repair_strategy in AUTO_REPAIR_STRATEGIES:
+            return False
+        if f.repair_strategy in AUTO_REPAIR_STRATEGIES and f.requires_human_decision:
+            return False
+    return True
 
 
 def score_architecture(findings: list[Any], golden: dict) -> dict:
@@ -36,9 +63,10 @@ def score_architecture(findings: list[Any], golden: dict) -> dict:
     return {
         "finding_recall": finding_recall,
         "block_ok": 1.0 if block_ok else 0.0,
+        "repair_contract_ok": 1.0 if _repair_contract_ok(findings) else 0.0,
         "n_findings": len(findings),
         "dimensions": sorted(dims_present),
     }
 
 
-METRIC_KEYS = ["scores.finding_recall", "scores.block_ok"]
+METRIC_KEYS = ["scores.finding_recall", "scores.block_ok", "scores.repair_contract_ok"]

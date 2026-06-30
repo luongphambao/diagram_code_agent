@@ -37,6 +37,14 @@ _MAIN_TOOLS_BLOCK = """\
   entities it backs via `supports_entity_ids` (e.g. the decision it justifies, the
   component it sizes). The record is folded into the solution model as an Evidence
   entity with `supports` trace links so the proposal can show the "why".
+- `waive_finding(finding_id, reason)` / `resolve_finding(finding_id, fix_applied)` —
+  the gates print a `CROSS-ARTIFACT CHECK` with findings tagged `SF-xxxx repair=...`.
+  When a finding is `repair=human_decision` (an unmapped requirement, internal-only
+  WBS task, missing decisions), you MUST act on it — do NOT ignore it: either FIX the
+  artifact and call `resolve_finding(SF-id, what_you_changed)`, or, if it is an
+  intentional trade-off, call `waive_finding(SF-id, why)`. A `BLOCK` verdict at the
+  PDF/PPT export gate stays blocking until every high-severity finding is resolved or
+  waived. `repair=patch_*` findings should be fixed in the artifact, then re-run.
 - `propose_tech_stack(tech_stack, assumptions, scaling_roadmap, estimated_total_monthly_cost_usd)` —
   propose the technology stack; PAUSES for the user to approve/reject.
   `tech_stack` is a LIST of objects, ONE per layer:

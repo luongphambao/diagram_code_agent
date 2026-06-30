@@ -145,7 +145,9 @@ from .analysis_tools import (
     propose_tech_stack,
     query_change_impact,
     record_evidence,
+    resolve_finding,
     submit_critique,
+    waive_finding,
     web_research,
 )
 
@@ -194,6 +196,8 @@ MAIN_TOOLS = [
     # find_similar_solutions,   # DISABLED: focus on WBS testing
     web_research,             # 10 Tavily calls/session, split per stage (topic=tech_stack/architecture/wbs/evidence)
     record_evidence,          # persist a grounded claim -> evidence_log.json -> CSM Evidence + supports links
+    waive_finding,            # accept a cross-artifact finding as a trade-off -> findings_log.json
+    resolve_finding,          # mark a cross-artifact finding fixed -> findings_log.json
     propose_tech_stack,
     propose_blueprint,
     visualize_code_structure,

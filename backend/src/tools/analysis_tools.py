@@ -26,7 +26,7 @@ from deck import (
     write_deck_plan,
 )
 from findings import DiagramFinding, format_critique, prune, verdict_for
-from solution_validator import validate_solution
+from solution_validator import format_validation, validate_solution
 from traceability import write_trace_links
 from reporting import (
     DEFAULT_REPORT_SECTIONS,
@@ -920,7 +920,10 @@ def propose_blueprint(blueprint: Blueprint) -> str:
             "Architect warnings (address before finalizing if possible):\n"
             + "\n".join(f"  ⚠ {w}" for w in warnings)
         )
-    return "\n\n".join(result_parts)
+    # Per-stage cross-artifact gate (advisory): now that the blueprint exists, surface
+    # drift (unmapped requirement, dangling edge, missing decisions) early instead of
+    # only at export. 3-outcome verdict; settled findings are filtered.
+    return "\n\n".join(result_parts) + _solution_gate_note("blueprint")
 
 
 @tool
@@ -1075,21 +1078,32 @@ def _epistemic_note(model, *, cap: int = 8) -> str:
     return "\n\nEPISTEMIC SUMMARY (confirm assumptions / request evidence at the gate):\n" + "\n".join(lines)
 
 
-def _solution_gate_note() -> str:
-    """Run the cross-artifact validator + refresh trace_links.json before an export.
+def _solution_gate_note(stage: str = "export", *, block: bool = False) -> str:
+    """Run the cross-artifact validator + refresh trace_links.json at a pipeline gate.
 
-    Warnings-first: never blocks the export, but appends any cross-artifact
-    contradictions (unmapped requirement, dangling edge, zero-effort WBS, orphan
-    task, missing decisions) plus an epistemic summary so the agent/user sees drift
-    and open assumptions before the deck/report leaves the building. Promote to
-    blocking by passing block=True once the rules have proven stable in real runs.
+    Called after a stage (`blueprint`/`wbs`, advisory) and before an export
+    (`block=True`, the release gate). The validator's findings are merged into the
+    persisted `findings_log.json` so a defect keeps a stable id and a `waived`/`resolved`
+    status survives re-runs; findings a human already settled are dropped here, so a
+    waived defect can never re-block an export (docx §4.3, §7.1). The summary's first
+    line is `VALIDATION: PASS|AUTO-REPAIR|HUMAN-DECISION|WARN|BLOCK` for the three gate
+    outcomes (pass / auto-repair / human-decision), plus an epistemic summary.
     """
     try:
         model = build_solution_model(WORKSPACE)   # materialize/refresh the CSM projection
         write_trace_links(WORKSPACE)
-        findings, summary = validate_solution(WORKSPACE, block=False)
+        findings, _ = validate_solution(WORKSPACE, block=block)
     except Exception:
         return ""
+    # Persist the lifecycle and drop findings a human already waived/resolved, so the
+    # gate reflects open work only. Best-effort: a store hiccup must not break the gate.
+    try:
+        from finding_store import active_findings, upsert_findings
+        upsert_findings(findings, revision=model.revision)
+        findings = active_findings(findings)
+    except Exception:
+        pass
+    summary = format_validation(findings, block=block)
     csm_note = (
         f"\n\nSOLUTION MODEL — revision {model.revision}: "
         f"{len(model.requirements)} req, {len(model.components)} component, "
@@ -1099,7 +1113,15 @@ def _solution_gate_note() -> str:
     csm_note += _epistemic_note(model)
     if not findings:
         return csm_note
-    return csm_note + "\n\nCROSS-ARTIFACT CHECK — " + summary
+    note = csm_note + f"\n\nCROSS-ARTIFACT CHECK [{stage}] — " + summary
+    if block and summary.startswith("VALIDATION: BLOCK"):
+        note += (
+            "\n\nRELEASE GATE: blocking contradiction(s) remain — do NOT send this to the "
+            "client. Either fix the artifact and re-run, or, if it is an accepted trade-off, "
+            "call waive_finding(finding_id, reason) / resolve_finding(finding_id, fix_applied) "
+            "to record the decision and clear the block."
+        )
+    return note
 
 
 def _impact_ids(dumps: list[dict], cap: int = 8) -> str:
@@ -1218,7 +1240,7 @@ def generate_pdf_report(
                 f" NOTE: {len(missing)} section(s) were omitted from this run: "
                 + ", ".join(missing) + "."
             )
-    msg += _solution_gate_note()
+    msg += _solution_gate_note("pdf_export", block=True)
     return msg
 
 
@@ -1295,7 +1317,7 @@ def generate_ppt_proposal(
         missing = [s for s in DEFAULT_PPT_SECTIONS if s not in sections]
         if missing:
             msg += f" NOTE: {len(missing)} section(s) were omitted from this run: " + ", ".join(missing) + "."
-    msg += _solution_gate_note()
+    msg += _solution_gate_note("ppt_export", block=True)
     msg += _deck_qa_note()
     return msg
 
@@ -1696,3 +1718,72 @@ def record_evidence(
         f"{total} evidence record(s) on file; folded into the solution model on next "
         f"build_solution_model."
     )
+
+
+def _settle_finding(finding_id: str, status: str, note: str, *, action: str) -> str:
+    """Set a finding's terminal status + record the human DecisionRecord (docx §4.3)."""
+    from datetime import datetime, timezone
+
+    from decisions import append_decision, new_decision_record, next_seq
+    from finding_store import set_status
+
+    fid = (finding_id or "").strip()
+    if not fid:
+        return "Pass the finding_id (SF-xxxx) shown in the CROSS-ARTIFACT CHECK output."
+    now = datetime.now(timezone.utc).isoformat()
+    updated = set_status(fid, status, reason=note or "", by="agent", at=now, workspace=WORKSPACE)
+    if updated is None:
+        return (f"No finding {fid} in findings_log.json — re-run the stage or export gate to "
+                "refresh the cross-artifact check, then use a live SF-id.")
+    # Audit trail: a human DecisionRecord, folded into the CSM on next build_solution_model.
+    try:
+        rec = new_decision_record(
+            "cross_artifact_check",
+            action,  # type: ignore[arg-type]
+            seq=next_seq(WORKSPACE),
+            approver="agent",
+            timestamp=now,
+            comment=note or "",
+            payload={"finding_id": fid},
+        )
+        append_decision(rec, WORKSPACE)
+    except Exception:
+        pass
+    _bump_tool_summary(action)
+    verb = "waived" if status == "waived" else "resolved"
+    return (f"Finding {fid} marked {verb}: {note or '(no note)'}. It no longer blocks an export; "
+            "re-run the export gate to confirm the verdict clears.")
+
+
+@tool(parse_docstring=True)
+def waive_finding(finding_id: str, reason: str) -> str:
+    """Accept a cross-artifact validation finding as a known trade-off (docx §4.3).
+
+    Use when a finding from the CROSS-ARTIFACT CHECK is an intentional, accepted
+    decision (a requirement is deliberately deferred, internal-only WBS work is
+    expected) rather than a defect to fix. The finding's status becomes `waived` in
+    findings_log.json so it stops blocking an export, and a human decision record is
+    persisted for the audit trail. Prefer resolve_finding when you actually fixed the
+    underlying artifact.
+
+    Args:
+        finding_id: The SF-xxxx id shown in the CROSS-ARTIFACT CHECK output.
+        reason: Why this finding is accepted as-is — the trade-off being accepted.
+    """
+    return _settle_finding(finding_id, "waived", reason, action="waive_finding")
+
+
+@tool(parse_docstring=True)
+def resolve_finding(finding_id: str, fix_applied: str) -> str:
+    """Mark a cross-artifact validation finding as fixed (docx §4.3).
+
+    Use AFTER you corrected the underlying artifact (added the missing node, mapped
+    the requirement, ran the rollup). The finding's status becomes `resolved` so it no
+    longer blocks an export, and a human decision record is persisted. If the defect
+    genuinely persists it re-appears under a NEW id on the next check.
+
+    Args:
+        finding_id: The SF-xxxx id shown in the CROSS-ARTIFACT CHECK output.
+        fix_applied: What you changed to fix it.
+    """
+    return _settle_finding(finding_id, "resolved", fix_applied, action="resolve_finding")

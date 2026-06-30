@@ -20,11 +20,12 @@ the heavy reporting/render stack and remains trivially unit-testable.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 # --- severity / dimension ladder (mirrors findings.py) ----------------------
 
@@ -37,6 +38,23 @@ Dimension = Literal[
     "coverage",       # a requirement is not addressed by any component/task
     "completeness",   # an expected piece is missing (no decisions, no effort)
 ]
+# How a finding gets resolved (docx §4.3 repair contract). `patch_*` and
+# `auto_repair` can be fixed mechanically (an agent/tool owns the fix);
+# `human_decision`/`request_evidence` are trade-offs a person must settle;
+# `none` is informational only.
+RepairStrategy = Literal[
+    "auto_repair",
+    "patch_blueprint",
+    "patch_wbs",
+    "patch_deck",
+    "request_evidence",
+    "human_decision",
+    "none",
+]
+# repair_strategy values an agent/tool can fix without a human trade-off.
+AUTO_REPAIR_STRATEGIES: frozenset[str] = frozenset(
+    {"auto_repair", "patch_blueprint", "patch_wbs", "patch_deck"}
+)
 
 _SEVERITY_ORDER: dict[str, int] = {"low": 0, "medium": 1, "high": 2, "critical": 3}
 
@@ -52,6 +70,16 @@ MAX_TITLE_LENGTH = 120
 class SolutionFinding(BaseModel):
     """One concrete cross-artifact contradiction, anchored to entity IDs."""
 
+    finding_id: str = Field(
+        default="",
+        description="stable id for this defect, computed from (dimension, entity_ids, title) "
+        "so the SAME defect keeps the SAME id across validation runs (see finding_store).",
+    )
+    repair_strategy: RepairStrategy = Field(
+        default="none",
+        description="how this finding is fixed: patch_blueprint|patch_wbs|patch_deck|auto_repair "
+        "(mechanical), request_evidence|human_decision (a person must settle), or none.",
+    )
     severity: Severity
     confidence: Confidence = "high"
     dimension: Dimension
@@ -78,6 +106,29 @@ class SolutionFinding(BaseModel):
         if len(compact) > MAX_TITLE_LENGTH:
             return f"{compact[: MAX_TITLE_LENGTH - 3].rstrip()}..."
         return compact or "Solution finding"
+
+    @model_validator(mode="after")
+    def _ensure_finding_id(self) -> "SolutionFinding":
+        # Fill a stable id from the defect's identity (not its run) so re-validating
+        # the same artifacts yields the same id — the key to tracking waive/resolve.
+        if not self.finding_id:
+            self.finding_id = stable_finding_id(self.dimension, self.entity_ids, self.title)
+        return self
+
+
+def stable_finding_id(dimension: str, entity_ids: list[str], title: str) -> str:
+    """A short, deterministic id for a defect, keyed by what it IS, not when it was found.
+
+    Same (dimension, entity set, title) → same id across runs, so `finding_store` can
+    carry a `waived`/`resolved` status forward instead of re-raising the defect each run.
+    """
+    basis = "|".join([
+        dimension,
+        ",".join(sorted(str(e) for e in (entity_ids or []))),
+        " ".join((title or "").split()),
+    ])
+    digest = hashlib.sha256(basis.encode("utf-8")).hexdigest()[:10]
+    return f"SF-{digest}"
 
 
 # --- tiny helpers (copied from reporting.py to stay dependency-light) --------
@@ -168,6 +219,7 @@ def evaluate_solution(
         if missing:
             findings.append(SolutionFinding(
                 severity="high", dimension="correctness", artifact_type="blueprint",
+                repair_strategy="patch_blueprint",
                 entity_ids=[f"COMP-{m}" for m in missing],
                 title="Edge references a missing component",
                 detail=f"Edge {src or '?'}→{dst or '?'} points at node id(s) "
@@ -181,6 +233,7 @@ def evaluate_solution(
         if cl and cluster_ids and cl not in cluster_ids:
             findings.append(SolutionFinding(
                 severity="medium", dimension="correctness", artifact_type="blueprint",
+                repair_strategy="patch_blueprint",
                 entity_ids=[f"COMP-{n.get('id')}", f"CLUSTER-{cl}"],
                 title="Component points at a missing cluster",
                 detail=f"Node '{n.get('id')}' has cluster='{cl}' which is not a "
@@ -201,6 +254,7 @@ def evaluate_solution(
             rid = req_id_by_text.get(text) or req_id_by_text.get(text.strip())
             findings.append(SolutionFinding(
                 severity="medium", dimension="coverage", artifact_type="requirement",
+                repair_strategy="human_decision",
                 entity_ids=[rid] if rid else [], requires_human_decision=True,
                 title=f"Unmapped {kind} requirement",
                 detail=f"Requirement \"{text[:90]}\" is not addressed by any blueprint "
@@ -220,7 +274,7 @@ def evaluate_solution(
             wid = wbs_id_by_name.get(name) or f"WBS-{ref}"
             findings.append(SolutionFinding(
                 severity="low", confidence="medium", dimension="traceability",
-                artifact_type="wbs", entity_ids=[wid],
+                artifact_type="wbs", repair_strategy="human_decision", entity_ids=[wid],
                 title="WBS task traces to no requirement or component",
                 detail=f"Task '{name}' does not soft-match any requirement or blueprint "
                        f"component; it may be internal-only work or scope creep.",
@@ -237,6 +291,7 @@ def evaluate_solution(
         if total_md <= 0:
             findings.append(SolutionFinding(
                 severity="high", dimension="completeness", artifact_type="wbs",
+                repair_strategy="patch_wbs",
                 entity_ids=[], title="WBS has tasks but zero total effort",
                 detail="effort_totals.total_mandays is 0 while items exist — the rollup "
                        "did not run or every task is unestimated.",
@@ -247,6 +302,7 @@ def evaluate_solution(
     if nodes and not decisions:
         findings.append(SolutionFinding(
             severity="medium", dimension="completeness", artifact_type="blueprint",
+            repair_strategy="human_decision",
             entity_ids=[], title="Architecture has no recorded key decisions",
             detail="The approved blueprint lists components but no key_decisions, so the "
                    "deck/report can't answer \"why this?\".",
@@ -259,11 +315,21 @@ def evaluate_solution(
 # --- verdict + rendering (mirrors findings.format_critique) ------------------
 
 def _rank_key(f: SolutionFinding) -> tuple[int, int]:
-    return (_SEVERITY_ORDER[f.severity], 1 if f.requires_human_decision else 0)
+    return (_SEVERITY_ORDER[f.severity], 1 if requires_human(f) else 0)
 
 
 def is_blocking(f: SolutionFinding) -> bool:
     return _SEVERITY_ORDER[f.severity] >= _SEVERITY_ORDER[BLOCKING_SEVERITY]
+
+
+def requires_human(f: SolutionFinding) -> bool:
+    """A finding a person must settle (a scope/cost/risk trade-off), not a mechanical fix."""
+    return f.requires_human_decision or f.repair_strategy in ("human_decision", "request_evidence")
+
+
+def is_auto_repair(f: SolutionFinding) -> bool:
+    """A finding an agent/tool can fix mechanically (patch the blueprint/wbs/deck)."""
+    return f.repair_strategy in AUTO_REPAIR_STRATEGIES
 
 
 def coverage_ratio(findings: list[SolutionFinding], total_requirements: int) -> float:
@@ -277,21 +343,32 @@ def coverage_ratio(findings: list[SolutionFinding], total_requirements: int) -> 
 def format_validation(findings: list[SolutionFinding], *, block: bool = False) -> str:
     """Render a deterministic, machine-greppable summary.
 
-    First line is `VALIDATION: PASS|WARN|BLOCK` so a gate can branch without JSON.
+    First line is `VALIDATION: PASS|AUTO-REPAIR|HUMAN-DECISION|WARN|BLOCK` (docx §7.1: a
+    gate has three outcomes — pass, auto-repair, human-decision) so a gate can branch
+    without parsing JSON. `block=True` (the release gate) promotes any blocking finding
+    to BLOCK; callers should pass only NON-waived findings so a waived defect can't
+    re-block an export.
     """
     kept = sorted(findings, key=_rank_key, reverse=True)[:MAX_FINDINGS]
-    blockers = [f for f in kept if is_blocking(f)]
     if not kept:
         return "VALIDATION: PASS (no cross-artifact contradictions found)"
-    state = "BLOCK" if (block and blockers) else "WARN"
-    header = (
-        f"VALIDATION: {state} ({len(blockers)} blocking, {len(kept) - len(blockers)} advisory)"
-    )
-    lines = [header]
+    blockers = [f for f in kept if is_blocking(f)]
+    human = [f for f in kept if requires_human(f)]
+    auto = [f for f in kept if is_auto_repair(f)]
+    if block and blockers:
+        state, gloss = "BLOCK", f"{len(blockers)} blocking — resolve or waive before export"
+    elif human:
+        state, gloss = "HUMAN-DECISION", f"{len(human)} need a human decision (waive_finding/resolve_finding)"
+    elif auto:
+        state, gloss = "AUTO-REPAIR", f"{len(auto)} mechanically fixable, none blocking"
+    else:
+        state, gloss = "WARN", f"{len(kept)} advisory"
+    lines = [f"VALIDATION: {state} ({gloss})"]
     for f in kept:
-        flag = " [needs human decision]" if f.requires_human_decision else ""
+        flag = " [needs human decision]" if requires_human(f) else ""
         ids = f" {f.entity_ids}" if f.entity_ids else ""
-        line = f"- [{f.severity}/{f.dimension}]{flag} {f.title}:{ids} {f.detail}"
+        line = (f"- [{f.severity}/{f.dimension}] ({f.finding_id} repair={f.repair_strategy})"
+                f"{flag} {f.title}:{ids} {f.detail}")
         if f.recommendation:
             line += f" — fix: {f.recommendation}"
         lines.append(line)

@@ -37,6 +37,7 @@ _COLUMNS = [
     ("case_id", "case"),
     ("scores.finding_recall", "find_recall"),
     ("scores.block_ok", "block_ok"),
+    ("scores.repair_contract_ok", "repair_ok"),
     ("scores.n_findings", "n_find"),
 ]
 

@@ -47,6 +47,8 @@ DecisionAction = Literal[
     "request_evidence",
     "request_alternative",
     "edit_entity",
+    "waive_finding",     # accept a cross-artifact finding as a known trade-off
+    "resolve_finding",   # record that a finding was fixed
 ]
 
 
@@ -175,7 +177,10 @@ def project_into_csm(model: SolutionModel, records: Iterable[DecisionRecord]) ->
         if rec.id in existing_ids:
             continue  # already projected (defensive; a fresh build never has these)
 
-        status = "approved" if rec.action in ("approve", "approve_with_assumptions", "accept_risk") else "deferred"
+        status = "approved" if rec.action in (
+            "approve", "approve_with_assumptions", "accept_risk",
+            "waive_finding", "resolve_finding",
+        ) else "deferred"
         dec = Decision(
             id=rec.id,
             provenance="human",
@@ -231,6 +236,13 @@ def project_into_csm(model: SolutionModel, records: Iterable[DecisionRecord]) ->
             extra = rec.payload.get("constraint_change") or rec.payload.get("option_comparison") or ""
             if extra:
                 dec.rationale = (dec.rationale + " | " + extra).strip(" |")
+
+        elif rec.action in ("waive_finding", "resolve_finding"):
+            # Anchor the human decision to the finding it settles (finding ids live in
+            # findings_log.json, outside the CSM, so we carry it in the rationale).
+            fid = rec.payload.get("finding_id") or ""
+            if fid:
+                dec.rationale = (f"{fid}: " + (dec.rationale or "")).strip()
 
         model.decisions.append(dec)
         existing_ids.add(rec.id)
