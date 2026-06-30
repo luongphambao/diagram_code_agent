@@ -1,6 +1,8 @@
 import base64
+import contextvars
 import json
 
+import backends
 import session_state as server
 import tools
 import tools.analysis_tools as analysis_tools
@@ -9,12 +11,16 @@ from tools import GATE_TOOL_NAMES
 
 
 def _use_workspace(monkeypatch, tmp_path) -> None:
-    monkeypatch.setattr(analysis_tools, "WORKSPACE", tmp_path)
-    monkeypatch.setattr(analysis_tools, "_ARCH_ANALYSIS_FILE", tmp_path / "architecture_analysis.json")
-    monkeypatch.setattr(analysis_tools, "_BRIEF_FILE", tmp_path / "diagram_brief.json")
-    monkeypatch.setattr(analysis_tools, "_TECHSTACK_FILE", tmp_path / "tech_stack.json")
-    monkeypatch.setattr(analysis_tools, "_BLUEPRINT_FILE", tmp_path / "blueprint.json")
-    monkeypatch.setattr(analysis_tools, "_CRITIQUE_FILE", tmp_path / "critique.json")
+    """Bind ``tmp_path`` as the current-thread workspace (§4.10).
+
+    Stage files resolve lazily against backends.current_workspace(), so swapping the
+    ContextVar isolates the whole suite; monkeypatch auto-restores it after the test.
+    """
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(
+        backends, "_current_workspace",
+        contextvars.ContextVar("current_workspace", default=tmp_path),
+    )
 
 
 def _fake_pdf_renderer(html: str, pdf_path) -> None:

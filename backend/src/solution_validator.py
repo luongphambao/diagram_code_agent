@@ -539,8 +539,8 @@ def validate_solution(
     the rules have proven stable).
     """
     if workspace is None:
-        from backends import WORKSPACE  # local import keeps this module importable standalone
-        workspace = WORKSPACE
+        from backends import current_workspace  # local import keeps this module importable standalone
+        workspace = current_workspace()
     workspace = Path(workspace)
     brief = _read_json(workspace / "diagram_brief.json", {}) or {}
     blueprint = _read_json(workspace / "blueprint.json", {}) or {}

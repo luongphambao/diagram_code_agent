@@ -8,7 +8,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from backends import LOCAL_ICONS, LOCAL_MANIFEST, LOCAL_NODE_CATALOG, WORKSPACE
+from backends import LOCAL_ICONS, LOCAL_MANIFEST, LOCAL_NODE_CATALOG, current_workspace
 from .constants import (
     ICON_SEARCH_DEFAULT_TOTAL_CAP,
     ICON_SEARCH_PER_QUERY_CAP,
@@ -300,7 +300,7 @@ try:
                 "alternatives": hits[1:5],
                 "tried_keywords": [item.icon_keyword],
             })
-        WORKSPACE.mkdir(parents=True, exist_ok=True)
+        current_workspace().mkdir(parents=True, exist_ok=True)
         _ICON_PLAN_FILE.write_text(json.dumps(resolved, indent=2), encoding="utf-8")
         state.update({
             "resolved_this_round": True,
@@ -338,7 +338,7 @@ try:
             pass
         try:
             from logo_fetch import get_logo
-            path = get_logo(name, str(LOCAL_ICONS), str(WORKSPACE))
+            path = get_logo(name, str(LOCAL_ICONS), str(current_workspace()))
         except Exception as exc:  # noqa: BLE001
             return f"NOT_FOUND: fetch_logo error: {exc}"
         return path or f"NOT_FOUND: no verified logo for '{name}'. Use a built-in node or search_icons()."

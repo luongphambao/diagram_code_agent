@@ -61,8 +61,8 @@ def new_comment_record(
 
 def _log_path(workspace: Optional[Path]) -> Path:
     if workspace is None:
-        from backends import WORKSPACE
-        workspace = WORKSPACE
+        from backends import current_workspace
+        workspace = current_workspace()
     return Path(workspace) / COMMENT_LOG_NAME
 
 

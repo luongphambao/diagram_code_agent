@@ -120,8 +120,8 @@ def write_trace_links(workspace: Optional[Path] = None) -> dict[str, Any]:
     falls back to the legacy artifact-derived graph if the CSM can't be built.
     """
     if workspace is None:
-        from backends import WORKSPACE
-        workspace = WORKSPACE
+        from backends import current_workspace
+        workspace = current_workspace()
     workspace = Path(workspace)
 
     try:

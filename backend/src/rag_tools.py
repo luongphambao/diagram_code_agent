@@ -13,11 +13,11 @@ import logging
 
 from langchain_core.tools import tool
 
-from backends import WORKSPACE
+from backends import WorkspaceFile, current_workspace
 
 logger = logging.getLogger(__name__)
 
-_SIMILAR_SOLUTIONS_FILE = WORKSPACE / "similar_solutions.json"
+_SIMILAR_SOLUTIONS_FILE = WorkspaceFile("similar_solutions.json")
 
 
 @tool(parse_docstring=True)
@@ -86,5 +86,5 @@ def find_similar_solutions(query: str, top_k: int = 3) -> str:
 
 
 def _similar_solutions_file():
-    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    current_workspace().mkdir(parents=True, exist_ok=True)
     return _SIMILAR_SOLUTIONS_FILE

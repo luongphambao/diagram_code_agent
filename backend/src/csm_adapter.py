@@ -53,8 +53,8 @@ def archive_approved_revision(workspace: Optional[Path] = None) -> Optional[Path
     archival must not break a HITL resume.
     """
     if workspace is None:
-        from backends import WORKSPACE
-        workspace = WORKSPACE
+        from backends import current_workspace
+        workspace = current_workspace()
     workspace = Path(workspace)
     src = workspace / SOLUTION_MODEL_NAME
     if not src.exists():
@@ -364,8 +364,8 @@ def build_solution_model(
     a real change is visible to a change-impact diff.
     """
     if workspace is None:
-        from backends import WORKSPACE
-        workspace = WORKSPACE
+        from backends import current_workspace
+        workspace = current_workspace()
     workspace = Path(workspace)
 
     model = from_artifacts(

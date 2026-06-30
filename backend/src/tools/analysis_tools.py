@@ -14,7 +14,7 @@ from langchain_core.tools import InjectedToolCallId, tool
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from architecture_advisor import analyze_requirements
-from backends import WORKSPACE
+from backends import current_workspace
 from csm import SolutionModel
 from csm_adapter import build_solution_model, SOLUTION_MODEL_NAME, SOLUTION_MODEL_PREV_NAME
 from csm_diff import diff_solution_models
@@ -504,10 +504,10 @@ def analyze_architecture_requirements(requirements: str, provider_preference: st
             "aws", "azure", "gcp"; empty means cloud-neutral.
     """
     analysis = analyze_requirements(requirements, provider_preference)
-    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    current_workspace().mkdir(parents=True, exist_ok=True)
     _ARCH_ANALYSIS_FILE.write_text(json.dumps(analysis, indent=2), encoding="utf-8")
     record_report_step(
-        WORKSPACE,
+        current_workspace(),
         "analyze_architecture_requirements",
         summary=(
             f"Detected {analysis.get('application_type', 'application')} workload, "
@@ -535,10 +535,10 @@ def propose_diagram_brief(brief: DiagramBrief) -> str:
         brief: The structured diagram brief (objective, stakeholders, functional and
             non-functional requirements, constraints, and assumptions).
     """
-    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    current_workspace().mkdir(parents=True, exist_ok=True)
     _BRIEF_FILE.write_text(brief.model_dump_json(indent=2), encoding="utf-8")
     record_report_step(
-        WORKSPACE,
+        current_workspace(),
         "propose_diagram_brief",
         summary=(
             f"Recorded diagram brief with {len(brief.functional_requirements)} functional "
@@ -599,7 +599,7 @@ def propose_tech_stack(
     """
     if not _BRIEF_FILE.exists():
         return "Create the diagram brief first by calling propose_diagram_brief."
-    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    current_workspace().mkdir(parents=True, exist_ok=True)
 
     layers_dict = {
         t.layer: {
@@ -659,7 +659,7 @@ def propose_tech_stack(
                 f"(${estimated_total_monthly_cost_usd.max_usd}/mo) — cost estimates are inconsistent."
             )
 
-    analysis_file = WORKSPACE / "architecture_analysis.json"
+    analysis_file = current_workspace() / "architecture_analysis.json"
     if analysis_file.exists():
         try:
             import json as _json
@@ -678,7 +678,7 @@ def propose_tech_stack(
 
     _TECHSTACK_FILE.write_text(json.dumps(as_dict, indent=2), encoding="utf-8")
     record_report_step(
-        WORKSPACE,
+        current_workspace(),
         "propose_tech_stack",
         summary=f"Approved technology stack covering {len(layers_dict)} layer(s).",
         data=as_dict,
@@ -846,7 +846,7 @@ def propose_blueprint(blueprint: Blueprint) -> str:
     """
     if not _TECHSTACK_FILE.exists():
         return "Get the tech stack approved first by calling propose_tech_stack."
-    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    current_workspace().mkdir(parents=True, exist_ok=True)
     _BLUEPRINT_FILE.write_text(
         blueprint.model_dump_json(by_alias=True, indent=2), encoding="utf-8"
     )
@@ -915,7 +915,7 @@ def propose_blueprint(blueprint: Blueprint) -> str:
         )
 
     record_report_step(
-        WORKSPACE,
+        current_workspace(),
         "propose_blueprint",
         summary=(
             f"Approved {blueprint.pattern} blueprint with {n} nodes (density={d}), "
@@ -953,7 +953,7 @@ def inspect_diagram(tool_call_id: Annotated[str, InjectedToolCallId]) -> ToolMes
     it and the objective layout audit (page aspect ratio + label-bearing edges
     that strand). Call this once, then judge the diagram against the blueprint.
     """
-    png = WORKSPACE / "out.png"
+    png = current_workspace() / "out.png"
     if not png.exists():
         return ToolMessage(
             content="No rendered diagram (out.png) to inspect yet.",
@@ -1001,7 +1001,7 @@ def submit_critique(findings: list[DiagramFinding]) -> str:
             in_blueprint?}. Pass an empty list if the diagram is clean.
     """
     kept = prune(findings)
-    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    current_workspace().mkdir(parents=True, exist_ok=True)
     _CRITIQUE_FILE.write_text(
         json.dumps([f.model_dump() for f in kept], indent=2), encoding="utf-8"
     )
@@ -1024,7 +1024,7 @@ def submit_critique(findings: list[DiagramFinding]) -> str:
         _bump_tool_summary("submit_critique")
     verdict_text = format_critique(kept)
     record_report_step(
-        WORKSPACE,
+        current_workspace(),
         "submit_critique",
         status="revise" if verdict_for(kept) == "revise" else "passed",
         summary=verdict_text.splitlines()[0] if verdict_text else "Critic review completed.",
@@ -1125,9 +1125,9 @@ def _solution_gate_note(stage: str = "export", *, block: bool = False) -> str:
     outcomes (pass / auto-repair / human-decision), plus an epistemic summary.
     """
     try:
-        model = build_solution_model(WORKSPACE)   # materialize/refresh the CSM projection
-        write_trace_links(WORKSPACE)
-        findings, _ = validate_solution(WORKSPACE, block=block)
+        model = build_solution_model(current_workspace())   # materialize/refresh the CSM projection
+        write_trace_links(current_workspace())
+        findings, _ = validate_solution(current_workspace(), block=block)
     except Exception:
         return ""
     # Merge compliance-pack findings (required controls missing/ungrounded, §4 P2).
@@ -1177,7 +1177,7 @@ def _diagram_gate_note(*, block: bool = False) -> str:
     from finding_store import active_findings, upsert_findings
     from solution_validator import format_validation
 
-    drawio_path = WORKSPACE / "out.drawio"
+    drawio_path = current_workspace() / "out.drawio"
     if not drawio_path.exists():
         return ""
     try:
@@ -1189,7 +1189,7 @@ def _diagram_gate_note(*, block: bool = False) -> str:
         revision = "0"
         try:
             from csm_adapter import build_solution_model
-            m = build_solution_model(WORKSPACE)
+            m = build_solution_model(current_workspace())
             revision = str(m.revision)
         except Exception:
             pass
@@ -1227,8 +1227,8 @@ def query_change_impact() -> str:
     solution model has been refreshed) to see the blast radius of the change. Returns
     CHANGE_IMPACT: NONE when there is no previous snapshot or nothing changed.
     """
-    cur_raw = _read_json_file(WORKSPACE / SOLUTION_MODEL_NAME, None)
-    prev_raw = _read_json_file(WORKSPACE / SOLUTION_MODEL_PREV_NAME, None)
+    cur_raw = _read_json_file(current_workspace() / SOLUTION_MODEL_NAME, None)
+    prev_raw = _read_json_file(current_workspace() / SOLUTION_MODEL_PREV_NAME, None)
     if cur_raw is None:
         return "CHANGE_IMPACT: NONE — no solution model yet (run the pipeline first)."
     if prev_raw is None:
@@ -1292,7 +1292,7 @@ def compare_revisions(approved_revision: int = 0) -> str:
     Args:
         approved_revision: The approved revision number to compare against; 0 = latest.
     """
-    approved_dir = WORKSPACE / "approved"
+    approved_dir = current_workspace() / "approved"
     if not approved_dir.exists():
         return "COMPARE: NONE — no approved revision yet (approve a gate first)."
     snaps = sorted(approved_dir.glob("REV-*.json"),
@@ -1306,7 +1306,7 @@ def compare_revisions(approved_revision: int = 0) -> str:
             return f"COMPARE: NONE — approved REV-{approved_revision} not found. Available: {avail}."
     else:
         target = snaps[-1]
-    cur_raw = _read_json_file(WORKSPACE / SOLUTION_MODEL_NAME, None)
+    cur_raw = _read_json_file(current_workspace() / SOLUTION_MODEL_NAME, None)
     old_raw = _read_json_file(target, None)
     if cur_raw is None or old_raw is None:
         return "COMPARE: NONE — missing current or approved model."
@@ -1351,7 +1351,7 @@ def generate_pdf_report(
 
     try:
         html_path, pdf_path, sections, unrecognized = generate_report(
-            WORKSPACE,
+            current_workspace(),
             title=title,
             subtitle=subtitle,
             brand=brand,
@@ -1430,7 +1430,7 @@ def generate_ppt_proposal(
 
     try:
         pptx_path, sections, unrecognized = generate_ppt_proposal_file(
-            WORKSPACE,
+            current_workspace(),
             title=title,
             subtitle=subtitle,
             brand=brand,
@@ -1486,7 +1486,7 @@ def create_pptx(
     """
     try:
         pptx_path, sections, unrecognized = generate_ppt_proposal_file(
-            WORKSPACE,
+            current_workspace(),
             title=title,
             subtitle=subtitle,
             brand=brand,
@@ -1507,32 +1507,32 @@ def create_pptx(
 
 def _refresh_deck_plan(title: str = "", subtitle: str = "", brand: str = ""):
     """Build/refresh deck_plan.json from the CSM + artifacts. Returns (model, plan)."""
-    model = build_solution_model(WORKSPACE)
-    wbs = _read_json_file(WORKSPACE / "wbs.json", {}) or {}
-    brief = _read_json_file(WORKSPACE / "diagram_brief.json", {}) or {}
-    has_diagram = (WORKSPACE / "out.body.png").exists() or (WORKSPACE / "out.png").exists()
+    model = build_solution_model(current_workspace())
+    wbs = _read_json_file(current_workspace() / "wbs.json", {}) or {}
+    brief = _read_json_file(current_workspace() / "diagram_brief.json", {}) or {}
+    has_diagram = (current_workspace() / "out.body.png").exists() or (current_workspace() / "out.png").exists()
     plan = build_deck_plan(
         model, wbs=wbs, brief=brief, has_diagram=has_diagram,
         title=title, subtitle=subtitle, brand=brand,
     )
-    write_deck_plan(plan, WORKSPACE)
+    write_deck_plan(plan, current_workspace())
     return model, plan
 
 
 def _deck_qa_note(model=None) -> str:
     """Run validate_deck + score_deck_structure over the stored plan, write deck_qa_result.json."""
-    plan = load_deck_plan(WORKSPACE)
+    plan = load_deck_plan(current_workspace())
     if plan is None:
         return ""
     if model is None:
         try:
-            model = build_solution_model(WORKSPACE)
+            model = build_solution_model(current_workspace())
         except Exception:
             return ""
     findings = validate_deck(plan, model)
     struct = score_deck_structure(plan)
     try:
-        (WORKSPACE / DECK_QA_NAME).write_text(
+        (current_workspace() / DECK_QA_NAME).write_text(
             json.dumps({
                 "deck_revision": plan.revision,
                 "findings": findings,
@@ -1584,12 +1584,12 @@ def _visual_audit_note(pptx_path: str | None) -> str:
             high_issues = [i for i in result.issues if i.severity == "high"]
             patched_path = patch_pptx_overflow(pptx_path, high_issues)
             result_after = audit_pptx_deterministic(patched_path)
-            write_visual_audit(result_after, WORKSPACE)
+            write_visual_audit(result_after, current_workspace())
             return (
                 format_visual_audit(result_after)
                 + f"\n  AUTO-PATCHED {len(high_issues)} HIGH issue(s) → saved as {_Path(patched_path).name}"
             )
-        write_visual_audit(result, WORKSPACE)
+        write_visual_audit(result, current_workspace())
         return format_visual_audit(result)
     except Exception as exc:  # noqa: BLE001
         return f"\n  Visual audit skipped: {exc}"
@@ -1605,7 +1605,7 @@ def audit_deck_visual() -> str:
     out_patched.pptx. No LLM, no rendering — reads the PPTX XML model directly.
     Call this after create_pptx or generate_ppt_proposal to get a layout QA report.
     """
-    pptx_path = WORKSPACE / "out.pptx"
+    pptx_path = current_workspace() / "out.pptx"
     if not pptx_path.exists():
         return "ERROR: out.pptx not found. Run create_pptx or generate_ppt_proposal first."
     _bump_tool_summary("audit_deck_visual")
@@ -1632,7 +1632,7 @@ def export_proposal_package(title: str = "") -> str:
                diagram_brief.slide_title or the existing project title).
     """
     try:
-        export_dir, manifest = _export_proposal_package(WORKSPACE, title=title)
+        export_dir, manifest = _export_proposal_package(current_workspace(), title=title)
     except Exception as exc:  # noqa: BLE001
         return f"ERROR: could not assemble package: {exc}"
 
@@ -1713,7 +1713,7 @@ def propose_deck_plan(title: str = "", subtitle: str = "", brand: str = "") -> s
         lines.append(f"  {s.slide_no:>2}. [{s.narrative_role}] {s.title or '(cover)'}{refs}")
 
     record_report_step(
-        WORKSPACE,
+        current_workspace(),
         "propose_deck_plan",
         summary=f"Proposed deck storyboard: {len(plan.slides)} slides (revision {plan.revision}).",
         data={"slides": [s.model_dump() for s in plan.slides]},
@@ -1938,7 +1938,7 @@ def record_evidence(
 
     record = new_evidence_record(
         claim=claim,
-        seq=next_seq(WORKSPACE),
+        seq=next_seq(current_workspace()),
         source_url=source_url or "",
         source_type=stype,  # type: ignore[arg-type]
         fetched_at=datetime.now(timezone.utc).isoformat(),
@@ -1948,8 +1948,8 @@ def record_evidence(
         supports_entity_ids=list(supports_entity_ids or []),
         supersedes_evidence_id=supersedes_evidence_id,
     )
-    append_evidence(record, WORKSPACE)
-    total = next_seq(WORKSPACE) - 1
+    append_evidence(record, current_workspace())
+    total = next_seq(current_workspace()) - 1
     _bump_tool_summary("record_evidence", evidence_count=total)
     linked = ", ".join(record.supports_entity_ids) or "(no entity link)"
     return (
@@ -1970,7 +1970,7 @@ def _settle_finding(finding_id: str, status: str, note: str, *, action: str) -> 
     if not fid:
         return "Pass the finding_id (SF-xxxx) shown in the CROSS-ARTIFACT CHECK output."
     now = datetime.now(timezone.utc).isoformat()
-    updated = set_status(fid, status, reason=note or "", by="agent", at=now, workspace=WORKSPACE)
+    updated = set_status(fid, status, reason=note or "", by="agent", at=now, workspace=current_workspace())
     if updated is None:
         return (f"No finding {fid} in findings_log.json — re-run the stage or export gate to "
                 "refresh the cross-artifact check, then use a live SF-id.")
@@ -1979,13 +1979,13 @@ def _settle_finding(finding_id: str, status: str, note: str, *, action: str) -> 
         rec = new_decision_record(
             "cross_artifact_check",
             action,  # type: ignore[arg-type]
-            seq=next_seq(WORKSPACE),
+            seq=next_seq(current_workspace()),
             approver="agent",
             timestamp=now,
             comment=note or "",
             payload={"finding_id": fid},
         )
-        append_decision(rec, WORKSPACE)
+        append_decision(rec, current_workspace())
     except Exception:
         pass
     _bump_tool_summary(action)
@@ -2048,9 +2048,9 @@ def apply_compliance_pack(pack_name: str) -> str:
     if not load_pack(pack_name):
         return (f"Unknown compliance pack {pack_name!r}. "
                 f"Available: {', '.join(available) or '(none)'}.")
-    set_active_pack(pack_name, WORKSPACE)
+    set_active_pack(pack_name, current_workspace())
     try:
-        model = build_solution_model(WORKSPACE)  # rebuild so controls + findings appear now
+        model = build_solution_model(current_workspace())  # rebuild so controls + findings appear now
         gaps = evidence_gaps(model)
         n_controls = len(model.controls)
     except Exception:
@@ -2082,13 +2082,13 @@ def add_comment(body: str, anchor_entity_id: str = "", role: str = "reviewer") -
 
     rec = new_comment_record(
         body=body,
-        seq=next_seq(WORKSPACE),
+        seq=next_seq(current_workspace()),
         anchor_entity_id=(anchor_entity_id or "").strip(),
         author="agent",
         role=(role or "reviewer").strip(),
         timestamp=datetime.now(timezone.utc).isoformat(),
     )
-    append_comment(rec, WORKSPACE)
+    append_comment(rec, current_workspace())
     _bump_tool_summary("add_comment")
     anchor = f" on {rec.anchor_entity_id}" if rec.anchor_entity_id else ""
     return f"Comment {rec.id} added{anchor} (comment_log.json). Resolve it with resolve_comment({rec.id})."
@@ -2105,7 +2105,7 @@ def resolve_comment(comment_id: str) -> str:
     from comments import resolve_comment as _resolve
 
     rec = _resolve(comment_id, resolved_by="agent",
-                   resolved_at=datetime.now(timezone.utc).isoformat(), workspace=WORKSPACE)
+                   resolved_at=datetime.now(timezone.utc).isoformat(), workspace=current_workspace())
     if rec is None:
         return f"No comment {comment_id!r} found in comment_log.json."
     _bump_tool_summary("resolve_comment")
@@ -2131,13 +2131,13 @@ def export_to_delivery(system: str, dry_run: bool = True) -> str:
     if sys_l not in ("jira", "linear", "confluence"):
         return f"Unknown delivery system {system!r}. Use jira, linear, or confluence."
     try:
-        model = build_solution_model(WORKSPACE)
+        model = build_solution_model(current_workspace())
     except Exception as exc:  # noqa: BLE001
         return f"Could not build solution model: {exc}"
     if not model.work_items:
         return "No WBS work items to export — run the WBS pipeline first."
     from delivery_export import sync_work_items
-    res = sync_work_items(model, sys_l, dry_run=dry_run, workspace=WORKSPACE)  # type: ignore[arg-type]
+    res = sync_work_items(model, sys_l, dry_run=dry_run, workspace=current_workspace())  # type: ignore[arg-type]
     _bump_tool_summary("export_to_delivery")
     c = res["counts"]
     mode = "PREVIEW (dry-run)" if res["dry_run"] else "SYNCED"
@@ -2168,7 +2168,7 @@ def reality_sync(source_path: str) -> str:
     if not src.exists():
         return f"Source path not found: {source_path!r}."
     try:
-        report = run_reality_sync(src, WORKSPACE)
+        report = run_reality_sync(src, current_workspace())
     except Exception as exc:  # noqa: BLE001
         return f"Reality sync failed: {exc}"
     _bump_tool_summary("reality_sync")
@@ -2185,7 +2185,7 @@ def export_adr_pack() -> str:
     """
     try:
         from adr_export import write_adr_pack
-        path, n = write_adr_pack(WORKSPACE)
+        path, n = write_adr_pack(current_workspace())
     except Exception as exc:  # noqa: BLE001
         return f"ADR export failed: {exc}"
     _bump_tool_summary("export_adr_pack")
@@ -2237,7 +2237,7 @@ def edit_entity(entity_id: str, field: str, new_value: str) -> str:
             f"Allowed: {sorted(_PATCHABLE_FIELDS)}."
         )
 
-    cur_path = WORKSPACE / SOLUTION_MODEL_NAME
+    cur_path = current_workspace() / SOLUTION_MODEL_NAME
     cur_raw = _read_json_file(cur_path, None)
     if cur_raw is None:
         return "EDIT_ENTITY: ERROR — no solution_model.json yet (run the pipeline first)."
@@ -2268,7 +2268,7 @@ def edit_entity(entity_id: str, field: str, new_value: str) -> str:
         return f"EDIT_ENTITY: ERROR — validation failed after patch: {exc}"
 
     # Snapshot the current file as .prev (enables query_change_impact)
-    prev_path = WORKSPACE / SOLUTION_MODEL_PREV_NAME
+    prev_path = current_workspace() / SOLUTION_MODEL_PREV_NAME
     prev_path.write_text(cur_path.read_text(encoding="utf-8"), encoding="utf-8")
 
     # Bump revision and write back
@@ -2300,8 +2300,8 @@ def quality_summary() -> str:
     after any gate to see the current quality health of the solution proposal.
     """
     try:
-        snap = build_quality_snapshot(WORKSPACE)
-        write_snapshot(snap, WORKSPACE)
+        snap = build_quality_snapshot(current_workspace())
+        write_snapshot(snap, current_workspace())
         return format_snapshot(snap)
     except Exception as exc:
         return f"QUALITY_SUMMARY: ERROR — {exc}"

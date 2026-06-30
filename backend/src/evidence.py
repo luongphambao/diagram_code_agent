@@ -92,8 +92,8 @@ def new_evidence_record(
 
 def _log_path(workspace: Optional[Path]) -> Path:
     if workspace is None:
-        from backends import WORKSPACE
-        workspace = WORKSPACE
+        from backends import current_workspace
+        workspace = current_workspace()
     return Path(workspace) / EVIDENCE_LOG_NAME
 
 

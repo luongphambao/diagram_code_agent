@@ -25,7 +25,7 @@ from typing import Any, Literal, Optional
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field, model_validator
 
-from backends import WORKSPACE
+from backends import WORKSPACE, WorkspaceFile, current_workspace
 import wbs_excel
 from wbs_effort import (
     RATIOS, Ratios, derive_leaf_effort, rollup, make_ref_code, delivery_grid,
@@ -34,12 +34,13 @@ from wbs_effort import (
 )
 
 # ── state files (registered in tools.clear_stage_markers) ────────────────────
-_BRIEF_FILE = WORKSPACE / "diagram_brief.json"
-_TECHSTACK_FILE = WORKSPACE / "tech_stack.json"
-_BLUEPRINT_FILE = WORKSPACE / "blueprint.json"
-_SKELETON_FILE = WORKSPACE / "wbs_skeleton.json"
-_WBS_FILE = WORKSPACE / "wbs.json"
-_WBS_XLSX = WORKSPACE / "wbs_filled.xlsx"
+# Resolved lazily per request (per-thread isolation, §4.10) via WorkspaceFile.
+_BRIEF_FILE = WorkspaceFile("diagram_brief.json")
+_TECHSTACK_FILE = WorkspaceFile("tech_stack.json")
+_BLUEPRINT_FILE = WorkspaceFile("blueprint.json")
+_SKELETON_FILE = WorkspaceFile("wbs_skeleton.json")
+_WBS_FILE = WorkspaceFile("wbs.json")
+_WBS_XLSX = WorkspaceFile("wbs_filled.xlsx")
 
 
 def _read_json(path: Path, default=None):
@@ -50,7 +51,7 @@ def _read_json(path: Path, default=None):
 
 
 def _write_json(path: Path, data) -> None:
-    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    current_workspace().mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
@@ -773,7 +774,7 @@ def propose_wbs(
     summary = lines[1]
     try:
         from reporting import record_report_step
-        record_report_step(WORKSPACE, "propose_wbs", summary=summary, data=et)
+        record_report_step(current_workspace(), "propose_wbs", summary=summary, data=et)
     except Exception:
         pass
     return "\n".join(lines)
@@ -818,9 +819,9 @@ def export_wbs_excel(
         from csm_adapter import build_solution_model
         from solution_validator import format_validation, validate_solution
         from traceability import write_trace_links
-        model = build_solution_model(WORKSPACE)   # the WBS is now in scope — refresh the CSM
-        write_trace_links(WORKSPACE)
-        findings, _ = validate_solution(WORKSPACE, block=False)
+        model = build_solution_model(current_workspace())   # the WBS is now in scope — refresh the CSM
+        write_trace_links(current_workspace())
+        findings, _ = validate_solution(current_workspace(), block=False)
         try:
             from finding_store import active_findings, upsert_findings
             upsert_findings(findings, revision=model.revision)

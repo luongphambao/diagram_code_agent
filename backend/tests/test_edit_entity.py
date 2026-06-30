@@ -5,9 +5,10 @@ patching Requirement.status; unknown entity id error; disallowed field guard;
 missing solution_model.json error.
 """
 
+import contextvars
 import json
 
-import tools.analysis_tools as analysis_tools
+import backends
 from csm import Decision, Requirement, SolutionModel
 from csm_adapter import SOLUTION_MODEL_NAME, SOLUTION_MODEL_PREV_NAME
 from tools import edit_entity
@@ -20,7 +21,12 @@ def _write_model(tmp_path, model: SolutionModel) -> None:
 
 
 def _use_workspace(monkeypatch, tmp_path):
-    monkeypatch.setattr(analysis_tools, "WORKSPACE", tmp_path)
+    # §4.10: bind tmp_path as the current-thread workspace (auto-restored by monkeypatch).
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(
+        backends, "_current_workspace",
+        contextvars.ContextVar("current_workspace", default=tmp_path),
+    )
 
 
 # ---------------------------------------------------------------------------

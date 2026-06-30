@@ -53,8 +53,8 @@ def load_pack(name: str) -> Optional[dict[str, Any]]:
 
 def _marker_path(workspace: Optional[Path]) -> Path:
     if workspace is None:
-        from backends import WORKSPACE
-        workspace = WORKSPACE
+        from backends import current_workspace
+        workspace = current_workspace()
     return Path(workspace) / COMPLIANCE_PACK_MARKER
 
 

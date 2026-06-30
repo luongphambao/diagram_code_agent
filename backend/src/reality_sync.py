@@ -244,8 +244,8 @@ def format_drift(report: dict) -> str:
 def run_reality_sync(source_dir: Path, workspace: Optional[Path] = None) -> dict:
     """Build the current-state model + drift report and write both into the workspace."""
     if workspace is None:
-        from backends import WORKSPACE
-        workspace = WORKSPACE
+        from backends import current_workspace
+        workspace = current_workspace()
     workspace = Path(workspace)
     workspace.mkdir(parents=True, exist_ok=True)
 

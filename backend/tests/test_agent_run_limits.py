@@ -1,24 +1,26 @@
+import contextvars
 import json
 from pathlib import Path
 from types import SimpleNamespace
 
+import backends
 import tools
+import tools.rendering_tools as rendering_tools
 from agent import DRAWER_SKILL_PATHS
 
 
 def _use_workspace(monkeypatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(tools, "WORKSPACE", tmp_path)
-    monkeypatch.setattr(tools, "_ARCH_ANALYSIS_FILE", tmp_path / "architecture_analysis.json")
-    monkeypatch.setattr(tools, "_BRIEF_FILE", tmp_path / "diagram_brief.json")
-    monkeypatch.setattr(tools, "_TECHSTACK_FILE", tmp_path / "tech_stack.json")
-    monkeypatch.setattr(tools, "_BLUEPRINT_FILE", tmp_path / "blueprint.json")
-    monkeypatch.setattr(tools, "_CRITIQUE_FILE", tmp_path / "critique.json")
-    monkeypatch.setattr(tools, "_RENDER_COUNT_FILE", tmp_path / "render_count.json")
-    monkeypatch.setattr(tools, "_ICON_SEARCH_BUDGET_FILE", tmp_path / "icon_search_budget.json")
-    monkeypatch.setattr(tools, "_NODE_SEARCH_BUDGET_FILE", tmp_path / "node_search_budget.json")
-    monkeypatch.setattr(tools, "_REVISION_COUNT_FILE", tmp_path / "revision_count.json")
-    monkeypatch.setattr(tools, "_TOOL_SUMMARY_FILE", tmp_path / "tool_budget_summary.json")
-    monkeypatch.setattr(tools, "_ICON_PLAN_FILE", tmp_path / "icon_plan.json")
+    """Bind ``tmp_path`` as the current-thread workspace for the duration of the test.
+
+    Stage files are now resolved lazily against ``backends.current_workspace()`` (the
+    WorkspaceFile proxies in tools.constants), so a single context-var swap isolates the
+    whole tool suite; monkeypatch auto-restores the ContextVar after the test, so no
+    state leaks to other tests.
+    """
+    monkeypatch.setattr(
+        backends, "_current_workspace",
+        contextvars.ContextVar("current_workspace", default=tmp_path),
+    )
 
 
 def test_drawer_uses_drawer_skill_paths():
@@ -46,7 +48,7 @@ def test_failed_render_counts_toward_hard_cap(monkeypatch, tmp_path):
     def fail_run(*_args, **_kwargs):
         return SimpleNamespace(returncode=1, stderr="boom", stdout="")
 
-    monkeypatch.setattr(tools.subprocess, "run", fail_run)
+    monkeypatch.setattr(rendering_tools.subprocess, "run", fail_run)
 
     msg = tools.render_diagram.func("print('bad')", tool_call_id="tc-1")
     assert "Render #1/6 FAILED" in msg.content

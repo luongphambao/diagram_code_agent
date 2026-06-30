@@ -4,23 +4,25 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from backends import WORKSPACE
+from backends import WORKSPACE, WorkspaceFile
 from reporting import REPORT_EVIDENCE_NAME
 
-# Stage markers written under WORKSPACE so the staged tools can enforce order.
-_ARCH_ANALYSIS_FILE = WORKSPACE / "architecture_analysis.json"
-_BRIEF_FILE = WORKSPACE / "diagram_brief.json"
-_TECHSTACK_FILE = WORKSPACE / "tech_stack.json"
-_BLUEPRINT_FILE = WORKSPACE / "blueprint.json"
-_CRITIQUE_FILE = WORKSPACE / "critique.json"
+# Stage markers written under the current-thread workspace so the staged tools can
+# enforce order. Resolved lazily per request via WorkspaceFile (per-thread isolation,
+# §4.10) — importers can keep ``from .constants import _BRIEF_FILE`` unchanged.
+_ARCH_ANALYSIS_FILE = WorkspaceFile("architecture_analysis.json")
+_BRIEF_FILE = WorkspaceFile("diagram_brief.json")
+_TECHSTACK_FILE = WorkspaceFile("tech_stack.json")
+_BLUEPRINT_FILE = WorkspaceFile("blueprint.json")
+_CRITIQUE_FILE = WorkspaceFile("critique.json")
 
-_RENDER_SPEC_FILE = WORKSPACE / "render_spec.json"
-_RENDER_COUNT_FILE = WORKSPACE / "render_count.json"
-_ICON_SEARCH_BUDGET_FILE = WORKSPACE / "icon_search_budget.json"
-_NODE_SEARCH_BUDGET_FILE = WORKSPACE / "node_search_budget.json"
-_REVISION_COUNT_FILE = WORKSPACE / "revision_count.json"
-_TOOL_SUMMARY_FILE = WORKSPACE / "tool_budget_summary.json"
-_ICON_PLAN_FILE = WORKSPACE / "icon_plan.json"
+_RENDER_SPEC_FILE = WorkspaceFile("render_spec.json")
+_RENDER_COUNT_FILE = WorkspaceFile("render_count.json")
+_ICON_SEARCH_BUDGET_FILE = WorkspaceFile("icon_search_budget.json")
+_NODE_SEARCH_BUDGET_FILE = WorkspaceFile("node_search_budget.json")
+_REVISION_COUNT_FILE = WorkspaceFile("revision_count.json")
+_TOOL_SUMMARY_FILE = WorkspaceFile("tool_budget_summary.json")
+_ICON_PLAN_FILE = WorkspaceFile("icon_plan.json")
 
 # Files copied into each session archive folder under OUTPUTS_DIR.
 _SESSION_ARTIFACTS = ("out.png", "out.body.png", "out.drawio", "diagram.py", "out.nodes.json", "out.dot")
@@ -52,7 +54,7 @@ WEB_SEARCH_CATEGORY_CAPS: dict[str, int] = {
 }
 # Tavily's own `topic` hint only accepts these; category is mapped onto one of them.
 WEB_SEARCH_TAVILY_TOPICS: frozenset[str] = frozenset({"general", "news"})
-_WEB_SEARCH_BUDGET_FILE = WORKSPACE / "web_search_budget.json"
+_WEB_SEARCH_BUDGET_FILE = WorkspaceFile("web_search_budget.json")
 TAVILY_SEARCH_URL = "https://api.tavily.com/search"
 
 RENDER_TIMEOUT_S = 180

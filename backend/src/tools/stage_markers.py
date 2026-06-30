@@ -8,7 +8,7 @@ import re
 import shutil
 from pathlib import Path
 
-from backends import OUTPUTS_DIR, WORKSPACE
+from backends import OUTPUTS_DIR, current_workspace
 from reporting import REPORT_EVIDENCE_NAME
 from .constants import (
     _ARCH_ANALYSIS_FILE,
@@ -40,7 +40,7 @@ def _read_json_file(path: Path, default):
 
 
 def _write_json_file(path: Path, value) -> None:
-    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    current_workspace().mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, indent=2), encoding="utf-8")
 
 
@@ -87,19 +87,25 @@ def _reset_revision_count() -> None:
 
 
 def clear_stage_markers() -> None:
-    """Reset the staged-flow markers at the start of a fresh run."""
+    """Reset the staged-flow markers at the start of a fresh run.
+
+    These are the per-thread JSON markers and stores (resolved against the current
+    workspace); the shared binary render artifacts (out.png/out.drawio/…) are cleaned
+    separately by the render pipeline.
+    """
+    ws = current_workspace()
     for f in (
         _ARCH_ANALYSIS_FILE, _BRIEF_FILE, _TECHSTACK_FILE, _BLUEPRINT_FILE,
         _CRITIQUE_FILE, _REVISION_COUNT_FILE, _TOOL_SUMMARY_FILE,
         _ICON_SEARCH_BUDGET_FILE, _NODE_SEARCH_BUDGET_FILE, _RENDER_SPEC_FILE,
-        _ICON_PLAN_FILE, _WEB_SEARCH_BUDGET_FILE, WORKSPACE / REPORT_EVIDENCE_NAME,
-        WORKSPACE / "wbs_skeleton.json", WORKSPACE / "wbs.json", WORKSPACE / "wbs_filled.xlsx",
-        WORKSPACE / "solution_model.json", WORKSPACE / "trace_links.json",
-        WORKSPACE / "evidence_log.json",
-        WORKSPACE / "deck_plan.json", WORKSPACE / "deck_qa_result.json",
-        WORKSPACE / "quality_snapshot.json", WORKSPACE / "compliance_pack.json",
-        WORKSPACE / "delivery_export_preview.json",
-        WORKSPACE / "current_state_model.json", WORKSPACE / "drift_report.json",
+        _ICON_PLAN_FILE, _WEB_SEARCH_BUDGET_FILE, ws / REPORT_EVIDENCE_NAME,
+        ws / "wbs_skeleton.json", ws / "wbs.json", ws / "wbs_filled.xlsx",
+        ws / "solution_model.json", ws / "trace_links.json",
+        ws / "evidence_log.json",
+        ws / "deck_plan.json", ws / "deck_qa_result.json",
+        ws / "quality_snapshot.json", ws / "compliance_pack.json",
+        ws / "delivery_export_preview.json",
+        ws / "current_state_model.json", ws / "drift_report.json",
     ):
         if f.exists():
             f.unlink()
@@ -107,8 +113,8 @@ def clear_stage_markers() -> None:
 
 
 def _stage_helpers() -> None:
-    WORKSPACE.mkdir(parents=True, exist_ok=True)
-    pg_dst = WORKSPACE / "prettygraph"
+    current_workspace().mkdir(parents=True, exist_ok=True)
+    pg_dst = current_workspace() / "prettygraph"
     pg_dst.mkdir(exist_ok=True)
     for src_file in _PRETTYGRAPH_PKG_DIR.glob("*.py"):
         dst_file = pg_dst / src_file.name
@@ -119,8 +125,8 @@ def _stage_helpers() -> None:
 
 def _layout_audit() -> str:
     """Best-effort layout audit for the last render (advisory; "" if unavailable)."""
-    dot = WORKSPACE / "out.dot"
-    png = WORKSPACE / "out.png"
+    dot = current_workspace() / "out.dot"
+    png = current_workspace() / "out.png"
     if not dot.exists() or not png.exists():
         return ""
     try:
@@ -130,7 +136,7 @@ def _layout_audit() -> str:
         return ""
 
     # Append panel-fill check from the last slide render metadata.
-    slide_json = WORKSPACE / "out.slide.json"
+    slide_json = current_workspace() / "out.slide.json"
     if slide_json.exists():
         try:
             slide_data = json.loads(slide_json.read_text(encoding="utf-8"))
@@ -159,8 +165,8 @@ def _archive_session() -> Path | None:
 
     Returns the archive folder path, or None if nothing was saved.
     """
-    png = WORKSPACE / "out.png"
-    drawio = WORKSPACE / "out.drawio"
+    png = current_workspace() / "out.png"
+    drawio = current_workspace() / "out.drawio"
     if not png.exists() and not drawio.exists():
         return None
 
@@ -191,7 +197,7 @@ def _archive_session() -> Path | None:
 
     copied: list[str] = []
     for name in _SESSION_ARTIFACTS:
-        src = WORKSPACE / name
+        src = current_workspace() / name
         if src.exists():
             shutil.copy2(str(src), str(dest / name))
             copied.append(name)

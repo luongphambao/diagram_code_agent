@@ -185,9 +185,9 @@ class UsageLoggingMiddleware(AgentMiddleware):
 
     def _log(self, usage: dict) -> None:
         try:
-            from backends import WORKSPACE  # avoid circular at module load
+            from backends import current_workspace  # avoid circular at module load
 
-            path = WORKSPACE / "usage.json"
+            path = current_workspace() / "usage.json"
             try:
                 records: list = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
             except Exception:

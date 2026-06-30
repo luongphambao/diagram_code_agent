@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import backends
 from backends import (
     WORKSPACE,
@@ -43,3 +45,50 @@ def test_current_workspace_contextvar_default_and_override():
     finally:
         backends._current_workspace.reset(token)
     assert current_workspace() == WORKSPACE
+
+
+import contextvars  # noqa: E402
+
+
+def _bind(monkeypatch, ws):
+    """Bind ``ws`` as the current workspace; monkeypatch auto-restores afterwards."""
+    ws.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(
+        backends, "_current_workspace",
+        contextvars.ContextVar("current_workspace", default=ws),
+    )
+
+
+def test_stage_marker_proxy_follows_current_workspace(tmp_path, monkeypatch):
+    """A WorkspaceFile proxy resolves against whatever workspace is bound at call time."""
+    from tools.constants import _BRIEF_FILE
+
+    a, b = tmp_path / "ta", tmp_path / "tb"
+    _bind(monkeypatch, a)
+    _BRIEF_FILE.write_text('{"thread": "a"}', encoding="utf-8")
+    assert (a / "diagram_brief.json").exists()
+    assert not (b / "diagram_brief.json").exists()
+
+    # Rebinding to another thread re-points the SAME proxy object — no leak.
+    _bind(monkeypatch, b)
+    assert not _BRIEF_FILE.exists()
+    _BRIEF_FILE.write_text('{"thread": "b"}', encoding="utf-8")
+    assert (b / "diagram_brief.json").exists()
+    assert json.loads((a / "diagram_brief.json").read_text())["thread"] == "a"
+
+
+def test_store_writes_into_current_workspace(tmp_path, monkeypatch):
+    """A router-side store (decision_log) lands in the bound thread's workspace."""
+    from decisions import DecisionRecord, append_decision, next_seq, read_decisions
+
+    a, b = tmp_path / "da", tmp_path / "db"
+    _bind(monkeypatch, a)
+    assert next_seq() == 1  # empty log in this thread
+    append_decision(DecisionRecord(id="DR-1", action="accept_risk"))  # no workspace arg
+    assert (a / "decision_log.json").exists()
+    assert len(read_decisions()) == 1
+
+    # A different thread starts with an empty, independent log.
+    _bind(monkeypatch, b)
+    assert read_decisions() == []
+    assert not (b / "decision_log.json").exists()

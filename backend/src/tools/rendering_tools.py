@@ -17,7 +17,7 @@ from langchain_core.messages import ToolMessage
 from langchain_core.tools import InjectedToolCallId, tool
 from pydantic import BaseModel, Field
 
-from backends import OUTPUTS_DIR, WORKSPACE
+from backends import OUTPUTS_DIR, current_workspace
 from reporting import record_artifact_inventory, record_report_step
 from .constants import (
     _BLUEPRINT_FILE,
@@ -245,7 +245,7 @@ def render_diagram(
         next_step = (
             "Keep the existing out.png: call export_drawio(), then return your "
             "summary listing residual audit warnings."
-            if (WORKSPACE / "out.png").exists()
+            if (current_workspace() / "out.png").exists()
             else "No usable out.png remains. Stop rendering and return a short "
                  "failure summary with the last traceback."
         )
@@ -259,15 +259,15 @@ def render_diagram(
     attempt = _bump_render_count()
     _stage_helpers()
     for out_name in _OUT_NAMES:
-        p = WORKSPACE / out_name
+        p = current_workspace() / out_name
         if p.exists():
             p.unlink()
-    (WORKSPACE / "diagram.py").write_text(code, encoding="utf-8")
+    (current_workspace() / "diagram.py").write_text(code, encoding="utf-8")
 
     try:
         proc = subprocess.run(
             [sys.executable, "diagram.py"],
-            cwd=str(WORKSPACE),
+            cwd=str(current_workspace()),
             capture_output=True,
             text=True,
             timeout=RENDER_TIMEOUT_S,
@@ -281,7 +281,7 @@ def render_diagram(
             status="error",
         )
 
-    png = WORKSPACE / "out.png"
+    png = current_workspace() / "out.png"
     if proc.returncode != 0 or not png.exists():
         err = (proc.stderr or proc.stdout or "").strip()
         return ToolMessage(
@@ -309,13 +309,13 @@ def render_diagram(
                      "with this image and report residual warnings in your "
                      "summary — do not chase the same warning again.")
     record_report_step(
-        WORKSPACE,
+        current_workspace(),
         "render_diagram",
         summary=f"Rendered out.png successfully on attempt {attempt}.",
         data={
             "attempt": attempt,
             "audit": audit,
-            "artifacts": record_artifact_inventory(WORKSPACE),
+            "artifacts": record_artifact_inventory(current_workspace()),
         },
     )
     include_image = os.getenv("RENDER_INCLUDES_IMAGE", "1").lower() not in ("0", "false", "no")
@@ -344,10 +344,10 @@ def export_drawio() -> str:
 
     Call this once the diagram looks good. Produces out.drawio next to out.png.
     """
-    dot = WORKSPACE / "out.dot"
-    out = WORKSPACE / "out.drawio"
-    sidecar = WORKSPACE / "out.nodes.json"
-    slide = WORKSPACE / "out.slide.json"
+    dot = current_workspace() / "out.dot"
+    out = current_workspace() / "out.drawio"
+    sidecar = current_workspace() / "out.nodes.json"
+    slide = current_workspace() / "out.slide.json"
     if slide.exists() and out.exists():
         return f"Slide drawio already ready ({out.stat().st_size} bytes); not overwriting."
     if not dot.exists():
@@ -364,10 +364,10 @@ def export_drawio() -> str:
     if not out.exists():
         return "export_drawio produced no file."
     record_report_step(
-        WORKSPACE,
+        current_workspace(),
         "export_drawio",
         summary=f"Created editable draw.io artifact ({out.stat().st_size} bytes).",
-        data={"artifacts": record_artifact_inventory(WORKSPACE)},
+        data={"artifacts": record_artifact_inventory(current_workspace())},
     )
     # Structural + design lint — fast pre-check before the (slow) visual critic.
     lint = ""
@@ -573,8 +573,8 @@ def plan_style_sizes(
         "pretty_kwargs": ", ".join(f"{k}={v}" for k, v in sizes.items()),
         "notes": notes,
     }
-    WORKSPACE.mkdir(parents=True, exist_ok=True)
-    (WORKSPACE / "style_plan.json").write_text(
+    current_workspace().mkdir(parents=True, exist_ok=True)
+    (current_workspace() / "style_plan.json").write_text(
         json.dumps(plan, indent=2), encoding="utf-8"
     )
     return json.dumps(plan, indent=2)
@@ -656,7 +656,7 @@ def fit_labels(
         sublabel_size: Sublabel font size override; defaults to the last `plan_style_sizes` result.
     """
     plan_sizes: dict = {}
-    plan_file = WORKSPACE / "style_plan.json"
+    plan_file = current_workspace() / "style_plan.json"
     if plan_file.exists():
         try:
             plan_sizes = json.loads(plan_file.read_text(encoding="utf-8")).get("sizes", {})
@@ -761,13 +761,13 @@ def finalize_diagram() -> str:
     PAUSES for human review. Call this only AFTER render_diagram succeeded and
     export_drawio produced out.drawio.
     """
-    if not (WORKSPACE / "out.png").exists():
+    if not (current_workspace() / "out.png").exists():
         return "No rendered diagram yet — call render_diagram (and export_drawio) first."
     record_report_step(
-        WORKSPACE,
+        current_workspace(),
         "finalize_diagram",
         summary="Diagram finalized and approved by the user.",
-        data={"artifacts": record_artifact_inventory(WORKSPACE)},
+        data={"artifacts": record_artifact_inventory(current_workspace())},
     )
     return "Diagram finalized and approved by the user."
 
@@ -840,8 +840,8 @@ def declare_poster_grid(
         sections_info["row3"] = [_sec(s) for s in row3]
         col_info["row3"] = n3
 
-    WORKSPACE.mkdir(parents=True, exist_ok=True)
-    (WORKSPACE / "poster_grid.json").write_text(json.dumps(sections_info, indent=2), encoding="utf-8")
+    current_workspace().mkdir(parents=True, exist_ok=True)
+    (current_workspace() / "poster_grid.json").write_text(json.dumps(sections_info, indent=2), encoding="utf-8")
 
     return json.dumps({
         "status": "OK",

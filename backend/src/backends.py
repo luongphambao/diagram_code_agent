@@ -73,6 +73,48 @@ def set_current_workspace(workspace: Path) -> contextvars.Token:
     """Bind ``workspace`` as the current-context workspace; returns a reset token."""
     return _current_workspace.set(Path(workspace))
 
+
+def reset_current_workspace(token: contextvars.Token) -> None:
+    """Restore the previous current-context workspace (use the token from set_*)."""
+    _current_workspace.reset(token)
+
+
+class WorkspaceFile:
+    """A workspace-relative file resolved lazily against the *current thread's*
+    workspace (see :func:`current_workspace`).
+
+    Stage-marker / store paths used to be bound to the shared ``WORKSPACE`` at import
+    time, so every thread wrote to the same files. Wrapping the name in this proxy
+    defers the join to call time: each ``.exists()`` / ``.read_text()`` /
+    ``.write_text()`` / ``.unlink()`` / ``.parent`` / ``str()`` resolves against
+    whatever workspace is bound for the running request (per-thread isolation,
+    §4.10). It quacks like a :class:`pathlib.Path` for the operations the tools use,
+    so importers can keep ``from … import _BRIEF_FILE`` unchanged.
+    """
+
+    __slots__ = ("_name",)
+
+    def __init__(self, name: str) -> None:
+        self._name = name
+
+    def _path(self) -> Path:
+        return current_workspace() / self._name
+
+    def __getattr__(self, attr: str):  # exists/read_text/write_text/unlink/parent/...
+        return getattr(self._path(), attr)
+
+    def __truediv__(self, other):
+        return self._path() / other
+
+    def __fspath__(self) -> str:
+        return str(self._path())
+
+    def __str__(self) -> str:
+        return str(self._path())
+
+    def __repr__(self) -> str:
+        return f"WorkspaceFile({self._name!r})"
+
 # Procedural skills bundled with the repo (loaded by the deep agent).
 SKILLS_DIR     = _BACKEND_ROOT / "skills"
 

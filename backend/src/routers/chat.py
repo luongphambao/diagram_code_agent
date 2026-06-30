@@ -12,7 +12,12 @@ from langgraph.types import Command
 
 import conversations as conv_db
 from agent import RECURSION_LIMIT
-from backends import WORKSPACE
+from backends import (
+    WORKSPACE,
+    resolve_workspace,
+    reset_current_workspace,
+    set_current_workspace,
+)
 from safe_path import safe_workspace_path
 from context import SessionContext
 from reporting import record_report_step
@@ -65,15 +70,16 @@ def _persist_decision_record(payload: dict, gate: str | None, approver: str,
         if approver_role and not can_approve(approver_role, gate):
             logger.warning("role %r is not permitted to approve gate %s (recorded anyway)",
                            approver_role, gate)
+        from backends import current_workspace
         rec = decision_record_from_payload(
             payload, gate,
-            seq=next_seq(WORKSPACE),
+            seq=next_seq(current_workspace()),
             approver=approver,
             timestamp=datetime.now(timezone.utc).isoformat(),
         )
         if rec is not None:
             rec.approver_role = approver_role
-            append_decision(rec, WORKSPACE)
+            append_decision(rec, current_workspace())
             logger.info("persisted decision %s (%s) at %s by role=%s",
                         rec.id, rec.action, gate, approver_role or "-")
     except Exception as exc:  # noqa: BLE001
@@ -123,6 +129,11 @@ async def agui_endpoint(request: Request):
     messages = body.get("messages", [])
     file_ids = body.get("file_ids", [])
 
+    # §4.10 per-thread isolation: every JSON store / stage marker / render artifact is
+    # resolved against this thread's own workspace dir (the agent's FilesystemBackend +
+    # /memories/ + requirements.md stay on the shared WORKSPACE root — see backends.py).
+    ws = resolve_workspace(thread_id)
+
     config = {
         "configurable": {"thread_id": thread_id},
         "recursion_limit": RECURSION_LIMIT,
@@ -139,6 +150,7 @@ async def agui_endpoint(request: Request):
     last_tool = _last_tool_msg(messages)
 
     async def stream():
+        _ws_token = set_current_workspace(ws)
         _upsert_snap: dict = {}
         yield _sse({"type": "RUN_STARTED", "threadId": thread_id, "runId": run_id})
         try:
@@ -162,13 +174,13 @@ async def agui_endpoint(request: Request):
                 if decision.get("type") == "approve" and pending_name in GATE_TOOL_NAMES:
                     try:
                         from csm_adapter import archive_approved_revision
-                        archive_approved_revision(WORKSPACE)
+                        archive_approved_revision(ws)
                     except Exception as exc:  # noqa: BLE001
                         logger.debug("approved-revision archive skipped: %s", exc)
                 if pending_name in GATE_TOOL_NAMES:
                     note = payload.get("feedback") or payload.get("modifications") or ""
                     record_report_step(
-                        WORKSPACE,
+                        ws,
                         f"{pending_name}_gate",
                         status=decision["type"],
                         summary=(
@@ -195,11 +207,11 @@ async def agui_endpoint(request: Request):
                 desc = _last_user_text(messages)
                 is_pdf_followup = _is_pdf_followup(desc)
                 is_ppt_followup = _is_ppt_followup(desc)
-                preserve_artifacts = (is_pdf_followup or is_ppt_followup) and (WORKSPACE / "out.png").exists()
+                preserve_artifacts = (is_pdf_followup or is_ppt_followup) and (ws / "out.png").exists()
                 if not preserve_artifacts:
                     clear_stage_markers()
                 else:
-                    await _restore_workspace_from_db(request.app.state.pool, thread_id, WORKSPACE)
+                    await _restore_workspace_from_db(request.app.state.pool, thread_id, ws)
                     artifact_instruction = (
                         "The user is asking for a PPT/proposal/PowerPoint deck. Do NOT "
                         "redesign or re-render the diagram. Call `generate_ppt_proposal({})` "
@@ -348,16 +360,16 @@ async def agui_endpoint(request: Request):
                                 if name in {"generate_pdf_report", "generate_ppt_proposal"} and ok:
                                     artifact_delta = [
                                         {"op": "replace", "path": f"/{k}", "value": v}
-                                        for k, v in _artifacts(WORKSPACE).items()
+                                        for k, v in _artifacts(ws).items()
                                     ]
                                     artifact_delta.append({"op": "replace", "path": "/current_step", "value": "done"})
                                     yield _sse({"type": "STATE_DELTA", "delta": artifact_delta})
                                 if name == "export_wbs_excel" and ok:
                                     artifact_delta = [
                                         {"op": "replace", "path": f"/{k}", "value": v}
-                                        for k, v in _artifacts(WORKSPACE).items()
+                                        for k, v in _artifacts(ws).items()
                                     ]
-                                    for k, v in _stage_artifacts(WORKSPACE).items():
+                                    for k, v in _stage_artifacts(ws).items():
                                         artifact_delta.append({"op": "replace", "path": f"/{k}", "value": v})
                                     yield _sse({"type": "STATE_DELTA", "delta": artifact_delta})
                 elif mode == "custom":
@@ -398,7 +410,7 @@ async def agui_endpoint(request: Request):
                 yield _sse({"type": "TEXT_MESSAGE_END", "messageId": current_id})
 
             summary, logs = await _summary_and_logs(config)
-            run_met = _run_metrics(WORKSPACE, logs)
+            run_met = _run_metrics(ws, logs)
 
             val = await _pending_interrupt(config)
             if val is not None:
@@ -410,12 +422,12 @@ async def agui_endpoint(request: Request):
                         card.setdefault("allowed_decisions", allowed_decisions_for(gate_name))
                     logger.info("PAUSED at gate: %s", card["type"])
                     state_delta = [{"op": "replace", "path": "/current_step", "value": step}]
-                    for k, v in _stage_artifacts(WORKSPACE).items():
+                    for k, v in _stage_artifacts(ws).items():
                         state_delta.append({"op": "replace", "path": f"/{k}", "value": v})
                     state_delta.append({"op": "replace", "path": "/run_metrics", "value": run_met})
                     for k, v in delta.items():
                         state_delta.append({"op": "replace", "path": f"/{k}", "value": v})
-                    for k, v in _artifacts(WORKSPACE).items():
+                    for k, v in _artifacts(ws).items():
                         state_delta.append({"op": "replace", "path": f"/{k}", "value": v})
                     yield _sse({"type": "STATE_DELTA", "delta": state_delta})
                     tc_id = f"tc-{run_id}"
@@ -426,8 +438,8 @@ async def agui_endpoint(request: Request):
                         request.app.state.pool,
                         thread_id=thread_id,
                         messages=messages,
-                        state={"current_step": step, **_stage_artifacts(WORKSPACE), **delta,
-                               **_artifacts(WORKSPACE), "run_metrics": run_met},
+                        state={"current_step": step, **_stage_artifacts(ws), **delta,
+                               **_artifacts(ws), "run_metrics": run_met},
                         last_msg=_last_user_text(messages),
                         auto_name=(_last_user_text(messages) or "Untitled")[:50],
                     )
@@ -438,20 +450,20 @@ async def agui_endpoint(request: Request):
                 {**r, "status": "running"} for r in _pending_tasks.values()
             ]
 
-            png = WORKSPACE / "out.png"
+            png = ws / "out.png"
             if png.exists():
                 logger.info("run finished — diagram ready")
                 snapshot = {"current_step": "done", "summary": summary, "logs": logs,
                             "run_metrics": run_met}
-                snapshot.update(_stage_artifacts(WORKSPACE))
-                snapshot.update(_artifacts(WORKSPACE))
+                snapshot.update(_stage_artifacts(ws))
+                snapshot.update(_artifacts(ws))
                 if all_delegations:
                     snapshot["delegations"] = all_delegations
                 _upsert_snap = snapshot
                 yield _sse({"type": "STATE_SNAPSHOT", "snapshot": snapshot})
             else:
                 snap: dict = {"logs": logs, "run_metrics": run_met}
-                snap.update(_stage_artifacts(WORKSPACE))
+                snap.update(_stage_artifacts(ws))
                 if all_delegations:
                     snap["delegations"] = all_delegations
                 _upsert_snap = snap
@@ -460,6 +472,8 @@ async def agui_endpoint(request: Request):
         except Exception as exc:  # noqa: BLE001
             logger.exception("agent run failed: %s", exc)
             yield _sse({"type": "RUN_ERROR", "message": str(exc), "code": "internal_error"})
+        finally:
+            reset_current_workspace(_ws_token)
 
         if _upsert_snap:
             await conv_db.upsert_run(
