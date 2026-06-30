@@ -142,6 +142,7 @@ from .analysis_tools import (
     propose_diagram_brief,
     propose_tech_stack,
     query_change_impact,
+    record_evidence,
     submit_critique,
     web_research,
 )
@@ -154,6 +155,7 @@ DIAGRAM_TOOLS = [
     analyze_architecture_requirements,
     propose_diagram_brief,
     web_research,
+    record_evidence,
     propose_tech_stack,
     propose_blueprint,
     audit_diagram_code,
@@ -188,6 +190,7 @@ MAIN_TOOLS = [
     propose_diagram_brief,
     # find_similar_solutions,   # DISABLED: focus on WBS testing
     web_research,             # 10 Tavily calls/session, split per stage (topic=tech_stack/architecture/wbs/evidence)
+    record_evidence,          # persist a grounded claim -> evidence_log.json -> CSM Evidence + supports links
     propose_tech_stack,
     propose_blueprint,
     visualize_code_structure,

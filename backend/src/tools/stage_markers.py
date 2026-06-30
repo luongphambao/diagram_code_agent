@@ -95,6 +95,7 @@ def clear_stage_markers() -> None:
         _ICON_PLAN_FILE, _WEB_SEARCH_BUDGET_FILE, WORKSPACE / REPORT_EVIDENCE_NAME,
         WORKSPACE / "wbs_skeleton.json", WORKSPACE / "wbs.json", WORKSPACE / "wbs_filled.xlsx",
         WORKSPACE / "solution_model.json", WORKSPACE / "trace_links.json",
+        WORKSPACE / "evidence_log.json",
     ):
         if f.exists():
             f.unlink()

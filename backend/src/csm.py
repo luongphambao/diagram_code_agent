@@ -58,6 +58,7 @@ ID_PREFIX = {
     "cluster": "CLUSTER",
     "risk": "RISK",
     "work_item": "WBS",
+    "evidence": "EVD",
 }
 
 
@@ -154,6 +155,31 @@ class WorkItem(_Entity):
     assigned_sprint: Optional[int] = None
 
 
+class Evidence(_Entity):
+    """A grounded claim with its source (docx §4.9).
+
+    Web research returns answers + URLs that today live only in chat history. An
+    Evidence record makes a recommendation auditable: *which* claim rests on *which*
+    source, fetched *when*, how fresh, and *which* CSM entities it supports — so a
+    proposal can show the "why" behind a version/pricing/compliance statement.
+
+    `supports_entity_ids` are projected into `supports` trace links by
+    `evidence.project_into_csm`; `supersedes_evidence_id` chains a refreshed record
+    to the one it replaces without deleting the old (the log is append-only).
+    """
+    claim: str
+    source_url: str = ""
+    source_type: Literal[
+        "web", "documentation", "vendor", "benchmark", "standard", "other"
+    ] = "web"
+    fetched_at: str = ""          # ISO 8601; injected by the recording tool
+    freshness_date: str = ""      # the date the source itself reflects, if known
+    quote_or_excerpt: str = ""
+    confidence: Literal["low", "medium", "high"] = "medium"
+    supports_entity_ids: list[str] = Field(default_factory=list)
+    supersedes_evidence_id: Optional[str] = None
+
+
 class TraceLink(BaseModel):
     from_id: str
     to_id: str
@@ -177,6 +203,7 @@ class SolutionModel(BaseModel):
     components: list[Component] = Field(default_factory=list)
     risks: list[Risk] = Field(default_factory=list)
     work_items: list[WorkItem] = Field(default_factory=list)
+    evidence: list[Evidence] = Field(default_factory=list)
     trace_links: list[TraceLink] = Field(default_factory=list)
 
     # -- access helpers --
@@ -188,6 +215,7 @@ class SolutionModel(BaseModel):
         yield from self.components
         yield from self.risks
         yield from self.work_items
+        yield from self.evidence
 
     def by_id(self, entity_id: str) -> Optional[_Entity]:
         for e in self.all_entities():
@@ -234,5 +262,10 @@ class SolutionModel(BaseModel):
             "constraints": [
                 {"id": c.id, "statement": c.statement, "kind": c.kind}
                 for c in self.constraints
+            ],
+            "grounded_claims": [
+                {"id": e.id, "claim": e.claim, "source_url": e.source_url,
+                 "confidence": e.confidence}
+                for e in self.evidence
             ],
         }

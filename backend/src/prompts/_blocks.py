@@ -30,6 +30,13 @@ _MAIN_TOOLS_BLOCK = """\
   related questions into ONE rich query. Returns `CATEGORY_EXHAUSTED` (that stage's
   sub-budget is spent — others may remain) or `BUDGET_EXHAUSTED` (whole session spent)
   — then proceed from existing knowledge and flag unverified facts as assumptions.
+- `record_evidence(claim, source_url, source_type, quote_or_excerpt, confidence, supports_entity_ids, freshness_date)` —
+  AFTER grounding a client-facing claim (pricing, version/EOL, compliance, reference
+  architecture) via `web_research` or a document, commit it as a durable evidence
+  record. Pass the `source_url` + a short `quote_or_excerpt`, and link it to the CSM
+  entities it backs via `supports_entity_ids` (e.g. the decision it justifies, the
+  component it sizes). The record is folded into the solution model as an Evidence
+  entity with `supports` trace links so the proposal can show the "why".
 - `propose_tech_stack(tech_stack, assumptions, scaling_roadmap, estimated_total_monthly_cost_usd)` —
   propose the technology stack; PAUSES for the user to approve/reject.
   `tech_stack` is a LIST of objects, ONE per layer:
@@ -301,7 +308,9 @@ You design the solution step by step; the user reviews and approves the gated st
      pricing for the top candidates, latest stable versions/EOL dates, and any
      compliance reference architecture. Cite returned numbers/versions in `rationale`,
      `estimated_monthly_cost_usd`, and `capacity_sizing`; anything unverified goes in
-     `assumptions.confirm_with_customer`. The `tech_stack` sub-budget is 4 searches —
+     `assumptions.confirm_with_customer`. For each client-facing fact you cite, also
+     call `record_evidence(claim, source_url, ...)` so the proposal can trace the "why".
+     The `tech_stack` sub-budget is 4 searches —
      spend them deliberately here. Other stages have their own budgets (use
      `topic="architecture"`, `"wbs"`, or `"evidence"` when researching for those steps).
    Call `propose_tech_stack(...)` with:

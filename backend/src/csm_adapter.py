@@ -318,6 +318,12 @@ def build_solution_model(
     from decisions import project_into_csm, read_decisions
     project_into_csm(model, read_decisions(workspace))
 
+    # Fold grounded claims (web research / document evidence) into the model as
+    # Evidence entities + `supports` trace links, back-filling Decision.evidence_ids.
+    # New evidence changes the content hash and therefore bumps the revision below.
+    from evidence import project_into_csm as project_evidence, read_evidence
+    project_evidence(model, read_evidence(workspace))
+
     prev = _read_json(workspace / SOLUTION_MODEL_NAME, {}) or {}
     new_hash = model.content_hash()
     if prev.get("sha256") == new_hash:

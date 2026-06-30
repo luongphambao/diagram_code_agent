@@ -1486,8 +1486,80 @@ def web_research(query: str, topic: str = "tech_stack") -> str:
         "budget": report,
         "instruction": (
             "Cite specific numbers/versions from answer/sources in the relevant "
-            "artifact (rationale, cost estimate, evidence record). Remaining — "
+            "artifact, AND when the claim is client-facing (pricing/version/"
+            "compliance/reference-architecture) commit it with record_evidence "
+            "(pass source_url + supports_entity_ids). Remaining — "
             f"total: {report['total_remaining']}, this stage ('{category}'): "
             f"{report['by_category'][category]['remaining']}."
         ),
     }, indent=2)
+
+
+@tool(parse_docstring=True)
+def record_evidence(
+    claim: str,
+    source_url: str = "",
+    source_type: str = "web",
+    quote_or_excerpt: str = "",
+    confidence: str = "medium",
+    supports_entity_ids: Optional[list[str]] = None,
+    freshness_date: str = "",
+    supersedes_evidence_id: Optional[str] = None,
+) -> str:
+    """Persist a grounded claim as a durable evidence record (docx §4.9).
+
+    Use AFTER web_research (or reading a document) to ground a client-facing claim
+    — a price, a version/EOL date, a compliance statement, a reference architecture
+    — so the proposal can show *why* and an auditor can trace the source. The record
+    is appended to `evidence_log.json` and folded into the solution model as an
+    Evidence entity with `supports` trace links back to the entities it backs.
+
+    When to use: right after the search/source that established the fact, while the
+    URL and excerpt are at hand. Link it to the CSM entities it supports via
+    `supports_entity_ids` (e.g. the decision it justifies or the component it sizes).
+
+    Args:
+        claim: The single factual statement being grounded, e.g. "AWS Fargate is
+            $0.04048/vCPU-hour in us-east-1 (2026)".
+        source_url: The URL (or document locator) the claim came from.
+        source_type: One of web, documentation, vendor, benchmark, standard, other.
+        quote_or_excerpt: A short verbatim span from the source supporting the claim.
+        confidence: low, medium, or high — how strongly the source supports the claim.
+        supports_entity_ids: CSM entity ids this evidence backs (DEC-/COMP-/REQ-...).
+            When an id names a decision, the evidence is added to its evidence_ids.
+        freshness_date: The date the source itself reflects (e.g. pricing as-of), if
+            known; distinct from when it was fetched.
+        supersedes_evidence_id: An older EVD-### this record refreshes/replaces.
+    """
+    from datetime import datetime, timezone
+    from evidence import append_evidence, new_evidence_record, next_seq
+
+    valid_types = {"web", "documentation", "vendor", "benchmark", "standard", "other"}
+    stype = (source_type or "web").strip().lower()
+    if stype not in valid_types:
+        stype = "other"
+    conf = (confidence or "medium").strip().lower()
+    if conf not in {"low", "medium", "high"}:
+        conf = "medium"
+
+    record = new_evidence_record(
+        claim=claim,
+        seq=next_seq(WORKSPACE),
+        source_url=source_url or "",
+        source_type=stype,  # type: ignore[arg-type]
+        fetched_at=datetime.now(timezone.utc).isoformat(),
+        freshness_date=freshness_date or "",
+        quote_or_excerpt=quote_or_excerpt or "",
+        confidence=conf,  # type: ignore[arg-type]
+        supports_entity_ids=list(supports_entity_ids or []),
+        supersedes_evidence_id=supersedes_evidence_id,
+    )
+    append_evidence(record, WORKSPACE)
+    total = next_seq(WORKSPACE) - 1
+    _bump_tool_summary("record_evidence", evidence_count=total)
+    linked = ", ".join(record.supports_entity_ids) or "(no entity link)"
+    return (
+        f"Recorded {record.id} (confidence={record.confidence}) supporting {linked}. "
+        f"{total} evidence record(s) on file; folded into the solution model on next "
+        f"build_solution_model."
+    )
