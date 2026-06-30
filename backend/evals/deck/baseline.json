@@ -1,0 +1,7 @@
+{
+  "metrics": {
+    "scores.finding_recall": 1.0,
+    "scores.match": 1.0
+  },
+  "n_cases": 6
+}

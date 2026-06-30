@@ -18,6 +18,13 @@ from backends import WORKSPACE
 from csm import SolutionModel
 from csm_adapter import build_solution_model, SOLUTION_MODEL_NAME, SOLUTION_MODEL_PREV_NAME
 from csm_diff import diff_solution_models
+from deck import (
+    DECK_QA_NAME,
+    build_deck_plan,
+    load_deck_plan,
+    validate_deck,
+    write_deck_plan,
+)
 from findings import DiagramFinding, format_critique, prune, verdict_for
 from solution_validator import validate_solution
 from traceability import write_trace_links
@@ -1289,6 +1296,7 @@ def generate_ppt_proposal(
         if missing:
             msg += f" NOTE: {len(missing)} section(s) were omitted from this run: " + ", ".join(missing) + "."
     msg += _solution_gate_note()
+    msg += _deck_qa_note()
     return msg
 
 
@@ -1331,6 +1339,131 @@ def create_pptx(
     if unrecognized:
         msg += f" Ignored unrecognised sections: {', '.join(unrecognized)}."
     return msg
+
+
+# --- deck quality loop (docx §4.8) -------------------------------------------
+
+def _refresh_deck_plan(title: str = "", subtitle: str = "", brand: str = ""):
+    """Build/refresh deck_plan.json from the CSM + artifacts. Returns (model, plan)."""
+    model = build_solution_model(WORKSPACE)
+    wbs = _read_json_file(WORKSPACE / "wbs.json", {}) or {}
+    brief = _read_json_file(WORKSPACE / "diagram_brief.json", {}) or {}
+    has_diagram = (WORKSPACE / "out.body.png").exists() or (WORKSPACE / "out.png").exists()
+    plan = build_deck_plan(
+        model, wbs=wbs, brief=brief, has_diagram=has_diagram,
+        title=title, subtitle=subtitle, brand=brand,
+    )
+    write_deck_plan(plan, WORKSPACE)
+    return model, plan
+
+
+def _deck_qa_note(model=None) -> str:
+    """Run validate_deck over the stored plan, write deck_qa_result.json, render a note."""
+    plan = load_deck_plan(WORKSPACE)
+    if plan is None:
+        return ""
+    if model is None:
+        try:
+            model = build_solution_model(WORKSPACE)
+        except Exception:
+            return ""
+    findings = validate_deck(plan, model)
+    try:
+        (WORKSPACE / DECK_QA_NAME).write_text(
+            json.dumps({"deck_revision": plan.revision, "findings": findings},
+                       indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+    except Exception:
+        pass
+    grounded = sum(1 for s in plan.slides if s.source_refs)
+    trace_total = sum(len(s.source_refs) for s in plan.slides)
+    head = (
+        f"\n\nDECK QA — storyboard revision {plan.revision}: {len(plan.slides)} slides, "
+        f"{grounded} grounded in {trace_total} CSM source ref(s)."
+    )
+    if not findings:
+        return head + " No traceability/consistency/evidence issues."
+    by_sev: dict[str, int] = {}
+    for f in findings:
+        by_sev[f["severity"]] = by_sev.get(f["severity"], 0) + 1
+    lines = [
+        f"  ⚠ [{f['severity']}/{f['dimension']}] slide {f['slide_no']}: {f['evidence']}"
+        for f in findings[:8]
+    ]
+    extra = f"\n  … (+{len(findings) - 8} more)" if len(findings) > 8 else ""
+    sev = ", ".join(f"{k}:{v}" for k, v in sorted(by_sev.items()))
+    return head + f" {len(findings)} finding(s) ({sev}):\n" + "\n".join(lines) + extra
+
+
+@tool(parse_docstring=True)
+def plan_deck(title: str = "", subtitle: str = "", brand: str = "") -> str:
+    """Build the traceable BnK proposal storyboard (deck_plan.json) from the CSM.
+
+    Assembles the fixed BnK narrative (Executive Summary -> Proposed Solution ->
+    Technical Stack -> Scope -> Project Delivery/Effort/Timeline -> Risks -> Pricing),
+    with every slide grounded in CSM entity ids (source_refs). Runs silently (no
+    approval). Call this in the ppt_generator subagent BEFORE create_pptx, and BEFORE
+    propose_deck_plan presents the storyboard for review.
+
+    Args:
+        title: Deck title (falls back to diagram_brief.slide_title).
+        subtitle: Subtitle / kicker line.
+        brand: Client brand name shown on the cover.
+    """
+    try:
+        _model, plan = _refresh_deck_plan(title, subtitle, brand)
+    except Exception as exc:  # noqa: BLE001
+        return f"ERROR: could not build deck plan: {exc}"
+    grounded = sum(1 for s in plan.slides if s.source_refs)
+    return (
+        f"Wrote deck_plan.json — {len(plan.slides)} slides, {grounded} grounded in the CSM "
+        f"(storyboard revision {plan.revision}). Next: propose_deck_plan to approve the narrative."
+    )
+
+
+@tool(parse_docstring=True)
+def propose_deck_plan(title: str = "", subtitle: str = "", brand: str = "") -> str:
+    """Present the proposal storyboard for the user to approve BEFORE rendering the deck.
+
+    PAUSES for human approval (docx §4.8 / §5.3: approve the narrative & trade-offs
+    before the file is built). Builds/refreshes deck_plan.json from the CSM, runs
+    validate_deck (traceability / coverage / consistency / evidence — advisory, does
+    NOT block), writes deck_qa_result.json, and shows the storyboard outline + findings
+    + epistemic summary. After approval, call create_pptx (or generate_ppt_proposal)
+    to render the deck from the approved plan.
+
+    Args:
+        title: Deck title (falls back to diagram_brief.slide_title).
+        subtitle: Subtitle / kicker line.
+        brand: Client brand name shown on the cover.
+    """
+    try:
+        model, plan = _refresh_deck_plan(title, subtitle, brand)
+    except Exception as exc:  # noqa: BLE001
+        return f"Could not build the deck plan: {exc}"
+
+    lines: list[str] = []
+    for s in plan.slides:
+        refs = ""
+        if s.source_refs:
+            head = ", ".join(s.source_refs[:6])
+            refs = f"  ⟵ {head}" + ("…" if len(s.source_refs) > 6 else "")
+        lines.append(f"  {s.slide_no:>2}. [{s.narrative_role}] {s.title or '(cover)'}{refs}")
+
+    record_report_step(
+        WORKSPACE,
+        "propose_deck_plan",
+        summary=f"Proposed deck storyboard: {len(plan.slides)} slides (revision {plan.revision}).",
+        data={"slides": [s.model_dump() for s in plan.slides]},
+    )
+    return (
+        "DECK STORYBOARD — review the narrative & trade-offs before the file is rendered:\n"
+        + "\n".join(lines)
+        + _deck_qa_note(model)
+        + _epistemic_note(model)
+        + "\n\nApprove to render the deck from this plan, or tell me what to change in the storyboard."
+    )
 
 
 def _web_search_category(topic: str) -> str:

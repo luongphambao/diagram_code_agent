@@ -1,0 +1,113 @@
+"""Deck eval judge (docx §4.8, §4.5 "deck" suite).
+
+Deterministic L1/L2 scorer built directly on `deck.validate_deck`. A golden case
+seeds a storyboard defect (a slide claiming a non-existent entity, a missing
+narrative role, an effort number that disagrees with the WBS, or a client-facing
+claim with no evidence) and asserts the matching finding dimension fires; the clean
+case asserts none does. This makes the deck validator self-testing on realistic
+inputs, mirroring the architecture suite.
+
+The VLM coherence/visual judge (`render_deck_to_png` + `deck_vision_judge`) is
+OPT-IN — it needs a pptx->png renderer (aspose.slides) and an API key, so it is NOT
+part of `METRIC_KEYS` / the regression gate, exactly like the diagram vision judge.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+
+def score_deck(findings: list[dict[str, Any]], golden: dict) -> dict:
+    """`findings` is the list[dict] returned by deck.validate_deck."""
+    dims_present = {f.get("dimension") for f in findings}
+    expected = golden.get("expected_dimensions", [])
+
+    # Recall over the dimensions the seeded case should surface.
+    if expected:
+        hit = sum(1 for d in expected if d in dims_present)
+        finding_recall = round(hit / len(expected), 4)
+    else:
+        finding_recall = 1.0
+
+    # Exact match: the validator fires exactly the expected dimensions (no more, no less).
+    match = 1.0 if dims_present == set(expected) else 0.0
+
+    return {
+        "finding_recall": finding_recall,
+        "match": match,
+        "n_findings": len(findings),
+        "dimensions": sorted(d for d in dims_present if d),
+    }
+
+
+METRIC_KEYS = ["scores.finding_recall", "scores.match"]
+
+
+# --- opt-in vision/coherence judge (NOT in the gate) -------------------------
+
+def render_deck_to_png(pptx_path: str | Path, out_dir: str | Path) -> list[str]:
+    """Render every slide of `pptx_path` to PNG via aspose.slides (opt-in dependency).
+
+    Mirrors DATA/analyze_slide.convert_pptx_to_images. aspose.slides is not in the
+    backend venv, so this raises ImportError unless the caller's interpreter has it
+    (e.g. anaconda). Used only by the opt-in vision judge, never by the CI gate.
+    """
+    import os
+
+    import aspose.slides as slides  # type: ignore
+    import aspose.pydrawing as drawing  # type: ignore
+
+    out_dir = str(out_dir)
+    os.makedirs(out_dir, exist_ok=True)
+    paths: list[str] = []
+    with slides.Presentation(str(pptx_path)) as prs:
+        for i, slide in enumerate(prs.slides):
+            p = os.path.join(out_dir, f"slide_{i + 1:03d}.png")
+            slide.get_image(drawing.Size(1280, 720)).save(p)
+            paths.append(p)
+    return paths
+
+
+_VISION_RUBRIC = """\
+Score each dimension 0.0-1.0 for this proposal slide deck:
+1. readability            — legible text, no overflow/truncation, sane font sizes.
+2. visual_hierarchy       — clear title/section structure, scannable bullets.
+3. brand_consistency      — consistent BnK palette, fonts, layout across slides.
+4. text_density           — slides are not walls of text; one idea per slide.
+5. coherence_across_slides— the narrative flows Exec Summary -> Solution -> Scope ->
+                            Delivery -> Pricing without gaps or repeats.
+6. factual_alignment      — claims match the provided source context (no invented
+                            components, numbers or guarantees).
+7. overall                — holistic proposal quality.
+Return ONLY a JSON object with those keys (floats) plus "reasoning" (string).
+"""
+
+
+def deck_vision_judge(png_paths: list[str], context: str, model: str) -> dict:
+    """Opt-in VLM judge over the rendered slides. Returns the rubric scores as a dict.
+
+    Kept thin and tolerant: any failure (no key, no aspose, parse error) returns an
+    empty dict so a caller can treat the vision layer as best-effort. NOT gated.
+    """
+    import base64
+    import json
+
+    try:
+        from openai import OpenAI  # type: ignore
+    except ImportError:
+        return {}
+    try:
+        client = OpenAI()
+        blocks: list[dict] = [{"type": "text", "text": _VISION_RUBRIC + "\n\nCONTEXT:\n" + context}]
+        for p in png_paths[:12]:
+            b64 = base64.b64encode(Path(p).read_bytes()).decode("ascii")
+            blocks.append({"type": "image_url",
+                           "image_url": {"url": f"data:image/png;base64,{b64}"}})
+        resp = client.chat.completions.create(
+            model=model, messages=[{"role": "user", "content": blocks}],
+            response_format={"type": "json_object"},
+        )
+        return json.loads(resp.choices[0].message.content or "{}")
+    except Exception:  # noqa: BLE001 — opt-in layer, never fatal
+        return {}

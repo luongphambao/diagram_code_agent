@@ -1,0 +1,28 @@
+{
+  "id": "clean",
+  "brief": {
+    "objective": "A clinic management platform for daily sales and patient tracking.",
+    "functional_requirements": ["Patient management", "Sales order entry", "Financial management"],
+    "non_functional_requirements": ["Mobile responsive", "Role-based access"],
+    "slide_title": "CLINIC MANAGEMENT",
+    "brand": "BnK"
+  },
+  "blueprint": {
+    "nodes": [
+      {"id": "api_gw", "label": "API Gateway", "cluster": "edge"},
+      {"id": "app", "label": "Odoo App", "cluster": "app"}
+    ],
+    "clusters": [{"id": "edge", "label": "Edge"}, {"id": "app", "label": "Application"}],
+    "key_decisions": ["Use Odoo ERP as the core platform", "Flutter for cross-platform mobile", "PostgreSQL for the database"]
+  },
+  "wbs": {
+    "items": [
+      {"id": "1.1", "name": "API Gateway setup", "total_md": 30},
+      {"id": "1.2", "name": "Patient module", "total_md": 20}
+    ],
+    "effort_totals": {"total_mandays": 50, "total_manmonths": 2.3},
+    "timeline": {"weeks": 16, "months": 4, "sprints": 8}
+  },
+  "evidence": [{"id": "EVD-1", "claim": "Odoo 17 is the current LTS release", "source_url": "https://www.odoo.com"}],
+  "expected_dimensions": []
+}

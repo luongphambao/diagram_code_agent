@@ -138,7 +138,9 @@ from .analysis_tools import (
     generate_pdf_report,
     generate_ppt_proposal,
     inspect_diagram,
+    plan_deck,
     propose_blueprint,
+    propose_deck_plan,
     propose_diagram_brief,
     propose_tech_stack,
     query_change_impact,
@@ -175,6 +177,7 @@ DIAGRAM_TOOLS = [
     submit_critique,
     finalize_diagram,
     generate_pdf_report,
+    propose_deck_plan,
     generate_ppt_proposal,
     query_change_impact,
 ]
@@ -197,6 +200,7 @@ MAIN_TOOLS = [
     list_saved_diagrams,
     finalize_diagram,
     generate_pdf_report,
+    propose_deck_plan,        # HITL: approve the deck storyboard before rendering
     generate_ppt_proposal,
     send_architecture_report_email,
     propose_meeting_slots,    # uses internal interrupt() — NOT in GATE_TOOL_NAMES
@@ -216,8 +220,8 @@ DRAWER_TOOLS = [plan_style_sizes, fit_labels, declare_poster_grid, audit_diagram
 # Critic subagent tools: read-only review of the rendered diagram.
 CRITIC_TOOLS = [inspect_diagram, submit_critique]
 
-# PPT generator subagent tools: generate the slide deck from workspace artifacts.
-PPT_GENERATOR_TOOLS = [create_pptx]
+# PPT generator subagent tools: plan the traceable storyboard, then render the deck.
+PPT_GENERATOR_TOOLS = [plan_deck, create_pptx]
 
 # Tools that require human approval before they run (interrupt_on in agent.py).
 GATE_TOOL_NAMES = [
@@ -225,6 +229,7 @@ GATE_TOOL_NAMES = [
     "propose_blueprint",
     "finalize_diagram",
     "generate_pdf_report",
+    "propose_deck_plan",
     "generate_ppt_proposal",
     "send_architecture_report_email",
     "create_client_meeting",
@@ -249,6 +254,7 @@ GATE_DECISIONS: dict[str, list[str]] = {
                           "request_alternative", "request_evidence", "reject"],
     "finalize_diagram": ["approve", "reject"],
     "generate_pdf_report": ["approve", "request_evidence", "reject"],
+    "propose_deck_plan": ["approve", "request_alternative", "reject"],
     "generate_ppt_proposal": ["approve", "request_evidence", "reject"],
     "send_architecture_report_email": ["approve", "reject"],
     "create_client_meeting": ["approve", "reject"],

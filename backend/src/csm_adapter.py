@@ -324,6 +324,13 @@ def build_solution_model(
     from evidence import project_into_csm as project_evidence, read_evidence
     project_evidence(model, read_evidence(workspace))
 
+    # Fold the deck storyboard (if planned) into the model as Deliverable entities +
+    # `visualizes` / `claims` trace links, so a slide can never claim a component that
+    # is not in the CSM. No-op until `deck_plan.json` exists; a new/changed plan bumps
+    # the revision below.
+    from deck import load_deck_plan, project_into_csm as project_deck
+    project_deck(model, load_deck_plan(workspace))
+
     prev = _read_json(workspace / SOLUTION_MODEL_NAME, {}) or {}
     new_hash = model.content_hash()
     if prev.get("sha256") == new_hash:

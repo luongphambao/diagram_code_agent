@@ -190,6 +190,24 @@ def test_work_item_predecessors_and_pert_roundtrip():
     assert legacy.predecessors == [] and legacy.pert_expected_md == 0.0
 
 
+def test_deliverable_entity_serializes_and_is_an_entity():
+    """The Deliverable entity (docx §6.1) round-trips and joins all_entities/epistemic."""
+    d = csm.Deliverable(id="ART-deck", kind="pptx", title="Proposal deck",
+                        solution_revision=3, source_entity_ids=["REQ-1", "DEC-1"],
+                        quality_checks={"factual": 1.0, "visual": 0.87})
+    m = csm.SolutionModel(deliverables=[d])
+    assert m.by_id("ART-deck") is d
+    assert "ART-deck" in m.ids()
+    # Survives a JSON round-trip via to_json + model_validate.
+    reloaded = csm.SolutionModel.model_validate(json.loads(m.to_json()))
+    assert reloaded.deliverables[0].kind == "pptx"
+    assert reloaded.deliverables[0].quality_checks["visual"] == 0.87
+    # Surfaces in the epistemic summary's deliverables bucket.
+    bucket = m.epistemic_summary()["deliverables"]
+    assert bucket == [{"id": "ART-deck", "kind": "pptx", "title": "Proposal deck",
+                       "quality_checks": {"factual": 1.0, "visual": 0.87}}]
+
+
 def test_build_writes_prev_snapshot_only_on_change(tmp_path):
     _write_artifacts(tmp_path)
 

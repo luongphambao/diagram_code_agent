@@ -25,7 +25,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from typing import Iterable, Literal, Optional
+from typing import Any, Iterable, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -59,6 +59,8 @@ ID_PREFIX = {
     "risk": "RISK",
     "work_item": "WBS",
     "evidence": "EVD",
+    "deliverable": "ART",
+    "slide": "SLIDE",
 }
 
 
@@ -180,6 +182,23 @@ class Evidence(_Entity):
     supersedes_evidence_id: Optional[str] = None
 
 
+class Deliverable(_Entity):
+    """A rendered output artifact (a deck, a report, or one slide) projected from the
+    CSM (docx §6.1: `deliverables[] -> ART-### / SLIDE-###`, §6.3 artifact manifest).
+
+    A deck/slide is NOT a source of truth — it is a *view*. `source_entity_ids` are
+    the CSM entities the artifact claims/visualizes; `deck.project_into_csm` turns
+    them into `visualizes`/`claims` trace links so a slide can never claim a component
+    that does not exist (docx §4.4). `quality_checks` carries the deck QA scores
+    (factual/visual/coherence) for the artifact manifest.
+    """
+    kind: Literal["pptx", "pdf", "slide", "report"] = "slide"
+    title: str = ""
+    solution_revision: int = 0
+    source_entity_ids: list[str] = Field(default_factory=list)
+    quality_checks: dict[str, Any] = Field(default_factory=dict)
+
+
 class TraceLink(BaseModel):
     from_id: str
     to_id: str
@@ -204,6 +223,7 @@ class SolutionModel(BaseModel):
     risks: list[Risk] = Field(default_factory=list)
     work_items: list[WorkItem] = Field(default_factory=list)
     evidence: list[Evidence] = Field(default_factory=list)
+    deliverables: list[Deliverable] = Field(default_factory=list)
     trace_links: list[TraceLink] = Field(default_factory=list)
 
     # -- access helpers --
@@ -216,6 +236,7 @@ class SolutionModel(BaseModel):
         yield from self.risks
         yield from self.work_items
         yield from self.evidence
+        yield from self.deliverables
 
     def by_id(self, entity_id: str) -> Optional[_Entity]:
         for e in self.all_entities():
@@ -267,5 +288,10 @@ class SolutionModel(BaseModel):
                 {"id": e.id, "claim": e.claim, "source_url": e.source_url,
                  "confidence": e.confidence}
                 for e in self.evidence
+            ],
+            "deliverables": [
+                {"id": d.id, "kind": d.kind, "title": d.title,
+                 "quality_checks": d.quality_checks}
+                for d in self.deliverables
             ],
         }

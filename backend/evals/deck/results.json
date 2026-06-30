@@ -1,0 +1,67 @@
+[
+  {
+    "case_id": "clean",
+    "scores": {
+      "finding_recall": 1.0,
+      "match": 1.0,
+      "n_findings": 0,
+      "dimensions": []
+    }
+  },
+  {
+    "case_id": "dangling_ref",
+    "scores": {
+      "finding_recall": 1.0,
+      "match": 1.0,
+      "n_findings": 1,
+      "dimensions": [
+        "traceability"
+      ]
+    }
+  },
+  {
+    "case_id": "missing_coverage",
+    "scores": {
+      "finding_recall": 1.0,
+      "match": 1.0,
+      "n_findings": 1,
+      "dimensions": [
+        "completeness"
+      ]
+    }
+  },
+  {
+    "case_id": "effort_mismatch",
+    "scores": {
+      "finding_recall": 1.0,
+      "match": 1.0,
+      "n_findings": 1,
+      "dimensions": [
+        "consistency"
+      ]
+    }
+  },
+  {
+    "case_id": "ungrounded_claim",
+    "scores": {
+      "finding_recall": 1.0,
+      "match": 1.0,
+      "n_findings": 2,
+      "dimensions": [
+        "evidence"
+      ]
+    }
+  },
+  {
+    "case_id": "multi_defect",
+    "scores": {
+      "finding_recall": 1.0,
+      "match": 1.0,
+      "n_findings": 3,
+      "dimensions": [
+        "evidence",
+        "traceability"
+      ]
+    }
+  }
+]

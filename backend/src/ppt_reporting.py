@@ -976,12 +976,34 @@ def generate_ppt_proposal_file(
     )
     _clear_slides(prs)
 
-    # --- Attempt LLM-driven outline (Paper2Any-style) ---
+    # --- Prefer the reviewed, traceable storyboard (deck_plan.json) when present ---
+    # The deck plan is a CSM projection the user approved at the propose_deck_plan
+    # gate; its SlideSpec is a superset of the render outline dict, so we consume it
+    # directly. Falls back to the inline LLM outline (then the hardcoded path) below.
     outline: list[dict[str, Any]] | None = None
+    outline_source = "hardcoded layout"
+    deck_revision: int | None = None
     try:
-        outline = _generate_slide_outline(report, workspace, sections)
-    except Exception as exc:
-        warnings.warn(f"PPT outline LLM step failed ({exc!r}); using hardcoded layout.", stacklevel=2)
+        from deck import load_deck_plan
+        plan = load_deck_plan(workspace)
+        if plan and plan.slides:
+            deck_revision = plan.revision
+            outline = [
+                s.model_dump() for s in plan.slides
+                if (s.section in sections or s.section in ("", "cover"))
+            ]
+            outline_source = "deck_plan"
+    except Exception as exc:  # noqa: BLE001 — a bad plan must not block rendering
+        warnings.warn(f"deck_plan render step failed ({exc!r}); falling back.", stacklevel=2)
+
+    # --- Attempt LLM-driven outline (Paper2Any-style) when no deck plan ---
+    if not outline:
+        try:
+            outline = _generate_slide_outline(report, workspace, sections)
+            if outline:
+                outline_source = "LLM outline"
+        except Exception as exc:
+            warnings.warn(f"PPT outline LLM step failed ({exc!r}); using hardcoded layout.", stacklevel=2)
 
     if outline:
         slide_no = 1
@@ -1078,9 +1100,11 @@ def generate_ppt_proposal_file(
         "generate_ppt_proposal",
         summary=(
             f"Generated editable BnK PowerPoint proposal: {slide_count} slides"
-            f" ({'LLM outline' if outline else 'hardcoded layout'})."
+            f" ({outline_source})."
         ),
-        data={"sections": rendered_sections, "slide_count": slide_count, "artifacts": artifacts},
+        data={"sections": rendered_sections, "slide_count": slide_count,
+              "artifacts": artifacts, "outline_source": outline_source,
+              "deck_plan_revision": deck_revision},
     )
     return pptx_path, rendered_sections, unrecognized
 

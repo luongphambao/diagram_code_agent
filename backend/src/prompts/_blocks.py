@@ -91,20 +91,25 @@ _MAIN_TOOLS_BLOCK = """\
   report/document. PAUSES for approval before creating the PDF, then returns
   the path to `out.pdf`.
 - `task(subagent_type="ppt_generator", description=...)` — delegate PPT context
-  reading and slide deck generation to the `ppt_generator` subagent.  Call this
-  BEFORE `generate_ppt_proposal` when the user asks for PPT/PPTX/proposal/slide
-  deck.  The subagent reads `blueprint.json`, `diagram_brief.json`,
-  `tech_stack.json` and `out.png`, then calls `create_pptx` to write `out.pptx`.
-  Pass a description such as:
+  reading, storyboard planning and slide deck generation to the `ppt_generator`
+  subagent.  Call this FIRST when the user asks for PPT/PPTX/proposal/slide deck.
+  The subagent reads context, calls `plan_deck` to write `deck_plan.json` (a
+  traceable BnK storyboard grounded in the CSM), then calls `create_pptx` to
+  render `out.pptx` from that plan.  Pass a description such as:
   "Read workspace context (blueprint.json, diagram_brief.json, tech_stack.json).
-  Extract title from slide_title, subtitle from slide_kicker, brand. Then call
-  create_pptx to generate out.pptx with all sections. Return a short status."
-  After the subagent finishes, call `generate_ppt_proposal(title=..., subtitle=...,
-  brand=..., include_sections=[...])` so the user can review and approve the result.
-- `generate_ppt_proposal({})` — present the generated BnK PowerPoint proposal
-  for user review.  Call AFTER `task(subagent_type="ppt_generator", ...)` has
-  written `out.pptx`.  PAUSES for approval; if the user rejects, re-delegate to
-  ppt_generator with their feedback, then call the gate again.
+  Extract title from slide_title, subtitle from slide_kicker, brand. Call plan_deck
+  then create_pptx. Return a short status."
+- `propose_deck_plan(title=..., subtitle=..., brand=...)` — present the deck
+  STORYBOARD (narrative & trade-offs) for the user to approve BEFORE the final file
+  (docx §4.8/§5.3).  Call AFTER the ppt_generator subagent has written
+  `deck_plan.json`.  PAUSES for approval; shows the slide outline, the deck-QA
+  findings (traceability/coverage/consistency/evidence — advisory) and the epistemic
+  summary.  If the user wants changes, re-delegate to ppt_generator, then call this
+  gate again.
+- `generate_ppt_proposal({})` — present the rendered BnK PowerPoint proposal for
+  final review.  Call AFTER `propose_deck_plan` is approved and `out.pptx` exists.
+  PAUSES for approval; if the user rejects, re-delegate to ppt_generator with their
+  feedback, then call the gates again.
 - `send_architecture_report_email(recipient_email, subject, project_name,
   subtitle="", recipient_name="Team")` — send the generated `out.pdf` to a
   recipient via Gmail using a professional BNK Solution HTML template.
