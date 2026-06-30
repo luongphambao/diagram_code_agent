@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field, model_validator
@@ -29,7 +29,7 @@ from backends import WORKSPACE
 import wbs_excel
 from wbs_effort import (
     RATIOS, Ratios, derive_leaf_effort, rollup, make_ref_code, delivery_grid,
-    critical_path, MANDAYS_PER_MONTH,
+    critical_path, MANDAYS_PER_MONTH, pert_percentile, assign_sprints, MANDAYS_PER_WEEK,
 )
 
 # ── state files (registered in tools.clear_stage_markers) ────────────────────
@@ -229,6 +229,13 @@ def draft_wbs_skeleton(project_info: ProjectInfo, phases: list[PhaseMeta],
 # ════════════════════════════════════════════════════════════════════════════
 # 4. add_wbs_items
 # ════════════════════════════════════════════════════════════════════════════
+class DependencyEdge(BaseModel):
+    """A rich DAG edge with optional lag and relationship type."""
+    predecessor_ref: str
+    lag_days: float = 0.0
+    relationship: Literal["FS", "SS", "FF"] = "FS"
+
+
 class LeafIn(BaseModel):
     phase_code: str = Field(description="which phase this leaf belongs to, e.g. 'II'")
     module_code: str = Field(description="which module, e.g. 'II.A'")
@@ -249,6 +256,13 @@ class LeafIn(BaseModel):
         default_factory=list,
         description="ref_code(s) that must finish before this task starts, e.g. ['BNK-3']")
     remark: str = ""
+    owner: Optional[str] = None
+    acceptance_criteria: list[str] = Field(
+        default_factory=list,
+        description="Definition-of-Done checklist, e.g. ['Unit tests pass', 'PR reviewed']")
+    dependencies: list[DependencyEdge] = Field(
+        default_factory=list,
+        description="Rich DAG edges with lag and type (FS/SS/FF); supersedes predecessors when set")
 
 
 class AddItemsArgs(_CoercingModel):
@@ -283,6 +297,8 @@ def add_wbs_items(items: list[LeafIn]) -> str:
                                  ba=it.ba, phase_type=it.phase_type, ratios=r)
         # PERT is for scheduling only — it does NOT feed the BnK effort/ratio model.
         pert = round((it.optimistic + 4 * it.likely + it.pessimistic) / 6, 4) if it.likely > 0 else 0.0
+        pert_p50 = pert_percentile(it.optimistic, it.likely, it.pessimistic, 0.0) if it.likely > 0 else 0.0
+        pert_p80 = pert_percentile(it.optimistic, it.likely, it.pessimistic, 0.842) if it.likely > 0 else 0.0
         existing.append({
             "seq": seq, "ref_code": make_ref_code(pc, seq),
             "phase_code": it.phase_code, "module_code": it.module_code,
@@ -292,8 +308,11 @@ def add_wbs_items(items: list[LeafIn]) -> str:
             "fe_mobile": round(eff["fe"] + eff["mobile"] + eff["ai"], 4),
             "ba": eff["ba"], "qc": eff["qc"], "pm": eff["pm"], "total": eff["total"],
             "optimistic": it.optimistic, "likely": it.likely, "pessimistic": it.pessimistic,
-            "pert_expected_md": pert,
+            "pert_expected_md": pert, "pert_p50_md": pert_p50, "pert_p80_md": pert_p80,
             "predecessors": [str(p).strip() for p in (it.predecessors or [])],
+            "dependencies": [d.model_dump() for d in it.dependencies],
+            "owner": it.owner or None,
+            "acceptance_criteria": list(it.acceptance_criteria),
         })
         added += 1
     _write_json(_WBS_FILE, wbs)
@@ -333,9 +352,15 @@ def _assemble_nested(wbs: dict) -> dict:
                     "be": it["be"], "fe": it["fe"], "mobile": it["mobile"], "ai": it["ai"],
                     "fe_mobile": it.get("fe_mobile", round(it["fe"] + it["mobile"] + it["ai"], 4)),
                     "ba": it["ba"], "qc": it["qc"], "pm": it["pm"], "total": it["total"],
-                    # WBS v2 scheduling (carried through so the Excel export can show O/M/P)
+                    # WBS v2 scheduling fields (passed through to Excel builder)
                     "optimistic": it.get("optimistic", 0), "likely": it.get("likely", 0),
                     "pessimistic": it.get("pessimistic", 0),
+                    "pert_p50_md": it.get("pert_p50_md", 0),
+                    "pert_p80_md": it.get("pert_p80_md", 0),
+                    "acceptance_criteria": it.get("acceptance_criteria", []),
+                    "owner": it.get("owner"),
+                    "assigned_sprint": it.get("assigned_sprint"),
+                    "dependencies": it.get("dependencies", []),
                 })
             modules_out.append({"code": m["code"], "name": m["name"],
                                 "groups": [{"name": g, "items": groups[g]} for g in order]})
@@ -369,7 +394,8 @@ def compute_wbs_rollup() -> str:
     wbs["effort_totals"] = totals
     # Critical path (only when the agent supplied dependencies or 3-point estimates).
     cp_msg = ""
-    if any(it.get("predecessors") or it.get("pert_expected_md") for it in wbs["items"]):
+    if any(it.get("predecessors") or it.get("dependencies") or it.get("pert_expected_md")
+           for it in wbs["items"]):
         cp = critical_path(wbs["items"])
         sched = {s["ref_code"]: s for s in cp["items"]}
         sched_keys = ("early_start", "early_finish", "late_start", "late_finish",
@@ -427,6 +453,9 @@ def plan_timeline_and_sprints(duration_weeks: Optional[int] = None,
         "weeks_per_sprint": 2, "weeks_per_month": 4,
         "project_start_date": "TBD", "project_end_date": "TBD",
     }
+    # Sprint assignment: if CPM Early Start exists (from compute_wbs_rollup), assign sprints now.
+    if any(it.get("early_start") is not None for it in wbs.get("items", [])):
+        assign_sprints(wbs["items"], peak_dev_fte, weeks_per_sprint=2)
     _write_json(_WBS_FILE, wbs)
     return (f"Timeline: {grid['weeks']} weeks = {grid['months']} months / "
             f"{grid['sprints']} sprints (2-week sprints). Delivery Plan will render "

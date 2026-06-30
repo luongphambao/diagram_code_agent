@@ -38,6 +38,7 @@ import re
 
 # Man-days per man-month used across the corpus (total_manmonths = mandays / 22).
 MANDAYS_PER_MONTH = 22.0
+MANDAYS_PER_WEEK = 5
 
 
 @dataclass(frozen=True)
@@ -157,6 +158,17 @@ def normalize_role_key(raw: str) -> str | None:
     return None
 
 
+def pert_percentile(o: float, m: float, p: float, q: float) -> float:
+    """PERT normal approximation: mu + q*sigma.
+
+    q=0.0 → P50 (= expected value), q=0.842 → P80.
+    Assumes PERT beta distribution; normal approx is standard PM tooling practice.
+    """
+    mu = (o + 4 * m + p) / 6
+    sigma = (p - o) / 6
+    return _round(mu + q * sigma)
+
+
 def rollup(items: list[dict]) -> dict:
     """Aggregate leaf items into per-role totals + man-months.
 
@@ -187,14 +199,16 @@ def rollup(items: list[dict]) -> dict:
 
 
 def critical_path(items: list[dict]) -> dict:
-    """CPM forward/backward pass over leaf items linked by ``ref_code`` predecessors.
+    """CPM forward/backward pass over leaf items with optional lag and SS/FF edges.
 
     Each item's duration is ``item['pert_expected_md']`` when a 3-point estimate was
-    supplied (>0), else its derived ``item['total']``. Predecessors are read from
-    ``item['predecessors']`` (a list of ref_codes); unknown refs are silently skipped
-    so a partial/loose DAG is fine. A dependency cycle does NOT raise — the schedule
-    degrades to "no float info" rather than crashing the roll-up (the items come from
-    an LLM and cannot be trusted to be acyclic).
+    supplied (>0), else its derived ``item['total']``. Dependencies are read from
+    ``item['dependencies']`` (list of dicts with predecessor_ref/lag_days/relationship)
+    when present; falls back to ``item['predecessors']`` (plain ref_code list, FS+lag=0)
+    for backwards compatibility. Unknown refs are silently skipped. A dependency cycle
+    does NOT raise — the schedule degrades to "no float info" rather than crashing.
+
+    Supported relationship types: FS (Finish-Start), SS (Start-Start), FF (Finish-Finish).
 
     Returns::
 
@@ -204,27 +218,42 @@ def critical_path(items: list[dict]) -> dict:
                     "late_start", "late_finish", "float_md", "critical"}, ...]}
 
     Isolated tasks (no predecessors and no successors) get ``float_md=None`` and
-    ``critical=False`` — there is no dependency structure to place them on a path.
+    ``critical=False``.
     """
     nodes = [it for it in items if it.get("ref_code")]
     by_ref = {it["ref_code"]: it for it in nodes}
     dur = {r: (float(it.get("pert_expected_md") or 0) or float(it.get("total") or 0))
            for r, it in by_ref.items()}
 
-    # preds[r] = valid predecessor refs of r; succs[r] = refs that depend on r.
-    preds: dict[str, list[str]] = {}
+    # preds[r] = list of (pred_ref, lag_days, relationship) triples.
+    # succs[r] = list of successor ref_codes.
+    preds: dict[str, list[tuple[str, float, str]]] = {}
     succs: dict[str, list[str]] = {r: [] for r in by_ref}
     indeg: dict[str, int] = {}
     for r, it in by_ref.items():
-        ps = [str(p).strip() for p in (it.get("predecessors") or [])]
-        ps = [p for p in ps if p in by_ref and p != r]      # drop unknown + self refs
-        preds[r] = ps
-        indeg[r] = len(ps)
-        for p in ps:
+        edges: list[tuple[str, float, str]] = []
+        deps = it.get("dependencies") or []
+        if deps:
+            for d in deps:
+                p_ref = str(d.get("predecessor_ref", "")).strip()
+                if p_ref in by_ref and p_ref != r:
+                    lag = float(d.get("lag_days", 0) or 0)
+                    rel = str(d.get("relationship", "FS")).upper()
+                    if rel not in ("FS", "SS", "FF"):
+                        rel = "FS"
+                    edges.append((p_ref, lag, rel))
+        else:
+            # backwards compat: plain predecessors list → FS, lag=0
+            for p in (it.get("predecessors") or []):
+                p = str(p).strip()
+                if p in by_ref and p != r:
+                    edges.append((p, 0.0, "FS"))
+        preds[r] = edges
+        indeg[r] = len(edges)
+        for (p, *_) in edges:
             succs[p].append(r)
 
     def _bare(reason_no_path: bool) -> dict:
-        # Fallback when we can't schedule (cycle): no float, longest single task as duration.
         out = [{"ref_code": r, "early_start": None, "early_finish": None,
                 "late_start": None, "late_finish": None, "float_md": None,
                 "critical": False} for r in by_ref]
@@ -243,26 +272,47 @@ def critical_path(items: list[dict]) -> dict:
             if rem[s] == 0:
                 queue.append(s)
     if len(topo) != len(by_ref):
-        return _bare(reason_no_path=True)            # cycle — bail gracefully
+        return _bare(reason_no_path=True)
 
-    # Forward pass: ES = max EF of predecessors; EF = ES + duration.
-    es: dict[str, float] = {}
-    ef: dict[str, float] = {}
+    # Forward pass: compute ES/EF per relationship type.
+    es: dict[str, float] = {r: 0.0 for r in by_ref}
+    ef: dict[str, float] = {r: 0.0 for r in by_ref}
     for r in topo:
-        es[r] = max((ef[p] for p in preds[r]), default=0.0)
+        for (p, lag, rel) in preds[r]:
+            if rel == "FS":
+                es[r] = max(es[r], ef[p] + lag)
+            elif rel == "SS":
+                es[r] = max(es[r], es[p] + lag)
+            elif rel == "FF":
+                # j must finish when i finishes: EF(j) >= EF(i)+lag → ES(j) >= EF(i)+lag-dur(j)
+                es[r] = max(es[r], ef[p] + lag - dur[r])
         ef[r] = es[r] + dur[r]
     project_ef = max(ef.values(), default=0.0)
 
-    # Backward pass: LF = project_ef for sinks, else min LS of successors; LS = LF - dur.
-    lf: dict[str, float] = {}
-    ls: dict[str, float] = {}
+    # Backward pass: LF/LS per relationship type.
+    # For SS edges: constrains LS(pred), not LF(pred).
+    lf: dict[str, float] = {r: project_ef for r in by_ref}
+    ls: dict[str, float] = {r: project_ef - dur[r] for r in by_ref}
     for r in reversed(topo):
-        lf[r] = min((ls[s] for s in succs[r]), default=project_ef)
+        lf_cand = project_ef
+        ls_cand = project_ef - dur[r]
+        for j in succs[r]:
+            for (p, lag, rel) in preds[j]:
+                if p != r:
+                    continue
+                if rel == "FS":
+                    lf_cand = min(lf_cand, ls[j] - lag)
+                elif rel == "FF":
+                    lf_cand = min(lf_cand, lf[j] - lag)
+                elif rel == "SS":
+                    ls_cand = min(ls_cand, ls[j] - lag)
+        # SS tightens LS; recompute LF to be consistent.
+        lf[r] = min(lf_cand, ls_cand + dur[r])
         ls[r] = lf[r] - dur[r]
 
     out = []
     crit: list[str] = []
-    for it in nodes:                                 # preserve original item order
+    for it in nodes:
         r = it["ref_code"]
         isolated = not preds[r] and not succs[r]
         flt = None if isolated else _round(ls[r] - es[r])
@@ -277,6 +327,26 @@ def critical_path(items: list[dict]) -> dict:
         })
     return {"project_duration_md": _round(project_ef),
             "critical_path_ref_codes": crit, "items": out}
+
+
+def assign_sprints(items: list[dict], peak_dev_fte: float,
+                   weeks_per_sprint: int = 2) -> None:
+    """Set ``assigned_sprint`` on each item in-place based on its CPM Early Start.
+
+    Converts Early Start (man-days) to a calendar week using ``peak_dev_fte`` and
+    ``MANDAYS_PER_WEEK``, then maps the week to a sprint number. Items without
+    ``early_start`` (isolated tasks or no PERT data) get ``assigned_sprint=None``.
+    Sprint numbering starts at 1.
+    """
+    import math
+    fte = max(0.5, float(peak_dev_fte or 1.0))
+    for it in items:
+        raw_es = it.get("early_start")
+        if raw_es is None:
+            it["assigned_sprint"] = None
+            continue
+        cal_week = float(raw_es) / (fte * MANDAYS_PER_WEEK)
+        it["assigned_sprint"] = max(1, math.ceil(cal_week / weeks_per_sprint))
 
 
 def delivery_grid(duration_weeks: int) -> dict:

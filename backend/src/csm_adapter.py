@@ -205,11 +205,15 @@ def _work_items(wbs: dict[str, Any]) -> list[WorkItem]:
             md = float(it.get("total_md") or it.get("mandays") or 0) or 0.0
         except (TypeError, ValueError):
             md = 0.0
+        sprint_raw = it.get("assigned_sprint")
         out.append(WorkItem(
             id=mint_id("work_item", key), name=name, effort_mandays=md,
             parent=str(it.get("module") or it.get("phase") or ""),
             predecessors=[str(p) for p in _as_list(it.get("predecessors"))],
             pert_expected_md=float(it.get("pert_expected_md") or 0),
+            owner=str(it.get("owner") or "") or None,
+            definition_of_done=list(it.get("acceptance_criteria") or []),
+            assigned_sprint=(int(sprint_raw) if sprint_raw is not None else None),
             provenance="agent", source_refs=_src("wbs.json"),
         ))
     return out

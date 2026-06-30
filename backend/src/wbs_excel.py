@@ -58,6 +58,8 @@ C_BE, C_FEMOB, C_RA, C_TEST, C_PM, C_REMARK = 7, 8, 9, 10, 11, 12
 # written only when a project supplies them — left untouched otherwise. They sit AFTER
 # the template's columns (B..L) so the Effort sheet's VLOOKUP range ($B$5:$L$) is unaffected.
 C_OPT, C_LIK, C_PES = 13, 14, 15
+C_P50, C_P80 = 16, 17   # risk-adjusted percentiles (WBS v2)
+C_DOD = 18              # Definition-of-Done / acceptance criteria
 
 # Master Data cell refs the template formulas point at.
 MD = "'4. Master Data'"
@@ -135,10 +137,19 @@ def _build_wbs_sheet(ws: Worksheet, wbs: dict, snap: dict) -> dict:
         for group in module.get("groups", [])
         for leaf in group.get("items", [])
     )
+    has_dod = any(
+        leaf.get("acceptance_criteria")
+        for phase in wbs.get("phases", [])
+        for module in phase.get("modules", [])
+        for group in module.get("groups", [])
+        for leaf in group.get("items", [])
+    )
     if has_pert:
         for col, label in ((C_OPT, "Optimistic (O)"), (C_LIK, "Most-likely (M)"),
-                           (C_PES, "Pessimistic (P)")):
+                           (C_PES, "Pessimistic (P)"), (C_P50, "P50 (md)"), (C_P80, "P80 (md)")):
             ws.cell(5, col).value = label
+    if has_dod:
+        ws.cell(5, C_DOD).value = "Definition of Done"
 
     for phase in wbs.get("phases", []):
         phase_row = r
@@ -184,6 +195,11 @@ def _build_wbs_sheet(ws: Worksheet, wbs: dict, snap: dict) -> dict:
                         ws.cell(r, C_OPT).value = leaf.get("optimistic") or None
                         ws.cell(r, C_LIK).value = leaf.get("likely") or None
                         ws.cell(r, C_PES).value = leaf.get("pessimistic") or None
+                        ws.cell(r, C_P50).value = leaf.get("pert_p50_md") or None
+                        ws.cell(r, C_P80).value = leaf.get("pert_p80_md") or None
+                    if has_dod:
+                        criteria = leaf.get("acceptance_criteria") or []
+                        ws.cell(r, C_DOD).value = "; ".join(criteria) if criteria else None
                     r += 1
 
             # module roll-up over its full contiguous block (label rows are empty).
