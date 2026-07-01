@@ -464,11 +464,19 @@ def _build_delivery_sheet(wb, wbs: dict, wbs_last_row: int) -> dict:
         r += 1
 
     # milestones
+    # The "Deliverables" text is free-form prose (e.g. "System ready in UAT +
+    # Test Cases + Test Report"), but column F alone is only 4.5 wide (sized for
+    # a Gantt week column) — wrapped + vertically-centered text there renders as
+    # an unreadable single letter per line. Merge it across a wide span (mirroring
+    # the template's F:U milestone merges) so the sentence actually fits.
+    DELIV_LAST = FIRST + max(weeks, 16) - 1
     r += 1
     hdr = ["#", "Deliverables Milestone", "Start", "End", "Deliverables"]
     for c, lbl in zip(range(2, 7), hdr):
         cell = ws.cell(r, c); cell.value = lbl; cell.fill = head_fill
         cell.font = whitebold; cell.border = border
+    ws.merge_cells(start_row=r, start_column=6, end_row=r, end_column=DELIV_LAST)
+    ws.cell(r, 6).alignment = center
     r += 1
     milestones = wbs.get("milestones") or [
         {"name": n, "deliverables": [d]} for n, d in _BNK_MILESTONES
@@ -479,7 +487,13 @@ def _build_delivery_sheet(wb, wbs: dict, wbs_last_row: int) -> dict:
         ws.cell(r, 4).value = ms.get("start", "TBD")
         ws.cell(r, 5).value = ms.get("end", "TBD")
         dl = ms.get("deliverables")
-        ws.cell(r, 6).value = ", ".join(dl) if isinstance(dl, list) else (dl or "")
+        deliv_cell = ws.cell(r, 6)
+        deliv_cell.value = ", ".join(dl) if isinstance(dl, list) else (dl or "")
+        deliv_cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+        ws.merge_cells(start_row=r, start_column=6, end_row=r, end_column=DELIV_LAST)
+        for c in range(2, DELIV_LAST + 1):
+            ws.cell(r, c).border = border
+        ws.row_dimensions[r].height = 30
         r += 1
 
     return {"weeks": weeks, "months": grid["months"], "sprints": grid["sprints"],
