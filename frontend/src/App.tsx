@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDiagramAgent } from "./hooks/useDiagramAgent";
 import { useConversations } from "./hooks/useConversations";
+import { AgentProvider } from "./context/AgentContext";
 import type { UserRole } from "./hooks/agent-utils";
+import { loadGateHistory, clearGateHistory } from "./hooks/agent-utils";
 import ChatSidebar from "./components/ChatSidebar";
 import DiagramCanvas from "./components/DiagramCanvas";
 import ConversationSidebar from "./components/ConversationSidebar";
@@ -53,11 +55,6 @@ export default function App() {
   const startX = useRef(0);
   const startW = useRef(CHAT_DEFAULT);
 
-  // Load conversations on mount
-  useEffect(() => {
-    convStore.fetchAll();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   // Keep localStorage in sync whenever threadId changes
   useEffect(() => {
     setStoredThreadId(threadId);
@@ -66,7 +63,13 @@ export default function App() {
   // Extract stable function refs — these are created with useCallback([]) inside their
   // respective hooks, so they never change identity across renders.
   const { resetToNew, restore } = diagramAgent;
-  const { loadHistory, fetchAll } = convStore;
+  const { loadHistory, fetchAll, remove } = convStore;
+
+  // Load conversations on mount. `fetchAll` is stable, so an empty dep array
+  // would also be correct — depending on it explicitly keeps the lint rule honest.
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
 
   const handleNewConversation = useCallback(() => {
     const tid = newThreadId();
@@ -79,11 +82,18 @@ export default function App() {
     const hist = await loadHistory(tid);
     setThreadId(tid);
     if (hist) {
-      restore(hist.state, hist.chatMessages, hist.wireMessages as never);
+      restore(hist.state, hist.chatMessages, hist.wireMessages as never, loadGateHistory(tid));
     } else {
       resetToNew();
     }
   }, [threadId, loadHistory, restore, resetToNew]);
+
+  // Conversation deletion also drops its persisted gate-history entry so
+  // localStorage doesn't accumulate orphaned per-thread keys.
+  const handleDeleteConversation = useCallback((tid: string) => {
+    clearGateHistory(tid);
+    remove(tid);
+  }, [remove]);
 
   // After each agent run finishes, refresh the conversation list so the sidebar
   // shows the latest name/preview. Use the stable `fetchAll` ref to avoid
@@ -123,7 +133,7 @@ export default function App() {
   const activeIsRunning = diagramAgent.isRunning;
 
   return (
-    <div className="flex h-screen w-screen flex-col" style={{ background: "#0b0e14" }}>
+    <div className="flex h-screen w-screen flex-col bg-surface-base">
       {/* Header */}
       <header className="flex items-center gap-3 border-b border-white/8 px-6 py-3.5">
         <div className="flex items-center gap-2.5">
@@ -168,14 +178,23 @@ export default function App() {
               className="rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[11px] capitalize text-slate-300 outline-none hover:border-white/20 focus:border-blue-500/40"
             >
               {USER_ROLES.map((r) => (
-                <option key={r} value={r} className="bg-[#0b0e14] capitalize">{r}</option>
+                <option key={r} value={r} className="bg-surface-base capitalize">{r}</option>
               ))}
             </select>
           </label>
           {activeIsRunning && (
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-600">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400" />
-              Processing
+            <div className="flex items-center gap-2 text-[11px] text-slate-600">
+              <span className="flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400" />
+                Processing
+              </span>
+              <button
+                onClick={diagramAgent.abortRun}
+                className="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-slate-300 hover:border-red-500/40 hover:text-red-400"
+                title="Cancel the in-flight run"
+              >
+                Stop
+              </button>
             </div>
           )}
           {activeStep === "done" && !activeIsRunning && (
@@ -194,77 +213,49 @@ export default function App() {
       </header>
 
       {/* Main */}
-      <main className="flex flex-1 overflow-hidden">
-        {/* Conversation sidebar */}
-        <ConversationSidebar
-          conversations={convStore.conversations}
-          activeThreadId={threadId}
-          loading={convStore.loading}
-          onSelect={handleSelectConversation}
-          onNew={handleNewConversation}
-          onRename={convStore.rename}
-          onDelete={convStore.remove}
-        />
+      <AgentProvider value={diagramAgent}>
+        <main className="flex flex-1 overflow-hidden">
+          {/* Conversation sidebar */}
+          <ConversationSidebar
+            conversations={convStore.conversations}
+            activeThreadId={threadId}
+            loading={convStore.loading}
+            onSelect={handleSelectConversation}
+            onNew={handleNewConversation}
+            onRename={convStore.rename}
+            onDelete={handleDeleteConversation}
+          />
 
-        {/* Chat panel */}
-        <div style={{ width: chatWidth, minWidth: chatWidth, maxWidth: chatWidth }} className="flex flex-col overflow-hidden">
-          <ChatSidebar
-            messages={diagramAgent.chatMessages}
+          {/* Chat panel */}
+          <div style={{ width: chatWidth, minWidth: chatWidth, maxWidth: chatWidth }} className="flex flex-col overflow-hidden">
+            <ChatSidebar />
+          </div>
+
+          {/* Drag handle */}
+          <div
+            onMouseDown={onDragStart}
+            className="relative w-1 flex-shrink-0 cursor-col-resize bg-white/5 hover:bg-blue-500/40 transition-colors group"
+            title="Drag to resize"
+          >
+            <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              <span className="h-1 w-1 rounded-full bg-blue-400" />
+              <span className="h-1 w-1 rounded-full bg-blue-400" />
+              <span className="h-1 w-1 rounded-full bg-blue-400" />
+            </div>
+          </div>
+
+          {/* Right panel — diagram preview */}
+          <DiagramCanvas
+            agentState={diagramAgent.agentState}
             pendingInterrupt={diagramAgent.pendingInterrupt}
             isRunning={diagramAgent.isRunning}
-            pdfBase64={diagramAgent.agentState.pdf_base64}
-            pptxBase64={diagramAgent.agentState.pptx_base64}
-            wbsXlsxBase64={diagramAgent.agentState.wbs_xlsx_base64}
-            wbsSummary={diagramAgent.agentState.wbs_summary}
-            activity={diagramAgent.activity}
             activeSubagent={diagramAgent.activeSubagent}
-            error={diagramAgent.error}
-            onSend={diagramAgent.sendMessage}
-            onResolveTechStack={diagramAgent.resolveTechStack}
-            onResolveBlueprint={diagramAgent.resolveBlueprint}
-            onResolveResult={diagramAgent.resolveResultReview}
-            onResolvePdfReport={diagramAgent.resolvePdfReport}
-            onResolvePptProposal={diagramAgent.resolvePptProposal}
-            onResolveEmail={diagramAgent.resolveEmail}
-            onResolveMeeting={diagramAgent.resolveMeeting}
-            onResolveMeetingSlot={diagramAgent.resolveMeetingSlot}
-            onResolveWbsSkeleton={diagramAgent.resolveWbsSkeleton}
-            onResolveWbs={diagramAgent.resolveWbs}
-            onResolveWbsExcel={diagramAgent.resolveWbsExcel}
-            onResolveDeliveryExport={diagramAgent.resolveDeliveryExport}
-            onResolveDecision={diagramAgent.resolveDecision}
-            iteration={diagramAgent.agentState.iteration}
-            uploadedFiles={diagramAgent.uploadedFiles}
-            isUploading={diagramAgent.isUploading}
-            onUploadFile={diagramAgent.uploadFile}
-            onClearFiles={diagramAgent.clearFiles}
+            activity={diagramAgent.activity}
+            threadId={threadId}
+            userRole={userRole}
           />
-        </div>
-
-        {/* Drag handle */}
-        <div
-          onMouseDown={onDragStart}
-          className="relative w-1 flex-shrink-0 cursor-col-resize bg-white/5 hover:bg-blue-500/40 transition-colors group"
-          title="Drag to resize"
-        >
-          <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-            <span className="h-1 w-1 rounded-full bg-blue-400" />
-            <span className="h-1 w-1 rounded-full bg-blue-400" />
-            <span className="h-1 w-1 rounded-full bg-blue-400" />
-          </div>
-        </div>
-
-        {/* Right panel — diagram preview */}
-        <DiagramCanvas
-          agentState={diagramAgent.agentState}
-          pendingInterrupt={diagramAgent.pendingInterrupt}
-          isRunning={diagramAgent.isRunning}
-          activeSubagent={diagramAgent.activeSubagent}
-          activity={diagramAgent.activity}
-          threadId={threadId}
-          userRole={userRole}
-        />
-      </main>
+        </main>
+      </AgentProvider>
     </div>
   );
 }

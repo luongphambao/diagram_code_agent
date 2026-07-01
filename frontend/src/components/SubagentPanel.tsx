@@ -352,7 +352,7 @@ export default function SubagentPanel({
     );
 
   return (
-    <div className="w-full bg-[#0c1015] border border-white/8 rounded-2xl overflow-hidden">
+    <div className="w-full bg-surface-panel border border-white/8 rounded-2xl overflow-hidden">
 
       {/* ── Orchestrator section ────────────────────────────────────────────── */}
       <OrchestratorSection
@@ -362,7 +362,7 @@ export default function SubagentPanel({
       />
 
       {/* ── Indicator chips row ─────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 px-5 py-2.5 border-b border-white/8 bg-[#0c1015]">
+      <div className="flex items-center gap-2 px-5 py-2.5 border-b border-white/8 bg-surface-panel">
         <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-700 mr-1">
           Subagents
         </span>

@@ -1,4 +1,7 @@
-import type { ChatMessage, DecisionPayload, PendingInterrupt, WbsSummary } from "../../hooks/useDiagramAgent";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { useAgentContext } from "../../context/AgentContext";
+import type { DecisionPayload, ResolvedGate } from "../../hooks/useDiagramAgent";
+import { downloadBase64File, openBase64InNewTab, MIME_TYPES } from "../../lib/downloadBase64";
 import TechStackApproval from "../TechStackApproval";
 import BlueprintApproval from "../BlueprintApproval";
 import DiagramFeedback from "../DiagramFeedback";
@@ -12,49 +15,92 @@ import WbsApproval from "../WbsApproval";
 import WbsExcelApproval from "../WbsExcelApproval";
 import DeliveryExportApproval from "../DeliveryExportApproval";
 
-interface MessageListProps {
-  messages: ChatMessage[];
-  pendingInterrupt: PendingInterrupt | null;
-  isRunning: boolean;
-  pdfBase64?: string;
-  pptxBase64?: string;
-  wbsXlsxBase64?: string;
-  wbsSummary?: WbsSummary;
-  activity?: string | null;
-  activeSubagent?: string | null;
-  error: string | null;
-  iteration?: number;
-  bottomRef: React.RefObject<HTMLDivElement | null>;
-  onPreviewPdf: () => void;
-  onDownloadPdf: () => void;
-  onDownloadPptx: () => void;
-  onDownloadWbsXlsx: () => void;
-  wbsPreviewOpen: boolean;
-  onToggleWbsPreview: () => void;
-  onResolveTechStack: (approved: boolean, modifications?: string) => void;
-  onResolveBlueprint: (approved: boolean, modifications?: string) => void;
-  onResolveResult: (satisfied: boolean, feedback?: string) => void;
-  onResolvePdfReport: (approved: boolean, modifications?: string) => void;
-  onResolvePptProposal: (approved: boolean, modifications?: string) => void;
-  onResolveEmail: (approved: boolean) => void;
-  onResolveMeeting: (approved: boolean) => void;
-  onResolveMeetingSlot: (approved: boolean, selectedSlot?: { start: string; end: string; display_day: string; display_time: string }) => void;
-  onResolveWbsSkeleton: (approved: boolean, modifications?: string) => void;
-  onResolveWbs: (approved: boolean, modifications?: string) => void;
-  onResolveWbsExcel: (approved: boolean) => void;
-  onResolveDeliveryExport: (approved: boolean) => void;
-  onResolveDecision: (payload: DecisionPayload) => void;
+const GATE_LABELS: Record<string, string> = {
+  brief_approval: "Requirements Brief",
+  techstack_approval: "Tech Stack Recommendation",
+  blueprint_approval: "Architecture Blueprint",
+  result_review: "Diagram Review",
+  pdf_report_approval: "PDF Report",
+  ppt_proposal_approval: "PPT Proposal",
+  email_approval: "Email",
+  slot_picker: "Meeting Slot",
+  meeting_approval: "Meeting",
+  wbs_skeleton_approval: "WBS Skeleton",
+  wbs_approval: "WBS Plan",
+  wbs_excel_approval: "WBS Excel Export",
+  delivery_export_approval: "Delivery Export",
+};
+
+function summarizeDecision(decision: Record<string, unknown>): { positive: boolean; text: string } {
+  if (typeof decision.action === "string" && decision.action !== "approve" && decision.action !== "reject") {
+    return { positive: true, text: decision.action.replace(/_/g, " ") };
+  }
+  if (typeof decision.satisfied === "boolean") {
+    return { positive: decision.satisfied, text: decision.satisfied ? "Satisfied" : "Needs changes" };
+  }
+  if (typeof decision.approved === "boolean") {
+    return { positive: decision.approved, text: decision.approved ? "Approved" : "Rejected" };
+  }
+  return { positive: true, text: "Resolved" };
 }
 
-export default function MessageList({
-  messages, pendingInterrupt, isRunning, pdfBase64, pptxBase64, wbsXlsxBase64, wbsSummary,
-  activity, activeSubagent, error, iteration, bottomRef,
-  onPreviewPdf, onDownloadPdf, onDownloadPptx, onDownloadWbsXlsx,
-  wbsPreviewOpen, onToggleWbsPreview,
-  onResolveTechStack, onResolveBlueprint, onResolveResult, onResolvePdfReport,
-  onResolvePptProposal, onResolveEmail, onResolveMeeting, onResolveMeetingSlot,
-  onResolveWbsSkeleton, onResolveWbs, onResolveWbsExcel, onResolveDeliveryExport, onResolveDecision,
-}: MessageListProps) {
+function ResolvedGateCard({ gate }: { gate: ResolvedGate }) {
+  const label = GATE_LABELS[gate.data.type] ?? gate.data.type;
+  const { positive, text } = summarizeDecision(gate.decision);
+  const note = (gate.decision.modifications ?? gate.decision.feedback ?? gate.decision.comment) as string | undefined;
+  return (
+    <div className="ml-9 max-w-[82%] rounded-xl border border-white/8 bg-white/3 px-3.5 py-2.5">
+      <div className="flex items-center gap-2">
+        <span className={`h-1.5 w-1.5 rounded-full ${positive ? "bg-emerald-400" : "bg-red-400"}`} />
+        <p className="text-xs font-semibold text-slate-300">{label}</p>
+        <span className={`ml-auto text-[10px] font-medium capitalize ${positive ? "text-emerald-400" : "text-red-400"}`}>
+          {text}
+        </span>
+      </div>
+      {gate.data.question && <p className="mt-1 text-[11px] text-slate-600">{gate.data.question}</p>}
+      {note && <p className="mt-1 text-[11px] italic text-slate-500">"{note}"</p>}
+    </div>
+  );
+}
+
+export default function MessageList() {
+  const {
+    chatMessages: messages, pendingInterrupt, gateHistory, isRunning,
+    agentState, activity, activeSubagent, error, resolveGate,
+  } = useAgentContext();
+  const { pdf_base64: pdfBase64, pptx_base64: pptxBase64, wbs_xlsx_base64: wbsXlsxBase64, wbs_summary: wbsSummary, iteration } = agentState;
+
+  const [wbsPreviewOpen, setWbsPreviewOpen] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, error, pendingInterrupt, pdfBase64, pptxBase64, wbsXlsxBase64]);
+
+  const onResolveTechStack = (approved: boolean, modifications?: string) =>
+    resolveGate({ approved, modifications: modifications?.trim() || null });
+  const onResolveBlueprint = onResolveTechStack;
+  const onResolvePdfReport = onResolveTechStack;
+  const onResolvePptProposal = onResolveTechStack;
+  const onResolveWbsSkeleton = onResolveTechStack;
+  const onResolveWbs = onResolveTechStack;
+  const onResolveResult = (satisfied: boolean, feedback?: string) =>
+    resolveGate({ satisfied, feedback: feedback?.trim() || null });
+  const onResolveEmail = (approved: boolean) => resolveGate({ approved });
+  const onResolveMeeting = onResolveEmail;
+  const onResolveWbsExcel = onResolveEmail;
+  const onResolveDeliveryExport = onResolveEmail;
+  const onResolveMeetingSlot = (
+    approved: boolean,
+    selectedSlot?: { start: string; end: string; display_day: string; display_time: string },
+  ) => resolveGate({ approved, selected_slot: selectedSlot });
+  const onResolveDecision = (payload: DecisionPayload) => resolveGate({ ...payload });
+
+  const previewPdf = () => { if (pdfBase64) openBase64InNewTab(pdfBase64, MIME_TYPES.pdf); };
+  const downloadPdf = () => { if (pdfBase64) downloadBase64File(pdfBase64, "architecture_report.pdf", MIME_TYPES.pdf); };
+  const downloadWbsXlsx = () => { if (wbsXlsxBase64) downloadBase64File(wbsXlsxBase64, "wbs_filled.xlsx", MIME_TYPES.xlsx); };
+  const downloadPptx = () => { if (pptxBase64) downloadBase64File(pptxBase64, "architecture_proposal.pptx", MIME_TYPES.pptx); };
+
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-5">
       {messages.length === 0 && !isRunning && (
@@ -73,29 +119,37 @@ export default function MessageList({
         </div>
       )}
 
-      {messages.map((msg) => (
-        <div key={msg.id} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-          {msg.role === "assistant" && (
-            <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-600/20">
-              <svg className="h-3 w-3 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" />
-              </svg>
-            </div>
-          )}
-          <div className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-            msg.role === "user"
-              ? "rounded-tr-sm bg-blue-600 text-white shadow-lg shadow-blue-900/30"
-              : "rounded-tl-sm border border-white/8 bg-white/5 text-slate-200"
-          }`}>
-            {msg.content || (
-              <span className="inline-flex gap-1 text-slate-500">
-                <span className="animate-bounce [animation-delay:0ms]">·</span>
-                <span className="animate-bounce [animation-delay:150ms]">·</span>
-                <span className="animate-bounce [animation-delay:300ms]">·</span>
-              </span>
+      {messages.map((msg, i) => (
+        <Fragment key={msg.id}>
+          {gateHistory.filter((g) => g.afterMessageIndex === i).map((g) => (
+            <ResolvedGateCard key={g.id} gate={g} />
+          ))}
+          <div className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+            {msg.role === "assistant" && (
+              <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-600/20">
+                <svg className="h-3 w-3 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" />
+                </svg>
+              </div>
             )}
+            <div className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+              msg.role === "user"
+                ? "rounded-tr-sm bg-blue-600 text-white shadow-lg shadow-blue-900/30"
+                : "rounded-tl-sm border border-white/8 bg-white/5 text-slate-200"
+            }`}>
+              {msg.content || (
+                <span className="inline-flex gap-1 text-slate-500">
+                  <span className="animate-bounce [animation-delay:0ms]">·</span>
+                  <span className="animate-bounce [animation-delay:150ms]">·</span>
+                  <span className="animate-bounce [animation-delay:300ms]">·</span>
+                </span>
+              )}
+            </div>
           </div>
-        </div>
+        </Fragment>
+      ))}
+      {gateHistory.filter((g) => g.afterMessageIndex === messages.length).map((g) => (
+        <ResolvedGateCard key={g.id} gate={g} />
       ))}
 
       {/* HITL gate cards */}
@@ -152,11 +206,11 @@ export default function MessageList({
               <p className="text-sm font-semibold text-white">PDF report ready</p>
               <p className="mt-1 text-xs text-slate-500">Preview it in a new tab or download the file.</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <button onClick={onPreviewPdf}
+                <button onClick={previewPdf}
                   className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-200 transition-colors hover:bg-cyan-500/20">
                   Preview PDF
                 </button>
-                <button onClick={onDownloadPdf}
+                <button onClick={downloadPdf}
                   className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200 transition-colors hover:bg-white/10">
                   Download PDF
                 </button>
@@ -179,7 +233,7 @@ export default function MessageList({
               <p className="text-sm font-semibold text-white">PPT proposal ready</p>
               <p className="mt-1 text-xs text-slate-500">Download the editable BnK PowerPoint deck.</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <button onClick={onDownloadPptx}
+                <button onClick={downloadPptx}
                   className="rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-xs font-semibold text-orange-200 transition-colors hover:bg-orange-500/20">
                   Download PPT
                 </button>
@@ -201,11 +255,11 @@ export default function MessageList({
               <p className="text-sm font-semibold text-white">WBS Excel ready</p>
               <p className="mt-1 text-xs text-slate-500">Download the filled .xlsx file or preview effort breakdown.</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <button onClick={onToggleWbsPreview}
+                <button onClick={() => setWbsPreviewOpen((v) => !v)}
                   className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/20">
                   {wbsPreviewOpen ? "Hide Preview" : "Preview WBS"}
                 </button>
-                <button onClick={onDownloadWbsXlsx}
+                <button onClick={downloadWbsXlsx}
                   className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200 transition-colors hover:bg-white/10">
                   Download .xlsx
                 </button>

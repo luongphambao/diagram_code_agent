@@ -19,7 +19,7 @@ export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning,
   // Empty / idle
   if (!current_step && !isRunning && !png_base64 && !error && !pendingInterrupt) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 bg-[#0f1117]">
+      <div className="flex flex-1 flex-col items-center justify-center gap-5 bg-surface-canvas">
         <div className="flex h-24 w-24 items-center justify-center rounded-3xl border border-white/8 bg-white/4">
           <svg className="h-12 w-12 text-slate-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
             <rect x="3" y="3" width="7" height="7" rx="1.5" />
@@ -53,7 +53,7 @@ export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning,
 
   // In-progress / waiting
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto bg-[#0f1117] p-10">
+    <div className="flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto bg-surface-canvas p-10">
       {(isRunning || current_step) && (
         <AgentStatus
           step={current_step ?? (isRunning ? "planning" : "done")}

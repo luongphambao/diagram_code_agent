@@ -4,22 +4,6 @@ export const BACKEND_URL =
   (import.meta.env.VITE_BACKEND_URL as string | undefined) ??
   "http://localhost:8001";
 
-export function applyOps(
-  state: Record<string, unknown>,
-  ops: Array<{ op: string; path: string; value: unknown }>
-): Record<string, unknown> {
-  const next = { ...state };
-  for (const op of ops) {
-    const key = op.path.slice(1);
-    if (op.op === "add" || op.op === "replace") {
-      next[key] = op.value;
-    } else if (op.op === "remove") {
-      delete next[key];
-    }
-  }
-  return next;
-}
-
 // ---- Shared domain types ---- //
 
 export interface LogEntry {
@@ -371,4 +355,45 @@ export interface WireMessage {
   role: string;
   content: string;
   toolCallId?: string;
+}
+
+// A HITL gate that has been resolved — kept in the chat timeline instead of
+// vanishing once `pendingInterrupt` is cleared (§ frontend chat/HITL persistence).
+export interface ResolvedGate {
+  id: string; // toolCallId
+  data: PendingInterrupt["data"];
+  decision: Record<string, unknown>;
+  resolvedAt: number;
+  // Number of chat messages that existed when this gate resolved — anchors it
+  // to the right spot in the merged chat/gate timeline (see MessageList).
+  afterMessageIndex: number;
+}
+
+// The backend doesn't persist the original gate-card payload (only the decision
+// wire-message), so the resolved-gate timeline is persisted client-side, per thread.
+const GATE_HISTORY_PREFIX = "diagram_agent_gate_history_";
+
+export function loadGateHistory(threadId: string): ResolvedGate[] {
+  try {
+    const raw = localStorage.getItem(GATE_HISTORY_PREFIX + threadId);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveGateHistory(threadId: string, history: ResolvedGate[]): void {
+  try {
+    if (history.length === 0) {
+      localStorage.removeItem(GATE_HISTORY_PREFIX + threadId);
+    } else {
+      localStorage.setItem(GATE_HISTORY_PREFIX + threadId, JSON.stringify(history));
+    }
+  } catch { /* storage unavailable/full — history stays in-memory for the session */ }
+}
+
+export function clearGateHistory(threadId: string): void {
+  try { localStorage.removeItem(GATE_HISTORY_PREFIX + threadId); } catch { /* ignore */ }
 }

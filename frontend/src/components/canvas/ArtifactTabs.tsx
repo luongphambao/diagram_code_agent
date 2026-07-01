@@ -97,9 +97,9 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
 
   return (
     <>
-      <div className="flex flex-1 flex-col overflow-hidden bg-[#0f1117]">
+      <div className="flex flex-1 flex-col overflow-hidden bg-surface-canvas">
         {/* Toolbar */}
-        <div className="flex items-center gap-2 border-b border-white/8 bg-[#0c1015] px-5 py-2.5">
+        <div className="flex items-center gap-2 border-b border-white/8 bg-surface-panel px-5 py-2.5">
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <span className="h-2 w-2 flex-shrink-0 rounded-full bg-emerald-400 shadow-sm shadow-emerald-500/40" />
             {iteration && iteration > 1 && (
@@ -184,7 +184,7 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
         {tab === "code" && (
           <div className="flex flex-1 flex-col overflow-hidden">
             {code ? (
-              <pre className="flex-1 overflow-auto bg-[#0b0e14] p-6 font-mono text-xs leading-relaxed text-slate-300">{code}</pre>
+              <pre className="flex-1 overflow-auto bg-surface-base p-6 font-mono text-xs leading-relaxed text-slate-300">{code}</pre>
             ) : (
               <div className="flex flex-1 items-center justify-center">
                 <p className="text-sm text-slate-700">No code available</p>
@@ -194,7 +194,7 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
         )}
 
         {tab === "pdf" && (
-          <div className="flex flex-1 flex-col overflow-hidden bg-[#0b0e14]">
+          <div className="flex flex-1 flex-col overflow-hidden bg-surface-base">
             {pdf_base64 ? (
               <>
                 <div className="flex items-center justify-between border-b border-white/8 px-4 py-2">
@@ -219,7 +219,7 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
         )}
 
         {tab === "ppt" && (
-          <div className="flex flex-1 flex-col overflow-hidden bg-[#0b0e14]">
+          <div className="flex flex-1 flex-col overflow-hidden bg-surface-base">
             <div className="flex items-center justify-between border-b border-white/8 px-4 py-2">
               <span className="text-xs font-medium text-slate-400">BnK PowerPoint proposal</span>
               <button onClick={downloadPptx} disabled={!pptx_base64}
@@ -240,7 +240,7 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
         )}
 
         {tab === "wbs" && (
-          <div className="flex flex-1 flex-col overflow-hidden bg-[#0b0e14]">
+          <div className="flex flex-1 flex-col overflow-hidden bg-surface-base">
             <div className="flex items-center justify-between border-b border-white/8 px-4 py-2">
               <span className="text-xs font-medium text-slate-400">Work Breakdown Structure</span>
               <button onClick={downloadWbsXlsx} disabled={!wbs_xlsx_base64}
@@ -301,7 +301,7 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
         )}
 
         {tab === "quality" && (
-          <div className="flex flex-1 flex-col overflow-hidden bg-[#0b0e14]">
+          <div className="flex flex-1 flex-col overflow-hidden bg-surface-base">
             <div className="flex items-center justify-between border-b border-white/8 px-4 py-2">
               <span className="text-xs font-medium text-slate-400">Governance &amp; quality</span>
               {quality?.solution_revision != null && (
@@ -317,7 +317,7 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
         )}
 
         {tab === "activity" && (
-          <div className="flex flex-1 flex-col overflow-hidden bg-[#0b0e14]">
+          <div className="flex flex-1 flex-col overflow-hidden bg-surface-base">
             {logs && logs.length > 0 ? (
               <div className="flex-1 space-y-1.5 overflow-y-auto p-4">
                 {logs.map((entry: LogEntry, i) => <ActivityRow key={i} entry={entry} />)}
@@ -331,7 +331,7 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
         )}
 
         {tab === "agents" && (
-          <div className="flex flex-1 flex-col overflow-hidden bg-[#0b0e14]">
+          <div className="flex flex-1 flex-col overflow-hidden bg-surface-base">
             {hasLiveAgentWork ? (
               <div className="flex-1 overflow-y-auto p-4">
                 <SubagentPanel delegations={delegations ?? []} activeSubagent={activeSubagent ?? null}

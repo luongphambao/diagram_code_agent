@@ -49,6 +49,23 @@ logger = logging.getLogger("diagram-agent")
 router = APIRouter()
 
 
+def _activity_event(phase: str, tool: str, label: str = "", detail: str = "",
+                    subagent: str | None = None, ok: bool | None = None) -> dict:
+    """Build a tool/subagent progress event as an AG-UI CUSTOM envelope.
+
+    AG-UI's EventType enum has no bare "ACTIVITY" type (only ACTIVITY_SNAPSHOT /
+    ACTIVITY_DELTA, which model a different shape) — CUSTOM is the spec's generic
+    passthrough for app-specific events, letting an @ag-ui/client consumer parse
+    this stream without dropping/rejecting it.
+    """
+    value: dict = {"phase": phase, "tool": tool, "label": label, "detail": detail}
+    if subagent:
+        value["subagent"] = subagent
+    if ok is not None:
+        value["ok"] = ok
+    return {"type": "CUSTOM", "name": "activity", "value": value}
+
+
 def _persist_decision_record(payload: dict, gate: str | None, approver: str,
                              approver_role: str = "") -> None:
     """Append a HITL v2 DecisionRecord to the workspace log (no-op for plain
@@ -315,9 +332,9 @@ async def agui_endpoint(request: Request):
                                                   "current_detail": detail}
                                         _pending_tasks[tcid] = record
                                         logger.info("→ delegate to %s: %s", sa_name, sa_desc[:80])
-                                        yield _sse({"type": "ACTIVITY", "phase": "start", "tool": name,
-                                                    "label": f"Delegating to {sa_name}", "subagent": sa_name,
-                                                    "detail": detail})
+                                        yield _sse(_activity_event("start", name,
+                                                    label=f"Delegating to {sa_name}", subagent=sa_name,
+                                                    detail=detail))
                                         all_delegations = _completed_delegations + list(_pending_tasks.values())
                                         yield _sse({"type": "STATE_DELTA", "delta": [
                                             {"op": "replace", "path": "/delegations", "value": all_delegations}
@@ -325,12 +342,8 @@ async def agui_endpoint(request: Request):
                                     else:
                                         logger.info("→ %s%s", _label(name),
                                                     f" [{subagent}]" if subagent else "")
-                                        evt: dict = {"type": "ACTIVITY", "phase": "start",
-                                                     "tool": name, "label": _label(name),
-                                                     "detail": detail}
-                                        if subagent:
-                                            evt["subagent"] = subagent
-                                        yield _sse(evt)
+                                        yield _sse(_activity_event("start", name, label=_label(name),
+                                                    detail=detail, subagent=subagent))
                             elif isinstance(m, ToolMessage):
                                 tcid = getattr(m, "tool_call_id", "") or ""
                                 if tcid in seen_ends:
@@ -352,11 +365,8 @@ async def agui_endpoint(request: Request):
                                     ]})
                                 logger.info("← %s %s%s", name, "ok" if ok else "ERROR",
                                             f" [{subagent}]" if subagent else "")
-                                evt2: dict = {"type": "ACTIVITY", "phase": "end", "tool": name,
-                                              "ok": ok, "detail": _tool_output_detail(m.content)}
-                                if subagent:
-                                    evt2["subagent"] = subagent
-                                yield _sse(evt2)
+                                yield _sse(_activity_event("end", name, ok=ok,
+                                            detail=_tool_output_detail(m.content), subagent=subagent))
                                 if name in {"generate_pdf_report", "generate_ppt_proposal"} and ok:
                                     artifact_delta = [
                                         {"op": "replace", "path": f"/{k}", "value": v}
@@ -380,14 +390,8 @@ async def agui_endpoint(request: Request):
                     detail = payload.get("detail", "")
                     label = _label(tool)
                     logger.info("  [%s] %s %s", sa_name, "→" if phase == "start" else "←", label)
-                    act_evt: dict = {
-                        "type": "ACTIVITY", "phase": phase,
-                        "tool": tool, "label": label, "subagent": sa_name,
-                        "detail": detail,
-                    }
-                    if phase == "end":
-                        act_evt["ok"] = ok
-                    yield _sse(act_evt)
+                    yield _sse(_activity_event(phase, tool, label=label, detail=detail,
+                                subagent=sa_name, ok=(ok if phase == "end" else None)))
                     if phase == "start":
                         for _tcid, record in _pending_tasks.items():
                             if record.get("subagent") == sa_name:

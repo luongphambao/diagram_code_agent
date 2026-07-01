@@ -22,7 +22,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.error) {
       return (
-        <div className="flex min-h-screen items-center justify-center bg-[#0f1117] p-8">
+        <div className="flex min-h-screen items-center justify-center bg-surface-canvas p-8">
           <div className="max-w-md rounded-2xl border border-red-500/20 bg-red-950/20 p-6">
             <p className="mb-2 text-sm font-semibold text-red-300">Something went wrong rendering the UI</p>
             <p className="mb-4 break-words text-xs text-slate-400">{this.state.error.message}</p>

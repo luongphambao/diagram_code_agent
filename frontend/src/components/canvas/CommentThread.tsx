@@ -23,7 +23,7 @@ export default function CommentThread({ threadId, userRole }: CommentThreadProps
   const done = comments.filter((c) => c.resolved);
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden bg-[#0b0e14]">
+    <div className="flex flex-1 flex-col overflow-hidden bg-surface-base">
       <div className="flex items-center justify-between border-b border-white/8 px-4 py-2">
         <span className="text-xs font-medium text-slate-400">
           Comments {comments.length > 0 && <span className="text-slate-600">· {open.length} open</span>}

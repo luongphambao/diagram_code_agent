@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useAgentStream } from "./useAgentStream";
-import { BACKEND_URL } from "./agent-utils";
+import { BACKEND_URL, loadGateHistory, saveGateHistory } from "./agent-utils";
 
 // Re-export all types so callers keep their existing imports unchanged.
 export type {
@@ -22,6 +22,7 @@ export type {
   QualitySnapshot,
   LogEntry,
   PendingInterrupt,
+  ResolvedGate,
   ScalingPhase,
   SolutionAssumptions,
   TeamAssumptions,
@@ -37,8 +38,8 @@ export type {
 import type {
   AgentState,
   ChatMessage,
-  DecisionPayload,
   PendingInterrupt,
+  ResolvedGate,
   UploadedFile,
   WireMessage,
 } from "./agent-utils";
@@ -47,6 +48,7 @@ export function useDiagramAgent({ threadId, userRole = "" }: { threadId: string;
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [agentState, setAgentState] = useState<AgentState>({});
   const [pendingInterrupt, setPendingInterrupt] = useState<PendingInterrupt | null>(null);
+  const [gateHistory, setGateHistory] = useState<ResolvedGate[]>(() => loadGateHistory(threadId));
   const [isRunning, setIsRunning] = useState(false);
   const [activity, setActivity] = useState<string | null>(null);
   const [activeSubagent, setActiveSubagent] = useState<string | null>(null);
@@ -58,6 +60,9 @@ export function useDiagramAgent({ threadId, userRole = "" }: { threadId: string;
   const threadIdRef = useRef(threadId);
   const userRoleRef = useRef(userRole);
   const lastTcIdRef = useRef<string>("");
+  const agentStateRef = useRef<AgentState>(agentState);
+  const pendingInterruptRef = useRef<PendingInterrupt | null>(null);
+  const chatMessagesRef = useRef<ChatMessage[]>(chatMessages);
 
   useEffect(() => {
     threadIdRef.current = threadId;
@@ -67,15 +72,33 @@ export function useDiagramAgent({ threadId, userRole = "" }: { threadId: string;
     userRoleRef.current = userRole;
   }, [userRole]);
 
+  useEffect(() => {
+    agentStateRef.current = agentState;
+  }, [agentState]);
+
+  useEffect(() => {
+    pendingInterruptRef.current = pendingInterrupt;
+  }, [pendingInterrupt]);
+
+  useEffect(() => {
+    chatMessagesRef.current = chatMessages;
+  }, [chatMessages]);
+
+  // Persist the resolved-gate timeline for this thread whenever it changes.
+  useEffect(() => {
+    saveGateHistory(threadId, gateHistory);
+  }, [threadId, gateHistory]);
+
   const uploadedFileIds = useCallback(
     () => uploadedFiles.map((f) => f.file_id),
     [uploadedFiles]
   );
 
-  const { runAgent } = useAgentStream({
+  const { runAgent, abortRun } = useAgentStream({
     threadIdRef,
     userRoleRef,
     uploadedFileIds,
+    agentStateRef,
     setAgentState,
     setIsRunning,
     setActivity,
@@ -117,6 +140,20 @@ export function useDiagramAgent({ threadId, userRole = "" }: { threadId: string;
     async (payload: Record<string, unknown>) => {
       const tcId = lastTcIdRef.current;
       if (!tcId) return;
+
+      const resolved = pendingInterruptRef.current;
+      if (resolved) {
+        setGateHistory((prev) => [
+          ...prev,
+          {
+            id: resolved.toolCallId,
+            data: resolved.data,
+            decision: payload,
+            resolvedAt: Date.now(),
+            afterMessageIndex: chatMessagesRef.current.length,
+          },
+        ]);
+      }
       setPendingInterrupt(null);
 
       const toolResult: WireMessage = {
@@ -132,85 +169,13 @@ export function useDiagramAgent({ threadId, userRole = "" }: { threadId: string;
     [runAgent]
   );
 
-  const resolveTechStack = useCallback(
-    async (approved: boolean, modifications?: string) => {
-      await _resolveWithPayload({ approved, modifications: modifications?.trim() || null });
+  // Every HITL gate (tech-stack, blueprint, WBS, exports, ...) resolves through
+  // this single dispatcher — the backend treats them all identically as a tool
+  // result keyed by toolCallId, so there's no need for 12 near-duplicate wrappers.
+  const resolveGate = useCallback(
+    async (payload: Record<string, unknown>) => {
+      await _resolveWithPayload(payload);
     },
-    [_resolveWithPayload]
-  );
-
-  const resolveBlueprint = useCallback(
-    async (approved: boolean, modifications?: string) => {
-      await _resolveWithPayload({ approved, modifications: modifications?.trim() || null });
-    },
-    [_resolveWithPayload]
-  );
-
-  const resolveResultReview = useCallback(
-    async (satisfied: boolean, feedback?: string) => {
-      await _resolveWithPayload({ satisfied, feedback: feedback?.trim() || null });
-    },
-    [_resolveWithPayload]
-  );
-
-  const resolvePdfReport = useCallback(
-    async (approved: boolean, modifications?: string) => {
-      await _resolveWithPayload({ approved, modifications: modifications?.trim() || null });
-    },
-    [_resolveWithPayload]
-  );
-
-  const resolvePptProposal = useCallback(
-    async (approved: boolean, modifications?: string) => {
-      await _resolveWithPayload({ approved, modifications: modifications?.trim() || null });
-    },
-    [_resolveWithPayload]
-  );
-
-  const resolveEmail = useCallback(
-    async (approved: boolean) => { await _resolveWithPayload({ approved }); },
-    [_resolveWithPayload]
-  );
-
-  const resolveMeeting = useCallback(
-    async (approved: boolean) => { await _resolveWithPayload({ approved }); },
-    [_resolveWithPayload]
-  );
-
-  const resolveMeetingSlot = useCallback(
-    async (approved: boolean, selectedSlot?: { start: string; end: string; display_day: string; display_time: string }) => {
-      await _resolveWithPayload({ approved, selected_slot: selectedSlot });
-    },
-    [_resolveWithPayload]
-  );
-
-  const resolveWbsSkeleton = useCallback(
-    async (approved: boolean, modifications?: string) => {
-      await _resolveWithPayload({ approved, modifications: modifications?.trim() || null });
-    },
-    [_resolveWithPayload]
-  );
-
-  const resolveWbs = useCallback(
-    async (approved: boolean, modifications?: string) => {
-      await _resolveWithPayload({ approved, modifications: modifications?.trim() || null });
-    },
-    [_resolveWithPayload]
-  );
-
-  const resolveWbsExcel = useCallback(
-    async (approved: boolean) => { await _resolveWithPayload({ approved }); },
-    [_resolveWithPayload]
-  );
-
-  const resolveDeliveryExport = useCallback(
-    async (approved: boolean) => { await _resolveWithPayload({ approved }); },
-    [_resolveWithPayload]
-  );
-
-  // HITL v2: post a structured trade-off decision (accept_risk, request_evidence, ...).
-  const resolveDecision = useCallback(
-    async (payload: DecisionPayload) => { await _resolveWithPayload({ ...payload }); },
     [_resolveWithPayload]
   );
 
@@ -237,11 +202,13 @@ export function useDiagramAgent({ threadId, userRole = "" }: { threadId: string;
     savedState: AgentState,
     savedChat: ChatMessage[],
     savedWire: WireMessage[],
+    savedGateHistory: ResolvedGate[] = [],
   ) => {
     setChatMessages(savedChat);
     setAgentState(savedState);
     wireMessagesRef.current = savedWire;
     setPendingInterrupt(null);
+    setGateHistory(savedGateHistory);
     setError(null);
     setActivity(null);
     setActiveSubagent(null);
@@ -253,6 +220,7 @@ export function useDiagramAgent({ threadId, userRole = "" }: { threadId: string;
     setAgentState({});
     wireMessagesRef.current = [];
     setPendingInterrupt(null);
+    setGateHistory([]);
     setError(null);
     setActivity(null);
     setActiveSubagent(null);
@@ -263,6 +231,7 @@ export function useDiagramAgent({ threadId, userRole = "" }: { threadId: string;
     chatMessages,
     agentState,
     pendingInterrupt,
+    gateHistory,
     isRunning,
     activity,
     activeSubagent,
@@ -270,19 +239,8 @@ export function useDiagramAgent({ threadId, userRole = "" }: { threadId: string;
     uploadedFiles,
     isUploading,
     sendMessage,
-    resolveTechStack,
-    resolveBlueprint,
-    resolveResultReview,
-    resolvePdfReport,
-    resolvePptProposal,
-    resolveEmail,
-    resolveMeeting,
-    resolveMeetingSlot,
-    resolveWbsSkeleton,
-    resolveWbs,
-    resolveWbsExcel,
-    resolveDeliveryExport,
-    resolveDecision,
+    resolveGate,
+    abortRun,
     uploadFile,
     clearFiles,
     restore,
