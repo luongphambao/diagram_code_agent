@@ -12,6 +12,7 @@ models:
   icon_resolver:  mimo-v2.5
   drawer:         mimo-v2.5
   critic:         mimo-v2.5
+  wbs_planner:    gpt-5.4-mini # structured JSON estimation — direct OpenAI is more reliable than the mimo endpoint for this many sequential tool calls
   ppt_outline:    mimo-v2.5   # LLM outline generation for PPT proposals; swap to claude-sonnet-4-6 for richer output
 
 

@@ -15,6 +15,7 @@ Paths are resolved relative to this repo so the project is self-contained:
 from __future__ import annotations
 
 import contextvars
+import os
 from pathlib import Path
 
 from deepagents.backends import CompositeBackend, FilesystemBackend
@@ -32,13 +33,20 @@ OUTPUTS_DIR    = AGENT_SPACE / "outputs"
 #
 # `WORKSPACE` above is the single shared scratch dir the compiled agent graph and
 # its FilesystemBackend are rooted at (one graph per process). The helpers below
-# give each thread/tenant its OWN artifact directory under agent_space/workspaces/
-# so router-side stores (decision_log, evidence_log, solution_model, …) can be
-# read/written per thread without collision. They are additive: nothing resolves a
-# per-thread workspace until a caller opts in by passing the resolved path (every
-# store already accepts an explicit `workspace=` argument). Fully isolating the
-# agent's own file tools additionally requires per-thread backend construction.
-WORKSPACES_DIR = AGENT_SPACE / "workspaces"
+# give each thread/tenant its OWN artifact directory so router-side stores
+# (decision_log, evidence_log, solution_model, …) can be read/written per thread
+# without collision. They are additive: nothing resolves a per-thread workspace
+# until a caller opts in by passing the resolved path (every store already accepts
+# an explicit `workspace=` argument). Fully isolating the agent's own file tools
+# additionally requires per-thread backend construction.
+#
+# By default per-thread workspaces live under agent_space/workspaces/<thread_id>.
+# Set ARTIFACTS_DIR to an absolute path to mount them somewhere else instead (e.g.
+# a host-visible bind mount in Docker) — every session then shows up as
+# <ARTIFACTS_DIR>/<thread_id>/ with no copy step, since resolve_workspace() below
+# writes there directly.
+_ARTIFACTS_DIR_ENV = os.getenv("ARTIFACTS_DIR", "").strip()
+WORKSPACES_DIR = Path(_ARTIFACTS_DIR_ENV).resolve() if _ARTIFACTS_DIR_ENV else (AGENT_SPACE / "workspaces")
 
 # Context-local "current workspace" — defaults to the shared WORKSPACE so existing
 # code paths are unchanged. A request handler can set it for the duration of a

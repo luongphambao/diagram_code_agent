@@ -25,7 +25,9 @@ services:
     volumes:
       - qdrant_storage:/qdrant/storage
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:6333/healthz || exit 1"]
+      # The qdrant image ships neither curl nor wget (and /bin/sh is dash,
+      # which lacks /dev/tcp), so invoke bash explicitly for a raw HTTP check.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/6333 && printf 'GET /healthz HTTP/1.0\\r\\n\\r\\n' >&3 && head -1 <&3 | grep -q 200"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -46,6 +48,9 @@ services:
       ALLOWED_ORIGINS: "http://localhost:5173"
       # Qdrant for RAG (internal solution similarity search)
       QDRANT_URL: "http://qdrant:6333"
+      # Per-session workspaces are mounted here (host-visible under ./artifacts/<threadId>/)
+      # instead of living inside the opaque agentspace volume — see backends.py.
+      ARTIFACTS_DIR: /app/artifacts
     depends_on:
       postgres:
         condition: service_healthy
@@ -56,6 +61,8 @@ services:
     volumes:
       # Persist scratch workspace + /memories/AGENTS.md across restarts.
       - agentspace:/app/backend/agent_space
+      # Host-visible per-session artifact folders (./artifacts/<threadId>/...).
+      - ./artifacts:/app/artifacts
 
   frontend:
     build:
