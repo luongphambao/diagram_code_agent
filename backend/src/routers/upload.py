@@ -74,7 +74,7 @@ def _attached_images(file_ids: list[str]) -> list[dict]:
                 if b64:
                     blocks.append({
                         "type": "image_url",
-                        "text": "",  # mimo requires text on every content block
+                        "text": "[image]",  # mimo requires a non-empty text on every content block
                         "image_url": {"url": f"data:{mime};base64,{b64}"},
                         "filename": fname,
                     })
