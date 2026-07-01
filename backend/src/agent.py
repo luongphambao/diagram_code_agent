@@ -24,6 +24,7 @@ from langchain.agents.middleware import (
     AgentMiddleware,
     ClearToolUsesEdit,
     ContextEditingMiddleware,
+    LLMToolSelectorMiddleware,
     ModelCallLimitMiddleware,
     ModelFallbackMiddleware,
     ModelRequest,
@@ -171,6 +172,55 @@ class InjectVisionAsUserEdit:
                     "image_url": {"url": f"data:{mime};base64,{b64}"},
                 })
             messages.insert(i + 1, HumanMessage(content=relay_content))
+
+
+_OFFLOAD_GATE_TOOLS = frozenset({"propose_blueprint", "propose_tech_stack"})
+
+
+class OffloadGateArgsEdit:
+    """Replace large gate-tool call args with a pointer once the gate is resolved.
+
+    propose_blueprint/propose_tech_stack receive the full Blueprint/tech_stack as
+    *tool-call arguments* (not a return value — both tools only return a short
+    confirmation string). Both are in GATE_TOOL_NAMES, so ClearToolUsesEdit's
+    `exclude_tools=GATE_TOOL_NAMES` exempts them from clearing forever (needed so
+    an interrupted gate stays resumable) — meaning this ~3-9K token blob rides
+    along in every subsequent model call for the rest of the run even though
+    nothing ever re-reads it (drawer/critic/icon_resolver all read
+    render_spec.json/blueprint.json/tech_stack.json from disk instead).
+
+    This edit only rewrites the transient request-local copy of `tool_calls[i].args`
+    (it runs inside ContextEditingMiddleware like KeepLatestImagesEdit, so it never
+    touches the persisted LangGraph checkpoint state — session_state.py's activity-log
+    reconstruction reads that checkpoint directly and is unaffected). It only offloads
+    once a ToolMessage is already paired with the call (i.e. the gate was approved and
+    the run moved on), so a still-pending/interrupted gate is never touched.
+    """
+
+    _NOTE = "[cleared — full content persisted to disk, already applied]"
+
+    def apply(self, messages: list[AnyMessage], *, count_tokens: Any) -> None:
+        resolved_ids = {
+            getattr(m, "tool_call_id", None)
+            for m in messages
+            if isinstance(m, LCToolMessage)
+        }
+        for i, msg in enumerate(messages):
+            if not isinstance(msg, AIMessage) or not msg.tool_calls:
+                continue
+            new_calls = []
+            changed = False
+            for tc in msg.tool_calls:
+                if (
+                    tc.get("name") in _OFFLOAD_GATE_TOOLS
+                    and tc.get("id") in resolved_ids
+                    and tc.get("args")
+                ):
+                    tc = {**tc, "args": {"_offloaded": self._NOTE}}
+                    changed = True
+                new_calls.append(tc)
+            if changed:
+                messages[i] = msg.model_copy(update={"tool_calls": new_calls})
 
 
 class UsageLoggingMiddleware(AgentMiddleware):
@@ -403,20 +453,40 @@ _WBS_CALL_LIMIT = int(os.getenv("WBS_CALL_LIMIT", str(_RUN_CALL_LIMIT)))
 _PPT_CALL_LIMIT = int(os.getenv("PPT_CALL_LIMIT", "60"))
 
 
+# Main agent has ~42 tool schemas every call (34 MAIN_TOOLS + 6 filesystem
+# built-ins + write_todos + task). LLMToolSelectorMiddleware trims that down via
+# one small extra selection call — only worth it for the main agent; subagents
+# already have narrow (2-9 tool) tool sets where the selector call would cost
+# more than it saves. Env-gated so it can be turned off without a code change if
+# usage.json shows it isn't paying for itself, or the selector excludes a tool
+# the model actually needed.
+_MAIN_TOOL_SELECTOR = os.getenv("MAIN_TOOL_SELECTOR", "1").strip().lower() not in ("0", "false", "no")
+_MAIN_TOOL_SELECTOR_ALWAYS_INCLUDE = [
+    "read_file", "ls", "glob", "grep", "task", "write_todos", "finalize_diagram",
+]
+
+
 def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
-                use_vision_relay: bool = False):
+                use_vision_relay: bool = False, pin_skill_reads: bool = False,
+                use_tool_selector: bool = False):
     from config import vision_in_tools as _vision_in_tools
     edits: list = []
     if use_vision_relay:
         edits.append(InjectVisionAsUserEdit())
+    # pin_skill_reads: the drawer's diagram-detail prompt was trimmed to a short
+    # pointer (agent.py Priority 2) on the assumption it reads the pro-style/
+    # diagrams-as-code skill once and keeps using it — exempt read_file so that
+    # skill content never gets cleared mid-render-refine-loop by ClearToolUsesEdit.
+    exclude = [*GATE_TOOL_NAMES, "read_file"] if pin_skill_reads else GATE_TOOL_NAMES
     edits += [
         KeepLatestImagesEdit(),
+        OffloadGateArgsEdit(),
         ClearToolUsesEdit(
             trigger=CONTEXT_TRIGGER_TOKENS,
             clear_at_least=8_000,
             keep=8,
             clear_tool_inputs=True,
-            exclude_tools=GATE_TOOL_NAMES,
+            exclude_tools=exclude,
         ),
     ]
     layers = [
@@ -427,6 +497,11 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
         UsageLoggingMiddleware(agent_name),
         ModelCallLimitMiddleware(run_limit=run_limit, exit_behavior="end"),
     ]
+    if use_tool_selector and _MAIN_TOOL_SELECTOR:
+        layers.append(LLMToolSelectorMiddleware(
+            max_tools=20,
+            always_include=_MAIN_TOOL_SELECTOR_ALWAYS_INCLUDE,
+        ))
     # Optional model fallback: set FALLBACK_MODEL env var to activate.
     # Format: "provider:model-name" e.g. "anthropic:claude-sonnet-4-5-20250929"
     fallback = os.getenv("FALLBACK_MODEL", "").strip()
@@ -439,6 +514,50 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
 def _make_llm(model: str):
     from config import make_llm as _cfg_make_llm
     return _cfg_make_llm(model)
+
+
+def _register_tuned_summarization_profiles() -> None:
+    """Tune deepagents' bundled SummarizationMiddleware for the models we use.
+
+    create_deep_agent() always adds a SummarizationMiddleware safety net
+    (compute_summarization_defaults). Every model we use (mimo-v2.5, gpt-5.4-mini)
+    is built via ChatOpenAI (config.make_llm) — including mimo, which is an
+    OpenAI-compatible endpoint reached through ChatOpenAI with a custom base_url —
+    so `model.profile` is empty for both and the fallback branch kicks in:
+    trigger=("tokens", 170_000), keep=("messages", 6). Since ClearToolUsesEdit
+    (this module, CONTEXT_TRIGGER_TOKENS=30_000) already keeps the working set
+    well under 170K tokens, that fallback almost never fires — it isn't the
+    "long-run safety net" the module comment above assumes, just dead weight.
+    Register a profile so it actually engages as a backstop once ClearToolUsesEdit
+    alone isn't enough (e.g. a stuck drawer render-refine loop), well above
+    CONTEXT_TRIGGER_TOKENS so it doesn't fire on every normal run.
+
+    HarnessProfile keys are `provider:identifier`, where the provider comes from
+    the *LangChain class*'s `_get_ls_params()["ls_provider"]` — for ChatOpenAI
+    this is always "openai", regardless of a custom base_url — so both roles key
+    under "openai:<model-name>", not "mimo:<model-name>".
+    """
+    from deepagents import HarnessProfile, register_harness_profile
+    from deepagents.middleware.summarization import SummarizationMiddleware
+
+    def _tuned_summarizer(model_str: str):
+        def factory():
+            return [SummarizationMiddleware(
+                model=_make_llm(model_str),
+                backend=make_local_backend(),
+                trigger=("tokens", 60_000),
+                keep=("messages", 12),
+            )]
+        return factory
+
+    for model_str in ("mimo-v2.5", "gpt-5.4-mini"):
+        register_harness_profile(f"openai:{model_str}", HarnessProfile(
+            excluded_middleware={"SummarizationMiddleware"},
+            extra_middleware=_tuned_summarizer(model_str),
+        ))
+
+
+_register_tuned_summarization_profiles()
 
 
 async def make_persistence():
@@ -679,7 +798,8 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
                 memory=[MEMORY_PATH],
                 skills=drawer_spec.get("skills"),
                 middleware=_middleware(run_limit=_DRAWER_CALL_LIMIT, agent_name="drawer",
-                                     use_vision_relay=drawer_vision_relay),
+                                     use_vision_relay=drawer_vision_relay,
+                                     pin_skill_reads=True),
                 store=store,
             ),
             "drawer",
@@ -755,7 +875,7 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
             icon_resolver_compiled, drawer_compiled, critic_compiled,
             wbs_planner_compiled, ppt_generator_compiled,
         ],
-        middleware=_middleware(agent_name="main"),
+        middleware=_middleware(agent_name="main", use_tool_selector=True),
         checkpointer=checkpointer,
         store=store,
         interrupt_on=interrupt_on,

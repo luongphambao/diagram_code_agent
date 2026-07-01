@@ -634,120 +634,22 @@ _PRETTY_DIAGRAM_DETAIL = """\
 - Fix and call `render_diagram` again until production-clean (≤3 renders), then
   call `export_drawio()`.
 
-## Slide-style production output (the DEFAULT)
-Default output is a single-page 16:9 landscape slide with white background and
-NO gradient hero band (`include_hero=False` by default). The diagram is scaled
-to fit inside one page automatically — do not crop or remove nodes to force
-a certain size. Pass `include_hero=True` only when the user explicitly requests
-the blue hero title band. The script MUST use:
-```python
-from prettygraph import Pretty, render_slide
-# sizes come from plan_style_sizes(node_count=..., longest_label_chars=...) —
-# paste its pretty_kwargs here so icons/text scale with the cards:
-g = Pretty(..., direction="LR", flow_layout=True, theme="pro",
-           node_width=300, node_height=60, icon_size=44, title_size=16,
-           sublabel_size=13, edge_label_size=13, cluster_label_size=18)
-# top-level clusters must pass number=1, number=2, ... and optional accent=...
-# Pass the legend straight from render_spec.json["legend"] — each row is
-# {"label": ..., "flow": ...} and the flow resolves the matching arrow color/dash
-# automatically, so the legend always matches the edges. Omit legend only when the
-# blueprint has no flow-typed edges.
-render_slide(g, "out",
-             title=SLIDE_TITLE,
-             diagram_title=DIAGRAM_TITLE,
-             legend=RENDER_SPEC_LEGEND)  # e.g. [{"label": "Data Flow", "flow": "data"}, ...]
-```
-Rules for slide mode:
-- Always use `theme="pro"` with `node_width` and `node_height` for uniform cards.
-- Always size via `plan_style_sizes` first — do not hand-pick icon/font sizes.
-- Verify text with `fit_labels` before rendering: every label/sublabel must fit
-  INSIDE its card. Fix any TEXT OVERFLOW audit finding before finalizing.
-- Number every top-level section cluster (`number=1`, `number=2`, ...).
-- **MANDATORY — ≤5 primary columns.** Before writing any `g.cluster()` calls,
-  count the blueprint clusters and plan the column layout explicitly:
-  - ≤5 clusters: one row, done.
-  - 6-10 clusters: pick 4-5 main-flow tiers for the primary row; assign every
-    cross-cutting tier (Security, Observability, CI/CD, Infrastructure) to stack
-    UNDER its nearest main-flow tier. Then implement with invisible spine +
-    `same_rank` (the stacking recipe in "Layout into CLEAR BLOCKS"). **No
-    invisible spine = no stacking = spaghetti.** The audit will report CLUSTER
-    STRIP if you skip this — fix it before finalizing.
-  - >10 clusters: fold into a 2-row poster grid instead (`density="poster"`).
-  Poster: fold after 4-5 sections per row into a 2-row grid.
-- Include a legend when there are >2 edge colors/styles.
-- `export_drawio()` must report existing slide drawio, not overwrite it.
-
-## Layout into CLEAR BLOCKS (most important)
-Every component sits inside a labeled block, blocks arranged as a clean flow,
-arrows short and rarely crossing. Apply to Azure/GCP/OCI/IBM exactly as AWS.
-- **Every node belongs to a cluster.** Put EVERY box in a tier cluster (Client,
-  Edge/Hosting, Application, Data, AI, Monitoring, CI/CD...). Only a single entry
-  actor (User) may sit outside. No floating nodes.
-- **≤5 cluster COLUMNS — never a wide strip.** A row of 6-7 clusters renders as a
-  cramped 3:1 strip with tiny text and stranded labels. The fix when you have many
-  tiers: **STACK each cross-cutting tier (Security, Monitoring, CI/CD) in the SAME
-  column as the flow tier it serves**, so the page becomes a balanced ~1.3–2:1
-  grid AND every side-channel edge is short. Recipe (the pro-style skill documents
-  it fully): pin one node per column with an invisible spine, then `same_rank` a
-  node of each stacked cluster onto that column::
-
-      for a, b in [("edge_lb","app_ui"), ("app_ui","ai_x"), ("ai_x","db_x")]:
-          g.link(a, b, style="invis")            # spine fixes the columns
-      g.same_rank(["edge_lb", "cicd_build"])     # CI/CD stacks under Edge
-      g.same_rank(["app_ui", "sec_iam"])         # Security stacks under Application
-      g.same_rank(["ai_x", "mon_logs"])          # Monitoring stacks under AI
-
-- **Plan the columns BEFORE writing code** when you have ≥6 clusters: write a
-  comment block in the script listing which clusters go in each column and which
-  cross-cutting tiers stack under them. Example:
-  ```python
-  # COLUMN PLAN (5 cols):
-  # Col 1: client  |  under: cicd
-  # Col 2: edge    |  under: security
-  # Col 3: app     |  under: observability
-  # Col 4: data
-  # Col 5: storage
-  ```
-  Committing to a 10-column strip after the fact cannot be fixed without a full
-  redesign — plan first, then code.
-
-- **Order clusters along the flow and place connected clusters ADJACENT/STACKED** so
-  edges stay short. Never let a labeled edge cross the whole canvas or double back —
-  the audit flags these; reorder or stack instead.
-- **Few edges**: one edge per concern. Send monitoring/secrets/logging on ONE
-  dashed side-channel to a cluster that sits ADJACENT to its source — not fanned
-  out across the canvas.
-- **Limit concern colors**: use a small fixed set when color is needed — user/API
-  blue, CI/CD brown/slate, management teal, security red/dotted, monitoring
-  blue-gray/dashed. If more than two styles/colors are visible, include a legend
-  in slide mode.
-- **No spaghetti from cross-cutting inputs**: never draw one dashed edge from each
-  config/calibration file to each internal consumer. Use a `Configuration
-  Management` capability and one dashed cluster-level edge into the processing
-  service; use one dashed edge from the service to `Observability`.
-- **No floating labeled edges**: labels such as generated reports, semantic
-  index, conflict log, and store scores must sit on an edge that visibly
-  terminates at the target node/cluster. Use cluster-to-cluster arrows with
-  `ltail` / `lhead` for long storage/search/analytics flows.
-- **No L-shaped layouts / vertical towers**: never put the primary flow along the
-  bottom and then stack the remaining tiers in one tall right-side column. If
-  the audit says `SPARSE CENTER`, `L-SHAPE WARNING`, or `SIDE-CHANNEL FANOUT`,
-  redesign into a balanced 3x2 or 4x2 grid and collapse side-channel lines.
-- **Collapse side-channel fanout**: Observability, Security, CI/CD, audit, and
-  secrets should have ONE dashed cluster-level edge per concern, not one dashed
-  edge from every service to every monitoring/security node.
-- **Avoid label clashes**: do not let dense edge trunks cut through important
-  labels such as candidate/consent/scores. Move the label with `taillabel`, split
-  it, or reroute/shorten the edge.
-- **Security boundary for AWS client diagrams**: when the architecture has public
-  ingress plus private application/data resources, show a VPC boundary with
-  Public Subnet and Private Subnet clusters unless the blueprint says otherwise.
-- **Natural primary flow**: keep the main data path left-to-right for pipelines
-  (External I/O -> Input Stream -> Processing Service -> Output/Monitoring).
-  Do not route the primary arrow down, up, and back across the canvas.
-- **Keep edge labels SHORT (≤3 words)** so they fit on a short edge.
-- The render engine already produces large, crisp text + logos at the right size —
-  do NOT shrink fonts or compress; just get the BLOCK LAYOUT balanced.
+## Slide-style production output (the DEFAULT) & column layout
+The pro-style skill (read it FIRST, per the instruction above) documents the
+full `render_slide(...)` recipe and worked example, and the CLEAR BLOCKS
+column-stacking recipe (invisible spine + `same_rank` to stack cross-cutting
+tiers like Security/Monitoring/CI/CD under the flow tier they serve, keeping
+≤5 primary columns). Re-read the skill's "Slide-style production output" and
+"Layout discipline — CLEAR BLOCKS" sections if you need the exact code —
+do not guess the API. The load-bearing rules to never skip:
+- `theme="pro"` + `node_width`/`node_height` from `plan_style_sizes`; verify
+  with `fit_labels` before rendering — fix any TEXT OVERFLOW finding.
+- **≤5 primary columns.** ≥6 clusters → stack cross-cutting tiers under their
+  nearest flow tier (invisible-spine + `same_rank`); >10 clusters → poster mode.
+- Order/place connected clusters ADJACENT so edges stay short; one dashed
+  side-channel edge per concern (never fanned out); include a legend when
+  >2 edge colors/styles appear; `export_drawio()` must not overwrite an
+  existing slide drawio.
 
 ## Hard rules
 - End Pretty scripts with `render_slide(g, "out", ...)`; `include_hero` is
