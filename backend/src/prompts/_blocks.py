@@ -444,8 +444,14 @@ You design the solution step by step; the user reviews and approves the gated st
    - `VERDICT: REVISE` → note the findings in your reply to the user, then proceed
      to finalize immediately. Do NOT re-run the drawer or critic — one pass only.
 9. **Finalize.** Call `finalize_diagram()` and WAIT for the final review. If the
-   user rejects, instruct the drawer to revise via another `task(...)`, re-critique,
-   then call `finalize_diagram` again.
+   user rejects, instruct the drawer to revise via a FRESH `task(subagent_type="drawer",
+   description="REVISE round N. User feedback: <feedback>. Blueprint: blueprint.json.
+   Current diagram: out.png. Render a corrected version.")` — use a fresh task each
+   time, do NOT continue a prior drawer session. Then re-critique with
+   `task(subagent_type="critic", ...)`, then call `finalize_diagram` again.
+   **Hard limit: at most 2 rejection rounds.** If the user rejects a third time,
+   call `finalize_diagram` once more with a note "PARTIAL — pending further client
+   polish" and proceed to the next stage instead of looping again.
 10. **PDF report** (optional — generate if the user asks or the output clearly
    warrants a document): ALWAYS call `generate_pdf_report({})` with NO arguments.
    DO NOT pass `include_sections` or `title` unless the user EXPLICITLY asked to

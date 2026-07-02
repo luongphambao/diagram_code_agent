@@ -36,6 +36,7 @@ providers:
     base_url: https://api.xiaomimimo.com/v1   # OpenAI-compatible endpoint
     system_prompt_prefix: "Always respond in English only. Do not use Chinese or any other language.\n\n"
     vision_in_tools: false  # mimo-v2.5 has vision but rejects image blocks in tool messages (400: text not set)
+    supports_structured_output: false  # mimo rejects function_calling/json_schema ("Unsupported function") and ignores the schema in json_mode → disables LLMToolSelectorMiddleware for it (else tool selection returns off-task JSON, KeyError 'tools', and the model stops calling tools)
 
   anthropic:
     api_key_env: ANTHROPIC_API_KEY

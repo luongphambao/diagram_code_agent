@@ -232,6 +232,7 @@ class UsageLoggingMiddleware(AgentMiddleware):
 
     def __init__(self, agent_name: str) -> None:
         self._agent_name = agent_name
+        self._call_count = 0
 
     def _log(self, usage: dict) -> None:
         try:
@@ -262,6 +263,17 @@ class UsageLoggingMiddleware(AgentMiddleware):
         response: ModelResponse = await handler(request)
         usage = self._extract_usage(response)
         if usage:
+            self._call_count += 1
+            if self._call_count > _WARN_CALL_COUNT:
+                logger.warning(
+                    "agent %s: %d model calls (threshold=%d) — potential runaway loop",
+                    self._agent_name, self._call_count, _WARN_CALL_COUNT,
+                )
+            if usage["input_tokens"] > _WARN_INPUT_TOKENS:
+                logger.warning(
+                    "agent %s: input context=%d tok (threshold=%d) — approaching limit",
+                    self._agent_name, usage["input_tokens"], _WARN_INPUT_TOKENS,
+                )
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, self._log, usage)
         return response
@@ -270,6 +282,17 @@ class UsageLoggingMiddleware(AgentMiddleware):
         response: ModelResponse = handler(request)
         usage = self._extract_usage(response)
         if usage:
+            self._call_count += 1
+            if self._call_count > _WARN_CALL_COUNT:
+                logger.warning(
+                    "agent %s: %d model calls (threshold=%d) — potential runaway loop",
+                    self._agent_name, self._call_count, _WARN_CALL_COUNT,
+                )
+            if usage["input_tokens"] > _WARN_INPUT_TOKENS:
+                logger.warning(
+                    "agent %s: input context=%d tok (threshold=%d) — approaching limit",
+                    self._agent_name, usage["input_tokens"], _WARN_INPUT_TOKENS,
+                )
             self._log(usage)
         return response
 
@@ -452,6 +475,11 @@ _DRAWER_CALL_LIMIT = int(os.getenv("DRAWER_CALL_LIMIT", str(_RUN_CALL_LIMIT)))
 _WBS_CALL_LIMIT = int(os.getenv("WBS_CALL_LIMIT", str(_RUN_CALL_LIMIT)))
 _PPT_CALL_LIMIT = int(os.getenv("PPT_CALL_LIMIT", "60"))
 
+# Early-warning thresholds: log at WARNING level so runaway traces surface in
+# logs before they show up in LangSmith. Both are env-tunable.
+_WARN_CALL_COUNT   = int(os.getenv("WARN_CALL_COUNT", "30"))
+_WARN_INPUT_TOKENS = int(os.getenv("WARN_INPUT_TOKENS", "80000"))
+
 
 # Main agent has ~42 tool schemas every call (34 MAIN_TOOLS + 6 filesystem
 # built-ins + write_todos + task). LLMToolSelectorMiddleware trims that down via
@@ -465,26 +493,116 @@ _MAIN_TOOL_SELECTOR_ALWAYS_INCLUDE = [
     "read_file", "ls", "glob", "grep", "task", "write_todos", "finalize_diagram",
 ]
 
+# Phase-based static tool filter: send only the tools relevant to the current
+# stage instead of all 34 MAIN_TOOLS every call. Phase is inferred from the most
+# advanced workspace file present. Falls back to all tools if undetermined.
+# Utility tools (evidence, findings, comments, quality) appear in every phase.
+_UTILITY_TOOLS = frozenset({
+    "record_evidence", "waive_finding", "resolve_finding", "edit_entity",
+    "quality_summary", "compare_revisions", "add_comment", "resolve_comment",
+    "query_change_impact", "propose_meeting_slots", "create_client_meeting",
+    "export_to_delivery",
+})
+_PHASE_TOOLS: dict[str, frozenset[str]] = {
+    "intake": _UTILITY_TOOLS | {
+        "analyze_architecture_requirements", "propose_diagram_brief",
+        "web_research", "apply_compliance_pack", "reality_sync",
+        "propose_tech_stack", "propose_blueprint",
+    },
+    "blueprint": _UTILITY_TOOLS | {
+        "propose_tech_stack", "propose_blueprint", "web_research",
+        "propose_diagram_brief", "apply_compliance_pack",
+        "export_adr_pack", "reality_sync", "visualize_code_structure",
+        "finalize_diagram",
+    },
+    "draw": _UTILITY_TOOLS | {
+        "finalize_diagram", "list_saved_diagrams", "visualize_code_structure",
+        "export_adr_pack", "reality_sync",
+        "generate_pdf_report", "propose_deck_plan", "generate_ppt_proposal",
+        "send_architecture_report_email",
+    },
+    "wbs": _UTILITY_TOOLS | {
+        "propose_wbs_skeleton", "propose_wbs", "export_wbs_excel",
+        "web_research",
+    },
+    "ppt": _UTILITY_TOOLS | {
+        "propose_deck_plan", "generate_ppt_proposal",
+        "send_architecture_report_email",
+    },
+    "report": _UTILITY_TOOLS | {
+        "generate_pdf_report", "send_architecture_report_email",
+    },
+}
+
+
+def _detect_phase(workspace: "Path") -> str:
+    """Infer the current workflow phase from workspace files (most-advanced wins)."""
+    if (workspace / "out.pdf").exists():
+        return "report"
+    if (workspace / "deck_plan.json").exists():
+        return "ppt"
+    if (workspace / "wbs.json").exists():
+        return "wbs"
+    if (workspace / "out.png").exists() or (workspace / "blueprint.json").exists():
+        return "draw"
+    if (workspace / "tech_stack.json").exists() or (workspace / "architecture_analysis.json").exists():
+        return "blueprint"
+    return "intake"
+
+
+def _tool_name(tool) -> str:
+    """Return the name of a tool (BaseTool or schema dict)."""
+    if isinstance(tool, dict):
+        return tool.get("name", "")
+    return getattr(tool, "name", "")
+
+
+class PhaseToolFilterMiddleware(AgentMiddleware):
+    """Filter MAIN_TOOLS down to the phase-relevant subset each call.
+
+    Avoids sending ~34 tool schemas (~12K tok) when only 8-12 are relevant.
+    Falls back to the full tool list if the workspace phase can't be determined.
+    Only modifies the request.tools list; doesn't touch messages or state.
+    """
+
+    def _filtered_tools(self, tools):
+        try:
+            from backends import current_workspace
+            phase = _detect_phase(current_workspace())
+        except Exception:
+            return tools  # safe fallback: no filtering
+        allowed = _PHASE_TOOLS.get(phase)
+        if not allowed:
+            return tools
+        # Always keep built-ins (filesystem tools, task, write_todos) which don't
+        # appear in _PHASE_TOOLS but are always injected by deepagents.
+        return [t for t in tools if _tool_name(t) in allowed or not _tool_name(t)]
+
+    async def awrap_model_call(self, request: ModelRequest, handler):
+        request.tools = self._filtered_tools(request.tools)
+        return await handler(request)
+
+    def wrap_model_call(self, request: ModelRequest, handler):
+        request.tools = self._filtered_tools(request.tools)
+        return handler(request)
+
 
 def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
-                use_vision_relay: bool = False, pin_skill_reads: bool = False,
-                use_tool_selector: bool = False):
+                use_vision_relay: bool = False,
+                use_tool_selector: bool = False,
+                use_phase_filter: bool = False):
     from config import vision_in_tools as _vision_in_tools
     edits: list = []
     if use_vision_relay:
         edits.append(InjectVisionAsUserEdit())
-    # pin_skill_reads: the drawer's diagram-detail prompt was trimmed to a short
-    # pointer (agent.py Priority 2) on the assumption it reads the pro-style/
-    # diagrams-as-code skill once and keeps using it — exempt read_file so that
-    # skill content never gets cleared mid-render-refine-loop by ClearToolUsesEdit.
-    exclude = [*GATE_TOOL_NAMES, "read_file"] if pin_skill_reads else GATE_TOOL_NAMES
+    exclude = GATE_TOOL_NAMES
     edits += [
         KeepLatestImagesEdit(),
         OffloadGateArgsEdit(),
         ClearToolUsesEdit(
             trigger=CONTEXT_TRIGGER_TOKENS,
             clear_at_least=8_000,
-            keep=8,
+            keep=4,
             clear_tool_inputs=True,
             exclude_tools=exclude,
         ),
@@ -497,6 +615,8 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
         UsageLoggingMiddleware(agent_name),
         ModelCallLimitMiddleware(run_limit=run_limit, exit_behavior="end"),
     ]
+    if use_phase_filter:
+        layers.append(PhaseToolFilterMiddleware())
     if use_tool_selector and _MAIN_TOOL_SELECTOR:
         layers.append(LLMToolSelectorMiddleware(
             max_tools=20,
@@ -702,9 +822,14 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
     *model* overrides the 'main' role in config.yaml; icon_resolver/drawer/critic
     always come from config.yaml (falling back to the resolved main model).
     """
-    from config import get_model, get_system_prompt_prefix
+    from config import get_model, get_system_prompt_prefix, supports_structured_output
 
     main_model           = model or get_model("main",          DEFAULT_MODEL)
+    # LLMToolSelectorMiddleware calls main_model.with_structured_output() to pick
+    # tools; only enable it when the provider actually supports that (mimo does
+    # not — see config.supports_structured_output). Still AND-gated by the
+    # MAIN_TOOL_SELECTOR env flag inside _middleware().
+    _selector_ok         = supports_structured_output(main_model)
     icon_resolver_model  = get_model("icon_resolver",   main_model)
     drawer_model         = get_model("drawer",           main_model)
     critic_model         = get_model("critic",           main_model)
@@ -798,8 +923,7 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
                 memory=[MEMORY_PATH],
                 skills=drawer_spec.get("skills"),
                 middleware=_middleware(run_limit=_DRAWER_CALL_LIMIT, agent_name="drawer",
-                                     use_vision_relay=drawer_vision_relay,
-                                     pin_skill_reads=True),
+                                     use_vision_relay=drawer_vision_relay),
                 store=store,
             ),
             "drawer",
@@ -875,7 +999,8 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
             icon_resolver_compiled, drawer_compiled, critic_compiled,
             wbs_planner_compiled, ppt_generator_compiled,
         ],
-        middleware=_middleware(agent_name="main", use_tool_selector=True),
+        middleware=_middleware(agent_name="main", use_tool_selector=_selector_ok,
+                               use_phase_filter=True),
         checkpointer=checkpointer,
         store=store,
         interrupt_on=interrupt_on,

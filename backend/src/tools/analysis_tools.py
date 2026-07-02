@@ -1865,7 +1865,7 @@ def web_research(query: str, topic: str = "tech_stack") -> str:
         {
             "title": r.get("title", ""),
             "url": r.get("url", ""),
-            "snippet": (r.get("content", "") or "")[:500],
+            "snippet": (r.get("content", "") or "")[:300],
         }
         for r in (data.get("results") or [])[:5]
     ]
@@ -1875,7 +1875,7 @@ def web_research(query: str, topic: str = "tech_stack") -> str:
         "status": "OK",
         "query": query,
         "category": category,
-        "answer": data.get("answer", ""),
+        "answer": (data.get("answer", "") or "")[:1600],
         "sources": sources,
         "budget": report,
         "instruction": (

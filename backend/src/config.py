@@ -107,6 +107,20 @@ def vision_in_tools(model: str) -> bool:
     return bool(pcfg.get("vision_in_tools", True))
 
 
+def supports_structured_output(model: str) -> bool:
+    """Return True if the provider for *model* supports LangChain's structured-output
+    methods (function_calling / json_schema).
+
+    Some OpenAI-compatible endpoints (e.g. mimo) reject these with "Unsupported
+    function" or ignore the schema in json_mode. LLMToolSelectorMiddleware relies
+    on ``with_structured_output`` — when the main model can't honour it, tool
+    selection returns off-task free text (no ``tools`` key → KeyError) and the
+    model stops calling tools. Gate the selector on this flag. Defaults to True.
+    """
+    _, pcfg = resolve_provider(model)
+    return bool(pcfg.get("supports_structured_output", True))
+
+
 def make_llm(model: str):
     """Build a LangChain chat LLM for *model* using provider config from config.yaml."""
     provider_name, pcfg = resolve_provider(model)
