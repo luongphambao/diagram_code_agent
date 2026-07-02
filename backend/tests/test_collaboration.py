@@ -49,7 +49,7 @@ def test_can_approve_policy():
     assert can_approve("architect", "propose_blueprint") is True
     assert can_approve("pm", "propose_blueprint") is False
     # pm may approve client-facing sends
-    assert can_approve("pm", "send_architecture_report_email") is True
+    assert can_approve("pm", "send_email") is True
     # empty/unknown role is permissive (back-compat)
     assert can_approve("", "propose_blueprint") is True
     # a gate with no role restriction is open to anyone

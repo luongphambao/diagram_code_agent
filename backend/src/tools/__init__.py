@@ -203,7 +203,7 @@ DIAGRAM_TOOLS = [
 ]
 
 # Late imports (same as original tools.py bottom section)
-from integrations import send_architecture_report_email, propose_meeting_slots, create_client_meeting  # noqa: E402
+from integrations import send_email, propose_meeting_slots, create_client_meeting  # noqa: E402
 from wbs_tools import (  # noqa: E402
     WBS_PLANNER_TOOLS, propose_wbs_skeleton, propose_wbs, export_wbs_excel,
 )
@@ -233,7 +233,7 @@ MAIN_TOOLS = [
     generate_pdf_report,
     propose_deck_plan,        # HITL: approve the deck storyboard before rendering
     generate_ppt_proposal,
-    send_architecture_report_email,
+    send_email,
     propose_meeting_slots,    # uses internal interrupt() — NOT in GATE_TOOL_NAMES
     create_client_meeting,    # interrupt_on gate — in GATE_TOOL_NAMES
     propose_wbs_skeleton,     # WBS structure approval gate
@@ -262,7 +262,7 @@ GATE_TOOL_NAMES = [
     "generate_pdf_report",
     "propose_deck_plan",
     "generate_ppt_proposal",
-    "send_architecture_report_email",
+    "send_email",
     "create_client_meeting",
     "propose_wbs_skeleton",
     "propose_wbs",
@@ -288,7 +288,7 @@ GATE_DECISIONS: dict[str, list[str]] = {
     "generate_pdf_report": ["approve", "request_evidence", "reject"],
     "propose_deck_plan": ["approve", "request_alternative", "reject"],
     "generate_ppt_proposal": ["approve", "request_evidence", "reject"],
-    "send_architecture_report_email": ["approve", "reject"],
+    "send_email": ["approve", "reject"],
     "create_client_meeting": ["approve", "reject"],
     "propose_wbs_skeleton": ["approve", "request_alternative", "reject"],
     "propose_wbs": ["approve", "approve_with_assumptions", "accept_risk",
@@ -314,7 +314,7 @@ ROLE_GATE_PERMISSIONS: dict[str, set[str]] = {
     "export_wbs_excel": {"pm", "lead", "admin"},
     "generate_pdf_report": {"pm", "lead", "architect", "admin"},
     "generate_ppt_proposal": {"pm", "lead", "architect", "admin"},
-    "send_architecture_report_email": {"pm", "lead", "admin"},
+    "send_email": {"pm", "lead", "admin"},
     "create_client_meeting": {"pm", "lead", "admin"},
     "export_to_delivery": {"pm", "lead", "admin"},
 }

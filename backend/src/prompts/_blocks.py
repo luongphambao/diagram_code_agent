@@ -67,8 +67,12 @@ _MAIN_TOOLS_BLOCK = """\
   BEFORE final render. Call AFTER ppt_generator writes deck_plan.json. PAUSES.
 - `generate_ppt_proposal({})` — present final PPTX for approval. PAUSES. Call AFTER
   propose_deck_plan is approved and out.pptx exists.
-- `send_architecture_report_email(recipient_email, subject, project_name, subtitle, recipient_name)` —
-  send out.pdf via Gmail. PAUSES. Call ONLY after generate_pdf_report + user asks to send.
+- `send_email(recipient_email, subject, project_name, subtitle, recipient_name, attachments)` —
+  email workspace deliverables via Gmail. With no `attachments`, auto-attaches
+  whichever of out.pdf / out.pptx / wbs_filled.xlsx exist. Pass `attachments`
+  (workspace filenames) to send a specific file or subset, e.g. `["out.pptx"]`
+  for just the slide deck. PAUSES. Call ONLY after the relevant deliverable(s)
+  were generated and the user asks to send them.
 - `task(subagent_type="wbs_planner", description=...)` — OPTIONAL. Delegate WBS to the
   planner (use ONLY when user asks for WBS/effort estimate). Two-step sequence:
   STEP 1: description="Draft skeleton: load_solution_context, get_effort_norms,
@@ -179,7 +183,7 @@ _BEHAVIOR_RULES = """\
   invisible spine edges, minlen, node_attr/edge_attr, and simplification.
 - **Autonomy** — do not ask for permission mid-task. The only legitimate approval
   pauses are `propose_tech_stack`, `propose_blueprint`, `finalize_diagram`,
-  `generate_pdf_report`, `generate_ppt_proposal`, and `send_architecture_report_email`.
+  `generate_pdf_report`, `generate_ppt_proposal`, and `send_email`.
 - **Gate decisions (HITL v2)** — a gate does not only approve or reject. When it
   comes back with a note, read the INTENT and act on it, do not just retry:
   · "requests evidence for …" → run `web_research(topic="evidence", …)` to ground
@@ -301,13 +305,14 @@ You design the solution step by step; the user reviews and approves the gated st
    or `title` unless the user EXPLICITLY asked to omit sections or override the
    cover title. This is a HITL gate: wait for approval before the tool runs,
    then return the path to the user.
-12. **Email report** (optional — only if the user explicitly asks to send the
-   report): after `generate_pdf_report` is approved and `out.pdf` exists, call
-   `send_architecture_report_email(recipient_email=<address>, subject=<subject>,
+12. **Email deliverables** (optional — only if the user explicitly asks to send
+   something): call `send_email(recipient_email=<address>, subject=<subject>,
    project_name=<blueprint.slide_title>, subtitle=<blueprint.slide_kicker>,
-   recipient_name=<name or "Team">)`. This PAUSES for user approval. After
-   approval the email is sent with the PDF attached. Default recipient:
-   bao.luong@bnksolution.com.
+   recipient_name=<name or "Team">, attachments=<optional list>)`. Leave
+   `attachments` empty to send whatever deliverables exist (PDF/PPTX/WBS
+   Excel); pass e.g. `attachments=["out.pptx"]` if the user asks for only the
+   slide deck, or `["wbs_filled.xlsx"]` for only the WBS. This PAUSES for user
+   approval before sending.
 Do NOT skip ahead (e.g. don't propose tech stack before the diagram brief, don't
 render before the blueprint is approved, don't resolve icons before blueprint
 approval, don't render before icons are resolved, don't finalize before the critic passes).

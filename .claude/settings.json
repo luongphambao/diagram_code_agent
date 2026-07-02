@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE=$(jq -r '.tool_input.file_path // empty' 2>/dev/null); [[ \"$FILE\" =~ \\.(py|ts|tsx|js|jsx|json|yaml|yml|toml|sh)$ ]] && { REPO=$(git -C \"$(dirname \"$FILE\")\" rev-parse --show-toplevel 2>/dev/null) && cd \"$REPO\" && git add \"$FILE\" && git diff --cached --quiet || git commit -m \"auto: update $(basename \"$FILE\")\"; } 2>/dev/null || true",
+            "statusMessage": "Auto-committing code file..."
+          }
+        ]
+      }
+    ]
+  }
+}

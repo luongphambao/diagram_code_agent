@@ -519,7 +519,7 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
         "finalize_diagram", "list_saved_diagrams", "visualize_code_structure",
         "export_adr_pack", "reality_sync",
         "generate_pdf_report", "propose_deck_plan", "generate_ppt_proposal",
-        "send_architecture_report_email",
+        "send_email",
     },
     "wbs": _UTILITY_TOOLS | {
         "propose_wbs_skeleton", "propose_wbs", "export_wbs_excel",
@@ -527,10 +527,10 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
     },
     "ppt": _UTILITY_TOOLS | {
         "propose_deck_plan", "generate_ppt_proposal",
-        "send_architecture_report_email",
+        "send_email",
     },
     "report": _UTILITY_TOOLS | {
-        "generate_pdf_report", "send_architecture_report_email",
+        "generate_pdf_report", "send_email",
     },
 }
 

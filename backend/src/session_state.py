@@ -44,7 +44,7 @@ _TOOL_LABELS = {
     "generate_pdf_report": "Generating the PDF report",
     "generate_ppt_proposal": "Presenting the PPT proposal for approval",
     "create_pptx": "Generating the PowerPoint deck",
-    "send_architecture_report_email": "Sending the architecture report email",
+    "send_email": "Sending the deliverables email",
     "write_todos": "Planning the steps",
     "task": "Delegating to subagent",
     "ls": "Listing files",
@@ -457,16 +457,19 @@ def _card_for(val, summary: str):
             "awaiting_ppt_proposal",
             {},
         )
-    if name == "send_architecture_report_email":
+    if name == "send_email":
+        attachments = args.get("attachments") or []
+        what = ", ".join(attachments) if attachments else "the generated deliverables"
         return (
             {
                 "type": "email_approval",
-                "question": f"Send the architecture report PDF to {args.get('recipient_email', '')}?",
+                "question": f"Send {what} to {args.get('recipient_email', '')}?",
                 "recipient_email": args.get("recipient_email", ""),
                 "subject": args.get("subject", ""),
                 "project_name": args.get("project_name", ""),
                 "subtitle": args.get("subtitle", ""),
                 "recipient_name": args.get("recipient_name", "Team"),
+                "attachments": attachments,
             },
             "awaiting_email_approval",
             {},

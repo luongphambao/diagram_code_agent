@@ -1,0 +1,41 @@
+{
+  "objective": "Design a scalable, secure web application architecture on AWS with FastAPI backend, PostgreSQL, and Google OAuth for 5000 concurrent users.",
+  "application_type": "api_service",
+  "scale_level": "medium",
+  "security_level": "standard",
+  "provider_preference": "aws",
+  "analysis_signals": [
+    "authentication",
+    "database",
+    "resilience_required",
+    "medium scale",
+    "AWS provider"
+  ],
+  "stakeholders": [
+    "cloud/devops",
+    "developers",
+    "security"
+  ],
+  "functional_requirements": [
+    "Web application frontend",
+    "Python FastAPI backend API",
+    "PostgreSQL database",
+    "Google OAuth user authentication"
+  ],
+  "non_functional_requirements": [
+    "Handle 5000 concurrent users",
+    "High availability",
+    "Scalability",
+    "Security",
+    "Maintainability"
+  ],
+  "layout_constraints": [
+    "Left-to-right pipeline flow",
+    "Standard density for medium scale"
+  ],
+  "assumptions": [
+    "Medium scale deployment on AWS",
+    "Standard security level with OAuth",
+    "Resilience required for production use"
+  ]
+}

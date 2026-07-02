@@ -2,6 +2,6 @@
 from integrations.email import (  # noqa: F401
     SendEmailConfig,
     _EMAIL_HTML_TEMPLATE,
-    _upload_pdf_to_composio,
-    send_architecture_report_email,
+    _upload_file_to_composio,
+    send_email,
 )
