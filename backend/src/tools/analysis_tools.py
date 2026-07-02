@@ -268,51 +268,22 @@ class ScalingPhase(CoercingModel):
 
 class TechChoice(CoercingModel):
     """One layer of the recommended technology stack."""
-    layer: str = Field(
-        description=(
-            "the layer name — core layers: frontend, backend, database, auth, infra, monitoring, networking, security; "
-            "conditional layers: cache, queue, cdn, search, storage, ci_cd, analytics, ai_ml, integration"
-        )
-    )
+    layer: str = Field(description="e.g. frontend|backend|database|auth|infra|monitoring|networking|security|cache|queue|cdn|search|storage|ci_cd|analytics|ai_ml|integration")
     choice: str = Field(description="the specific technology chosen for this layer")
     rationale: str = Field("", description="1-2 sentence reason tied to the requirements")
     cost_tier: str = Field("$$", description="relative cost: $=low, $$=medium, $$$=high")
-    decision_criteria: Optional[TechCriteria] = Field(
-        default=None,
-        description="1-5 scores for the CHOSEN technology on cost, ops_complexity, scalability, vendor_lockin, team_fit",
-    )
-    alternatives: list[TechAlternative] = Field(
-        default_factory=list,
-        description="rejected alternatives with why_rejected and optional criteria scores",
-    )
-    estimated_monthly_cost_usd: Optional[CostRange] = Field(
-        default=None,
-        description="assumption-based cost range for this layer in USD/month",
-    )
-    capacity_sizing: str = Field(
-        "",
-        description="instance type/count WITH the math — e.g. '2× Fargate 0.5vCPU, autoscale 2–6 — sized for ~150 RPS peak × 2 headroom'",
-    )
-    performance_target: str = Field(
-        "",
-        description="measurable target tied to an NFR — e.g. 'p99 ≤ 120 ms at 150 RPS'",
-    )
-    risks: list[TechRisk] = Field(
-        default_factory=list,
-        description="1-2 risks for this layer with mitigation",
-    )
+    decision_criteria: Optional[TechCriteria] = Field(default=None, description="1-5 scores on cost/ops_complexity/scalability/vendor_lockin/team_fit")
+    alternatives: list[TechAlternative] = Field(default_factory=list, description="rejected alternatives with why_rejected")
+    estimated_monthly_cost_usd: Optional[CostRange] = Field(default=None, description="USD/month cost range for this layer")
+    capacity_sizing: str = Field("", description="instance type/count with sizing math, e.g. '2× Fargate 0.5vCPU autoscale 2-6 for ~150 RPS'")
+    performance_target: str = Field("", description="measurable NFR target, e.g. 'p99 ≤ 120ms at 150 RPS'")
+    risks: list[TechRisk] = Field(default_factory=list, description="1-2 risks with mitigation")
 
 
 class WAFPillar(CoercingModel):
     """Coverage of one AWS Well-Architected Framework pillar in the blueprint."""
-    addressed_by: list[str] = Field(
-        default_factory=list,
-        description="node IDs or key_decision labels that address this pillar",
-    )
-    gaps: list[str] = Field(
-        default_factory=list,
-        description="known gaps — explicitly declare rather than leave empty; gaps are allowed when stated",
-    )
+    addressed_by: list[str] = Field(default_factory=list, description="node IDs or key_decision labels addressing this pillar")
+    gaps: list[str] = Field(default_factory=list, description="known gaps; declare explicitly rather than leaving empty")
 
 
 class PillarCoverage(BaseModel):
@@ -344,23 +315,9 @@ class BPCluster(BaseModel):
     id: str = Field(description="unique snake_case id")
     label: str = Field(description="tier / group name")
     tier: str = Field("", description="frontend|backend|data|infra|external|security")
-    parent: str = Field(
-        "",
-        description="id of the parent cluster when this group nests inside another "
-                    "(e.g. an 'OCR Pipeline' sub-group inside a 'Serving' zone); "
-                    "leave empty for top-level zones",
-    )
-    accent: str = Field(
-        "",
-        description="optional pinned accent color for this zone — one of: blue, cyan, "
-                    "teal, violet, indigo, green, amber, rose, slate. Leave empty to "
-                    "auto-assign by declaration order. Use to color-code phases.",
-    )
-    number: Optional[int] = Field(
-        None,
-        description="optional explicit step number shown as a badge in the zone header "
-                    "(1, 2, 3 …). Leave null to skip numbering.",
-    )
+    parent: str = Field("", description="id of parent cluster for nesting; empty for top-level zones")
+    accent: str = Field("", description="zone color: blue|cyan|teal|violet|indigo|green|amber|rose|slate; empty=auto")
+    number: Optional[int] = Field(None, description="step badge number (1,2,3…); null to skip")
 
 
 class BPEdge(BaseModel):
@@ -369,17 +326,8 @@ class BPEdge(BaseModel):
     to: str = Field(description="target node id")
     label: str = Field("", description="operation or protocol label")
     protocol: str = Field("", description="HTTP|gRPC|AMQP|TCP|WebSocket|SQL|Redis")
-    flow: str = Field(
-        "",
-        description="semantic flow category used to color-code the arrow consistently "
-                    "with the legend: data|control|serving|registry|monitoring|security. "
-                    "Leave empty for a neutral default arrow.",
-    )
-    style: str = Field(
-        "",
-        description="line style override: solid|dashed|dotted. Leave empty to use the "
-                    "style implied by `flow` (control/monitoring/security are dashed).",
-    )
+    flow: str = Field("", description="data|control|serving|registry|monitoring|security; empty=neutral")
+    style: str = Field("", description="solid|dashed|dotted; empty=infer from flow")
 
 
 class LegendEntry(BaseModel):
@@ -394,44 +342,20 @@ class LegendEntry(BaseModel):
 
 class Blueprint(CoercingModel):
     """A structured architecture blueprint."""
-    audience: str = Field(
-        "client",
-        description="target reader for the diagram; default client for customer-facing architecture diagrams",
-    )
-    detail_level: str = Field(
-        "architecture",
-        description="architecture|engineering|code; default architecture hides implementation details",
-    )
-    layout_intent: str = Field(
-        "left_to_right_pipeline",
-        description="intended visual flow, e.g. left_to_right_pipeline or top_down_stack",
-    )
+    audience: str = Field("client", description="client|engineer; default client for customer-facing diagrams")
+    detail_level: str = Field("architecture", description="architecture|engineering|code")
+    layout_intent: str = Field("left_to_right_pipeline", description="e.g. left_to_right_pipeline or top_down_stack")
     presentation_style: Literal["slide", "diagram"] = Field(
         "slide",
-        description="slide (default): production output with the gradient hero "
-                    "title band + caption + legend; diagram: body-only output, "
-                    "ONLY when the user explicitly asks for a plain/raw diagram",
+        description="slide (default): title band + legend; diagram: body-only, use ONLY when user asks for plain/raw diagram",
     )
     density: Literal["standard", "detailed", "poster"] = Field(
         "detailed",
-        description="detailed (DEFAULT): flow-driven landscape slide — ~20-28 nodes "
-                    "(more is fine for complex systems; engine scales to fit one page), "
-                    "direction='LR', flow_layout=True so real cross-cluster edges pull "
-                    "the layout and connections between zones are clearly visible. "
-                    "Clusters size to their content (small clusters stay small); only "
-                    "clusters with ≥4 nodes get grid packing via g.grid_cluster(). "
-                    "Sublabel (tech + sizing) MANDATORY for every compute/data/network "
-                    "node. Primary-flow edges carry protocol labels (≤3 words). "
-                    "Choose density based on actual architecture complexity — do NOT "
-                    "cut nodes to fit the page; the engine scales the diagram to fit "
-                    "inside one 16:9 slide. "
-                    "poster: dense wall-grid output (flow_layout=False) — 25-45 nodes "
-                    "in 6-12 numbered planes each packed as a multi-column logo grid; "
-                    "use ONLY when the user explicitly requests a poster/wall layout. "
-                    "standard: ONLY for genuinely small systems (<10 components, ≤3 "
-                    "tiers) — 12-18 nodes, ≤5 columns. "
-                    "Pass density to the drawer so it calls plan_style_sizes(output='poster') "
-                    "for poster, or plan_style_sizes(output='slide') for standard/detailed.",
+        description=(
+            "detailed (DEFAULT): flow-driven LR landscape, ~20-45 nodes, sublabels mandatory, real cross-cluster edges. "
+            "poster: dense wall-grid 25-45 nodes in numbered planes; use ONLY when user asks for poster/wall layout. "
+            "standard: small systems only (<10 components, ≤3 tiers, 12-18 nodes)."
+        ),
     )
     slide_title: str = Field(
         "",
@@ -451,32 +375,11 @@ class Blueprint(CoercingModel):
     )
     pattern: str = Field(description="microservices|monolith|serverless|event-driven|hybrid")
     pattern_rationale: str = Field("", description="2-3 sentences: why this architecture pattern fits these requirements")
-    key_decisions: list[str] = Field(
-        default_factory=list,
-        description="3-6 concrete design decisions & trade-offs: data flow, scaling/performance, "
-                    "availability/HA, security/auth, storage, integration — one sentence each",
-    )
-    c4_level: Literal["context", "container"] = Field(
-        "container",
-        description="C4 diagram level: container (default, full component view) or context (5-8 nodes, "
-                    "system boundaries + external actors only — use for executive/client slide audience)",
-    )
-    pillar_coverage: Optional[PillarCoverage] = Field(
-        default=None,
-        description="Well-Architected Framework 6-pillar coverage; for each pillar list node IDs / "
-                    "key decisions that address it, and any known gaps. Gaps are allowed when declared.",
-    )
-    nfr_mapping: list[NFRMapping] = Field(
-        default_factory=list,
-        description="Maps each NFR from the diagram brief to the mechanism and blueprint nodes that satisfy it. "
-                    "Use measurable NFRs when possible (SLA %, RPO minutes, latency ms).",
-    )
-    legend: list[LegendEntry] = Field(
-        default_factory=list,
-        description="optional legend rows mapping each flow category used in `edges` to "
-                    "a human label (e.g. data → 'Data & Training Flow'). Leave empty to "
-                    "auto-derive one row per distinct flow present in the edges.",
-    )
+    key_decisions: list[str] = Field(default_factory=list, description="3-6 design decisions & trade-offs (data flow, scaling, HA, security, storage, integration), one sentence each")
+    c4_level: Literal["context", "container"] = Field("container", description="container (default, full components) or context (5-8 nodes, boundaries+actors only)")
+    pillar_coverage: Optional[PillarCoverage] = Field(default=None, description="WAF 6-pillar coverage: addressed_by node IDs + known gaps per pillar")
+    nfr_mapping: list[NFRMapping] = Field(default_factory=list, description="each NFR mapped to mechanism and node_ids; use measurable NFRs (SLA%, latency ms)")
+    legend: list[LegendEntry] = Field(default_factory=list, description="legend rows per flow category; empty=auto-derive from edges")
     nodes: list[BPNode] = Field(default_factory=list)
     clusters: list[BPCluster] = Field(default_factory=list)
     edges: list[BPEdge] = Field(default_factory=list)
