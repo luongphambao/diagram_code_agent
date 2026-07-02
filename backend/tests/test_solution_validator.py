@@ -234,4 +234,34 @@ def test_feasibility_detail_names_worst_sprint():
     feas = [f for f in findings if f.dimension == "feasibility"]
     assert feas
     assert "sprint 2" in feas[0].detail.lower() or "2" in feas[0].detail
-    assert "2" in feas[0].title  # "2 sprint(s) overloaded"
+    # title/entity_ids must stay stable across re-runs (which sprints are overloaded
+    # is a detail, not identity) so waive_finding's status survives; see finding_store.py.
+    assert feas[0].title == "Schedule not deliverable: sprint(s) overloaded"
+    assert feas[0].entity_ids == []
+
+
+def test_feasibility_finding_id_stable_when_overload_set_shrinks():
+    """Waiving must survive a gate re-run where a partial fix drops one overload.
+
+    Regression for a bug where the overload count lived in the finding's title,
+    so finding_id (a hash of dimension/entity_ids/title) changed on every re-run
+    with a different overload count, silently discarding a waived/resolved status
+    (docx §4.3) and re-blocking the release gate forever.
+    """
+    def _feas_finding(overloads):
+        wbs = {
+            "items": [],
+            "effort_totals": {"total_mandays": 0},
+            "resource_leveling": {"overloads": overloads},
+        }
+        findings = evaluate_solution(_CLEAN_BRIEF, _CLEAN_BLUEPRINT, wbs)
+        return next(f for f in findings if f.dimension == "feasibility")
+
+    before = _feas_finding([
+        {"sprint": 2, "role": "dev", "demand_md": 25.0, "capacity_md": 10.0, "overflow_md": 15.0},
+        {"sprint": 3, "role": "ba", "demand_md": 12.0, "capacity_md": 5.0, "overflow_md": 7.0},
+    ])
+    after = _feas_finding([
+        {"sprint": 2, "role": "dev", "demand_md": 20.0, "capacity_md": 10.0, "overflow_md": 10.0},
+    ])
+    assert before.finding_id == after.finding_id

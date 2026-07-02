@@ -452,9 +452,15 @@ def evaluate_solution(
         findings.append(SolutionFinding(
             severity="high", confidence="medium", dimension="feasibility",
             artifact_type="wbs", repair_strategy="human_decision",
+            # entity_ids=[] + a static title (matching Rules 5/6/9) so finding_id stays
+            # constant across re-runs even as which sprints/roles are overloaded shifts
+            # with a partial fix — a dynamic title here previously minted a new
+            # finding_id every gate re-run, silently dropping the waived status (see
+            # finding_store.py's stable-id contract) and re-blocking the release gate
+            # in an unbreakable loop.
             entity_ids=[], requires_human_decision=True,
-            title=f"Schedule not deliverable: {len(overloads)} sprint(s) overloaded",
-            detail=("; ".join(detail_parts)
+            title="Schedule not deliverable: sprint(s) overloaded",
+            detail=(f"{len(overloads)} sprint(s) overloaded — " + "; ".join(detail_parts)
                     + f" (worst: sprint {worst['sprint']} {worst['role']} "
                     f"+{float(worst['overflow_md']):.1f} MD over capacity)."),
             recommendation=("Increase FTE, reduce scope per sprint, or extend the timeline "
