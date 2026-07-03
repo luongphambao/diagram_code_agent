@@ -723,6 +723,30 @@ def _register_tuned_summarization_profiles() -> None:
 _register_tuned_summarization_profiles()
 
 
+def _set_general_purpose_enabled(enabled: bool, model_strs: set[str]) -> None:
+    """Toggle deepagents' auto-added "general-purpose" subagent per model key.
+
+    create_deep_agent() silently adds a "general-purpose" subagent (plus the
+    SubAgentMiddleware `task` tool) to every agent that doesn't already define
+    one. For worker subagents (icon_resolver/drawer/critic/ppt_generator) that
+    tool is an unintended escape hatch: a failed render once led the drawer to
+    retry via task(general-purpose) three times, each a stateless nested agent
+    with no call limit — 1.66M tokens (42%) of a single 4M-token run.
+
+    Harness profiles are keyed per provider:model and the registry is
+    process-global, so per-agent behavior requires toggling around each
+    create_deep_agent call in build_agent (profiles are read at build time,
+    and register_harness_profile merges field-wise with incoming values
+    winning). build_agent runs once at server startup, so the toggling is not
+    a concurrency concern.
+    """
+    from deepagents import GeneralPurposeSubagentProfile, HarnessProfile, register_harness_profile
+    for model_str in model_strs:
+        register_harness_profile(f"openai:{model_str}", HarnessProfile(
+            general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=enabled),
+        ))
+
+
 async def make_persistence():
     """Build session persistence: ``(checkpointer, store, aclose, pool)``.
 
