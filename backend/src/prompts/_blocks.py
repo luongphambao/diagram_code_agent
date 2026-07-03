@@ -526,12 +526,9 @@ do not guess the API. The load-bearing rules to never skip:
   ml_rnn/ml_lstm(yellow), ml_fc/ml_dense(orange), ml_norm(gray), ml_loss(red), ml_output(dark green).
   ML_* cluster kinds: ML_Input, ML_Embedding, ML_Encoder, ML_Attention, ML_Decoder,
   ML_Output, ML_Training, ML_Inference, ML_Pipeline.
-- Resolve every icon path with `search_icons("<service>", provider="<provider>")`
-  within the stack's provider — don't reach for an `aws/...` icon in an
-  Azure/GCP/OCI diagram. NEVER guess a path — a wrong path drops the icon. No icon
-  found? omit `icon=` or use `fetch_logo`. A blank-icon box is a bug.
-  `fetch_logo` now resolves 321 AI/LLM brands via lobe-icons CDN automatically
-  (Claude, OpenAI, Gemini, Mistral, LangChain, HuggingFace, Ollama, etc.).
+- Icons are pre-resolved in `icon_plan.json` — use those exact paths, staying
+  within the stack's provider. A plan entry of NOT_FOUND → omit `icon=`. NEVER
+  invent or guess a path — a wrong path drops the icon; a blank-icon box is a bug.
 - Collapse N identical replicas to ONE box "(xN)". Route monitoring/secrets on ONE
   dashed side-channel, not per node.
 - Pick `direction` deliberately ("LR" flows, "TB" stacks).
