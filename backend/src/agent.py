@@ -747,6 +747,7 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
                 use_vision_relay: bool = False,
                 use_tool_selector: bool = False,
                 use_phase_filter: bool = False,
+                use_drawer_revise_gate: bool = False,
                 task_call_limit: int | None = None):
     from config import resolve_provider as _resolve_provider
     exclude = GATE_TOOL_NAMES
