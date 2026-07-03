@@ -102,9 +102,8 @@ _ICON_RESOLVER_TOOLS_BLOCK = """\
 - `search_drawio_shapes(query, limit=5)` — search 10,446 official draw.io shapes
   for exact `style=` strings. Use when you need vendor shapes (AWS Lambda, k8s Pod,
   UML actor, etc.) in the exported .drawio file. NEVER guess mxgraph.* names.
-- `fetch_logo(name)` — resolve a brand logo. NOW SEARCHES lobe-icons (321 AI/LLM
-  brands: Claude, OpenAI, Gemini, Mistral, LangChain, HuggingFace, Ollama, Qdrant,
-  Kafka, MongoDB, etc.) FIRST, then falls back to web scraping. Use after search_icons.
+- `fetch_logo(name)` — resolve a brand logo (lobe-icons first, then web
+  scraping). Use after search_icons.
 - Plus `read_file`, `ls`, `glob`, `grep`."""
 
 _DRAWER_TOOLS_BLOCK = """\
