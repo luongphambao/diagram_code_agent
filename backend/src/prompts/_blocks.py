@@ -462,12 +462,9 @@ _PRETTY_DIAGRAM_DETAIL = """\
   same_rank/invisible spine edges, short adjacent clusters, anchors, collapsed
   replicas, and one representative side-channel edge.
 - Pick each node `kind` by MEANING (source/network/compute/data/messaging/
-  monitoring/security/neutral) so the color carries information.
-  For ML/DL neural network diagrams, use ml_* node kinds and ML_* cluster kinds:
-  ml_input(green), ml_embed(amber), ml_conv/ml_pool(blue), ml_attention/ml_transformer(purple),
-  ml_rnn/ml_lstm(yellow), ml_fc/ml_dense(orange), ml_norm(gray), ml_loss(red), ml_output(dark green).
-  ML_* cluster kinds: ML_Input, ML_Embedding, ML_Encoder, ML_Attention, ML_Decoder,
-  ML_Output, ML_Training, ML_Inference, ML_Pipeline.
+  monitoring/security/neutral) so the color carries information. For ML/DL
+  neural-network diagrams use the ml_* node kinds and ML_* cluster kinds — the
+  full color table is in the pro-style skill.
 - Icons are pre-resolved in `icon_plan.json` — use those exact paths, staying
   within the stack's provider. A plan entry of NOT_FOUND → omit `icon=`. NEVER
   invent or guess a path — a wrong path drops the icon; a blank-icon box is a bug.
