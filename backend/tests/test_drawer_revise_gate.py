@@ -143,7 +143,7 @@ def test_submit_critique_reads_but_no_longer_increments_counter(workspace):
         "severity": "high", "confidence": "high", "category": "layout",
         "title": "test finding", "detail": "test",
     }
-    verdict_text = analysis_tools.submit_critique.func(findings=[finding])
+    verdict_text = analysis_tools.submit_critique.invoke({"findings": [finding]})
     assert "VERDICT: REVISE" in verdict_text
     assert not _REVISION_COUNT_FILE.resolve().exists() or json.loads(
         _REVISION_COUNT_FILE.resolve().read_text(encoding="utf-8")
