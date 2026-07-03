@@ -125,16 +125,26 @@ def test_non_drawer_task_calls_pass_through_untouched(workspace):
     assert mw._decide(req) is None
 
 
-def test_main_agent_middleware_stack_includes_gate(monkeypatch):
-    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    monkeypatch.setenv("MIMO_API_KEY", "test-key")
-    main_graph = agent_module.build_agent()
-    found = False
-    for node in getattr(main_graph, "nodes", {}).values():
-        bound = getattr(node, "bound", None)
-        # middleware list isn't directly introspectable on the compiled graph in
-        # all langgraph versions; fall back to checking the module builds at all
-        # and DrawerReviseGateMiddleware is importable/usable (covered above).
-        if bound is not None:
-            found = True
-    assert found
+def test_middleware_wires_gate_only_when_requested():
+    layers_off = agent_module._middleware(agent_name="drawer")
+    assert not any(isinstance(m, DrawerReviseGateMiddleware) for m in layers_off)
+    layers_on = agent_module._middleware(agent_name="main", use_drawer_revise_gate=True)
+    assert any(isinstance(m, DrawerReviseGateMiddleware) for m in layers_on)
+
+
+def test_submit_critique_reads_but_no_longer_increments_counter(workspace):
+    """submit_critique must only READ _REVISION_COUNT_FILE now — incrementing it
+    is DrawerReviseGateMiddleware's job (see analysis_tools.py comment)."""
+    import tools.analysis_tools as analysis_tools
+
+    blueprint = {"nodes": [], "clusters": [], "edges": []}
+    (workspace / "blueprint.json").write_text(json.dumps(blueprint), encoding="utf-8")
+    finding = {
+        "severity": "high", "confidence": "high", "category": "layout",
+        "title": "test finding", "detail": "test",
+    }
+    verdict_text = analysis_tools.submit_critique.func(findings=[finding])
+    assert "VERDICT: REVISE" in verdict_text
+    assert not _REVISION_COUNT_FILE.resolve().exists() or json.loads(
+        _REVISION_COUNT_FILE.resolve().read_text(encoding="utf-8")
+    )["count"] == 0
