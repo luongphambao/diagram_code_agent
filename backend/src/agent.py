@@ -335,6 +335,8 @@ class UsageLoggingMiddleware(AgentMiddleware):
     def wrap_model_call(self, request: ModelRequest, handler):
         if self._check_missing_text:
             _warn_missing_text_blocks(self._agent_name, request.messages)
+        if self._is_fresh_run(request.messages):
+            self._call_count = 0
         response: ModelResponse = handler(request)
         usage = self._extract_usage(response)
         if usage:
