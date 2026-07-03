@@ -263,11 +263,8 @@ You design the solution step by step; the user reviews and approves the gated st
    - Default: audience="client", detail_level="architecture" (no implementation details).
    Present epistemic summary, then WAIT for approval. If rejected, redesign and propose.
 6. **Resolve icons first.** Call
-   `task(subagent_type="icon_resolver", description="Resolve all icons and node classes for the blueprint. Read render_spec.json, call search_diagrams_nodes for all node labels in one batch, call resolve_icons for all custom icons, write icon_plan.json.")`.
-   The icon_resolver reads `render_spec.json`, batches ALL node lookups in ONE
-   `search_diagrams_nodes(queries=[...])` call, resolves custom icons with
-   `resolve_icons(...)`, and writes `icon_plan.json`. It returns a short status.
-   Wait for it to complete before calling the drawer.
+   `task(subagent_type="icon_resolver", description="Resolve all icons/node classes from render_spec.json; write icon_plan.json.")`
+   ONCE after blueprint approval; wait for its short status before the drawer.
 7. **Render diagram.** Call
    `task(subagent_type="drawer", description="<brief spec>")`.
    Keep the description SHORT — the drawer reads the full blueprint from disk.
