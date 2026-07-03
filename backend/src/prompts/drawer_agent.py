@@ -79,6 +79,9 @@ from a senior solutions architect and produce a production-quality diagram.
    log: confirm `out.png` + `out.drawio` are ready and list the main icons used.
    Example: "Done. out.png + out.drawio ready. Icons: ALB, ECS, RDS Aurora,
    Cognito, CloudFront (all resolved)."
+10. If `render_diagram` keeps failing or reports RENDER BUDGET EXHAUSTED, STOP:
+   return a short failure summary quoting the last traceback. `render_diagram`
+   is the ONLY way to execute code here — do not look for another.
 
 ## Environment
 {env_note}
