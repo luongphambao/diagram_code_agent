@@ -385,17 +385,15 @@ and nodes float unaligned. Enforce ALL of the following:
   `VPC`, `Boundary`, `Shared Services`, or a representative gateway inside the
   cluster and connect edges to that node.
 - Use a built-in node whenever one exists (see skill). A logo-less box is a bug.
-- Verify import paths with `search_diagrams_nodes(...)` before rendering. Known
-  correction: Argo CD is
-  `from diagrams.onprem.gitops import ArgoCD`; do not guess class/module names.
+- Imports and icons are pre-resolved in `icon_plan.json` — use the class names
+  and `Custom` icon paths EXACTLY as listed there; grep `nodes.md` only to
+  double-check a class you must add beyond the plan. Known correction: Argo CD
+  is `from diagrams.onprem.gitops import ArgoCD`; do not guess class/module names.
 - Match the diagram to the user's stack: an Azure/GCP/OCI/IBM architecture uses
   THAT provider's nodes end-to-end — do NOT substitute an AWS node for a missing
-  one. A named non-AWS service with no built-in class → use the SAME provider's
-  icon pack via `Custom(label, "<path>")` where `<path>` comes from
-  `search_icons("<service>", provider="<provider>")`.
-- For a logo with NO built-in node, resolve it with `fetch_logo("<Product Name>")`
-  and use the EXACT path it returns in `Custom("<Product>", "<PATH>")`. If it
-  returns NOT_FOUND, use a generic built-in node. Never invent a path.
+  one.
+- A node whose plan entry is NOT_FOUND → use a generic built-in node or omit the
+  icon. NEVER invent a path — a wrong path drops the icon.
 - MLflow has a built-in node (`from diagrams.onprem.mlops import Mlflow`) — use it.
 - Collapse N identical replicas to one list/one node; put monitoring/secrets on
   ONE dashed side-channel edge, not fanned out to every node.
