@@ -660,6 +660,13 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
         ),
         ModelCallLimitMiddleware(run_limit=run_limit, exit_behavior="end"),
     ]
+    if task_call_limit is not None:
+        # Defense-in-depth against subagent-dispatch storms: caps `task` calls
+        # per run. exit_behavior="continue" (not "end") — "end" raises
+        # NotImplementedError when parallel tool calls are pending.
+        layers.append(ToolCallLimitMiddleware(
+            tool_name="task", run_limit=task_call_limit, exit_behavior="continue",
+        ))
     if use_phase_filter:
         layers.append(PhaseToolFilterMiddleware())
     if use_tool_selector and _MAIN_TOOL_SELECTOR:
