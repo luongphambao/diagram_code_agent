@@ -340,8 +340,9 @@ async def agui_endpoint(request: Request):
                                             {"op": "add", "path": "/delegations", "value": all_delegations}
                                         ]})
                                     else:
-                                        logger.info("→ %s%s", _label(name),
-                                                    f" [{subagent}]" if subagent else "")
+                                        logger.info("→ %s%s%s", _label(name),
+                                                    f" [{subagent}]" if subagent else "",
+                                                    f" — {detail}" if detail else "")
                                         yield _sse(_activity_event("start", name, label=_label(name),
                                                     detail=detail, subagent=subagent))
                             elif isinstance(m, ToolMessage):
