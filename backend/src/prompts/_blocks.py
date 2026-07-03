@@ -416,83 +416,29 @@ _PRETTY_DIAGRAM_DETAIL = """\
   node inside a tier cluster (no floating boxes)? clean one-directional flow with
   connected clusters adjacent and SHORT, non-crossing edges? every box shows its
   REAL icon (no blank)? replicas collapsed? If busy, reorder/drop nodes.
-- For **standard** client-facing diagrams, 12-18 visible nodes is the usual upper
-  bound; implementation libraries/file names are hidden, config/monitoring/
-  calibration are aggregated concerns.
-- For **detailed diagrams (blueprint `density="detailed"` — the DEFAULT house style)**:
-  flow-driven landscape layout that should read DENSE and information-rich like a
-  production reference poster — packed regions, short precise edges, every box
-  carrying real detail. ~32-48 visible nodes is the target band; richer systems may
-  use more — the engine scales to fit one 16:9 page automatically, so do NOT cut
-  nodes to force a size, and do NOT leave a sparse/airy page. Call
-  `plan_style_sizes(output="slide")`.
-  **Flow recipe** — makes zone connections visible AND keeps the page dense (mandatory):
-  1. Use `direction="LR"`, `flow_layout=True` (default) on `Pretty(...)`.
-  2. Draw REAL cross-cluster `g.link(...)` edges for the PRIMARY data flow between
-     zones — these pull the layout AND show connections between zones. Every cluster
-     must connect to at least one other cluster. **Color-code each edge by its
-     `flow` from `render_spec.json`: `g.link(a, b, flow="data")`** (categories:
-     data | control | serving | registry | monitoring | security). The flow sets a
-     consistent color + dash automatically (control/monitoring/security render
-     dashed) — do NOT hand-pick edge colors. The same flow keys feed the legend.
-  3. Declare each zone with `g.cluster(id, label, number=N, accent=A, parent=P, ...)`
-     using the `number`, `accent`, and `parent` from each cluster in
-     `render_spec.json` (when present): `accent` pins the zone color, `parent` nests
-     a sub-group inside another zone. **Aim for 4-7
-     nodes per top-level region.** A region with only 1-2 boxes reads thin and
-     leaves empty bands — merge it into the adjacent tier it serves (e.g. fold a
-     lone CDN into Edge, a lone cache into Data) rather than shipping a half-empty
-     band. Different region sizes are fine; near-empty regions are a defect.
-  4. **Grid packing is now AUTOMATIC** — the engine packs every region with ≥3 boxes
-     into a compact 2-3 column grid, so you usually do NOT need `g.grid_cluster(...)`.
-     Call it explicitly only to FORCE a specific column count (e.g.
-     `g.grid_cluster(region_id, cols=3)` for a very wide plane).
-  5. Sublabel MANDATORY for every compute/data/network node — 1-2 short detail lines
-     (tech + capacity/role) from blueprint `tech` + `capacity_sizing`
-     (e.g. `sublabel="Postgres 16 · Multi-AZ"`). A title-only card is a defect.
-     Primary-flow edge labels ≤3 words (e.g. "REST/HTTPS").
-  6. Number every top-level cluster (`number=1`, `number=2`, ...).
-  7. **Order regions along the flow and place connected regions ADJACENT** so every
-     cross-region edge is short — a label-bearing edge that spans the canvas strands
-     its label in blank space (the engine anchors cross-region labels to the source
-     to soften this, but short edges are still the goal). The layout audit reports
-     `LOW FILL` / `STRAND RISK` — treat either as a must-fix.
-  Result: a dense grid of detail-rich, connected regions that fills the page — NOT a
-  few thin bands of 1-2 boxes floating in whitespace.
-- For **poster-mode** (blueprint `density="poster"` — use ONLY when explicitly requested):
-  25-45 nodes in 4-8 numbered region planes, each plane packed as a DENSE multi-column
-  logo grid. Set `flow_layout=False` on `Pretty(...)`. Call
-  `plan_style_sizes(output="poster")`. Recipe:
-  1. Call `declare_poster_grid(row1=[...], row2=[...])` to validate and get the exact
-     `g.grid_cluster(...)` calls.
-  2. Pick `direction` by plane count: 5+ planes → `direction="LR"` (tall portrait
-     poster); ≤4 planes → `direction="TB"` (planes side by side). Set
-     `Pretty(..., flow_layout=False, direction=<that>, theme="pro")`.
-  3. AFTER all boxes/links, paste ONE `g.grid_cluster(region_id, cols=N)` per plane
-     (cols 2-3 reads densest).
-  4. Add only a few cross-plane `g.link(...)` for the primary flow; they auto-relax
-     so the grids — not the data flow — drive the layout.
-  5. Number every top-level plane cluster (`number=1`, `number=2`, ...).
-  Every compute/data/network box MUST show a real technology logo + a tech sublabel.
+- Density bands (the pro-style skill has the full recipe per band — follow it):
+  **standard** = 12-18 visible nodes, implementation details hidden;
+  **detailed** (`density="detailed"`, the DEFAULT) = dense flow-driven landscape,
+  ~32-48 nodes, `plan_style_sizes(output="slide")`, flow recipe per the skill's
+  "Slide-style production output" section — do NOT cut nodes to force a size and
+  do NOT ship a sparse/airy page;
+  **poster** (`density="poster"`, ONLY when explicitly requested) = 25-45 nodes in
+  4-8 numbered planes, `flow_layout=False`, `plan_style_sizes(output="poster")`,
+  and `declare_poster_grid(...)` BEFORE writing code (it returns the exact
+  `g.grid_cluster` calls) — per the skill's "Poster mode" section.
 - Fix and call `render_diagram` again until production-clean (≤3 renders), then
   call `export_drawio()`.
 
-## Slide-style production output (the DEFAULT) & column layout
-The pro-style skill (read it FIRST, per the instruction above) documents the
-full `render_slide(...)` recipe and worked example, and the CLEAR BLOCKS
-column-stacking recipe (invisible spine + `same_rank` to stack cross-cutting
-tiers like Security/Monitoring/CI/CD under the flow tier they serve, keeping
-≤5 primary columns). Re-read the skill's "Slide-style production output" and
-"Layout discipline — CLEAR BLOCKS" sections if you need the exact code —
-do not guess the API. The load-bearing rules to never skip:
+## Column layout (load-bearing rules — full recipe in the pro-style skill)
 - `theme="pro"` + `node_width`/`node_height` from `plan_style_sizes`; verify
   with `fit_labels` before rendering — fix any TEXT OVERFLOW finding.
 - **≤5 primary columns.** ≥6 clusters → stack cross-cutting tiers under their
-  nearest flow tier (invisible-spine + `same_rank`); >10 clusters → poster mode.
-- Order/place connected clusters ADJACENT so edges stay short; one dashed
-  side-channel edge per concern (never fanned out); include a legend when
-  >2 edge colors/styles appear; `export_drawio()` must not overwrite an
-  existing slide drawio.
+  nearest flow tier (skill: "Layout discipline — CLEAR BLOCKS"); >10 clusters →
+  poster mode.
+- Place connected clusters ADJACENT so edges stay short; one dashed side-channel
+  edge per concern (never fanned out); include a legend when >2 edge
+  colors/styles appear; `export_drawio()` must not overwrite an existing slide
+  drawio. The layout audit's `LOW FILL` / `STRAND RISK` findings are must-fix.
 
 ## Hard rules
 - End Pretty scripts with `render_slide(g, "out", ...)`; `include_hero` is
