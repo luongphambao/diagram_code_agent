@@ -274,10 +274,16 @@ interface OrchestratorSectionProps {
 const MAX_ORCHESTRATOR_CHIPS = 6;
 
 function OrchestratorSection({ isRunning, activity, mainLogs }: OrchestratorSectionProps) {
-  // Show recent main-agent tool calls (not subagent ones), newest last
-  const recentTools = mainLogs
+  // Show recent main-agent tool calls (not subagent ones), newest last.
+  // Deduplicate consecutive identical tool names for readability (same as DelegationCard).
+  const toolNames = mainLogs
     .filter((l) => l.type === "tool_start" && l.tool)
-    .slice(-MAX_ORCHESTRATOR_CHIPS);
+    .map((l) => l.tool!);
+  const dedupedTools = toolNames.reduce<string[]>((acc, t) => {
+    if (acc.length === 0 || acc[acc.length - 1] !== t) acc.push(t);
+    return acc;
+  }, []);
+  const recentTools = dedupedTools.slice(-MAX_ORCHESTRATOR_CHIPS);
 
   return (
     <div className="px-5 py-4 border-b border-white/8 bg-[#0d1118]">
@@ -312,8 +318,8 @@ function OrchestratorSection({ isRunning, activity, mainLogs }: OrchestratorSect
       {/* Main agent tool chips */}
       {recentTools.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          {recentTools.map((l, i) => (
-            <ToolChip key={i} name={l.tool!} />
+          {recentTools.map((t, i) => (
+            <ToolChip key={i} name={t} />
           ))}
         </div>
       )}
