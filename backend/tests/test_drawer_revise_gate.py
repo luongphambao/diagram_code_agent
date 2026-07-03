@@ -46,9 +46,14 @@ def _drawer_tool_call(description: str = "REVISE round 1", call_id: str = "d2") 
 
 
 @pytest.fixture()
-def workspace(tmp_path):
-    ws = resolve_workspace("thread-drawer-gate-test")
+def workspace(tmp_path, request):
+    # Unique thread id per test so _REVISION_COUNT_FILE (and any other stage
+    # marker) never leaks state between tests sharing the workspace dir.
+    ws = resolve_workspace(f"thread-drawer-gate-{request.node.name}")
     token = set_current_workspace(ws)
+    revision_file = _REVISION_COUNT_FILE.resolve()
+    if revision_file.exists():
+        revision_file.unlink()
     try:
         yield ws
     finally:
