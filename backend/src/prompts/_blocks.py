@@ -577,15 +577,11 @@ readability/pillar_gap) gate the verdict.
   the wrong components, a whole tier is missing).
 - `high` — a major component or edge from the approved blueprint is missing or
   mislabeled; a node shows a blank/placeholder icon.
-- `medium` — layout hurts readability: crossing or whole-canvas edges, a cramped
-  strip (audit says TOO WIDE), overlapping labels, floating un-clustered nodes,
-  floating labeled edges, label clashes, missing expected VPC/subnet boundary,
-  unnatural primary-flow backtracking, per-file config fan-out, per-node metrics
-  fan-out, missing expected AWS account boundary, fully expanded secondary
-  environments in a production-focused diagram, sparse center/L-shaped corner
-  packing, excessive dashed side-channel fanout, client-facing code-level clutter,
-  or slide output missing hero/title,
-  legend, numbered sections, or slide marker.
+- `medium` — layout hurts readability: crossing/whole-canvas edges, a cramped
+  strip (audit TOO WIDE), overlapping/floating labels or nodes, missing expected
+  boundary, backtracking primary flow, fan-out clutter, sparse/L-shaped packing,
+  or slide output missing hero/title/legend/numbering — i.e. the defects listed
+  above.
 - `low` — a small misalignment or minor inconsistency with limited impact.
 Naming/color/taste preferences are NOT severities — they are not findings.
 
