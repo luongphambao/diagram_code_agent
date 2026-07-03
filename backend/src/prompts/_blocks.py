@@ -516,82 +516,48 @@ These NEVER force REVISE — they ride along on a PASS so the drawer can polish 
 later round. Only functional categories (layout/completeness/correctness/
 readability/pillar_gap) gate the verdict.
 
-## Client-facing defects to file
-- If the blueprint/diagram metadata says `audience=client` or
-  `detail_level=architecture`, file visible code-level clutter as a readability
-  defect: parser libraries, in-place implementation steps, per-file config
-  fan-out, per-node metrics fan-out, or dashed concern lines that visually
-  dominate the main data flow.
-- File unnatural primary-flow backtracking when the main data path jumps down,
-  up, or across the full canvas instead of reading left-to-right/top-to-bottom.
-- File labels that float in blank space or visually point to no visible target.
-- File important labels that are cut through by multiple edge trunks.
-- File audit warnings `SPARSE CENTER`, `L-SHAPE WARNING`, or
-  `SIDE-CHANNEL FANOUT` as readability defects.
-- For `presentation_style=slide`, file missing slide hero/title, missing
-  `out.slide.json`, missing legend when >2 edge colors/styles are visible,
-  body diagram that is a cramped strip inside the slide, or top-level clusters
-  that are not visibly numbered.
-- For ANY slide output, file a `panel_underfill` finding (severity `medium`) when
-  the body diagram is noticeably small in the slide panel — a small island of nodes
-  floating in a large white area — OR when the layout audit reports `PANEL FILL`
-  below 65%. Fix suggestion: "add more columns/nodes, raise per-plane grid cols
-  (g.grid_cluster(region, cols=3)), or use direction='TB' so planes sit side by
-  side and the body fills the panel."
-- For `density=poster`, every region 'plane' MUST read as a DENSE multi-column
-  logo grid (not a tall single column of boxes), and the planes should sit side by
-  side filling the width. File a `poster_grid_broken` finding when you see any of:
-  a plane rendered as a tall single column instead of a 2-3 column grid; planes
-  sprawling with large gaps; an L-shape / staircase; a large empty quadrant; or
-  the panel mostly white with a small off-center body. Fix suggestion: "the drawer
-  must use Pretty(..., direction='TB') and call g.grid_cluster(region_id, cols=2
-  or 3) once per plane after declaring its boxes — NOT g.poster_grid (its
-  single-column ranks fight the in-plane grids); do not hand-wire invisible
-  edges." This is a concrete layout defect, not taste.
-- For `density=poster`, file a `blank_icon` finding when any box renders without a
-  real technology logo — posters require a logo on every compute/data/network box.
-- For AWS client diagrams with public ingress plus private app/data resources,
-  file a missing VPC/Public Subnet/Private Subnet boundary unless explicitly out
-  of scope.
-- For AWS multi-account/governance diagrams, file a missing Management/Security/
-  Shared Services/Production account boundary when those domains are in the
-  approved brief or blueprint.
-- If `architecture_analysis.json` or the approved brief says `security_level`
-  is high/critical, file missing auth/security/secrets/audit boundary when the
-  diagram has no visible security control at all.
-- If the analysis suggested `aws_multi_account_governance` with high/medium fit,
-  file missing account-level boundaries unless the approved blueprint explicitly
-  simplified them away.
-- If analysis concerns mention production focus or CI/CD separation, file a
-  finding when Dev/Staging or deployment tooling dominates the main runtime data
-  path without an explicit production-focused simplification.
-- File excessive side-channel fanout when monitoring, security, secrets, or logs
-  dominate the main data path with many dashed/dotted lines instead of one
-  aggregated representative edge.
-- File a `missing_stacking` finding (severity `medium`) when the layout audit
-  reports CLUSTER STRIP, or when the rendered diagram shows ≥6 top-level
-  clusters laid out in a single horizontal row with any long crossing edges.
-  Fix suggestion: "apply the ≤5-column stacking recipe — add invisible spine
-  edges and same_rank groups to pull Security/Observability/CI/CD under the
-  main-flow tiers they serve; collapse side-channel concerns to one dashed
-  cluster-level edge per concern."
-- For `density=detailed` or `density=poster`, file a `medium` finding when the
-  majority of compute/data/network cards show only a title with no sublabel (tech
-  detail is missing), or when most primary-flow edges carry no protocol/operation
-  label. Fix: "populate blueprint `tech` field and draw sublabel from it; add
-  `protocol` label to primary edges."
-- For `density=detailed`, file a `sparse_diagram` finding (severity `medium`) when
-  the page reads airy instead of like a packed production poster — any of: the
-  layout audit reports `LOW FILL`; multiple top-level regions hold only 1-2 boxes
-  (thin bands with empty space beside them); total visible node count is well below
-  the dense target (~32-48) for a non-trivial architecture; or large blank bands
-  separate the regions. Fix suggestion: "merge thin 1-2 node regions into the
-  adjacent tier they serve, add the missing per-node detail the blueprint already
-  lists, and keep connected regions adjacent so the grid fills the page (the engine
-  auto-packs every ≥3-node region — feed it denser regions)."
-- If the approved brief or blueprint says production-focused/client-facing, file
-  fully expanded Dev/Staging or secondary accounts as readability clutter unless
-  the user explicitly requested those environments.
+## Client-facing defects to file (trigger → finding; keep fix_suggestion short)
+- `audience=client`/`detail_level=architecture` + visible code-level clutter
+  (parser libs, per-file config or per-node metrics fan-out, dominant dashed
+  concern lines) → readability defect.
+- Primary flow backtracks (jumps down/up/across the canvas instead of reading
+  LR/TB) → readability defect.
+- Labels floating in blank space, pointing at no visible target, or cut through
+  by edge trunks → readability defect.
+- Audit warnings `SPARSE CENTER`, `L-SHAPE WARNING`, `SIDE-CHANNEL FANOUT` →
+  readability defects.
+- `presentation_style=slide`: missing hero/title, missing `out.slide.json`,
+  missing legend when >2 edge colors/styles, cramped-strip body, or unnumbered
+  top-level clusters → defect.
+- Slide body noticeably small in the panel OR audit `PANEL FILL` < 65% →
+  `panel_underfill` (medium). Fix: more columns/nodes, higher grid cols, or
+  `direction='TB'`.
+- `density=poster`: a plane rendered as a tall single column, sprawling gaps,
+  L-shape/staircase, large empty quadrant, or small off-center body →
+  `poster_grid_broken`. Fix: `direction='TB'` + one `g.grid_cluster(region,
+  cols=2-3)` per plane — never `g.poster_grid`. Any box without a real logo →
+  `blank_icon`.
+- AWS: public ingress + private app/data but no VPC/Public/Private-subnet
+  boundary → missing boundary. Multi-account/governance in the approved brief
+  but no Management/Security/Shared-Services/Production boundary → missing
+  boundary (also when analysis suggested `aws_multi_account_governance` with
+  high/medium fit, unless the approved blueprint simplified it away).
+- `security_level` high/critical but NO visible security control → missing
+  security/auth/secrets boundary.
+- Dev/Staging or CI/CD tooling dominating the runtime data path in a
+  production-focused diagram → readability clutter (also fully expanded
+  secondary environments the user didn't ask for).
+- Monitoring/security/secrets/logs fanned out over many dashed lines instead of
+  ONE aggregated edge → excessive side-channel fanout.
+- Audit `CLUSTER STRIP`, or ≥6 top-level clusters in one row with long crossing
+  edges → `missing_stacking` (medium). Fix: the ≤5-column stacking recipe;
+  one dashed cluster-level edge per concern.
+- `density=detailed|poster`: most cards title-only (no sublabel) or most primary
+  edges unlabeled → medium finding. Fix: sublabel from blueprint `tech`;
+  `protocol` labels on primary edges.
+- `density=detailed`: audit `LOW FILL`, multiple 1-2 box regions, node count
+  well below ~32-48, or large blank bands → `sparse_diagram` (medium). Fix:
+  merge thin regions into the tier they serve; keep connected regions adjacent.
 
 ## Do NOT file
 - **Taste / "would look nicer if…"** — no "use a different color", "nudge this
