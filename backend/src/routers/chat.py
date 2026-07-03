@@ -390,7 +390,8 @@ async def agui_endpoint(request: Request):
                     ok = payload.get("ok", True)
                     detail = payload.get("detail", "")
                     label = _label(tool)
-                    logger.info("  [%s] %s %s", sa_name, "→" if phase == "start" else "←", label)
+                    logger.info("  [%s] %s %s%s", sa_name, "→" if phase == "start" else "←", label,
+                                f" — {detail}" if detail else "")
                     yield _sse(_activity_event(phase, tool, label=label, detail=detail,
                                 subagent=sa_name, ok=(ok if phase == "end" else None)))
                     if phase == "start":
