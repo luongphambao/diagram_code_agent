@@ -259,12 +259,30 @@ class UsageLoggingMiddleware(AgentMiddleware):
 
     Reads ``usage_metadata`` from the first AIMessage in the response and appends
     a record to usage.json so we can observe token spend per agent over time.
+
+    ``_call_count`` used to be a plain instance counter that never reset: the
+    middleware object is built once inside ``_middleware()`` at ``build_agent()``
+    time, which itself runs ONCE at server startup and is cached globally
+    (``session_state.AGENT``), reused across every conversation and every
+    ``task(subagent_type=...)`` delegation for the server process's entire
+    lifetime. So the "N model calls (threshold=30)" warning log was cumulative
+    since process start, not per-round — a real trace showed "agent drawer: 99
+    model calls" spanning at least two separate drawer delegations, making it
+    impossible to tell how many calls any single round actually took. Fixed by
+    resetting the counter whenever ``request.messages`` has no prior AIMessage
+    yet, i.e. this model call is the first one of a fresh subgraph invocation
+    (each ``task()`` call starts a brand-new, empty conversation for that
+    subagent — see the "stateless subagent" design in drawer_agent.py).
     """
 
     def __init__(self, agent_name: str, *, check_missing_text: bool = False) -> None:
         self._agent_name = agent_name
         self._call_count = 0
         self._check_missing_text = check_missing_text
+
+    @staticmethod
+    def _is_fresh_run(messages) -> bool:
+        return not any(isinstance(m, AIMessage) for m in messages or [])
 
     def _log(self, usage: dict) -> None:
         try:
