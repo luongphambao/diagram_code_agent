@@ -1042,24 +1042,6 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
             "critic",
         ),
     }
-    wbs_planner_compiled: dict = {
-        "name": wbs_planner_spec["name"],
-        "description": wbs_planner_spec["description"],
-        "runnable": _StreamingSubAgentRunnable(
-            create_deep_agent(
-                model=wbs_planner_llm,
-                tools=wbs_planner_spec["tools"],
-                system_prompt=wbs_planner_spec["system_prompt"],
-                backend=backend,
-                memory=[MEMORY_PATH],
-                skills=wbs_planner_spec.get("skills"),
-                middleware=_middleware(run_limit=_WBS_CALL_LIMIT, agent_name="wbs_planner",
-                                     model=wbs_planner_model),
-                store=store,
-            ),
-            "wbs_planner",
-        ),
-    }
     ppt_generator_compiled: dict = {
         "name": ppt_generator_spec["name"],
         "description": ppt_generator_spec["description"],
