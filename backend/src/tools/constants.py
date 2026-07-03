@@ -32,10 +32,19 @@ _SESSION_ARTIFACTS = ("out.png", "out.body.png", "out.drawio", "diagram.py", "ou
 # loop chasing audit warnings that cannot be fully resolved).
 RENDER_SOFT_CAP = 3
 RENDER_HARD_CAP = 6
-ICON_SEARCH_PER_QUERY_CAP = 3
+# search_diagrams_nodes/search_icons are icon_resolver-EXCLUSIVE tools (not bound
+# to drawer/main — see tools/__init__.py ICON_RESOLVER_TOOLS), so these caps only
+# ever affect icon_resolver. A real trace (drawer_call.txt, 2026-07-03) showed
+# icon_resolver ignoring its own tool docstrings ("ALWAYS prefer the batch form")
+# and firing ~13 one-by-one search_diagrams_nodes calls, then ~13 one-by-one
+# search_icons calls repeatedly hitting BUDGET_EXHAUSTED, before ever calling the
+# batch resolve_icons — each a full wasted model call. Caps tightened so a
+# non-batched attempt fails fast (was 6/3, warn at 3) instead of burning ~13 calls
+# before the model gives up and switches to batching.
+ICON_SEARCH_PER_QUERY_CAP = 2      # matches the docstring's own "one keyword, one broader term" flow
 ICON_SEARCH_DEFAULT_TOTAL_CAP = 12
-NODE_SINGLE_SEARCH_WARN = 3
-NODE_SINGLE_SEARCH_HARD_CAP = 6
+NODE_SINGLE_SEARCH_WARN = 1
+NODE_SINGLE_SEARCH_HARD_CAP = 2
 CRITIC_REVISION_HARD_CAP = 2
 
 # Tavily web search is metered per session. The total cap is split into per-stage
