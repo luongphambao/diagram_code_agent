@@ -11,7 +11,7 @@ from typing import Annotated, Literal, Optional
 
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import InjectedToolCallId, tool
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
 from architecture_advisor import analyze_requirements
 from backends import current_workspace
@@ -255,7 +255,10 @@ class SolutionAssumptions(CoercingModel):
 
 
 class TechRisk(CoercingModel):
-    risk: str
+    risk: str = Field(
+        validation_alias=AliasChoices("risk", "description"),
+        description="the risk itself, e.g. 'vendor lock-in on managed DB'",
+    )
     mitigation: str = ""
 
 
