@@ -112,9 +112,17 @@ class InjectVisionAsUserEdit:
     can still see the rendered PNG via the user-message path.
 
     Old relay messages (marked with _SENTINEL) are removed on every apply() call
-    before new ones are injected, so only the latest image is live in context.
-    KeepLatestImagesEdit is a no-op after this edit because ToolMessages no longer
-    carry images.
+    before new ones are injected — belt-and-suspenders cleanup; in practice edits
+    are ephemeral (re-applied to a fresh copy of persisted history on every model
+    call, never written back), so a prior call's relay message is never actually
+    present here.
+
+    Depends on KeepLatestImagesEdit running FIRST in _middleware()'s edits list:
+    that edit trims the persisted ToolMessage history down to a single live image
+    before this edit runs, so this edit only ever finds and relays that one image.
+    If this edit ran first instead, it would relay every historical render/inspect
+    image on every call (unbounded payload growth). Do not reorder without
+    updating this note.
     """
 
     _SENTINEL = "[VISION_RELAY]"
@@ -223,6 +231,28 @@ class OffloadGateArgsEdit:
                 messages[i] = msg.model_copy(update={"tool_calls": new_calls})
 
 
+def _warn_missing_text_blocks(agent_name: str, messages: list[AnyMessage]) -> None:
+    """Log any outgoing content block lacking a non-empty "text" key.
+
+    mimo rejects requests containing a content block with no (or empty) "text"
+    field (see InjectVisionAsUserEdit) — this is a diagnostic-only check (no
+    behavior change) so a recurrence pinpoints the exact offending message
+    instead of requiring another from-scratch investigation. Callers gate this
+    to mimo-backed agents only.
+    """
+    for i, msg in enumerate(messages):
+        content = getattr(msg, "content", None)
+        if not isinstance(content, list):
+            continue
+        for block in content:
+            if isinstance(block, dict) and not block.get("text"):
+                logger.warning(
+                    "agent %s: outgoing message block missing non-empty text — "
+                    "msg_idx=%d msg_type=%s block_type=%s",
+                    agent_name, i, type(msg).__name__, block.get("type"),
+                )
+
+
 class UsageLoggingMiddleware(AgentMiddleware):
     """Append per-model-call token usage to WORKSPACE/usage.json.
 
@@ -230,9 +260,10 @@ class UsageLoggingMiddleware(AgentMiddleware):
     a record to usage.json so we can observe token spend per agent over time.
     """
 
-    def __init__(self, agent_name: str) -> None:
+    def __init__(self, agent_name: str, *, check_missing_text: bool = False) -> None:
         self._agent_name = agent_name
         self._call_count = 0
+        self._check_missing_text = check_missing_text
 
     def _log(self, usage: dict) -> None:
         try:
@@ -260,6 +291,8 @@ class UsageLoggingMiddleware(AgentMiddleware):
         return None
 
     async def awrap_model_call(self, request: ModelRequest, handler):
+        if self._check_missing_text:
+            _warn_missing_text_blocks(self._agent_name, request.messages)
         response: ModelResponse = await handler(request)
         usage = self._extract_usage(response)
         if usage:
@@ -279,6 +312,8 @@ class UsageLoggingMiddleware(AgentMiddleware):
         return response
 
     def wrap_model_call(self, request: ModelRequest, handler):
+        if self._check_missing_text:
+            _warn_missing_text_blocks(self._agent_name, request.messages)
         response: ModelResponse = handler(request)
         usage = self._extract_usage(response)
         if usage:
@@ -458,11 +493,13 @@ CONTEXT_TRIGGER_TOKENS = 30_000   # main context is lean (no images/icons), can 
 # Per-run model-call caps: after this many model calls in one run the agent
 # exits cleanly ("Model call limits exceeded") instead of looping forever.
 # Each agent (main / drawer / critic) is a SEPARATE run with its own budget.
-# A clean drawer pass needs ~12-18 calls; the budget is headroom, and runaway
-# loops are bounded earlier by the render budget (tools.RENDER_HARD_CAP) and
-# the icon-search budget — hitting these caps means something is wrong, so we
-# stop spending. Override via env for experiments.
-_RUN_CALL_LIMIT = int(os.getenv("RUN_CALL_LIMIT", "120"))         # main + drawer
+# A clean drawer pass needs ~12-18 calls (prompt budget: "≤15 model calls").
+# The render/icon-search per-tool budgets (tools.RENDER_HARD_CAP etc.) don't
+# cover every drawer tool (audit_diagram_code, export_drawio, plan_style_sizes,
+# fit_labels are uncapped), so the model-call ceiling is the real backstop for
+# a stuck drawer — keep it comfortably above the intended budget, not 8x looser.
+# Override via env for experiments.
+_RUN_CALL_LIMIT = int(os.getenv("RUN_CALL_LIMIT", "120"))         # main only
 _CRITIC_CALL_LIMIT = int(os.getenv("CRITIC_CALL_LIMIT", "40"))    # inspect+critique only
 
 # Per-stage (per-subagent) model-call budgets (§4.10 "per-stage budget"). Each
@@ -471,7 +508,7 @@ _CRITIC_CALL_LIMIT = int(os.getenv("CRITIC_CALL_LIMIT", "40"))    # inspect+crit
 # Token/cost per stage is recorded separately by UsageLoggingMiddleware → usage.json
 # (keyed by agent_name), which the quality dashboard reads for spend-to-quality.
 _ICON_CALL_LIMIT = int(os.getenv("ICON_CALL_LIMIT", str(_CRITIC_CALL_LIMIT)))
-_DRAWER_CALL_LIMIT = int(os.getenv("DRAWER_CALL_LIMIT", str(_RUN_CALL_LIMIT)))
+_DRAWER_CALL_LIMIT = int(os.getenv("DRAWER_CALL_LIMIT", "40"))    # ~2.5x the ≤15-call budget
 _WBS_CALL_LIMIT = int(os.getenv("WBS_CALL_LIMIT", str(_RUN_CALL_LIMIT)))
 _PPT_CALL_LIMIT = int(os.getenv("PPT_CALL_LIMIT", "60"))
 
@@ -588,16 +625,19 @@ class PhaseToolFilterMiddleware(AgentMiddleware):
 
 
 def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
+                model: str | None = None,
                 use_vision_relay: bool = False,
                 use_tool_selector: bool = False,
                 use_phase_filter: bool = False):
-    from config import vision_in_tools as _vision_in_tools
-    edits: list = []
+    from config import resolve_provider as _resolve_provider
+    exclude = GATE_TOOL_NAMES
+    # KeepLatestImagesEdit MUST run before InjectVisionAsUserEdit: it reduces
+    # the ToolMessage history down to a single live image before the relay
+    # edit scans for images to relay. See InjectVisionAsUserEdit's docstring.
+    edits: list = [KeepLatestImagesEdit()]
     if use_vision_relay:
         edits.append(InjectVisionAsUserEdit())
-    exclude = GATE_TOOL_NAMES
     edits += [
-        KeepLatestImagesEdit(),
         OffloadGateArgsEdit(),
         ClearToolUsesEdit(
             trigger=CONTEXT_TRIGGER_TOKENS,
@@ -612,7 +652,10 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
             edits=edits,
             token_count_method="approximate",
         ),
-        UsageLoggingMiddleware(agent_name),
+        UsageLoggingMiddleware(
+            agent_name,
+            check_missing_text=bool(model) and _resolve_provider(model)[0] == "mimo",
+        ),
         ModelCallLimitMiddleware(run_limit=run_limit, exit_behavior="end"),
     ]
     if use_phase_filter:
@@ -905,7 +948,8 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
                 system_prompt=icon_resolver_spec["system_prompt"],
                 backend=backend,
                 memory=[MEMORY_PATH],
-                middleware=_middleware(run_limit=_ICON_CALL_LIMIT, agent_name="icon_resolver"),
+                middleware=_middleware(run_limit=_ICON_CALL_LIMIT, agent_name="icon_resolver",
+                                     model=icon_resolver_model),
                 store=store,
             ),
             "icon_resolver",
@@ -923,7 +967,7 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
                 memory=[MEMORY_PATH],
                 skills=drawer_spec.get("skills"),
                 middleware=_middleware(run_limit=_DRAWER_CALL_LIMIT, agent_name="drawer",
-                                     use_vision_relay=drawer_vision_relay),
+                                     model=drawer_model, use_vision_relay=drawer_vision_relay),
                 store=store,
             ),
             "drawer",
@@ -940,7 +984,7 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
                 backend=backend,
                 memory=[MEMORY_PATH],
                 middleware=_middleware(run_limit=_CRITIC_CALL_LIMIT, agent_name="critic",
-                                     use_vision_relay=drawer_vision_relay),
+                                     model=critic_model, use_vision_relay=drawer_vision_relay),
                 store=store,
             ),
             "critic",
@@ -957,7 +1001,8 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
                 backend=backend,
                 memory=[MEMORY_PATH],
                 skills=wbs_planner_spec.get("skills"),
-                middleware=_middleware(run_limit=_WBS_CALL_LIMIT, agent_name="wbs_planner"),
+                middleware=_middleware(run_limit=_WBS_CALL_LIMIT, agent_name="wbs_planner",
+                                     model=wbs_planner_model),
                 store=store,
             ),
             "wbs_planner",
@@ -974,7 +1019,8 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
                 backend=backend,
                 memory=[MEMORY_PATH],
                 skills=ppt_generator_spec.get("skills"),
-                middleware=_middleware(run_limit=_PPT_CALL_LIMIT, agent_name="ppt_generator"),
+                middleware=_middleware(run_limit=_PPT_CALL_LIMIT, agent_name="ppt_generator",
+                                     model=ppt_generator_model),
                 store=store,
             ),
             "ppt_generator",
@@ -999,7 +1045,7 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
             icon_resolver_compiled, drawer_compiled, critic_compiled,
             wbs_planner_compiled, ppt_generator_compiled,
         ],
-        middleware=_middleware(agent_name="main", use_tool_selector=_selector_ok,
+        middleware=_middleware(agent_name="main", model=main_model, use_tool_selector=_selector_ok,
                                use_phase_filter=True),
         checkpointer=checkpointer,
         store=store,
