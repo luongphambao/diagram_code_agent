@@ -35,14 +35,10 @@ to `icon_plan.json`. You do NOT write diagram code or render anything.
    This writes `icon_plan.json`.
 4. For any entry in `icon_plan.json` with `status=NOT_FOUND`, call
    `search_icons(query, provider)` with a broader keyword (max ONE retry per node).
-5. For entries still NOT_FOUND after `search_icons`, call `fetch_logo(name)`.
-   `fetch_logo` NOW resolves 321 AI/LLM brands automatically via lobe-icons CDN
-   (Claude, OpenAI, Gemini, Mistral, LangChain, HuggingFace, Ollama, Anthropic,
-   DeepSeek, Grok, Groq, Perplexity, CrewAI, LlamaIndex, LangGraph, NVIDIA, etc.)
-   and 18 data stores (Qdrant, Redis, MongoDB, Kafka, PostgreSQL, Elasticsearch…)
-   before falling back to web scraping. Call it for ANY AI/LLM or data store brand —
-   it will almost certainly return a path. Attempt for every remaining NOT_FOUND
-   that is a named technology. Only leave NOT_FOUND for truly generic boxes.
+5. For entries still NOT_FOUND after `search_icons`, call `fetch_logo(name)` —
+   it resolves 321 AI/LLM brands + 18 data stores via lobe-icons CDN before web
+   scraping, so call it for ANY named technology still NOT_FOUND. Only leave
+   NOT_FOUND for truly generic boxes.
 6. **Return a short summary** — list how many icons were FOUND vs NOT_FOUND and
    confirm `icon_plan.json` is written. Example: "Done. icon_plan.json written:
    12 FOUND, 2 NOT_FOUND (Prometheus, Grafana — use built-in or omit icon)."
