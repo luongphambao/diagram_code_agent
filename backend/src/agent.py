@@ -1210,7 +1210,7 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
             wbs_planner_compiled, ppt_generator_compiled,
         ],
         middleware=_middleware(agent_name="main", model=main_model, use_tool_selector=_selector_ok,
-                               use_phase_filter=True,
+                               use_phase_filter=True, use_drawer_revise_gate=True,
                                # Happy path ≈7 task calls; 2 rejection rounds ≈11.
                                task_call_limit=int(os.getenv("TASK_CALL_LIMIT", "12"))),
         checkpointer=checkpointer,
