@@ -913,11 +913,17 @@ def submit_critique(findings: list[DiagramFinding]) -> str:
     )
     critique_data = [f.model_dump() for f in kept]
     if verdict_for(kept) == "revise":
-        state = _read_json_file(_REVISION_COUNT_FILE, {"count": 0})
-        count = int(state.get("count", 0)) + 1
-        _write_json_file(_REVISION_COUNT_FILE, {"count": count})
+        # The revision-round counter is owned by DrawerReviseGateMiddleware
+        # (agent.py) — it increments _REVISION_COUNT_FILE and resets the render
+        # budget only when it actually lets a post-finalize_diagram drawer
+        # revise dispatch through, since only that middleware can tell an
+        # automatic first-pass critique apart from a genuine post-rejection
+        # round. Here we only READ the count, to stop suggesting a revision
+        # once the budget is already used up (avoids drafting a revise the
+        # gate would just block).
+        count = int(_read_json_file(_REVISION_COUNT_FILE, {"count": 0}).get("count", 0))
         _bump_tool_summary("submit_critique", critic_revisions=count)
-        if count > CRITIC_REVISION_HARD_CAP:
+        if count >= CRITIC_REVISION_HARD_CAP:
             base = format_critique(kept)
             return (
                 f"VERDICT: PASS (revision limit reached: {CRITIC_REVISION_HARD_CAP} "
@@ -925,7 +931,6 @@ def submit_critique(findings: list[DiagramFinding]) -> str:
                 "mention residual findings)\n"
                 + "\n".join(base.splitlines()[1:])
             )
-        reset_render_count()  # a revision round gets a fresh render/search budget
     else:
         _bump_tool_summary("submit_critique")
     verdict_text = format_critique(kept)
