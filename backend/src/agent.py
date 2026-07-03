@@ -785,6 +785,8 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
         layers.append(ToolCallLimitMiddleware(
             tool_name="task", run_limit=task_call_limit, exit_behavior="continue",
         ))
+    if use_drawer_revise_gate:
+        layers.append(DrawerReviseGateMiddleware())
     if use_phase_filter:
         layers.append(PhaseToolFilterMiddleware())
     if use_tool_selector and _MAIN_TOOL_SELECTOR:
