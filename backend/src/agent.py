@@ -962,6 +962,34 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
     wbs_planner_spec["system_prompt"]   = wbs_planner_prefix + wbs_planner_spec["system_prompt"]
     ppt_generator_spec["system_prompt"] = ppt_generator_prefix + ppt_generator_spec["system_prompt"]
 
+    # wbs_planner is built FIRST, with the auto-added general-purpose subagent
+    # left enabled (its behavior is intentionally unchanged). Every agent built
+    # after the False toggle — icon_resolver/drawer/critic/ppt_generator and the
+    # main agent — gets no implicit general-purpose subagent: workers lose the
+    # unintended `task` escape hatch entirely, and main keeps `task` only for
+    # its five named subagents. See _set_general_purpose_enabled.
+    _set_general_purpose_enabled(True, {wbs_planner_model})
+    wbs_planner_compiled: dict = {
+        "name": wbs_planner_spec["name"],
+        "description": wbs_planner_spec["description"],
+        "runnable": _StreamingSubAgentRunnable(
+            create_deep_agent(
+                model=wbs_planner_llm,
+                tools=wbs_planner_spec["tools"],
+                system_prompt=wbs_planner_spec["system_prompt"],
+                backend=backend,
+                memory=[MEMORY_PATH],
+                skills=wbs_planner_spec.get("skills"),
+                middleware=_middleware(run_limit=_WBS_CALL_LIMIT, agent_name="wbs_planner",
+                                     model=wbs_planner_model),
+                store=store,
+            ),
+            "wbs_planner",
+        ),
+    }
+    _set_general_purpose_enabled(False, {
+        icon_resolver_model, drawer_model, critic_model, ppt_generator_model, main_model,
+    })
     icon_resolver_compiled: dict = {
         "name": icon_resolver_spec["name"],
         "description": icon_resolver_spec["description"],
