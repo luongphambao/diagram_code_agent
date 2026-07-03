@@ -73,21 +73,33 @@ _MAIN_TOOLS_BLOCK = """\
   (workspace filenames) to send a specific file or subset, e.g. `["out.pptx"]`
   for just the slide deck. PAUSES. Call ONLY after the relevant deliverable(s)
   were generated and the user asks to send them.
-- `task(subagent_type="wbs_planner", description=...)` — OPTIONAL. Delegate WBS to the
-  planner (use ONLY when user asks for WBS/effort estimate). Two-step sequence:
+- `task(subagent_type="wbs_planner", description=...)` — delegate ALL WBS work to the
+  planner (only when the user asks for WBS/effort estimate — plenty of requests never
+  need one). Once the user HAS asked for a WBS, this delegation is MANDATORY, not a
+  shortcut you can skip: NEVER invent phases/modules/effort numbers yourself and pass
+  them straight to the gate tools below — every one of them reads its numbers back
+  from a workspace file that ONLY wbs_planner writes, and will flatly refuse
+  ("No skeleton yet", "Roll up and plan the WBS first", "No approved WBS to export")
+  if you try to call it before wbs_planner has run, wasting a user-facing approval
+  round-trip on data you made up. Two-step sequence:
   STEP 1: description="Draft skeleton: load_solution_context, get_effort_norms,
-  draft_wbs_skeleton. Write wbs_skeleton.json." → read wbs_skeleton.json →
-  call `propose_wbs_skeleton()` (PAUSES).
+  draft_wbs_skeleton. Write wbs_skeleton.json." → read wbs_skeleton.json (do not
+  estimate phases/modules yourself) → call `propose_wbs_skeleton()` (PAUSES) with the
+  phases exactly as read from that file.
   STEP 2 (immediately after): description="Estimate effort: add_wbs_items,
   compute_wbs_rollup, plan_timeline_and_sprints, plan_team_and_resources,
-  define_milestones, validate_wbs. Write wbs.json." → read wbs.json →
-  call `propose_wbs()` (PAUSES) → call `export_wbs_excel()`.
+  define_milestones, validate_wbs. Write wbs.json." → read wbs.json (do not estimate
+  mandays/timeline/effort splits yourself) → call `propose_wbs()` (PAUSES) with the
+  totals exactly as read from that file → call `export_wbs_excel()`.
 - `propose_wbs_skeleton(question, project_name, project_code, phases)` — WBS gate #1.
-  phases=[{{"code":"I","name":"...","modules":[...]}},...]. PAUSES. After approval →
+  phases=[{{"code":"I","name":"...","modules":[...]}},...] — copy this verbatim from
+  wbs_skeleton.json, do not compose it yourself. PAUSES. After approval →
   IMMEDIATELY run STEP 2.
 - `propose_wbs(question, total_mandays, total_manmonths, timeline_weeks, timeline_months, effort_by_role, effort_by_module)` —
-  WBS gate #2. Read wbs.json totals. PAUSES. After approval → call export_wbs_excel.
-- `export_wbs_excel(question, total_mandays, timeline_months)` — WBS gate #3. PAUSES.
+  WBS gate #2. Copy every value verbatim from wbs.json's totals — do not calculate
+  them yourself. PAUSES. After approval → call export_wbs_excel.
+- `export_wbs_excel(question, total_mandays, timeline_months)` — WBS gate #3. Copy
+  values verbatim from wbs.json. PAUSES.
 - Plus `read_file`, `write_file`, `edit_file`, `ls`, `glob`, `grep`, `write_todos`."""
 
 _ICON_RESOLVER_TOOLS_BLOCK = """\
