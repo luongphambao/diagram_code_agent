@@ -337,7 +337,7 @@ async def agui_endpoint(request: Request):
                                                     detail=detail))
                                         all_delegations = _completed_delegations + list(_pending_tasks.values())
                                         yield _sse({"type": "STATE_DELTA", "delta": [
-                                            {"op": "replace", "path": "/delegations", "value": all_delegations}
+                                            {"op": "add", "path": "/delegations", "value": all_delegations}
                                         ]})
                                     else:
                                         logger.info("→ %s%s", _label(name),
@@ -361,7 +361,7 @@ async def agui_endpoint(request: Request):
                                     logger.info("← delegate %s done (%s)", record["subagent"], record["status"])
                                     all_delegations = _completed_delegations + list(_pending_tasks.values())
                                     yield _sse({"type": "STATE_DELTA", "delta": [
-                                        {"op": "replace", "path": "/delegations", "value": all_delegations}
+                                        {"op": "add", "path": "/delegations", "value": all_delegations}
                                     ]})
                                 logger.info("← %s %s%s", name, "ok" if ok else "ERROR",
                                             f" [{subagent}]" if subagent else "")
@@ -369,18 +369,18 @@ async def agui_endpoint(request: Request):
                                             detail=_tool_output_detail(m.content), subagent=subagent))
                                 if name in {"generate_pdf_report", "generate_ppt_proposal"} and ok:
                                     artifact_delta = [
-                                        {"op": "replace", "path": f"/{k}", "value": v}
+                                        {"op": "add", "path": f"/{k}", "value": v}
                                         for k, v in _artifacts(ws).items()
                                     ]
-                                    artifact_delta.append({"op": "replace", "path": "/current_step", "value": "done"})
+                                    artifact_delta.append({"op": "add", "path": "/current_step", "value": "done"})
                                     yield _sse({"type": "STATE_DELTA", "delta": artifact_delta})
                                 if name == "export_wbs_excel" and ok:
                                     artifact_delta = [
-                                        {"op": "replace", "path": f"/{k}", "value": v}
+                                        {"op": "add", "path": f"/{k}", "value": v}
                                         for k, v in _artifacts(ws).items()
                                     ]
                                     for k, v in _stage_artifacts(ws).items():
-                                        artifact_delta.append({"op": "replace", "path": f"/{k}", "value": v})
+                                        artifact_delta.append({"op": "add", "path": f"/{k}", "value": v})
                                     yield _sse({"type": "STATE_DELTA", "delta": artifact_delta})
                 elif mode == "custom":
                     sa_name = payload.get("subagent", "")
@@ -399,7 +399,7 @@ async def agui_endpoint(request: Request):
                                 record["current_label"] = label
                                 record["current_detail"] = detail
                                 yield _sse({"type": "STATE_DELTA", "delta": [
-                                    {"op": "replace", "path": "/delegations",
+                                    {"op": "add", "path": "/delegations",
                                      "value": _completed_delegations + list(_pending_tasks.values())}
                                 ]})
                                 break
@@ -425,14 +425,14 @@ async def agui_endpoint(request: Request):
                     if gate_name:
                         card.setdefault("allowed_decisions", allowed_decisions_for(gate_name))
                     logger.info("PAUSED at gate: %s", card["type"])
-                    state_delta = [{"op": "replace", "path": "/current_step", "value": step}]
+                    state_delta = [{"op": "add", "path": "/current_step", "value": step}]
                     for k, v in _stage_artifacts(ws).items():
-                        state_delta.append({"op": "replace", "path": f"/{k}", "value": v})
-                    state_delta.append({"op": "replace", "path": "/run_metrics", "value": run_met})
+                        state_delta.append({"op": "add", "path": f"/{k}", "value": v})
+                    state_delta.append({"op": "add", "path": "/run_metrics", "value": run_met})
                     for k, v in delta.items():
-                        state_delta.append({"op": "replace", "path": f"/{k}", "value": v})
+                        state_delta.append({"op": "add", "path": f"/{k}", "value": v})
                     for k, v in _artifacts(ws).items():
-                        state_delta.append({"op": "replace", "path": f"/{k}", "value": v})
+                        state_delta.append({"op": "add", "path": f"/{k}", "value": v})
                     yield _sse({"type": "STATE_DELTA", "delta": state_delta})
                     tc_id = f"tc-{run_id}"
                     yield _sse({"type": "TOOL_CALL_START", "toolCallId": tc_id, "toolCallName": card["type"]})
