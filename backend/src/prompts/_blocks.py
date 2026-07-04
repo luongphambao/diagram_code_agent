@@ -4,12 +4,14 @@ from __future__ import annotations
 
 _MAIN_TOOLS_BLOCK = """\
 ## Tools (you have NO shell — use these)
+[[PHASE intake]]
 - `analyze_architecture_requirements(requirements, provider_preference="")` —
   deterministic planning signals. Call BEFORE the diagram brief. Writes
   `architecture_analysis.json` (application_type, scale_level, security_level,
   provider_preference, detected_capabilities, constraints, patterns). Not a gate.
 - `propose_diagram_brief(brief)` — record the requirements brief BEFORE tech stack.
   Writes `diagram_brief.json`. Not a gate.
+[[/PHASE]]
 - `web_research(query, topic="tech_stack")` — ONE Tavily search. Budget: 10 total,
   split by topic: tech_stack(4), architecture(2), wbs(1), evidence(2), general(1).
   Batch related questions into ONE query. Returns CATEGORY_EXHAUSTED or BUDGET_EXHAUSTED
