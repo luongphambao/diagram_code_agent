@@ -646,6 +646,53 @@ def validate_wbs() -> str:
 
 
 # ════════════════════════════════════════════════════════════════════════════
+# 10. finalize_wbs — one code-driven call for the whole deterministic tail
+# ════════════════════════════════════════════════════════════════════════════
+class FinalizeWbsArgs(_CoercingModel):
+    duration_weeks: Optional[int] = Field(
+        None, description="explicit project duration in weeks; omit to auto-derive from effort")
+    peak_dev_fte: float = Field(
+        3.0, description="peak parallel developers used to auto-derive duration")
+    dev_fte: Optional[float] = Field(None, description="dev FTE override for resource leveling")
+    ba_fte: Optional[float] = Field(None, description="BA FTE override")
+    qc_fte: Optional[float] = Field(None, description="QC FTE override")
+    pm_fte: Optional[float] = Field(None, description="PM FTE override")
+
+
+@tool(args_schema=FinalizeWbsArgs)
+def finalize_wbs(duration_weeks: Optional[int] = None, peak_dev_fte: float = 3.0,
+                 dev_fte: Optional[float] = None, ba_fte: Optional[float] = None,
+                 qc_fte: Optional[float] = None, pm_fte: Optional[float] = None) -> str:
+    """Finish the WBS in ONE call: rollup → timeline → team → milestones → validate.
+
+    Call this exactly once, immediately after the last add_wbs_items call. It runs
+    the entire deterministic tail in code (no model decisions are needed between
+    the steps): aggregates module/phase/role totals, computes the delivery calendar
+    and sprints, derives the team composition with resource leveling, sets the BnK
+    5-milestone spine, and runs the quality checks. Returns one combined summary
+    plus any validation warnings. All args are optional scalars.
+    """
+    steps = [
+        ("rollup", lambda: compute_wbs_rollup.func()),
+        ("timeline", lambda: plan_timeline_and_sprints.func(
+            duration_weeks=duration_weeks, peak_dev_fte=peak_dev_fte)),
+        ("team", lambda: plan_team_and_resources.func(
+            dev_fte=dev_fte, ba_fte=ba_fte, qc_fte=qc_fte, pm_fte=pm_fte)),
+        ("milestones", lambda: define_milestones.func(None)),
+        ("validation", lambda: validate_wbs.func()),
+    ]
+    lines: list[str] = []
+    for label, run in steps:
+        result = run()
+        lines.append(f"[{label}] {result}")
+        # The first two steps hard-depend on prior state; stop early with the
+        # guard message instead of cascading confusing errors.
+        if label == "rollup" and "add_wbs_items first" in result:
+            return result
+    return "\n".join(lines)
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # HITL GATE TOOLS (interrupt_on in agent.py)
 # ════════════════════════════════════════════════════════════════════════════
 # Pydantic arg schemas — the LLM passes display data when calling each gate
