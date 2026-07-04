@@ -48,7 +48,7 @@ _EMAIL_HTML_TEMPLATE = """\
     <tr>
       <td style="padding:20px 40px;">
         <span style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:1px;">
-          BNK Solution
+          {brand}
         </span>
       </td>
       <td align="right" style="padding:20px 40px;">
@@ -101,9 +101,9 @@ _EMAIL_HTML_TEMPLATE = """\
 
               <p style="color:#334155;font-size:15px;margin:0;">
                 Best regards,<br>
-                <strong>BNK Solution Team</strong><br>
+                <strong>{brand} Team</strong><br>
                 <span style="color:#64748b;font-size:13px;">
-                  luongphambao1901@gmail.com
+                  {sender_line}
                 </span>
               </p>
 
@@ -120,7 +120,7 @@ _EMAIL_HTML_TEMPLATE = """\
     <tr>
       <td align="center" style="padding:20px;color:#94a3b8;font-size:12px;
                                  line-height:1.6;">
-        &copy; {year} BNK Solution. All rights reserved.<br>
+        &copy; {year} {brand}. All rights reserved.<br>
         This email and its attachments are confidential and intended solely for
         the named recipient(s).
       </td>
@@ -195,16 +195,18 @@ def send_email(
     recipient_name: str = "Team",
     attachments: list[str] | None = None,
 ) -> str:
-    """Email workspace deliverables (PDF report, PPTX slide deck, WBS Excel, ...) via Gmail.
+    """Email workspace deliverables (PDF, PPTX, WBS Excel, draw.io, PNG, ...) via Gmail.
 
     With no `attachments` given, auto-attaches whichever known deliverables
-    exist in the workspace (out.pdf, out.pptx, wbs_filled.xlsx) — send just
-    the PDF, just the slide deck, just the WBS, or any combination, whatever
-    was actually generated. Pass `attachments` (workspace filenames) to send
-    a specific file or set of files instead, e.g. attachments=["out.pptx"].
+    exist in the workspace (out.pdf, out.pptx, wbs_filled.xlsx, out.drawio,
+    out.png) — any combination, whatever was actually generated. Pass
+    `attachments` (workspace filenames) to send a specific file or set of files
+    instead, e.g. attachments=["out.pptx"]; ANY workspace file may be named
+    (mimetype is guessed automatically).
 
     Uploads each file to Composio file storage, then delivers them as email
-    attachments with a professional HTML template branded for BNK Solution.
+    attachments with a professional HTML template (branding via EMAIL_BRAND_NAME
+    / EMAIL_SENDER_LINE env vars).
 
     Requires a Composio API key and a connected Gmail account (run
     `composio add gmail` once to authorise the sending account).
@@ -256,6 +258,8 @@ def send_email(
 
     html_body = _EMAIL_HTML_TEMPLATE.format(
         project_name=project_name,
+        brand=_EMAIL_BRAND,
+        sender_line=_EMAIL_SENDER_LINE,
         subtitle=subtitle or "",
         recipient_name=recipient_name or "Team",
         year=datetime.now().year,
