@@ -181,13 +181,27 @@ def pert_percentile(o: float, m: float, p: float, q: float) -> float:
     return _round(mu + q * sigma)
 
 
-def rollup(items: list[dict]) -> dict:
-    """Aggregate leaf items into per-role totals + man-months.
+def cost_by_role(
+    effort_by_role: dict[str, float], rate_card: dict[str, float] | None = None
+) -> dict[str, float]:
+    """USD cost per role: ``man-days / MANDAYS_PER_MONTH * monthly rate``."""
+    rc = rate_card or DEFAULT_RATE_CARD_USD_PER_MONTH
+    return {
+        role: _round(float(md or 0) / MANDAYS_PER_MONTH * rc.get(role, 0.0), 2)
+        for role, md in effort_by_role.items()
+    }
+
+
+def rollup(items: list[dict], rate_card: dict[str, float] | None = None) -> dict:
+    """Aggregate leaf items into per-role totals + man-months + USD cost.
 
     Each item must carry numeric ``be/fe/mobile/ai/ba/qc/pm/total`` (as produced
-    by :func:`derive_leaf_effort`). Returns effort_by_role, total_mandays and
-    total_manmonths. Module/phase grouping is handled by the caller/Excel formulas;
-    this is the flat reconciliation used by validators and the propose summary.
+    by :func:`derive_leaf_effort`). Returns effort_by_role, total_mandays,
+    total_manmonths, and cost_by_role_usd/total_cost_usd (from ``rate_card`` or
+    :data:`DEFAULT_RATE_CARD_USD_PER_MONTH` — CAPEX is always derivable from the WBS
+    alone, never blocked on a business-narrative input). Module/phase grouping is
+    handled by the caller/Excel formulas; this is the flat reconciliation used by
+    validators and the propose summary.
     """
     agg = {k: 0.0 for k in ("be", "fe", "mobile", "ai", "ba", "qc", "pm", "total")}
     for it in items:
@@ -202,11 +216,15 @@ def rollup(items: list[dict]) -> dict:
         "PM": _round(agg["pm"]),
     }
     pct = {k: (_round(100 * v / total, 1) if total else 0.0) for k, v in by_role.items()}
+    cost = cost_by_role(by_role, rate_card)
     return {
         "total_mandays": total,
         "total_manmonths": _round(total / MANDAYS_PER_MONTH, 2),
         "effort_by_role": by_role,
         "effort_pct_by_role": pct,
+        "cost_by_role_usd": cost,
+        "total_cost_usd": _round(sum(cost.values()), 2),
+        "rate_card_usd_per_month": rate_card or dict(DEFAULT_RATE_CARD_USD_PER_MONTH),
     }
 
 
