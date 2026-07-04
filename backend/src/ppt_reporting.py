@@ -980,13 +980,17 @@ def _render_block(
 ) -> None:
     """Render a structured (table-based) BnK slide from a block type."""
     if block == "tech_stack_table":
-        _tech_stack_table_slide(prs, report, slide_no, title or "PROPOSED SOLUTION | Technical Stack")
+        _tech_stack_table_slide(prs, report, slide_no, title or "PROPOSED SOLUTION | Technical Stack",
+                                workspace=workspace)
     elif block == "func_nfr":
         _functional_nfr_slide(prs, report, slide_no, title or "PROPOSED SOLUTION | Requirements")
     elif block == "sdlc":
         _sdlc_scope_slide(prs, report, workspace, slide_no, title or "SCOPE OF WORK | SDLC Phases")
     elif block == "delivery_effort":
         _delivery_effort_slide(prs, workspace, slide_no, title or "PROJECT DELIVERY | Estimated Effort")
+    elif block == "gantt":
+        _gantt_slide(prs, _gantt_params_from_wbs(workspace), slide_no,
+                     title or "PROJECT DELIVERY | Master Plan & Milestones")
     elif block == "pricing":
         _pricing_slide(prs, report, slide_no, title or "PRICING | CAPEX")
     elif block == "milestones":
