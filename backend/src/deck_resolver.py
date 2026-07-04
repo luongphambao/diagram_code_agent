@@ -329,9 +329,8 @@ def _b_advice(model, wbs, nar, meta, lib):
 
 
 def _b_agenda(model, wbs, nar, meta, lib):
-    import re as _re
     sections = [
-        _re.sub(r"^\{roman\}\.\s*", "", c.title).strip()
+        re.sub(r"^\{roman\}\.\s*", "", c.title).strip()
         for c in SECTION_CONTENT_CONTRACTS if c.kind == "divider"
     ]
     # de-dup while preserving order (optional dividers may repeat a section name)
