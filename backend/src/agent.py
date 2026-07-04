@@ -797,6 +797,7 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
             exclude_tools=exclude,
         ),
     ]
+    from tool_coercion import ToolArgCoercionMiddleware
     layers = [
         ContextEditingMiddleware(
             edits=edits,
@@ -807,6 +808,11 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
             check_missing_text=bool(model) and _resolve_provider(model)[0] == "mimo",
         ),
         ModelCallLimitMiddleware(run_limit=run_limit, exit_behavior="end"),
+        # Every agent: repair mimo's stringified list/dict args before Pydantic
+        # validation and compact the kwargs-echoing invocation-error messages.
+        # Must be listed before DrawerReviseGateMiddleware (gate decisions assume
+        # well-formed task args).
+        ToolArgCoercionMiddleware(),
     ]
     if task_call_limit is not None:
         # Defense-in-depth against subagent-dispatch storms: caps `task` calls
