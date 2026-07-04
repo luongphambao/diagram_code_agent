@@ -772,10 +772,8 @@ def propose_wbs_skeleton(
         + _tree_summary(sk)
         + "\n\nSkeleton is approved. IMMEDIATELY proceed to STEP 2 — do NOT wait for "
         "user input: call task(subagent_type='wbs_planner', description='Estimate dev "
-        "effort: add_wbs_items for every module, compute_wbs_rollup, "
-        "plan_timeline_and_sprints, plan_team_and_resources, define_milestones, "
-        "validate_wbs. Write wbs.json.') → then call propose_wbs() → then "
-        "export_wbs_excel()."
+        "effort: add_wbs_items for every module, then finalize_wbs once. Write "
+        "wbs.json.') → then call propose_wbs() → then export_wbs_excel()."
     )
 
 
