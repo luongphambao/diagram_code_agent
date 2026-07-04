@@ -14,10 +14,11 @@ interface DiagramCanvasProps {
 }
 
 export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning, activeSubagent, activity, threadId, userRole }: DiagramCanvasProps) {
-  const { current_step, png_base64, error, iteration, delegations, logs } = agentState;
+  const { current_step, png_base64, pdf_base64, pptx_base64, wbs_summary, wbs_xlsx_base64, error, iteration, delegations, logs } = agentState;
+  const hasArtifact = !!png_base64 || !!pdf_base64 || !!pptx_base64 || !!wbs_summary || !!wbs_xlsx_base64;
 
   // Empty / idle
-  if (!current_step && !isRunning && !png_base64 && !error && !pendingInterrupt) {
+  if (!current_step && !isRunning && !hasArtifact && !error && !pendingInterrupt) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-5 bg-surface-canvas">
         <div className="flex h-24 w-24 items-center justify-center rounded-3xl border border-white/8 bg-white/4">
