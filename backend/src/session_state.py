@@ -246,8 +246,7 @@ def _is_ppt_followup(text: str) -> bool:
         "tao proposal",
         "xuất proposal",
         "xuat proposal",
-
-    )
+    ))
 
 
 def _read_json(path: Path):
