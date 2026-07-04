@@ -93,7 +93,8 @@ VALID_BLOCKS = frozenset({
     "pricing",
     "milestones",
     "team",
-    "gantt",
+    "gantt",  # rendered via _gantt_slide; not yet dispatched from _render_block's
+              # legacy outline path — see deck_resolver._b_master_plan for the params shape.
 })
 
 OUTLINE_TARGET_MIN = 20
