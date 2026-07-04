@@ -49,13 +49,26 @@ _INVOCATION_ERROR_RE = re.compile(
 
 
 def _maybe_json(value: str):
-    """Parse a string that looks like a JSON container; None if not one."""
+    """Parse a string that looks like a list/dict container; None if not one.
+
+    Tries strict JSON first, then a Python-literal fallback (``ast.literal_eval``) so
+    a model that emits a single-quoted repr — ``"{'BE': 490}"`` — still coerces to a
+    real dict instead of surviving as a string. A raw string reaching the frontend is
+    what turned the WBS "Effort by Role" chips into per-character garbage
+    (``Object.entries("...")`` iterates characters).
+    """
     s = value.strip()
     if not s or s[0] not in "[{":
         return None
     try:
         return json.loads(s)
     except (ValueError, TypeError):
+        pass
+    try:
+        import ast
+        parsed = ast.literal_eval(s)
+        return parsed if isinstance(parsed, (list, dict)) else None
+    except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
         return None
 
 
