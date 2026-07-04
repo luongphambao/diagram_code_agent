@@ -34,14 +34,14 @@ OUTPUTS_DIR    = AGENT_SPACE / "outputs"
 
 # Per-thread workspace isolation (§4.10 multi-tenancy).
 #
-# `WORKSPACE` above is the single shared scratch dir the compiled agent graph and
-# its FilesystemBackend are rooted at (one graph per process). The helpers below
-# give each thread/tenant its OWN artifact directory so router-side stores
-# (decision_log, evidence_log, solution_model, …) can be read/written per thread
-# without collision. They are additive: nothing resolves a per-thread workspace
-# until a caller opts in by passing the resolved path (every store already accepts
-# an explicit `workspace=` argument). Fully isolating the agent's own file tools
-# additionally requires per-thread backend construction.
+# `WORKSPACE` above is the shared scratch dir used only as a fallback for the
+# default/dev thread ("thread-default", or no thread_id at all). The helpers
+# below give each real thread/tenant its OWN artifact directory. Custom tools
+# read/write it via `current_workspace()` (the contextvar below); the agent's
+# own built-in filesystem tools (read_file/write_file/edit_file/ls/glob/grep)
+# are ALSO per-thread via `PerThreadFilesystemBackend` (see `make_local_backend`
+# below), which resolves the same contextvar on every call instead of being
+# bound to a fixed directory at graph-build time.
 #
 # By default per-thread workspaces live under agent_space/workspaces/<thread_id>.
 # Set ARTIFACTS_DIR to an absolute path to mount them somewhere else instead (e.g.
