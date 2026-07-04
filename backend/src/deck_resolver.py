@@ -409,6 +409,10 @@ def available_inputs(
         a.add("wbs.effort_totals")
     if wbs.get("timeline"):
         a.add("wbs.timeline")
+    if wbs.get("phases"):
+        a.add("wbs.phases")
+    if wbs.get("effort_by_module"):
+        a.add("wbs.effort_by_module")
     if model.risks:
         a.add("csm.risks")
     if has_diagram or meta.get("png"):
