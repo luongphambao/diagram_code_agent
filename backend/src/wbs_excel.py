@@ -513,6 +513,25 @@ def _write_master_data_ratios(wb, ratios: dict) -> None:
     md["C7"].value = float(ratios.get("qc_on_dev", 0.30))     # QC, on dev
 
 
+def _write_master_data_rate_card(wb, rate_card: dict[str, float] | None = None) -> None:
+    """Fill the ``4. Master Data`` Rate column (C11:C14) — ships empty in the template.
+
+    ``1. Effort`` col K/L/M/N/O multiply MD directly against these cells
+    (``K6 = E6 * '4. Master Data'!$C$13``, etc.) — so these MUST be a per-MAN-DAY USD
+    rate, not a monthly rate. ``rate_card`` is USD/month (the BnK-quoted unit); convert
+    with :func:`wbs_effort.rate_per_manday` (20-workday month, NOT the 22 used for
+    total_manmonths elsewhere — see that module for why).
+    """
+    from wbs_effort import DEFAULT_RATE_CARD_USD_PER_MONTH, rate_per_manday
+
+    rc = rate_card or DEFAULT_RATE_CARD_USD_PER_MONTH
+    md = wb["4. Master Data"]
+    md["C11"].value = rate_per_manday(rc.get("PM", 0))          # PM
+    md["C12"].value = rate_per_manday(rc.get("BA", 0))           # BA
+    md["C13"].value = rate_per_manday(rc.get("Developer", 0))   # Developer (BE + FE/Mobile)
+    md["C14"].value = rate_per_manday(rc.get("QC", 0))           # QC
+
+
 # The 5 canonical sheets the deliverable keeps; the template also ships auxiliary
 # reference sheets (General_BK / By-Month / Summary) whose VLOOKUPs would go stale
 # once we rebuild the WBS, so we drop them for a clean client file.
