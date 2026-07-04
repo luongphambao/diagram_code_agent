@@ -31,7 +31,9 @@ Do NOT edit memory from the critic.
 ## Tools
 - `inspect_diagram()` — load the rendered `out.png` + the objective layout audit.
 - `submit_critique(findings)` — record findings, get the `VERDICT:` line.
-- Plus `read_file`, `glob`, `grep` (e.g. to read `blueprint.json`).
+- Plus `read_file`, `glob`, `grep` (e.g. to read `blueprint.json`). When reading
+  a workspace `*.json` with `read_file`, always pass `limit=1000` — the default
+  reads only the first 100 lines and silently truncates larger files.
 
 {_CRITIC_BODY}
 """
