@@ -278,8 +278,11 @@ def _b_team(model, wbs, nar, meta, lib):
 
 
 def _b_capex(model, wbs, nar, meta, lib):
+    from wbs_effort import DEFAULT_RATE_CARD_USD_PER_MONTH
+
     totals = wbs.get("effort_totals") or {}
-    rate = meta.get("rate_card") or totals.get("rate_card_usd_per_month")  # {role: usd/month}
+    rate = meta.get("rate_card") or totals.get("rate_card_usd_per_month") \
+        or DEFAULT_RATE_CARD_USD_PER_MONTH
     # cost_by_role_usd is written by wbs_effort.rollup() for any WBS rolled up after this
     # feature landed; older wbs.json files (rolled up before) fall back to computing it here
     # from effort_by_role + the (possibly project-overridden) rate card — CAPEX is always
@@ -289,14 +292,13 @@ def _b_capex(model, wbs, nar, meta, lib):
     if total is None:
         total = round(sum(cost_role.values()), 2)
 
-    rows, running = [], 0.0
+    rows = []
     for m in (wbs.get("effort_by_module") or []):
         md = float(m.get("total_md") or 0)
         cost = sum(
-            float(b or 0) / 22.0 * float((rate or {}).get(role, 0))
+            float(b or 0) / 22.0 * float(rate.get(role, 0))
             for role, b in (m.get("breakdown") or {}).items()
         )
-        running += cost
         rows.append({
             "module": f"{m.get('code', '')} {m.get('name', '')}".strip(),
             "md": md, "cost": round(cost),
