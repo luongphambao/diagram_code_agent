@@ -185,13 +185,25 @@ def _resolve_one_tech_icon(name: str) -> dict:
     candidates = [name.replace(".", ""), squished]
     if squished in _TECH_ALIASES:
         candidates.append(_TECH_ALIASES[squished])
+    # Collect hits across ALL candidates (not stop-at-first) so the alias form (e.g.
+    # "k8s" for "kubernetes") gets a chance to surface its own exact-stem icon even
+    # when the literal name already matches something else by substring.
     hits: list[str] = []
+    seen_hits: set[str] = set()
     for cand in candidates:
-        hits = _search_icon_hits(cand, None, limit=40)
-        if hits:
-            break
+        for h in _search_icon_hits(cand, None, limit=40):
+            if h not in seen_hits:
+                seen_hits.add(h)
+                hits.append(h)
     if hits:
-        best = min(hits, key=lambda p: (0 if _squish_tech(Path(p).stem) == squished else 1, len(p)))
+        target = _squish_tech(_TECH_ALIASES.get(squished, squished))
+        best = min(
+            hits,
+            key=lambda p: (
+                0 if _squish_tech(Path(p).stem) in (squished, target) else 1,
+                len(p),
+            ),
+        )
         return {"name": name, "path": best, "icon": _icon_rel(best), "source": "bundled"}
     try:
         from aiicons import lookup_ai_logo
