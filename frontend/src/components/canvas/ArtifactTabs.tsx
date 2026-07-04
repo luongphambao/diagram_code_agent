@@ -138,7 +138,7 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
           {/* Download group */}
           <div className="flex items-center gap-2">
             {(["PNG", ".drawio", "PDF", "PPT"] as const).map((label) => {
-              const disabled = label === ".drawio" ? !drawio : label === "PDF" ? !pdf_base64 : label === "PPT" ? !pptx_base64 : false;
+              const disabled = label === "PNG" ? !png_base64 : label === ".drawio" ? !drawio : label === "PDF" ? !pdf_base64 : !pptx_base64;
               const handler = label === "PNG" ? downloadPng : label === ".drawio" ? downloadDrawio : label === "PDF" ? downloadPdf : downloadPptx;
               return (
                 <button key={label} onClick={handler} disabled={disabled}
