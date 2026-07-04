@@ -44,6 +44,12 @@ export default function WbsApproval({ interrupt, onResolve, onDecision, disabled
     effort_by_module,
   } = interrupt.data;
 
+  // Defensive: the model sometimes emits dict args as a (single- or double-quoted)
+  // string. A raw string here makes `Object.entries(...)` iterate characters, rendering
+  // one "Nmd" chip per character. Normalise to a plain {role: number} object; anything
+  // that can't be parsed into that shape renders nothing rather than garbage.
+  const roleMap = normalizeRoleMap(effort_by_role);
+
   const approve = () => {
     setDecided(true);
     setDecision("approved");
