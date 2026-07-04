@@ -1143,6 +1143,9 @@ def generate_ppt_proposal_file(
         brand=brand,
         include_sections=DEFAULT_REPORT_SECTIONS,
     )
+    # Backfill empty report fields from the CSM/wbs so CSM-era workspaces (no legacy
+    # blueprint/brief/tech_stack JSON) still render real content — see §8.1.
+    _enrich_report_from_csm(report, workspace)
     sections, unrecognized = normalize_ppt_sections(include_sections)
 
     prs = Presentation(str(template))
