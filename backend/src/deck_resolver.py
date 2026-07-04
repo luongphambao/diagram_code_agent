@@ -278,7 +278,7 @@ def _b_team(model, wbs, nar, meta, lib):
 
 
 def _b_capex(model, wbs, nar, meta, lib):
-    from wbs_effort import DEFAULT_RATE_CARD_USD_PER_MONTH
+    from wbs_effort import DEFAULT_RATE_CARD_USD_PER_MONTH, rate_per_manday
 
     totals = wbs.get("effort_totals") or {}
     rate = meta.get("rate_card") or totals.get("rate_card_usd_per_month") \
@@ -286,7 +286,9 @@ def _b_capex(model, wbs, nar, meta, lib):
     # cost_by_role_usd is written by wbs_effort.rollup() for any WBS rolled up after this
     # feature landed; older wbs.json files (rolled up before) fall back to computing it here
     # from effort_by_role + the (possibly project-overridden) rate card — CAPEX is always
-    # derivable from the WBS alone, never blocked on a business-narrative input.
+    # derivable from the WBS alone, never blocked on a business-narrative input. Rate-card
+    # months use a 20-workday convention (not the 22 used for total_manmonths elsewhere) —
+    # see wbs_effort.RATE_CARD_WORKDAYS_PER_MONTH / rate_per_manday.
     cost_role = totals.get("cost_by_role_usd") or _cost_by_role(totals.get("effort_by_role") or {}, rate)
     total = totals.get("total_cost_usd")
     if total is None:
@@ -296,7 +298,7 @@ def _b_capex(model, wbs, nar, meta, lib):
     for m in (wbs.get("effort_by_module") or []):
         md = float(m.get("total_md") or 0)
         cost = sum(
-            float(b or 0) / 22.0 * float(rate.get(role, 0))
+            float(b or 0) * rate_per_manday(rate.get(role, 0))
             for role, b in (m.get("breakdown") or {}).items()
         )
         rows.append({
