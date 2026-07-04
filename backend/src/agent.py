@@ -543,16 +543,6 @@ _DRAWER_CALL_LIMIT = int(os.getenv("DRAWER_CALL_LIMIT", "40"))    # ~2.5x the �
 _WBS_CALL_LIMIT = int(os.getenv("WBS_CALL_LIMIT", str(_RUN_CALL_LIMIT)))
 _PPT_CALL_LIMIT = int(os.getenv("PPT_CALL_LIMIT", "60"))
 
-# wbs_planner keeps the auto-added general-purpose subagent (its `task` tool is
-# intentionally left enabled — see _set_general_purpose_enabled below), but unlike
-# main it had NO cap on how many times it could call `task` itself. wbs_planner's
-# own prompt never instructs it to delegate to a subagent, so any `task` call it
-# makes is the unintended general-purpose escape hatch — the same uncapped-retry
-# pattern that previously caused a 4M-token run via the drawer (see
-# test_general_purpose_disabled.py). Cap it small: a legitimate wbs_planner pass
-# should never need to delegate at all.
-_WBS_TASK_CALL_LIMIT = int(os.getenv("WBS_TASK_CALL_LIMIT", "3"))
-
 # Early-warning thresholds: log at WARNING level so runaway traces surface in
 # logs before they show up in LangSmith. Both are env-tunable.
 _WARN_CALL_COUNT   = int(os.getenv("WARN_CALL_COUNT", "30"))
