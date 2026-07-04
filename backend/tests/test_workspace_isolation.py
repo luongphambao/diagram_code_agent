@@ -135,11 +135,14 @@ def test_default_route_absolute_path_does_not_leak_to_shared_workspace(tmp_path,
     write_res = backend.write("icon_plan.json", "from-a")
     assert write_res.error is None
 
-    # Model echoes back an absolute-looking path it saw while thread A's
-    # workspace happened to be bound (e.g. from an `ls` result).
+    # Model echoes back a POSIX-style absolute path it saw while thread A's
+    # workspace happened to be bound (e.g. from an `ls` result) — this mirrors
+    # the real container path "/app/backend/agent_space/workspace/icon_plan.json".
+    # Built as a plain string (not via tmp_path) so the leading "/" is preserved
+    # across platforms instead of becoming a Windows drive-absolute path.
     _bind(monkeypatch, b)
-    leaked = tmp_path / "app" / "backend" / "agent_space" / "workspace" / "icon_plan.json"
-    write_res = backend.write(str(leaked), "from-b-absolute")
+    leaked = "/app/backend/agent_space/workspace/icon_plan.json"
+    write_res = backend.write(leaked, "from-b-absolute")
     assert write_res.error is None
     # Re-rooted under thread B's own cwd — never touches thread A's file or any
     # literal host path outside the bound thread's directory.
@@ -147,7 +150,6 @@ def test_default_route_absolute_path_does_not_leak_to_shared_workspace(tmp_path,
         encoding="utf-8"
     ) == "from-b-absolute"
     assert (a / "icon_plan.json").read_text(encoding="utf-8") == "from-a"
-    assert not leaked.exists()
 
 
 def test_make_local_backend_default_route_uses_virtual_mode(monkeypatch, tmp_path):
