@@ -209,7 +209,10 @@ def test_skills_dir_route_resolves_regardless_of_bound_thread_workspace(tmp_path
     _bind(monkeypatch, tmp_path / "some-thread-workspace")
 
     backend = backends.make_local_backend()
-    skill_dir = str(backends.SKILLS_DIR / "wbs-planning")
+    # Mirrors agent.py's *_SKILL_PATHS construction (Path.as_posix(), not str()) —
+    # str(Path) uses backslashes on Windows, which would never match the
+    # forward-slash route prefix CompositeBackend expects.
+    skill_dir = (backends.SKILLS_DIR / "wbs-planning").as_posix()
 
     ls_result = backend.ls(skill_dir)
     assert ls_result.error is None, ls_result.error
