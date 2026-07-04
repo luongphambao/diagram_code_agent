@@ -180,6 +180,16 @@ def test_ppt_followup_detection():
     assert not server._is_ppt_followup("please add redis to the diagram")
 
 
+def test_wbs_followup_detection():
+    """Regression test: re-export/re-send asks like "xuất lại file WBS" must be
+    recognized as a WBS follow-up so chat.py's preserve_artifacts logic skips
+    clear_stage_markers() instead of wiping the already-approved wbs.json."""
+    assert server._is_wbs_followup("xuất lại file WBS")
+    assert server._is_wbs_followup("re-export the WBS excel file")
+    assert server._is_wbs_followup("gửi WBS cho khách")
+    assert not server._is_wbs_followup("please add redis to the diagram")
+
+
 def test_generate_pdf_report_writes_pdf(monkeypatch, tmp_path):
     from PIL import Image
 
