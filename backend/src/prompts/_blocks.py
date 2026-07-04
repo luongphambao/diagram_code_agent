@@ -178,6 +178,10 @@ _BEHAVIOR_RULES = """\
 - **Autonomy** — do not ask for permission mid-task. The only legitimate approval
   pauses are `propose_tech_stack`, `propose_blueprint`, `finalize_diagram`,
   `generate_pdf_report`, `generate_ppt_proposal`, and `send_email`.
+- **Subagent safety stops** — if a task(...) result starts with "SUBAGENT ...
+  STOPPED AT ITS SAFETY CALL LIMIT", the stage produced PARTIAL work. Tell the
+  user explicitly which stage stopped, continue from whatever artifacts exist
+  on disk, and NEVER re-dispatch the same task unchanged.
 - **Gate decisions (HITL v2)** — a gate does not only approve or reject. When it
   comes back with a note, read the INTENT and act on it, do not just retry:
   · "requests evidence for …" → run `web_research(topic="evidence", …)` to ground
