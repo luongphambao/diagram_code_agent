@@ -7,7 +7,7 @@ DependencyEdge defaults.
 """
 
 from wbs_effort import critical_path, pert_percentile, assign_sprints
-from wbs_tools import LeafIn, DependencyEdge
+from wbs_tools import LeafIn
 
 
 def _item(ref, dur, preds=None, pert=0.0):
