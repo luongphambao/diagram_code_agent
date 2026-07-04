@@ -1,6 +1,9 @@
-"""Rendering tools: render_diagram, export_drawio, audit_diagram_code,
-finalize_diagram, declare_poster_grid, list_saved_diagrams, plan_style_sizes,
-fit_labels, visualize_code_structure."""
+"""Rendering tools: render_diagram (with built-in pre-flight audit),
+export_drawio, finalize_diagram, declare_poster_grid, list_saved_diagrams,
+visualize_code_structure — plus code-side helpers write_style_and_fit_plans /
+_compute_style_plan / _compute_label_fits (style_plan.json + label_fits.json are
+pre-computed when the blueprint is approved; audit_diagram_code / plan_style_sizes
+/ fit_labels remain as ad-hoc tools but are no longer in DRAWER_TOOLS)."""
 
 from __future__ import annotations
 
