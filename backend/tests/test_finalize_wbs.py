@@ -65,6 +65,34 @@ def test_finalize_wbs_guards_when_no_items(tmp_path, monkeypatch):
     assert "add_wbs_items first" in out
 
 
+def test_draft_skeleton_resets_stale_different_project(tmp_path, monkeypatch):
+    _bind(monkeypatch, tmp_path / "ws4")
+    _build_minimal_wbs()  # project "Demo", 2 items
+
+    out = draft_wbs_skeleton.func(
+        project_info=ProjectInfo(name="Other Project", project_code="OTH"),
+        phases=[PhaseMeta(code="II", name="DEVELOPMENT",
+                          modules=[ModuleMeta(code="II.B", name="Mobile App")])],
+    )
+    assert "reset stale WBS files from a different project ('Demo')" in out
+
+    wbs = json.loads((tmp_path / "ws4" / "wbs.json").read_text(encoding="utf-8"))
+    assert wbs["project_info"]["name"] == "Other Project"
+    assert wbs["items"] == []  # old Demo items were not merged in
+
+
+def test_draft_skeleton_same_project_does_not_reset(tmp_path, monkeypatch):
+    _bind(monkeypatch, tmp_path / "ws5")
+    _build_minimal_wbs()  # project "Demo", 2 items
+
+    out = draft_wbs_skeleton.func(
+        project_info=ProjectInfo(name="Demo", project_code="DMO"),
+        phases=[PhaseMeta(code="II", name="DEVELOPMENT",
+                          modules=[ModuleMeta(code="II.A", name="Web Portal")])],
+    )
+    assert "reset stale WBS files" not in out
+
+
 def test_draft_skeleton_ratio_scalars_override(tmp_path, monkeypatch):
     _bind(monkeypatch, tmp_path / "ws3")
     draft_wbs_skeleton.func(
