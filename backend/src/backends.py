@@ -250,7 +250,7 @@ def make_local_backend() -> CompositeBackend:
                 root_dir=str(MEMORIES_DIR),
                 virtual_mode=True,
             ),
-            f"{SKILLS_DIR}/": FilesystemBackend(
+            f"{SKILLS_DIR.as_posix()}/": FilesystemBackend(
                 root_dir=str(SKILLS_DIR),
                 virtual_mode=True,
             ),
