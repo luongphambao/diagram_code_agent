@@ -257,7 +257,9 @@ DRAWER_TOOLS = [declare_poster_grid, render_diagram, export_drawio]
 CRITIC_TOOLS = [inspect_diagram, submit_critique]
 
 # PPT generator subagent tools: plan the traceable storyboard, then render the deck.
-PPT_GENERATOR_TOOLS = [plan_deck, create_pptx]
+# resolve_tech_stack_icons fetches per-technology logos (grouped by layer) for the
+# "PROPOSED SOLUTION | Technical Stack" slide — call before create_pptx.
+PPT_GENERATOR_TOOLS = [plan_deck, resolve_tech_stack_icons, create_pptx]
 
 # Tools that require human approval before they run (interrupt_on in agent.py).
 GATE_TOOL_NAMES = [
