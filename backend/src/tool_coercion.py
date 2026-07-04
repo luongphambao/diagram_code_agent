@@ -74,6 +74,8 @@ def _coerce_value(value, ann):
     origin = _t.get_origin(ann)
 
     if origin is _t.Union:  # includes Optional[...]
+        if value is None:
+            return value  # Optional accepts None as-is
         args = [a for a in _t.get_args(ann) if a is not type(None)]
         for a in args:
             coerced = _coerce_value(value, a)
@@ -88,12 +90,11 @@ def _coerce_value(value, ann):
             return []
         if isinstance(value, str):
             parsed = _maybe_json(value)
-            if isinstance(parsed, list):
+            if isinstance(parsed, (list, dict)):
                 value = parsed
         if isinstance(value, dict):
             as_list = _numeric_dict_to_list(value)
-            if as_list is not None:
-                value = as_list
+            value = as_list if as_list is not None else list(value.values())
         if isinstance(value, list) and item_ann is not None:
             return [_coerce_value(v, item_ann) for v in value]
         return value
