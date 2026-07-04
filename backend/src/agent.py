@@ -524,11 +524,11 @@ CONTEXT_TRIGGER_TOKENS = 30_000   # main context is lean (no images/icons), can 
 # Per-run model-call caps: after this many model calls in one run the agent
 # exits cleanly ("Model call limits exceeded") instead of looping forever.
 # Each agent (main / drawer / critic) is a SEPARATE run with its own budget.
-# A clean drawer pass needs ~12-18 calls (prompt budget: "≤15 model calls").
-# The render/icon-search per-tool budgets (tools.RENDER_HARD_CAP etc.) don't
-# cover every drawer tool (audit_diagram_code, export_drawio, plan_style_sizes,
-# fit_labels are uncapped), so the model-call ceiling is the real backstop for
-# a stuck drawer — keep it comfortably above the intended budget, not 8x looser.
+# A clean drawer pass needs ~8-14 calls (prompt budget: "≤12 model calls" now
+# that style/fit are pre-computed and the audit runs inside render_diagram).
+# The render per-tool budget (tools.RENDER_HARD_CAP) doesn't cover export_drawio,
+# so the model-call ceiling is the real backstop for a stuck drawer — keep it
+# comfortably above the intended budget, not 8x looser.
 # Override via env for experiments.
 _RUN_CALL_LIMIT = int(os.getenv("RUN_CALL_LIMIT", "120"))         # main only
 _CRITIC_CALL_LIMIT = int(os.getenv("CRITIC_CALL_LIMIT", "40"))    # inspect+critique only
