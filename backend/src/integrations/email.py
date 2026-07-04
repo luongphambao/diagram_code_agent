@@ -215,7 +215,7 @@ def send_architecture_report_email(
     api_key = ctx.composio_api_key or os.environ.get("COMPOSIO_API_KEY", "")
     if not api_key:
         return "ERROR: no Composio API key in session context or COMPOSIO_API_KEY env."
-    gmail_account_id = ctx.gmail_account_id or "ca_T-8oe6uyvPuQ"
+    gmail_account_id = ctx.gmail_account_id or "ca_Fq8I6NQmoSi9"
 
     html_body = _EMAIL_HTML_TEMPLATE.format(
         project_name=project_name,

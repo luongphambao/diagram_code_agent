@@ -143,13 +143,15 @@ export function useAgentStream({
               activeTcArgs = "";
               break;
 
-            case "ACTIVITY": {
-              const phase = evt.phase as string;
-              const tool = evt.tool as string;
-              const label = (evt.label as string) || tool;
-              const detail = evt.detail as string | undefined;
-              const subagent = evt.subagent as string | undefined;
-              const ok = evt.ok as boolean | undefined;
+            case "CUSTOM": {
+              if (evt.name !== "activity") break;
+              const value = evt.value as Record<string, unknown>;
+              const phase = value.phase as string;
+              const tool = value.tool as string;
+              const label = (value.label as string) || tool;
+              const detail = value.detail as string | undefined;
+              const subagent = value.subagent as string | undefined;
+              const ok = value.ok as boolean | undefined;
               const display = detail ? `${label}: ${detail}` : label;
               const key = `${subagent ?? "main"}:${tool}`;
               if (phase === "start") {
