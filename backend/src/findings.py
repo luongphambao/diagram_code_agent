@@ -86,6 +86,35 @@ class DiagramFinding(BaseModel):
         "(surfaced for awareness, does NOT block finalize)",
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def _lenient_enums(cls, values):
+        """Coerce off-enum values to safe defaults instead of rejecting.
+
+        A critique must NEVER burn a validation-error retry (each retry re-sends
+        the full context): mimo occasionally emits values outside the Literal
+        sets (e.g. category="visual", severity="major"). Unknown values map to
+        conservative defaults; known values pass through untouched.
+        """
+        if not isinstance(values, dict):
+            return values
+        defaults = {
+            "severity": ("medium", set(_SEVERITY_ORDER)),
+            "confidence": ("medium", set(_CONFIDENCE_ORDER)),
+            "category": ("style", {
+                "layout", "completeness", "correctness", "readability",
+                "pillar_gap", "style", "color_harmony", "alignment", "legend",
+                "whitespace", "grouping",
+            }),
+        }
+        for key, (fallback, allowed) in defaults.items():
+            v = values.get(key)
+            if v is None:
+                continue
+            norm = str(v).strip().lower()
+            values[key] = norm if norm in allowed else fallback
+        return values
+
     @field_validator("title")
     @classmethod
     def _clip_title(cls, v: str) -> str:
