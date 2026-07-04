@@ -40,16 +40,26 @@ import re
 MANDAYS_PER_MONTH = 22.0
 MANDAYS_PER_WEEK = 5
 
+# Working days/month for converting a MONTHLY rate card into a per-man-day rate.
+# Deliberately separate from MANDAYS_PER_MONTH (22, used for schedule/manmonths math):
+# the BnK rate-card convention (mirrors the WBS template's "4. Master Data" sheet,
+# `1. Effort` col K/L/M/N/O: ``MD * Master Data!rate`` — a flat per-day multiply) is a
+# 20-workday month.
+RATE_CARD_WORKDAYS_PER_MONTH = 20.0
+
 # BnK dev rate card, USD per man-month — varies by role seniority (client-quoted range is
 # 2,000-4,000 USD/month per developer depending on seniority; each role sits at a different
 # point in that band). Per-project overrides can be passed to cost_by_role(); this is only
-# the default used when a project hasn't customized its rates.
+# the default used when a project hasn't customized its rates. Keys mirror effort_by_role
+# (BE/FE_Mobile/BA/QC/PM); "Developer" is the blended BE+FE_Mobile rate the WBS Excel
+# template's single "Developer" Master Data row expects (see wbs_excel._write_master_data_rate_card).
 DEFAULT_RATE_CARD_USD_PER_MONTH: dict[str, float] = {
     "PM": 4000.0,          # project manager / lead — senior end of the band
     "BE": 3200.0,          # backend dev — mid-senior
     "FE_Mobile": 2800.0,   # frontend/mobile dev — mid
     "BA": 2600.0,          # business analyst
     "QC": 2200.0,          # QC/tester — junior-mid
+    "Developer": 3000.0,   # blended BE/FE rate — for the template's single "Developer" row
 }
 
 
