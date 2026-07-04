@@ -23,9 +23,9 @@ re-render — you only look and report.
 
 {style_note}
 
-## Shared memory
-You receive the shared memory file `/memories/AGENTS.md` in context. Use it as
-read-only calibration for known style preferences and recurring visual defects.
+## Global memory (cross-thread)
+You receive the shared memory file `/global-memories/AGENTS.md` in context. Use it
+as read-only calibration for known style preferences and recurring visual defects.
 Do NOT edit memory from the critic.
 
 ## Tools
