@@ -51,6 +51,66 @@ def _components_by_cluster(model: SolutionModel) -> list[tuple[str, str, list[st
     return out
 
 
+_REGULATORY_KEYWORDS = [
+    "GDPR", "PCI-DSS", "PCI DSS", "UCP 600", "AML", "KYC", "HIPAA", "SOX", "SOC2", "SOC 2",
+    "ISO 27001", "ISO27001", "CCPA", "PDPA", "FATCA", "Basel",
+]
+_GEOGRAPHY_KEYWORDS = [
+    "Singapore", "Vietnam", "Ap-southeast", "ap-southeast", "Europe", "EU ", "US ", "USA",
+    "APAC", "EMEA", "Japan", "Korea", "Indonesia", "Thailand", "Philippines",
+]
+
+
+def _find_sentences(statements: list[str], keywords: list[str]) -> list[str]:
+    """Statements that mention any keyword, de-duplicated, in original order."""
+    out, seen = [], set()
+    for s in statements:
+        low = s.lower()
+        if any(kw.lower() in low for kw in keywords) and s not in seen:
+            seen.add(s)
+            out.append(s)
+    return out
+
+
+def _find_keywords_present(statements: list[str], keywords: list[str]) -> list[str]:
+    """Which keywords (canonical form) appear anywhere across the statements."""
+    hay = " ".join(statements).lower()
+    return [kw for kw in keywords if kw.lower() in hay]
+
+
+def _infer_client_info(model: SolutionModel, wbs: dict) -> dict[str, Any]:
+    """Derive client/platform/geography/regulatory straight from the CSM + WBS project_info.
+
+    No business_narrative needed for the common case — these facts are usually already
+    stated as constraints/assumptions/NFRs during requirements gathering, just never
+    surfaced on their own slide.
+    """
+    pinfo = (wbs or {}).get("project_info") or {}
+    all_statements = (
+        [c.statement for c in model.constraints]
+        + [a.statement for a in model.assumptions]
+        + [r.statement for r in model.requirements if r.kind == "nfr"]
+    )
+
+    geography = _find_sentences(
+        [c.statement for c in model.constraints] + [a.statement for a in model.assumptions],
+        _GEOGRAPHY_KEYWORDS,
+    )
+    regulatory = _find_keywords_present(all_statements, _REGULATORY_KEYWORDS)
+    platform = [
+        s for s in [a.statement for a in model.assumptions]
+        if re.search(r"\bexisting\b.*\b(infrastructure|platform|system)\b", s, re.IGNORECASE)
+    ]
+
+    return {
+        "client": pinfo.get("client") or "",
+        "platform": "; ".join(_clip(p, 100) for p in platform[:2]),
+        "geography": "; ".join(_clip(g, 90) for g in geography[:2]),
+        "regulatory": ", ".join(regulatory) if regulatory else "",
+        "business_domain": pinfo.get("business_domain") or "",
+    }
+
+
 def _wbs_totals(wbs: dict) -> dict[str, Any]:
     totals = (wbs or {}).get("effort_totals") or {}
     timeline = (wbs or {}).get("timeline") or {}
