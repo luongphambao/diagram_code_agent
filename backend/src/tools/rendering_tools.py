@@ -467,28 +467,17 @@ def list_saved_diagrams() -> str:
     return "\n".join(lines)
 
 
-@tool(parse_docstring=True)
-def plan_style_sizes(
+def _compute_style_plan(
     node_count: int,
     longest_label_chars: int = 22,
     longest_sublabel_chars: int = 26,
-    output: Literal["slide", "diagram", "poster"] = "slide",
-) -> str:
-    """Decide icon/text sizes for a prettygraph render BEFORE writing the script.
+    output: str = "slide",
+) -> dict:
+    """Deterministic icon/text sizing for a prettygraph render.
 
-    Deterministic sizing from diagram density: sparse client-facing diagrams get
-    bigger icons and text (small fixed sizes look diluted inside large cards);
-    dense diagrams get compact cards. Returns JSON with a `sizes` block, a
-    ready-to-paste `pretty_kwargs` string for `Pretty(...)`, and `notes` with any
-    label-length warnings. Re-run after trimming nodes or when the critic flags
-    small/unreadable text.
-
-    Args:
-        node_count: number of VISIBLE boxes planned (after collapsing replicas).
-        longest_label_chars: character count of the longest node title.
-        longest_sublabel_chars: character count of the longest sublabel.
-        output: "slide" (pro slide canvas, standard or detailed density), "diagram"
-                (plain render), or "poster" (dense numbered-section grid, 25-45 nodes).
+    Pure arithmetic over the render spec — computed CODE-SIDE when
+    propose_blueprint writes render_spec.json (write_style_and_fit_plans), so the
+    drawer just reads style_plan.json instead of spending a model call on it.
     """
     if node_count <= 8:
         density, node_h, title = "sparse", 66, 17
