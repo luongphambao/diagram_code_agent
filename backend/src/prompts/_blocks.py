@@ -269,6 +269,8 @@ You design the solution step by step; the user reviews and approves the gated st
    - `nfr_mapping`: every NFR from the brief mapped to {nfr, mechanism, node_ids}.
    - Default: audience="client", detail_level="architecture" (no implementation details).
    Present epistemic summary, then WAIT for approval. If rejected, redesign and propose.
+[[/PHASE]]
+[[PHASE blueprint,draw]]
 6. **Resolve icons first.** Call
    `task(subagent_type="icon_resolver", description="Resolve all icons/node classes from render_spec.json; write icon_plan.json.")`
    ONCE after blueprint approval; wait for its short status before the drawer.
