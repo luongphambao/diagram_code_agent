@@ -241,6 +241,7 @@ def draft_wbs_skeleton(project_info: ProjectInfo, phases: list[PhaseMeta],
     """
     if not phases:
         return "Provide at least one phase with modules."
+    reset_note = _reset_if_stale_project(project_info.name)
     overrides = {k: v for k, v in
                  (("ba_on_dev", ba_on_dev), ("qc_on_dev", qc_on_dev), ("pm_on_total", pm_on_total))
                  if v is not None}
@@ -254,7 +255,8 @@ def draft_wbs_skeleton(project_info: ProjectInfo, phases: list[PhaseMeta],
     # seed wbs.json with empty item list + skeleton
     _write_json(_WBS_FILE, {**skeleton, "items": []})
     n_mod = sum(len(p.modules) for p in phases)
-    lines = [f"WBS skeleton drafted: {len(phases)} phase(s), {n_mod} module(s)."]
+    lines = [reset_note + f"WBS skeleton drafted: {len(phases)} phase(s), {n_mod} module(s)."] if reset_note \
+        else [f"WBS skeleton drafted: {len(phases)} phase(s), {n_mod} module(s)."]
     for p in phases:
         lines.append(f"  {p.code} {p.name}: " + ", ".join(f"{m.code} {m.name}" for m in p.modules))
     lines.append("Next: call propose_wbs_skeleton to get the structure approved.")
