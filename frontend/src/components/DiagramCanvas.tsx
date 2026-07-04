@@ -38,8 +38,8 @@ export default function DiagramCanvas({ agentState, pendingInterrupt, isRunning,
     );
   }
 
-  // Diagram ready — delegate to ArtifactTabs
-  if (png_base64) {
+  // Any artifact ready (diagram, PDF, PPT, or WBS) — delegate to ArtifactTabs
+  if (hasArtifact) {
     return (
       <ArtifactTabs
         agentState={agentState}
