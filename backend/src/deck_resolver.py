@@ -22,10 +22,12 @@ Imports only ``csm`` + ``deck_sections`` (both cycle-free), same discipline as `
 
 from __future__ import annotations
 
+import re
 from typing import Any, Optional
 
 from csm import SolutionModel
 from deck_sections import SECTION_CONTENT_CONTRACTS, SectionContract
+from wbs_effort import cost_by_role as _cost_by_role
 
 
 def _clip(text: Any, limit: int = 200) -> str:
