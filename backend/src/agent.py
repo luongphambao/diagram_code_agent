@@ -890,6 +890,10 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
         # well-formed task args).
         ToolArgCoercionMiddleware(),
     ]
+    if use_vision_relay:
+        # Vision 400s ("Multimodal data is corrupted") retry once text-only
+        # instead of letting the model retry-storm the same payload.
+        layers.append(VisionErrorFallbackMiddleware())
     if task_call_limit is not None:
         # Defense-in-depth against subagent-dispatch storms: caps `task` calls
         # per run. exit_behavior="continue" (not "end") — "end" raises
