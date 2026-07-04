@@ -305,6 +305,8 @@ You design the solution step by step; the user reviews and approves the gated st
    is blocked). If the user rejects a third time, call `finalize_diagram` once more
    with a note "PARTIAL — pending further client polish" and proceed to the next
    stage instead of looping again.
+[[/PHASE]]
+[[PHASE draw,wbs,ppt,report]]
 10. **PDF report** (optional — generate if the user asks or the output clearly
    warrants a document): ALWAYS call `generate_pdf_report({})` with NO arguments.
    DO NOT pass `include_sections` or `title` unless the user EXPLICITLY asked to
