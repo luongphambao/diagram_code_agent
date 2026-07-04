@@ -1281,7 +1281,12 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
     wbs_planner_model    = get_model("wbs_planner",      main_model)
     ppt_generator_model  = get_model("ppt_generator",    main_model)
 
-    workdir = str(WORKSPACE)
+    # Virtual workspace root the prompts refer to. MUST be the virtual "/workspace"
+    # mount (see make_local_backend's "/workspace/" route), NOT the absolute host path
+    # str(WORKSPACE): under virtual_mode=True the filesystem tools re-root every path
+    # under the per-thread current_workspace(), so an absolute host path baked into a
+    # prompt resolves to a non-existent nested dir (the ppt_generator 404 storm).
+    workdir = "/workspace"
     prefix = get_system_prompt_prefix(main_model)
     if style == "pretty":
         system_prompt = prefix + build_pretty_system_prompt(workdir, LOCAL_ICONS, LOCAL_MANIFEST)
