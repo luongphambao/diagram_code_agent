@@ -697,6 +697,16 @@ async def _summary_and_logs(config: dict) -> tuple[str, list]:
                 entry["output"] = _tool_output_detail(out)
                 if getattr(m, "status", None) == "error":
                     entry["error"] = entry.get("output", "error")
+    # ModelCallLimitMiddleware(exit_behavior="end") ends the run with a bare
+    # "Model call limits exceeded: run limit (N/N)" — translate it so the user
+    # sees an explanation instead of a cryptic internal counter.
+    if summary.startswith("Model call limits exceeded"):
+        detail = summary[len("Model call limits exceeded:"):].strip()
+        summary = (
+            "This run stopped at its safety call limit before finishing "
+            f"({detail}). Partial artifacts are saved in the workspace — send a "
+            "follow-up message to continue from where it stopped."
+        )
     return summary, logs
 
 
