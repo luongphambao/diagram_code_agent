@@ -188,7 +188,7 @@ def test_cpm_ff_relationship():
     assert b["B"]["early_finish"] == 10.0
 
 
-# --- DoD / DependencyEdge fields ---------------------------------------------
+# --- DoD fields ---------------------------------------------------------------
 
 def test_leaf_in_acceptance_criteria():
     leaf = LeafIn(phase_code="I", module_code="I.A", name="Login",
@@ -202,10 +202,11 @@ def test_leaf_in_acceptance_criteria_default_empty():
     assert leaf.acceptance_criteria == []
 
 
-def test_dependency_edge_defaults():
-    edge = DependencyEdge(predecessor_ref="BNK-1")
-    assert edge.lag_days == 0.0
-    assert edge.relationship == "FS"
+def test_leaf_in_has_no_rich_dependency_field():
+    """DependencyEdge was removed from the model-facing schema (mimo stringify
+    surface); the planner supplies plain predecessors only. CPM still reads a
+    dependencies key from old wbs.json files."""
+    assert "dependencies" not in LeafIn.model_fields
 
 
 # ─── level_resources (§4.6 Resource leveling) ────────────────────────────────
