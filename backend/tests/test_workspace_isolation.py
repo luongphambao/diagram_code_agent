@@ -199,6 +199,28 @@ def test_global_memory_route_resolves_to_memories_dir(tmp_path, monkeypatch):
     assert "global notes" in result.file_data["content"]
 
 
+def test_skills_dir_route_resolves_regardless_of_bound_thread_workspace(tmp_path, monkeypatch):
+    """Regression test: deepagents' SkillsMiddleware calls backend.ls()/read() with
+    the real absolute SKILLS_DIR path (see agent.py's *_SKILL_PATHS, e.g.
+    WBS_PLANNER_SKILL_PATHS). Without a dedicated route, that absolute path falls
+    to the per-thread default route and gets re-rooted under whatever thread's
+    workspace happens to be bound — producing "path_not_found" for every
+    subagent's skill load, regardless of which thread is running."""
+    _bind(monkeypatch, tmp_path / "some-thread-workspace")
+
+    backend = backends.make_local_backend()
+    skill_dir = str(backends.SKILLS_DIR / "wbs-planning")
+
+    ls_result = backend.ls(skill_dir)
+    assert ls_result.error is None, ls_result.error
+    names = [e["path"] for e in (ls_result.entries or [])]
+    assert any("SKILL.md" in n for n in names), names
+
+    read_result = backend.read(f"{skill_dir}/SKILL.md")
+    assert read_result.error is None, read_result.error
+    assert "wbs-planning" in read_result.file_data["content"]
+
+
 def test_requirements_md_lands_in_per_thread_workspace(tmp_path, monkeypatch):
     """Regression test: requirements.md must never be written to the shared
     WORKSPACE root for a real (non-default) thread_id."""
