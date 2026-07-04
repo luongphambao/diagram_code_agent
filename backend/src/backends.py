@@ -241,6 +241,19 @@ def make_local_backend() -> CompositeBackend:
     return CompositeBackend(
         default=PerThreadFilesystemBackend(root_dir=str(WORKSPACE), virtual_mode=True),
         routes={
+            # Explicit virtual mount for the per-thread workspace. Prompts refer to the
+            # workspace as `/workspace` (the workdir convention); CompositeBackend strips
+            # the `/workspace/` prefix and the sub-backend re-roots the rest under the
+            # current thread's workspace. WITHOUT this route, a prompt-supplied path like
+            # `/workspace/blueprint.json` (or the old absolute `.../agent_space/workspace/…`)
+            # falls to the default route and virtual_mode nests it as
+            # `<thread-ws>/workspace/blueprint.json` — a dir that never exists, which is
+            # why the ppt_generator subagent's reads all 404'd. Bare names (`blueprint.json`)
+            # still resolve via the default route, so both forms now work per-thread.
+            "/workspace/": PerThreadFilesystemBackend(
+                root_dir=str(WORKSPACE),
+                virtual_mode=True,
+            ),
             "/memories/": PerThreadFilesystemBackend(
                 root_dir=str(WORKSPACE),
                 subdir="memories",
