@@ -405,17 +405,17 @@ def build_solution_model(
 
     # Guard against clobbering a rich model with an empty one. build_solution_model
     # rebuilds from the legacy source artifacts (diagram_brief/blueprint/tech_stack/
-    # analysis); if those are transiently absent the projection collapses to a near-empty
-    # model (only WBS work items survive). Overwriting a previously-rich solution_model.json
-    # with that empty rebuild is how a workspace loses its architecture content (and how
-    # decks downstream go thin). If the fresh model has no architecture entities but the
-    # stored one did, keep the stored model instead of destroying it.
-    fresh_is_empty = not (model.components or model.requirements or model.decisions or model.risks)
-    prev_had_content = bool(
-        prev.get("components") or prev.get("requirements")
-        or prev.get("decisions") or prev.get("risks")
-    )
-    if fresh_is_empty and prev_had_content:
+    # analysis); if those are transiently absent the projection collapses — no components
+    # and no requirements (only WBS work items, and decisions/evidence folded from their
+    # own stores, survive). Overwriting a previously-rich solution_model.json with that
+    # stripped rebuild is how a workspace loses its architecture content (and how decks
+    # downstream go thin). Gauge "architecture content" by components+requirements only —
+    # those come solely from the legacy files; decisions/risks can arrive from other
+    # stores and so aren't a reliable signal. If the fresh model lost the architecture but
+    # the stored one had it, keep the stored model instead of destroying it.
+    fresh_has_architecture = bool(model.components or model.requirements)
+    prev_had_architecture = bool(prev.get("components") or prev.get("requirements"))
+    if not fresh_has_architecture and prev_had_architecture:
         try:
             return SolutionModel.model_validate(prev)
         except Exception:  # noqa: BLE001 — fall through to normal write if prev is unparseable
