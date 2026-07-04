@@ -244,13 +244,30 @@ def _b_delivery_effort(model, wbs, nar, meta, lib):
 
 
 def _b_master_plan(model, wbs, nar, meta, lib):
+    """The real Master Plan Gantt — same schedule model as the WBS Excel's
+    "3. Delivery Plan" sheet (wbs_excel._module_schedule + wbs_effort.delivery_grid), so the
+    deck's timeline slide and the client-facing Excel never drift apart.
+    """
+    from wbs_effort import delivery_grid
+    from wbs_excel import _module_schedule
+
     t = _wbs_totals(wbs)
-    phases = [
-        f"{ph.get('name', 'Phase')}: {ph.get('duration', ph.get('weeks', ''))}".strip(": ")
-        for ph in (wbs.get("phases") or [])
-    ]
-    header = f"Timeline: {t['weeks']} weeks (~{t['months']} months), {t['sprints']} sprints"
-    return {"timeline_phases": [header] + phases}
+    weeks = int(t["weeks"] or (wbs.get("timeline") or {}).get("weeks") or 16)
+    grid = delivery_grid(weeks)
+
+    if wbs.get("phases"):
+        gantt_rows = [
+            {"code": m["code"], "name": m["name"],
+             "start_week": m["start_week"], "end_week": m["end_week"]}
+            for m in _module_schedule(wbs, grid["weeks"])
+        ]
+    else:
+        gantt_rows = []
+
+    return {
+        "weeks": grid["weeks"], "months": grid["months"], "sprints": grid["sprints"],
+        "gantt_rows": gantt_rows,
+    }
 
 
 def _b_risk(model, wbs, nar, meta, lib):
