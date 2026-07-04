@@ -216,7 +216,7 @@ def make_local_backend() -> CompositeBackend:
     """
     _ensure_dirs()
     return CompositeBackend(
-        default=PerThreadFilesystemBackend(root_dir=str(WORKSPACE), virtual_mode=False),
+        default=PerThreadFilesystemBackend(root_dir=str(WORKSPACE), virtual_mode=True),
         routes={
             "/memories/": PerThreadFilesystemBackend(
                 root_dir=str(WORKSPACE),
