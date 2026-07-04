@@ -249,9 +249,9 @@ async def agui_endpoint(request: Request):
                     )
                 attached = _attached_text(file_ids)
                 image_blocks = _attached_images(file_ids)
-                req_file = WORKSPACE / "requirements.md"
+                req_file = ws / "requirements.md"
                 if attached:
-                    WORKSPACE.mkdir(parents=True, exist_ok=True)
+                    ws.mkdir(parents=True, exist_ok=True)
                     req_file.write_text(
                         f"<untrusted_document>\n{attached}\n</untrusted_document>",
                         encoding="utf-8",
