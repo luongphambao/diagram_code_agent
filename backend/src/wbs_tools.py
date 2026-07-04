@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Optional
 
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field, model_validator
