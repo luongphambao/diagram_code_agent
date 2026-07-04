@@ -318,7 +318,10 @@ def _b_kpis(model, wbs, nar, meta, lib):
 
 
 def _b_client_info(model, wbs, nar, meta, lib):
-    return {"client_info": nar.get("client_info") or {}}
+    inferred = _infer_client_info(model, wbs)
+    override = nar.get("client_info") or {}
+    merged = {**inferred, **{k: v for k, v in override.items() if v}}
+    return {"client_info": merged}
 
 
 def _b_advice(model, wbs, nar, meta, lib):
