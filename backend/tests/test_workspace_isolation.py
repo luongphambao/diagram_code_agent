@@ -92,3 +92,76 @@ def test_store_writes_into_current_workspace(tmp_path, monkeypatch):
     _bind(monkeypatch, b)
     assert read_decisions() == []
     assert not (b / "decision_log.json").exists()
+
+
+def test_per_thread_filesystem_backend_isolates_threads(tmp_path, monkeypatch):
+    """The deep agent's own built-in read_file/write_file must not leak across
+    threads — this is the backend behind read_file/write_file/edit_file/ls/glob/grep
+    for every agent (main + subagents), not just the router-side JSON stores above."""
+    from backends import PerThreadFilesystemBackend
+
+    a, b = tmp_path / "ta", tmp_path / "tb"
+    backend = PerThreadFilesystemBackend(root_dir=str(tmp_path), virtual_mode=False)
+
+    _bind(monkeypatch, a)
+    write_res = backend.write("foo.txt", "from-a")
+    assert write_res.error is None
+    assert (a / "foo.txt").read_text(encoding="utf-8") == "from-a"
+    assert not (b / "foo.txt").exists()
+
+    _bind(monkeypatch, b)
+    read_res = backend.read("foo.txt")
+    assert read_res.error is not None  # not found — no leak from thread A
+    write_res = backend.write("foo.txt", "from-b")
+    assert write_res.error is None
+    assert (b / "foo.txt").read_text(encoding="utf-8") == "from-b"
+    assert (a / "foo.txt").read_text(encoding="utf-8") == "from-a"  # thread A untouched
+
+
+def test_per_thread_memories_subdir_isolates_threads(tmp_path, monkeypatch):
+    """The per-thread /memories/ route (subdir="memories") must not collapse onto
+    the default route, and must isolate the same way as the default route."""
+    from backends import PerThreadFilesystemBackend
+
+    a, b = tmp_path / "ta", tmp_path / "tb"
+    backend = PerThreadFilesystemBackend(root_dir=str(tmp_path), subdir="memories", virtual_mode=True)
+
+    _bind(monkeypatch, a)
+    write_res = backend.write("/AGENTS.md", "notes-a")
+    assert write_res.error is None
+    assert (a / "memories" / "AGENTS.md").read_text(encoding="utf-8") == "notes-a"
+
+    _bind(monkeypatch, b)
+    assert backend.read("/AGENTS.md").error is not None
+    assert not (b / "memories").exists() or not (b / "memories" / "AGENTS.md").exists()
+
+
+def test_global_memory_route_resolves_to_memories_dir(tmp_path, monkeypatch):
+    """Regression test for Bug D: /global-memories/ used to be rooted one directory
+    level too high (AGENT_SPACE instead of AGENT_SPACE/memories), so the durable
+    shared-memory file was never actually found."""
+    monkeypatch.setattr(backends, "MEMORIES_DIR", tmp_path / "memories")
+    monkeypatch.setattr(backends, "WORKSPACE", tmp_path / "workspace")
+    monkeypatch.setattr(backends, "OUTPUTS_DIR", tmp_path / "outputs")
+    (tmp_path / "memories").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "memories" / "AGENTS.md").write_text("global notes", encoding="utf-8")
+
+    backend = backends.make_local_backend()
+    result = backend.read("/global-memories/AGENTS.md")
+    assert result.error is None
+    assert "global notes" in result.file_data["content"]
+
+
+def test_requirements_md_lands_in_per_thread_workspace(tmp_path, monkeypatch):
+    """Regression test: requirements.md must never be written to the shared
+    WORKSPACE root for a real (non-default) thread_id."""
+    monkeypatch.setattr(backends, "WORKSPACES_DIR", tmp_path / "workspaces")
+    monkeypatch.setattr(backends, "WORKSPACE", tmp_path / "workspace")
+
+    ws = resolve_workspace("thread-real-user")
+    req_file = ws / "requirements.md"
+    req_file.write_text("some uploaded requirement doc", encoding="utf-8")
+
+    assert req_file.exists()
+    assert not (backends.WORKSPACE / "requirements.md").exists()
+    assert str(tmp_path / "workspaces") in str(req_file)
