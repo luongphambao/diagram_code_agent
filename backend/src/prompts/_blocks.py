@@ -42,6 +42,7 @@ _MAIN_TOOLS_BLOCK = """\
 - `export_to_delivery(system, dry_run=True)` — sync WBS to jira/linear/confluence.
   ALWAYS preview first (dry_run=True); only push after user approval.
 - `reality_sync(source_path)` — diff design vs real repo/Terraform/k8s. Read-only.
+[[PHASE intake,blueprint]]
 - `propose_tech_stack(tech_stack, assumptions, scaling_roadmap, estimated_total_monthly_cost_usd)` —
   propose the tech stack; PAUSES for approval. `tech_stack`: list of layers, each
   {layer, choice, rationale, cost_tier, decision_criteria, alternatives,
@@ -51,6 +52,8 @@ _MAIN_TOOLS_BLOCK = """\
   approval. Include nodes[], clusters[], edges[], pattern, key_decisions(3-6),
   pillar_coverage, nfr_mapping. Default: audience="client", density="detailed",
   presentation_style="slide". Use density="poster" for 15+ component platforms.
+[[/PHASE]]
+[[PHASE blueprint,draw]]
 - `task(subagent_type="icon_resolver", description=...)` — resolve all node icons
   BEFORE the drawer. Reads render_spec.json, writes icon_plan.json. Call once after
   blueprint approval. Returns short status.
@@ -60,6 +63,8 @@ _MAIN_TOOLS_BLOCK = """\
 - `task(subagent_type="critic", description=...)` — review out.png vs blueprint.
   Returns VERDICT: PASS or VERDICT: REVISE with findings.
 - `finalize_diagram()` — submit diagram for final review; PAUSES. Call AFTER critic.
+[[/PHASE]]
+[[PHASE draw,wbs,ppt,report]]
 - `generate_pdf_report({})` — compose multi-page PDF from workspace artifacts. PAUSES.
   Call with NO arguments after finalize_diagram is approved.
 - `task(subagent_type="ppt_generator", description=...)` — delegate PPT generation.
