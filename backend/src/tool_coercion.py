@@ -72,6 +72,8 @@ def _coerce_value(value, ann):
     if ann is None or ann is _t.Any:
         return value
     origin = _t.get_origin(ann)
+    if origin is None and ann in (list, dict, tuple, set):
+        origin = ann  # bare `list` / `dict` annotation (no type params)
 
     if origin is _t.Union:  # includes Optional[...]
         if value is None:
