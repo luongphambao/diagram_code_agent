@@ -318,7 +318,7 @@ def add_wbs_items(items: list[LeafIn]) -> str:
             "optimistic": it.optimistic, "likely": it.likely, "pessimistic": it.pessimistic,
             "pert_expected_md": pert, "pert_p50_md": pert_p50, "pert_p80_md": pert_p80,
             "predecessors": [str(p).strip() for p in (it.predecessors or [])],
-            "dependencies": [d.model_dump() for d in it.dependencies],
+            "dependencies": [],
             "owner": it.owner or None,
             "acceptance_criteria": list(it.acceptance_criteria),
         })
