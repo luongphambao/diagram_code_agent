@@ -407,8 +407,9 @@ _PRETTY_DIAGRAM_DETAIL = """\
     brand=..., diagram_title=..., legend=[...], include_hero=False)`
   Both produce `out.png` + `out.body.png` + `out.dot` + `out.nodes.json` +
   editable `out.drawio` + `out.slide.json`.
-- Before rendering, call `audit_diagram_code(code=<the COMPLETE script>)` and fix
-  every high/medium finding unless it is demonstrably irrelevant to this script.
+- render_diagram runs a static pre-flight audit automatically: if it returns
+  PRE-FLIGHT AUDIT findings, fix every high/medium one and re-call (blocked
+  attempts consume no render budget).
 - READ THE LAYOUT AUDIT in the tool result FIRST (it reports the page aspect ratio
   and any label-bearing edges that span far / will strand). It is the objective
   signal — if it says TOO WIDE or lists STRAND-RISK edges, you MUST fix and
