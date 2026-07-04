@@ -421,8 +421,15 @@ def available_inputs(
     # stays optional and skips cleanly if the pick returns None at render time.
     if nar.get("case_study") is None:
         a.add("business_narrative.case_study")
+    # client_info is mostly CSM-derivable (client/domain from wbs.project_info, geography
+    # from constraints/assumptions, regulatory from NFRs) — no business_narrative needed
+    # for the common case; see _infer_client_info.
+    if (wbs.get("project_info") or {}).get("client") or model.constraints or model.assumptions:
+        a.add("business_narrative.client_info")
     if wbs.get("effort_by_module"):
         a |= {"tech_stack.opex", "tech_stack.cost"}  # OPEX derivable from module cost
+    # pricing (CAPEX) is always derivable from wbs.effort_totals + the default rate card —
+    # never blocked on a business-narrative rate_card override.
     return a
 
 
