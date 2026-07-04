@@ -316,6 +316,64 @@ try:
         return json.dumps(resolved, indent=2)
 
     @tool(parse_docstring=True)
+    def resolve_tech_stack_icons() -> str:
+        """Fetch and group icons for every technology in the tech stack, by layer.
+
+        Reads `tech_stack.json`'s `layers` (frontend/backend/database/...); when that
+        file is missing (common once the CSM/solution model has been built — the
+        legacy file is not always written past that point) falls back to the CSM's
+        component clusters, which carry the same information. For each layer, splits
+        its technology string into individual names (e.g. "Node.js + Express/Fastify"
+        -> Node.js, Express, Fastify) and resolves an icon for each: the bundled icon
+        pack first (aws/azure/gcp/onprem/k8s/programming/saas), then lobe-icons/
+        simple-icons CDN brand logos for anything not in the bundled pack.
+
+        Writes `tech_icons.json` — `{layer: [{name, icon, source}, ...]}` — so a
+        visual Technical Stack slide/diagram can render logos without re-fetching.
+        Safe to call again to refresh after the tech stack changes (overwrites the
+        cache).
+
+        When to use: for the "PROPOSED SOLUTION | Technical Stack" deck slide, or any
+        diagram that wants a per-technology logo instead of plain text.
+        """
+        workspace = current_workspace()
+        layers = _tech_layers_from_workspace(workspace)
+        if not layers:
+            return json.dumps({
+                "status": "NO_TECH_STACK",
+                "instruction": (
+                    "No tech_stack.json and no CSM component data found. Call "
+                    "propose_tech_stack (or analyze_architecture_requirements) first."
+                ),
+            }, indent=2)
+
+        result: dict[str, list[dict]] = {}
+        seen: dict[str, dict] = {}  # de-dup identical names across layers — one fetch each
+        for layer, choices in layers.items():
+            names: list[str] = []
+            for choice in choices:
+                names.extend(_split_tech_names(choice))
+            icons = []
+            for name in names:
+                key = name.lower()
+                if key not in seen:
+                    seen[key] = _resolve_one_tech_icon(name)
+                icons.append(seen[key])
+            result[layer] = icons
+
+        workspace.mkdir(parents=True, exist_ok=True)
+        _TECH_ICONS_FILE.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
+        found = sum(1 for icons in result.values() for i in icons if i["path"])
+        total = sum(len(icons) for icons in result.values())
+        _bump_tool_summary("resolve_tech_stack_icons", tech_icons_found=found, tech_icons_total=total)
+        return json.dumps({
+            "status": "OK", "layers": list(result.keys()),
+            "found": found, "total": total,
+            "path": "tech_icons.json",
+            "icons": result,
+        }, indent=2, ensure_ascii=False)
+
+    @tool(parse_docstring=True)
     def fetch_logo(name: str) -> str:
         """Resolve a brand/product logo — lobe-icons (321 AI/LLM brands + data stores) first,
         then local pack, then Iconify, then favicon; downloads & validates.
