@@ -1107,20 +1107,31 @@ def _gantt_params_from_wbs(workspace: Path) -> dict[str, Any]:
 
 
 def _load_current_csm(workspace: Path):
-    """Load the workspace CSM (solution_model.json, else the .prev snapshot). None if absent."""
+    """Load the workspace CSM, preferring whichever of solution_model.json / .prev.json
+    carries the most content.
+
+    Normally solution_model.json is the rich current model. But if it was last rebuilt by
+    `build_solution_model` while the legacy source files were absent, it degenerates to an
+    (almost) empty model while the .prev snapshot still holds the real one — so pick by
+    entity count rather than blindly taking .json. None if neither loads.
+    """
     try:
         from csm import SolutionModel
     except ImportError:
         return None
+    best, best_n = None, -1
     for name in ("solution_model.json", "solution_model.prev.json"):
         path = workspace / name
         if not path.exists():
             continue
         try:
-            return SolutionModel.model_validate(json.loads(path.read_text(encoding="utf-8")))
+            model = SolutionModel.model_validate(json.loads(path.read_text(encoding="utf-8")))
         except Exception:  # noqa: BLE001
             continue
-    return None
+        n = len(model.components) + len(model.requirements) + len(model.risks)
+        if n > best_n:
+            best, best_n = model, n
+    return best
 
 
 def _enrich_report_from_csm(report: dict[str, Any], workspace: Path) -> dict[str, Any]:
