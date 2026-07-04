@@ -1,14 +1,13 @@
-"""The implicit "general-purpose" subagent must be disabled for every agent
-except wbs_planner.
+"""The implicit "general-purpose" subagent must be disabled for EVERY agent.
 
 create_deep_agent() auto-adds a "general-purpose" subagent (and with it the
 `task` tool) unless the harness profile for the agent's model disables it.
-build_agent() toggles that profile around each create_deep_agent call:
-wbs_planner is built first with general-purpose enabled (unchanged behavior),
-then the toggle flips to disabled for icon_resolver/drawer/critic/
-ppt_generator and the main agent. A regression here re-opens the drawer's
-task(general-purpose) retry escape hatch that once burned 1.66M tokens
-(42% of a 4M-token run).
+build_agent() disables it for all six models before any create_deep_agent
+call. wbs_planner used to be the one exception (GP enabled + task cap 3), but
+a real 6M-token trace (2026-07-04) showed it delegating WBS work to
+task(general-purpose) — a stateless nested agent with the exact same toolset,
+so pure waste. A regression here re-opens the retry escape hatch that once
+burned 1.66M tokens (42% of a 4M-token run) via the drawer.
 """
 
 import pytest
@@ -40,7 +39,7 @@ def _tool_names(graph) -> set[str]:
     return names
 
 
-def test_general_purpose_toggle_order(monkeypatch, fake_llm_keys):
+def test_general_purpose_disabled_everywhere(monkeypatch, fake_llm_keys):
     real_create = agent_module.create_deep_agent
     snapshots: list[tuple[str, object]] = []
     graphs: list = []
@@ -56,19 +55,15 @@ def test_general_purpose_toggle_order(monkeypatch, fake_llm_keys):
     monkeypatch.setattr(agent_module, "create_deep_agent", recording_create)
     main_graph = agent_module.build_agent()
 
-    # 6 create_deep_agent calls: wbs_planner first, then the 4 workers, main last.
+    # 6 create_deep_agent calls: wbs_planner, 4 workers, then main.
     assert len(snapshots) == 6, snapshots
-    # wbs_planner keeps the default general-purpose subagent (enabled=True).
-    assert snapshots[0][1] is True, snapshots
-    # Everyone built after the flip — workers and main — has it disabled.
-    assert all(enabled is False for _, enabled in snapshots[1:]), snapshots
+    # Every single one is built with general-purpose disabled.
+    assert all(enabled is False for _, enabled in snapshots), snapshots
 
-    # Behavioral check on the compiled graphs: the wbs_planner graph keeps the
-    # `task` tool (via its auto-added general-purpose subagent) and so does the
-    # main graph (for its five named subagents); no other worker graph may
-    # expose `task`.
-    wbs_graph, worker_graphs = graphs[0], graphs[1:5]
-    assert "task" in _tool_names(wbs_graph)
+    # Behavioral check on the compiled graphs: only the MAIN graph exposes
+    # `task` (for its five named subagents). No subagent — wbs_planner
+    # included — may expose `task`.
+    subagent_graphs = graphs[:5]
     assert "task" in _tool_names(main_graph)
-    for worker_graph in worker_graphs:
-        assert "task" not in _tool_names(worker_graph)
+    for subagent_graph in subagent_graphs:
+        assert "task" not in _tool_names(subagent_graph)
