@@ -776,6 +776,68 @@ class PhaseToolFilterMiddleware(AgentMiddleware):
         return handler(request)
 
 
+_PHASE_SPAN_RE = None  # compiled lazily (re imported locally to keep module top light)
+
+
+def _strip_phase_spans(text: str, phase: str | None) -> str:
+    """Strip [[PHASE a,b]]...[[/PHASE]] spans not matching *phase*.
+
+    Marker syntax itself is always removed, so it can never leak to the model.
+    With phase=None (detection failed) every span is KEPT — safe fallback.
+    """
+    global _PHASE_SPAN_RE
+    import re
+    if _PHASE_SPAN_RE is None:
+        _PHASE_SPAN_RE = re.compile(r"\[\[PHASE ([a-z_,\s]+)\]\]\n?(.*?)\[\[/PHASE\]\]\n?", re.DOTALL)
+
+    def _repl(m):
+        phases = {p.strip() for p in m.group(1).split(",")}
+        if phase is None or phase in phases:
+            return m.group(2)
+        return ""
+
+    return _PHASE_SPAN_RE.sub(_repl, text)
+
+
+class PhasePromptFilterMiddleware(AgentMiddleware):
+    """Strip phase-irrelevant [[PHASE ...]] spans from the main system prompt.
+
+    Companion to PhaseToolFilterMiddleware: that one trims tool SCHEMAS, this one
+    trims the prompt PROSE (_STAGED_FLOW stages + _MAIN_TOOLS_BLOCK descriptions
+    in _blocks.py) to the current workflow phase — ~2.5-3K tokens saved on every
+    main model call, ~150K+ per run at main's call volume. NOTE: this makes the
+    system prompt vary by phase, which is correct for non-caching providers
+    (mimo); if main ever moves to a provider WITH prompt caching, disable this
+    (and the tool filter) and keep the prompt byte-stable instead.
+    """
+
+    name = "PhasePromptFilterMiddleware"
+
+    @staticmethod
+    def _current_phase() -> str | None:
+        try:
+            from backends import current_workspace
+            return _detect_phase(current_workspace())
+        except Exception:
+            return None
+
+    def _filtered(self, request: ModelRequest) -> ModelRequest:
+        sysmsg = getattr(request, "system_message", None)
+        content = getattr(sysmsg, "content", None)
+        if not isinstance(content, str) or "[[PHASE " not in content:
+            return request
+        new_content = _strip_phase_spans(content, self._current_phase())
+        if new_content == content:
+            return request
+        return request.override(system_message=sysmsg.model_copy(update={"content": new_content}))
+
+    async def awrap_model_call(self, request: ModelRequest, handler):
+        return await handler(self._filtered(request))
+
+    def wrap_model_call(self, request: ModelRequest, handler):
+        return handler(self._filtered(request))
+
+
 class DrawerReviseGateMiddleware(AgentMiddleware):
     """Block a premature `task(subagent_type="drawer")` revise dispatch.
 
