@@ -155,11 +155,25 @@ def _split_tech_names(choice: str) -> list[str]:
     return names or [choice.strip()]
 
 
+def _squish_tech(s: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", s.lower())
+
+
 def _resolve_one_tech_icon(name: str) -> dict:
-    """Bundled icon pack first, then lobe-icons/simple-icons CDN brand logos."""
-    hits = _search_icon_hits(name, None, limit=1)
+    """Bundled icon pack first, then lobe-icons/simple-icons CDN brand logos.
+
+    `_search_icon_hits` matches by substring (AND of query terms in "provider category
+    name"), so for a query like "aws" or "redis" many unrelated icons match — a bare
+    "aws" matches every icon under the aws/ provider since the provider name itself is
+    part of the haystack. Rank candidates by exact filename-stem match first (e.g.
+    "onprem/inmemory/redis.png" over "alibabacloud/database/apsaradb-redis.png" for
+    query "redis") so the canonical icon wins instead of an arbitrary substring hit.
+    """
+    hits = _search_icon_hits(name, None, limit=40)
     if hits:
-        return {"name": name, "path": hits[0], "icon": _icon_rel(hits[0]), "source": "bundled"}
+        q = _squish_tech(name)
+        best = min(hits, key=lambda p: (0 if _squish_tech(Path(p).stem) == q else 1, len(p)))
+        return {"name": name, "path": best, "icon": _icon_rel(best), "source": "bundled"}
     try:
         from aiicons import lookup_ai_logo
         path = lookup_ai_logo(name, str(LOCAL_ICONS))
