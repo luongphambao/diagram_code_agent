@@ -213,6 +213,15 @@ def make_local_backend() -> CompositeBackend:
       (default)           → PerThreadFilesystemBackend rooted at
                             <current thread's workspace>/ — diagram.py / out.png /
                             out.dot / out.drawio / wbs.json / etc. live here.
+
+    All three routes use virtual_mode=True. With virtual_mode=False (deepagents'
+    legacy default), FilesystemBackend._resolve_path() returns an absolute
+    `file_path` as-is, bypassing `cwd` (and thus the per-thread contextvar)
+    entirely — an agent that echoes back an absolute path it saw in an `ls`/`read`
+    result (which virtual_mode=False also renders as literal host paths) silently
+    reads/writes the real host directory instead of the bound thread's workspace.
+    virtual_mode=True re-roots every path (even absolute-looking ones) under `cwd`
+    and blocks `..` traversal, closing that leak. See test_workspace_isolation.py.
     """
     _ensure_dirs()
     return CompositeBackend(
