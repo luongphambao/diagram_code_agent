@@ -447,7 +447,8 @@ def compute_wbs_rollup() -> str:
     return (f"Roll-up complete: {totals['total_mandays']} MD "
             f"(~{totals['total_manmonths']} man-months) across {len(by_mod)} modules. "
             f"By role — BE {br['BE']}, FE/Mobile {br['FE_Mobile']}, BA {br['BA']}, "
-            f"QC {br['QC']}, PM {br['PM']}." + cp_msg)
+            f"QC {br['QC']}, PM {br['PM']}. "
+            f"Estimated cost: {totals['total_cost_usd']:,.0f} USD (default rate card)." + cp_msg)
 
 
 # ════════════════════════════════════════════════════════════════════════════
