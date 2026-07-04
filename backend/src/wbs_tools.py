@@ -57,6 +57,27 @@ def _write_json(path: Path, data) -> None:
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+def _reset_if_stale_project(new_name: str) -> str:
+    """Detect and clear a leftover WBS from a *different* project.
+
+    Independent safety net on top of per-thread workspace isolation: if the
+    workspace still has wbs_skeleton.json/wbs.json/wbs_filled.xlsx from a
+    project with a different ``project_info.name`` (e.g. a stale/misrouted
+    workspace), merging onto it silently mixes two projects' data instead of
+    starting fresh. Compares by name (not project_code, which defaults to
+    "BNK" for most projects and would rarely differ between real projects).
+    """
+    existing = _read_json(_WBS_FILE) or _read_json(_SKELETON_FILE)
+    old_name = ((existing or {}).get("project_info") or {}).get("name", "").strip()
+    if not old_name or old_name.lower() == new_name.strip().lower():
+        return ""
+    for f in (_SKELETON_FILE, _WBS_FILE, _WBS_XLSX):
+        if f.exists():
+            f.unlink()
+    return (f"NOTE: reset stale WBS files from a different project ('{old_name}') "
+            f"before drafting '{new_name}'.\n")
+
+
 # ── mimo-safe base: shared coercion (str→json, numeric-dict→list, None→[]) ───
 class _CoercingModel(BaseModel):
     """Normalise mimo's malformed payloads before validation.
