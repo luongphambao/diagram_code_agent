@@ -330,8 +330,9 @@ _PLAIN_DIAGRAM_DETAIL = """\
 ## Diagram detail (render-refine loop)
 - Call `render_diagram(code=<the COMPLETE script>)`. The script MUST do
   `Diagram(..., filename="out", outformat=["png","dot"], show=False, graph_attr=...)`.
-- Before rendering, call `audit_diagram_code(code=<the COMPLETE script>)` and fix
-  every high/medium finding unless it is demonstrably irrelevant to this script.
+- render_diagram runs a static pre-flight audit automatically: if it returns
+  PRE-FLIGHT AUDIT findings, fix every high/medium one and re-call (blocked
+  attempts consume no render budget).
 - LOOK at the returned PNG critically: every node shows a real LOGO (no blank
   boxes); NO overlapping nodes/labels; arrows are orthogonal and DON'T cross or
   double back; no two arrows between the same pair; clusters aligned and labeled;
