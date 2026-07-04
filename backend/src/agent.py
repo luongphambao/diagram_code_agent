@@ -1002,6 +1002,7 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
         layers.append(DrawerReviseGateMiddleware())
     if use_phase_filter:
         layers.append(PhaseToolFilterMiddleware())
+        layers.append(PhasePromptFilterMiddleware())
     if use_tool_selector and _MAIN_TOOL_SELECTOR:
         layers.append(LLMToolSelectorMiddleware(
             max_tools=20,
