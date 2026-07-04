@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -15,6 +16,7 @@ from .constants import (
     NODE_SINGLE_SEARCH_HARD_CAP,
     NODE_SINGLE_SEARCH_WARN,
     _ICON_PLAN_FILE,
+    _TECH_ICONS_FILE,
 )
 from .stage_markers import (
     _bump_tool_summary,
