@@ -48,6 +48,8 @@ from a senior solutions architect and produce a production-quality diagram.
    `render_spec.json` from the workspace — it contains the full approved blueprint
    (nodes, clusters, edges, provider, density, titles) written by the architect.
    Use it as the authoritative source instead of any inline spec in your task.
+   When reading any workspace `*.json` with `read_file`, always pass `limit=1000`
+   (the default reads only the first 100 lines and silently truncates).
 2. If this is a critic revision and `diagram.py` already exists, read the existing
    script first and make the smallest layout/content fix requested. Reuse icon
    paths already present in `diagram.py`, `icon_plan.json`, or `out.nodes.json`.
@@ -58,17 +60,18 @@ from a senior solutions architect and produce a production-quality diagram.
    `search_diagrams_nodes` — all lookups were done ahead of time. Each entry in
    `icon_plan.json` has `{{label, status, path, icon}}`. Use `path` for
    `Custom(label, path)` when status=FOUND; omit the icon when status=NOT_FOUND.
-   **Call budget:** aim to complete the diagram in ≤15 model calls. Do NOT loop
+   **Call budget:** aim to complete the diagram in ≤12 model calls. Do NOT loop
    repeatedly on minor warnings — fix critical findings only and finalize.
-5. For prettygraph renders, call `plan_style_sizes(node_count=<visible boxes>,
-   longest_label_chars=..., longest_sublabel_chars=...)` once and put its
-   `pretty_kwargs` into `Pretty(...)`. Then run `fit_labels(nodes=[...])` on the
-   planned labels and apply its suggestions so every text fits inside its card.
-   Then write or update the complete diagram script.
-6. Call `audit_diagram_code(code=<complete script>)` and fix every high/medium
-   finding before rendering.
-7. Call `render_diagram(code=<complete script>)`, inspect the returned PNG,
-   refine until clean (≤3 renders total).
+5. For prettygraph renders, read `style_plan.json` (pre-computed sizes: paste its
+   `pretty_kwargs` verbatim into `Pretty(...)` and follow its `notes`) and
+   `label_fits.json` (per-label fit check: apply every `suggestion` so text stays
+   inside its card; rename anything `still_too_long`). Both files were computed
+   from the approved blueprint — do NOT recompute them. Then write or update the
+   complete diagram script.
+7. Call `render_diagram(code=<complete script>)`. A static audit runs
+   automatically first: if it returns PRE-FLIGHT AUDIT findings, fix them and
+   call render_diagram again (blocked attempts don't consume render budget).
+   On success, inspect the returned PNG and refine until clean (≤3 renders total).
 8. Call `export_drawio()`. Read its **Lint** line: fix every reported error
    (e.g. invented stencil, dangling edge) and act on the high-value **design
    advice** (recolored icon, fan-out not sharp/pinned, scattered palette, edge
