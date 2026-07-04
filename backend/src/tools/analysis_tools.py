@@ -101,9 +101,16 @@ def _wants_structural(ann) -> bool:
 
 
 def _mimo_coerce_before(cls, values):
-    """Before-validator: coerce mimo's non-standard outputs to what Pydantic expects."""
+    """Before-validator: coerce mimo's non-standard outputs to what Pydantic expects.
+
+    Structural coercion (str→json.loads, dict→list, None→[]) is delegated to the
+    shared tool_coercion helper; this keeps only the gate-specific extras:
+    non-numeric-keyed dict→list fallback and numeric range clamping.
+    """
     if not isinstance(values, dict):
         return values
+    from tool_coercion import coerce_model_values
+    values = coerce_model_values(cls, values)
     for field_name in cls.model_fields:
         if field_name not in values:
             continue
@@ -112,19 +119,10 @@ def _mimo_coerce_before(cls, values):
         ann = field.annotation
         if ann is None:
             continue
-        if isinstance(val, str) and _wants_structural(ann):
-            try:
-                parsed = json.loads(val)
-            except (ValueError, TypeError):
-                parsed = None
-            if isinstance(parsed, (dict, list)):
-                values[field_name] = val = parsed
         origin = _t.get_origin(ann)
         if origin is list:
             if isinstance(val, dict):
                 values[field_name] = list(val.values())
-            elif val is None:
-                values[field_name] = []
             continue
         if origin is _t.Union:
             for arg in _t.get_args(ann):
