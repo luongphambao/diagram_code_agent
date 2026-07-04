@@ -103,6 +103,10 @@ def load_solution_context() -> str:
         "blueprint_clusters": [c.get("label") for c in bp.get("clusters", [])],
         "blueprint_nodes": [n.get("label") for n in bp.get("nodes", [])][:60],
         "pattern": bp.get("pattern"),
+        # Benchmark dev man-day ranges per feature type (distilled from ~50 real
+        # BnK WBS files). Anchor every leaf estimate to these; BA/QC/PM are
+        # derived by the ratio model — never hand-estimated.
+        "effort_norms": EFFORT_NORMS,
     }
     return json.dumps(digest, ensure_ascii=False, indent=2)
 
