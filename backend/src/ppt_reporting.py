@@ -525,7 +525,14 @@ _TECH_META_KEYS = frozenset({
 })
 
 
-def _tech_stack_table_slide(prs: Presentation, report: dict[str, Any], slide_no: int, title: str = "PROPOSED SOLUTION | Technical Stack"):
+def _tech_stack_table_slide(prs: Presentation, report: dict[str, Any], slide_no: int,
+                            title: str = "PROPOSED SOLUTION | Technical Stack",
+                            workspace: Path | None = None):
+    # Prefer a logo-per-technology layout when resolve_tech_stack_icons has run.
+    if workspace is not None:
+        tech_icons = read_json_file(workspace / "tech_icons.json", {})
+        if isinstance(tech_icons, dict) and any(tech_icons.values()):
+            return _tech_stack_icon_slide(prs, tech_icons, slide_no, title)
     rows = []
     for item in report.get("tech_items", [])[:12]:
         layer = item.get("layer") or "Layer"
@@ -540,6 +547,59 @@ def _tech_stack_table_slide(prs: Presentation, report: dict[str, Any], slide_no:
         prs, title, ["Layer", "Technology", "Description"], rows, slide_no,
         col_widths=[2.4, 3.2, 6.5],
     )
+
+
+def _tech_stack_icon_slide(prs: Presentation, tech_icons: dict, slide_no: int,
+                           title: str = "PROPOSED SOLUTION | Technical Stack"):
+    """Technical Stack slide with a logo per technology, grouped by layer.
+
+    ``tech_icons`` is the tech_icons.json produced by resolve_tech_stack_icons:
+    ``{layer: [{name, path, icon, source}, ...]}``.
+    """
+    slide = prs.slides.add_slide(_layout(prs, "Detail-01"))
+    _add_title(slide, title)
+    layers = [(lyr, icons) for lyr, icons in tech_icons.items() if icons]
+    if not layers:
+        _add_textbox(slide, "Technical stack not yet available.", 0.85, 1.6, 11.0, 0.4, font_size=14)
+        _add_footer(slide, slide_no)
+        return slide
+
+    y = 1.25
+    row_h = min(0.62, (6.6 - 1.25) / max(1, len(layers)))
+    icon_sz = min(0.34, row_h - 0.16)
+    for layer, icons in layers:
+        box = slide.shapes.add_textbox(Inches(0.55), Inches(y), Inches(2.5), Inches(row_h))
+        tf = box.text_frame
+        tf.word_wrap = True
+        p = tf.paragraphs[0]
+        p.text = str(layer)
+        for r in p.runs:
+            r.font.size = Pt(11)
+            r.font.bold = True
+            r.font.name = BNK_FONT
+            r.font.color.rgb = BNK_BLUE
+        x = 3.15
+        for it in icons:
+            if x > 12.6:
+                break
+            path = it.get("path")
+            if path and Path(path).exists():
+                try:
+                    slide.shapes.add_picture(path, Inches(x), Inches(y + (row_h - icon_sz) / 2),
+                                             height=Inches(icon_sz))
+                except Exception:  # noqa: BLE001
+                    pass
+            lbl = slide.shapes.add_textbox(Inches(x), Inches(y + row_h - 0.2), Inches(1.4), Inches(0.2))
+            lp = lbl.text_frame.paragraphs[0]
+            lp.text = str(it.get("name", ""))[:16]
+            for r in lp.runs:
+                r.font.size = Pt(6.5)
+                r.font.name = BNK_FONT
+                r.font.color.rgb = BNK_TEXT
+            x += 1.5
+        y += row_h
+    _add_footer(slide, slide_no)
+    return slide
 
 
 def _functional_nfr_slide(prs: Presentation, report: dict[str, Any], slide_no: int, title: str = "PROPOSED SOLUTION | Requirements"):
