@@ -166,6 +166,14 @@ def test_pdf_followup_detection():
     assert server._is_pdf_followup("tạo báo cáo PDF giúp tôi")
     assert not server._is_pdf_followup("please add redis to the diagram")
 
+def test_pdf_followup_does_not_false_positive_on_substrings():
+    """Regression test: naive substring matching used to match "doc" inside
+    "docker" and "report" inside "reporting", wrongly treating an unrelated
+    design request as a PDF follow-up and preserving stale stage artifacts."""
+    assert not server._is_pdf_followup("dùng Docker và Kubernetes cho kiến trúc")
+    assert not server._is_pdf_followup("add a docker container for the backend")
+    assert not server._is_pdf_followup("thêm reporting service vào kiến trúc")
+
 def test_ppt_followup_detection():
     assert server._is_ppt_followup("tạo PPT proposal theo template BnK")
     assert server._is_ppt_followup("make a PowerPoint slide deck")
