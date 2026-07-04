@@ -210,11 +210,19 @@ def make_local_backend() -> CompositeBackend:
                             (agent_space/memories/AGENTS.md) — durable, shared across
                             every thread; read by all agents, written only by the
                             main agent (by prompt convention).
+      <SKILLS_DIR>/      → FilesystemBackend rooted at SKILLS_DIR
+                            (backend/skills/) — bundled procedural skill docs
+                            (SKILL.md + reference/), fixed repo content read the
+                            same way by every agent regardless of which thread's
+                            workspace is currently bound. Every agent's skill path
+                            list (see agent.py's *_SKILL_PATHS) is an absolute
+                            SKILLS_DIR-rooted path, so this one route covers all of
+                            them by prefix match.
       (default)           → PerThreadFilesystemBackend rooted at
                             <current thread's workspace>/ — diagram.py / out.png /
                             out.dot / out.drawio / wbs.json / etc. live here.
 
-    All three routes use virtual_mode=True. With virtual_mode=False (deepagents'
+    All routes use virtual_mode=True. With virtual_mode=False (deepagents'
     legacy default), FilesystemBackend._resolve_path() returns an absolute
     `file_path` as-is, bypassing `cwd` (and thus the per-thread contextvar)
     entirely — an agent that echoes back an absolute path it saw in an `ls`/`read`
@@ -222,6 +230,12 @@ def make_local_backend() -> CompositeBackend:
     reads/writes the real host directory instead of the bound thread's workspace.
     virtual_mode=True re-roots every path (even absolute-looking ones) under `cwd`
     and blocks `..` traversal, closing that leak. See test_workspace_isolation.py.
+
+    That re-rooting is exactly why SKILLS_DIR needs its own route: without it,
+    an absolute skill path like `<SKILLS_DIR>/wbs-planning` doesn't match
+    `/memories/` or `/global-memories/`, so it falls to the per-thread `default`
+    route and gets re-rooted under `<thread-workspace>/<SKILLS_DIR>/...`, which
+    never exists — every subagent's skill load fails with "path_not_found".
     """
     _ensure_dirs()
     return CompositeBackend(
@@ -234,6 +248,10 @@ def make_local_backend() -> CompositeBackend:
             ),
             "/global-memories/": FilesystemBackend(
                 root_dir=str(MEMORIES_DIR),
+                virtual_mode=True,
+            ),
+            f"{SKILLS_DIR}/": FilesystemBackend(
+                root_dir=str(SKILLS_DIR),
                 virtual_mode=True,
             ),
         },
