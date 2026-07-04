@@ -659,7 +659,9 @@ _CRITIC_CALL_LIMIT = int(os.getenv("CRITIC_CALL_LIMIT", "40"))    # inspect+crit
 # (keyed by agent_name), which the quality dashboard reads for spend-to-quality.
 _ICON_CALL_LIMIT = int(os.getenv("ICON_CALL_LIMIT", str(_CRITIC_CALL_LIMIT)))
 _DRAWER_CALL_LIMIT = int(os.getenv("DRAWER_CALL_LIMIT", "40"))    # ~2.5x the ≤15-call budget
-_WBS_CALL_LIMIT = int(os.getenv("WBS_CALL_LIMIT", str(_RUN_CALL_LIMIT)))
+# wbs_planner: 60 is ample now that the deterministic tail is one finalize_wbs
+# call (Pass 2 ≈ N add_wbs_items + 1).
+_WBS_CALL_LIMIT = int(os.getenv("WBS_CALL_LIMIT", "60"))
 _PPT_CALL_LIMIT = int(os.getenv("PPT_CALL_LIMIT", "60"))
 
 # Early-warning thresholds: log at WARNING level so runaway traces surface in
