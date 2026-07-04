@@ -17,11 +17,19 @@ from backends import WorkspaceFile
 from context import SessionContext
 
 # Known deliverables auto-attached when the caller doesn't specify `attachments`.
+# Any other workspace file can still be attached by naming it in `attachments`
+# (mimetype is guessed).
 _KNOWN_DELIVERABLES: dict[str, str] = {
     "out.pdf": "PDF Report",
     "out.pptx": "Slide Deck (PPTX)",
     "wbs_filled.xlsx": "WBS (Excel)",
+    "out.drawio": "Editable Diagram (draw.io)",
+    "out.png": "Architecture Diagram (PNG)",
 }
+
+# Branding is configurable — the template is generic, not hardcoded to one team.
+_EMAIL_BRAND = os.environ.get("EMAIL_BRAND_NAME", "BNK Solution")
+_EMAIL_SENDER_LINE = os.environ.get("EMAIL_SENDER_LINE", "luongphambao1901@gmail.com")
 
 
 _EMAIL_HTML_TEMPLATE = """\
