@@ -93,6 +93,7 @@ VALID_BLOCKS = frozenset({
     "pricing",
     "milestones",
     "team",
+    "gantt",
 })
 
 OUTLINE_TARGET_MIN = 20
