@@ -123,6 +123,87 @@ def _node_search_hits(query: str, provider: str = "", category: str = "", *, lim
     return scored[: max(1, min(limit, 50))]
 
 
+# Generic descriptor words stripped from a "choice" segment before treating what's
+# left as a distinct technology name — e.g. "TypeScript SPA" -> "TypeScript", but
+# "PostgreSQL RDS" is kept whole (RDS is a real AWS product, not filler).
+_TECH_GENERIC_WORDS = frozenset({
+    "spa", "app", "application", "service", "services", "cluster", "instance",
+    "server", "framework", "engine", "platform", "system", "managed",
+    "serverless", "microservice", "microservices", "database", "db", "api",
+    "gateway", "layer", "tier", "component", "module",
+})
+
+
+def _split_tech_names(choice: str) -> list[str]:
+    """Split a layer's "choice" string into individually icon-searchable technology
+    names, e.g. "Node.js + Express/Fastify" -> ["Node.js", "Express", "Fastify"].
+    """
+    if not choice:
+        return []
+    segments = re.split(r"[+/&]|\band\b", choice, flags=re.IGNORECASE)
+    names: list[str] = []
+    for seg in segments:
+        seg = seg.strip(" ,.")
+        if not seg:
+            continue
+        words = seg.split()
+        while len(words) > 1 and words[-1].lower() in _TECH_GENERIC_WORDS:
+            words.pop()
+        cleaned = " ".join(words).strip()
+        if cleaned:
+            names.append(cleaned)
+    return names or [choice.strip()]
+
+
+def _resolve_one_tech_icon(name: str) -> dict:
+    """Bundled icon pack first, then lobe-icons/simple-icons CDN brand logos."""
+    hits = _search_icon_hits(name, None, limit=1)
+    if hits:
+        return {"name": name, "path": hits[0], "icon": _icon_rel(hits[0]), "source": "bundled"}
+    try:
+        from aiicons import lookup_ai_logo
+        path = lookup_ai_logo(name, str(LOCAL_ICONS))
+        if path:
+            return {"name": name, "path": path, "icon": _icon_rel(path), "source": "cdn"}
+    except Exception:  # noqa: BLE001
+        pass
+    return {"name": name, "path": None, "icon": None, "source": "none"}
+
+
+def _tech_layers_from_workspace(workspace: Path) -> dict[str, list[str]]:
+    """{layer_name: [technology string, ...]} from tech_stack.json, or the CSM's
+    component clusters when tech_stack.json is missing — common once the solution
+    model has been built (see backend/docs/bnk_deck_sections.md §8.1: the CSM is a
+    projection of tech_stack.json, but the legacy file itself isn't always retained).
+    """
+    tech_path = workspace / "tech_stack.json"
+    if tech_path.exists():
+        try:
+            raw = json.loads(tech_path.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            raw = {}
+        layers = raw.get("layers") or {}
+        return {
+            layer: [str(info.get("choice") or "").strip()]
+            for layer, info in layers.items()
+            if isinstance(info, dict) and info.get("choice")
+        }
+
+    for csm_name in ("solution_model.json", "solution_model.prev.json"):
+        csm_path = workspace / csm_name
+        if not csm_path.exists():
+            continue
+        try:
+            from csm import SolutionModel
+            from deck_resolver import _components_by_cluster
+
+            model = SolutionModel.model_validate(json.loads(csm_path.read_text(encoding="utf-8")))
+            return {name: list(names) for name, _purpose, names in _components_by_cluster(model)}
+        except Exception:  # noqa: BLE001
+            continue
+    return {}
+
+
 try:
     from langchain_core.tools import tool
 
