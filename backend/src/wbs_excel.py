@@ -561,6 +561,7 @@ def build_wbs_workbook(wbs: dict, out_path: str | Path,
         if name not in _KEEP_SHEETS:
             del wb[name]
     _write_master_data_ratios(wb, wbs.get("ratios", {}))
+    _write_master_data_rate_card(wb, (wbs.get("effort_totals") or {}).get("rate_card_usd_per_month"))
     _add_logo(wb)
     ws = wb["2. WBS"]
     snap = _snapshot_styles(ws)
