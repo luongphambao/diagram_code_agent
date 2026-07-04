@@ -17,9 +17,6 @@ interface ArtifactTabsProps {
 }
 
 export default function ArtifactTabs({ agentState, isRunning, activeSubagent, activity, threadId, userRole }: ArtifactTabsProps) {
-  const [tab, setTab] = useState<Tab>("preview");
-  const [lightbox, setLightbox] = useState(false);
-
   const { png_base64, pdf_base64, pptx_base64, wbs_xlsx_base64, wbs_summary, drawio, summary, iteration, code, logs, delegations, quality, compliance, drift } = agentState;
   const hasDelegations = !!delegations && delegations.length > 0;
   const hasLiveAgentWork = isRunning || !!activeSubagent || hasDelegations || !!activity;
@@ -27,7 +24,7 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
   const hasQuality = !!quality || !!compliance || !!drift;
 
   const tabs: Tab[] = [
-    "preview",
+    ...(png_base64 ? (["preview"] as Tab[]) : []),
     ...(pdf_base64 ? (["pdf"] as Tab[]) : []),
     ...(pptx_base64 ? (["ppt"] as Tab[]) : []),
     ...(hasWbs ? (["wbs"] as Tab[]) : []),
@@ -37,6 +34,12 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
     "agents",
     "comments",
   ];
+
+  // Default to whichever artifact tab actually has content — falling back to
+  // "preview" would render a broken image when no diagram was generated yet
+  // (e.g. a WBS-only conversation).
+  const [tab, setTab] = useState<Tab>(tabs[0]);
+  const [lightbox, setLightbox] = useState(false);
 
   const downloadPng = () => {
     if (!png_base64) return;
