@@ -529,10 +529,20 @@ REQUIRED_KEYS: frozenset[str] = frozenset({
     "scope_sdlc", "delivery_effort", "delivery_master_plan", "pricing_capex",
 })
 
-#: Blocks this registry specifies that ppt_reporting does NOT yet implement.
-NEW_BLOCKS: frozenset[str] = frozenset({
-    c.block for c in SECTION_CONTENT_CONTRACTS if c.status in ("new_block", "new_block+new_data")
+#: Blocks ppt_reporting already implements (VALID_BLOCKS) + structural pseudo-blocks that
+#: need no renderer. Keep in sync with ppt_reporting.VALID_BLOCKS.
+IMPLEMENTED_BLOCKS: frozenset[str] = frozenset({
+    "bullets", "tech_stack_table", "func_nfr", "sdlc", "delivery_effort",
+    "pricing", "milestones", "team",           # ppt_reporting.VALID_BLOCKS
+    "diagram", "cover", "divider", "closing",  # structural — handled without a block renderer
 })
+
+#: Blocks this registry references that ppt_reporting does NOT yet implement — the concrete
+#: renderer TODO list (a contract may still need NEW *data* while reusing an existing block,
+#: e.g. advice_phase uses "bullets"; such contracts are NOT counted here).
+NEW_BLOCKS: frozenset[str] = frozenset(
+    c.block for c in SECTION_CONTENT_CONTRACTS if c.block not in IMPLEMENTED_BLOCKS
+)
 
 _BY_KEY: dict[str, SectionContract] = {c.key: c for c in SECTION_CONTENT_CONTRACTS}
 
