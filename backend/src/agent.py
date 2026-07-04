@@ -486,12 +486,13 @@ DEFAULT_MODEL    = "gpt-5.4-mini"
 DEFAULT_STYLE    = "pretty"          # "pretty" (prettygraph) or "plain" (raw diagrams)
 RECURSION_LIMIT  = 450               # max agent steps per run (used by the server)
 # Shared across main + every delegated subagent (task-tool invocations propagate
-# the same config, so their steps count against this same budget). Must clear
-# ~2 steps per model call across the worst realistic sum of per-agent
-# ModelCallLimitMiddleware run_limits (main 120 + icon 40 + drawer 40 + critic 40
-# + wbs 120 + ppt 60 = 420 calls -> ~840 steps in the extreme; 450 is set well
-# above the calls actually seen in practice (main ~46, icon ~34) with headroom
-# for a multi-round drawer/critic exchange, while still catching genuine runaways.
+# the same config, so their steps count against this same budget) - ~2 graph
+# steps per model call. Raised from 160 after a real run (main 46 calls +
+# icon_resolver 34 calls = ~160 steps alone, before drawer even started)
+# hit GraphRecursionError with no graceful degradation. 450 gives ~2.8x headroom
+# over that failing case; per-agent ModelCallLimitMiddleware run_limits (main 120,
+# icon/critic/drawer 40 each, wbs 120, ppt 60) still cap any single runaway agent
+# gracefully well before this shared ceiling is reached in a normal request.
 REASONING_EFFORT = "medium"          # used as fallback when no config.yaml present
 
 MAIN_SKILL_PATHS = [
