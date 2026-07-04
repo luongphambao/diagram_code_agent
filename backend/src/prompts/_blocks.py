@@ -326,6 +326,7 @@ You design the solution step by step; the user reviews and approves the gated st
    Excel); pass e.g. `attachments=["out.pptx"]` if the user asks for only the
    slide deck, or `["wbs_filled.xlsx"]` for only the WBS. This PAUSES for user
    approval before sending.
+[[/PHASE]]
 Do NOT skip ahead (e.g. don't propose tech stack before the diagram brief, don't
 render before the blueprint is approved, don't resolve icons before blueprint
 approval, don't render before icons are resolved, don't finalize before the critic passes).
