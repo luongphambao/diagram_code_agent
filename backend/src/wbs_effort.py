@@ -40,6 +40,18 @@ import re
 MANDAYS_PER_MONTH = 22.0
 MANDAYS_PER_WEEK = 5
 
+# BnK dev rate card, USD per man-month — varies by role seniority (client-quoted range is
+# 2,000-4,000 USD/month per developer depending on seniority; each role sits at a different
+# point in that band). Per-project overrides can be passed to cost_by_role(); this is only
+# the default used when a project hasn't customized its rates.
+DEFAULT_RATE_CARD_USD_PER_MONTH: dict[str, float] = {
+    "PM": 4000.0,          # project manager / lead — senior end of the band
+    "BE": 3200.0,          # backend dev — mid-senior
+    "FE_Mobile": 2800.0,   # frontend/mobile dev — mid
+    "BA": 2600.0,          # business analyst
+    "QC": 2200.0,          # QC/tester — junior-mid
+}
+
 
 @dataclass(frozen=True)
 class Ratios:
