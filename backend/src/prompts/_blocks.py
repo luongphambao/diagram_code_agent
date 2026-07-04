@@ -432,8 +432,8 @@ _PRETTY_DIAGRAM_DETAIL = """\
   call `export_drawio()`.
 
 ## Column layout (load-bearing rules — full recipe in the pro-style skill)
-- `theme="pro"` + `node_width`/`node_height` from `plan_style_sizes`; verify
-  with `fit_labels` before rendering — fix any TEXT OVERFLOW finding.
+- `theme="pro"` + `node_width`/`node_height` from `style_plan.json`; apply every
+  `label_fits.json` suggestion before rendering — fix any TEXT OVERFLOW finding.
 - **≤5 primary columns.** ≥6 clusters → stack cross-cutting tiers under their
   nearest flow tier (skill: "Layout discipline — CLEAR BLOCKS"); >10 clusters →
   poster mode.
