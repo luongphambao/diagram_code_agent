@@ -625,6 +625,69 @@ def _payment_milestones_slide(prs: Presentation, slide_no: int, title: str = "PR
     )
 
 
+def _gantt_slide(
+    prs: Presentation, params: dict[str, Any], slide_no: int,
+    title: str = "PROJECT DELIVERY | Master Plan & Milestones",
+):
+    """The Master Plan Gantt — same schedule as the WBS Excel '3. Delivery Plan' sheet
+    (deck_resolver._b_master_plan calls wbs_excel._module_schedule so the two never drift).
+
+    Column granularity adapts to project length so the grid stays legible on a 13.3" slide:
+    weekly for short projects, sprint-grouped, then monthly for long ones — mirroring how
+    the Excel sheet groups Month > Sprint > Week headers, just collapsed to one row.
+    """
+    weeks = int(params.get("weeks") or 0)
+    months = int(params.get("months") or 0)
+    sprints = int(params.get("sprints") or 0)
+    rows = params.get("gantt_rows") or []
+
+    if weeks <= 20 and weeks:
+        n_cols, weeks_per_col, label = weeks, 1, lambda i: f"W{i + 1}"
+    elif weeks <= 40 and sprints:
+        n_cols, weeks_per_col, label = sprints, 2, lambda i: f"S{i + 1}"
+    else:
+        n_cols, weeks_per_col, label = (months or 1), 4, lambda i: f"M{i + 1}"
+
+    slide = prs.slides.add_slide(_layout(prs, "Detail-01"))
+    _add_title(slide, title)
+    if not rows or not n_cols:
+        _add_textbox(slide, "Delivery timeline not yet available.", 0.85, 1.6, 11.0, 0.4, font_size=14)
+        _add_footer(slide, slide_no)
+        return slide
+
+    name_w = 3.0
+    grid_w = _CONTENT_W - name_w
+    col_w = grid_w / n_cols
+    n_rows = min(len(rows), 16) + 1
+    gfx = slide.shapes.add_table(
+        n_rows, n_cols + 1, Inches(_CONTENT_X), Inches(_CONTENT_Y), Inches(_CONTENT_W), Inches(_CONTENT_H)
+    )
+    table = gfx.table
+    table.first_row = False
+    table.horz_banding = False
+    table.columns[0].width = Inches(name_w)
+    for i in range(n_cols):
+        table.columns[i + 1].width = Inches(col_w)
+
+    _style_cell(table.cell(0, 0), "Module", fill=BNK_BLUE, color=BNK_WHITE, bold=True, size=10)
+    for i in range(n_cols):
+        _style_cell(table.cell(0, i + 1), label(i), fill=BNK_BLUE, color=BNK_WHITE, bold=True,
+                    size=7, align=PP_ALIGN.CENTER)
+
+    for r, m in enumerate(rows[:16], start=1):
+        _style_cell(table.cell(r, 0), f"{m.get('code', '')} {m.get('name', '')}".strip(),
+                   fill=BNK_WHITE, color=BNK_TEXT, bold=False, size=9)
+        start_col = max(0, (int(m.get("start_week", 1)) - 1) // weeks_per_col)
+        end_col = min(n_cols - 1, (int(m.get("end_week", 1)) - 1) // weeks_per_col)
+        for i in range(n_cols):
+            active = start_col <= i <= end_col
+            _style_cell(table.cell(r, i + 1), "", fill=BNK_CYAN if active else BNK_WHITE,
+                       color=BNK_WHITE, bold=False, size=1)
+
+    _add_footer(slide, slide_no)
+    return slide
+
+
 def _team_slide(prs: Presentation, report: dict[str, Any], slide_no: int, title: str = "PROJECT DELIVERY | Team Structure"):
     rows = [
         ["Technical Lead", "Technical Lead"],
