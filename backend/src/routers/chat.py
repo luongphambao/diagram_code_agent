@@ -475,6 +475,18 @@ async def agui_endpoint(request: Request):
                 _upsert_snap = snap
                 yield _sse({"type": "STATE_SNAPSHOT", "snapshot": snap})
 
+        except GraphRecursionError as exc:
+            logger.exception("agent run hit the graph recursion limit: %s", exc)
+            yield _sse({
+                "type": "RUN_ERROR",
+                "message": (
+                    "The run hit its overall step safety limit "
+                    f"(recursion_limit={RECURSION_LIMIT}) and was stopped. Partial "
+                    "artifacts are saved in the workspace — send a follow-up "
+                    "message to continue from where it stopped."
+                ),
+                "code": "recursion_limit",
+            })
         except Exception as exc:  # noqa: BLE001
             logger.exception("agent run failed: %s", exc)
             yield _sse({"type": "RUN_ERROR", "message": str(exc), "code": "internal_error"})
