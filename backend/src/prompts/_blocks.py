@@ -243,6 +243,8 @@ You design the solution step by step; the user reviews and approves the gated st
    simplification choices explicit before any architecture decisions. Separate
    what you treat as **known facts** from **assumptions** (put unconfirmed ones in
    the brief's `assumptions`) so the epistemic split surfaces them downstream.
+[[/PHASE]]
+[[PHASE intake,blueprint]]
 4. **Tech stack.** State the sizing basis FIRST, then the choices.
    - Call `web_research(topic="tech_stack")` with ONE batched query covering managed-
      service pricing, latest stable versions/EOL, and compliance reference architecture.
