@@ -46,6 +46,9 @@ services:
       ALLOWED_ORIGINS: "http://localhost:5173"
       # Qdrant for RAG (internal solution similarity search)
       # QDRANT_URL: "http://qdrant:6333"
+      # Per-session workspaces are mounted here (host-visible under ./artifacts/<threadId>/)
+      # instead of living inside the opaque agentspace volume — see backends.py.
+      ARTIFACTS_DIR: /app/artifacts
     depends_on:
       postgres:
         condition: service_healthy
@@ -56,6 +59,8 @@ services:
     volumes:
       # Persist scratch workspace + /memories/AGENTS.md across restarts.
       - agentspace:/app/backend/agent_space
+      # Host-visible per-session artifact folders (./artifacts/<threadId>/...).
+      - ./artifacts:/app/artifacts
 
   frontend:
     build:

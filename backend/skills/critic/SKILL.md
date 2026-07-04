@@ -108,3 +108,28 @@ they NEVER force REVISE. Still anchor them to something visible; do not file vag
   legend/whitespace/grouping/style) → does NOT block → `VERDICT: PASS`
 - Reserve REVISE for defects a careful architect would also send back.
 - Keep findings tight: 3–5 maximum. A wall of nits is noise.
+
+## Canonical fix suggestions (full prose for common named findings)
+Use these as the `fix_suggestion` text when filing the matching finding:
+- `panel_underfill` (slide body small / audit `PANEL FILL` < 65%): "add more
+  columns/nodes, raise per-plane grid cols (g.grid_cluster(region, cols=3)), or
+  use direction='TB' so planes sit side by side and the body fills the panel."
+- `poster_grid_broken` (plane is a tall single column / sprawling gaps /
+  L-shape / empty quadrant / small off-center body): "the drawer must use
+  Pretty(..., direction='TB') and call g.grid_cluster(region_id, cols=2 or 3)
+  once per plane after declaring its boxes — NOT g.poster_grid (its
+  single-column ranks fight the in-plane grids); do not hand-wire invisible
+  edges." This is a concrete layout defect, not taste.
+- `missing_stacking` (audit `CLUSTER STRIP` / ≥6 top-level clusters in one row
+  with long crossing edges): "apply the ≤5-column stacking recipe — add
+  invisible spine edges and same_rank groups to pull Security/Observability/
+  CI/CD under the main-flow tiers they serve; collapse side-channel concerns to
+  one dashed cluster-level edge per concern."
+- `sparse_diagram` (audit `LOW FILL` / multiple 1-2 box regions / node count
+  well below ~32-48 / large blank bands): "merge thin 1-2 node regions into the
+  adjacent tier they serve, add the missing per-node detail the blueprint
+  already lists, and keep connected regions adjacent so the grid fills the page
+  (the engine auto-packs every ≥3-node region — feed it denser regions)."
+- Missing sublabels / unlabeled primary edges (`density=detailed|poster`):
+  "populate blueprint `tech` field and draw sublabel from it; add `protocol`
+  label to primary edges."

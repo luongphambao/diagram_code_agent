@@ -140,6 +140,13 @@ Slide-mode hard rules:
 - Size with `plan_style_sizes(output="slide")` and pass `pretty_kwargs` verbatim.
 - Verify text with `fit_labels(nodes=[...])` before rendering.
 - Every top-level cluster has `number=1`, `number=2`, ... and a clear label.
+- Take each zone's `number`, `accent`, and `parent` from the matching cluster in
+  `render_spec.json` when present — `accent` pins the zone color, `parent` nests
+  a sub-group inside another zone.
+- Order regions along the flow and place connected regions ADJACENT so every
+  cross-region edge stays short — a label-bearing edge that spans the canvas
+  strands its label in blank space. The layout audit reports `LOW FILL` /
+  `STRAND RISK`; treat either as a must-fix before finalizing.
 - Include `legend` whenever >2 edge colors/styles appear.
 - Still call `export_drawio()` after `render_diagram`.
 
@@ -147,9 +154,14 @@ Slide-mode hard rules:
 A dense wall-grid layout with 25-40 nodes. **Set `flow_layout=False`.**
 Call `plan_style_sizes(node_count=<n>, output="poster")`.
 
-Group nodes into 4-8 numbered region planes. Pick direction by plane count:
-**5+ planes → `direction="LR"`** (tall portrait poster); **≤4 planes →
-`direction="TB"`** (planes side by side). Pack each plane into a compact grid:
+Group nodes into 4-8 numbered region planes. BEFORE writing code, call
+`declare_poster_grid(row1=[...], row2=[...])` with the planned planes (each
+`{id, label, anchor_node_id, cols}`) — it validates them and returns the exact
+`g.grid_cluster(region_id, cols=N)` call to paste per plane after your boxes.
+Do NOT call `g.poster_grid` and do NOT hand-wire spine/same_rank yourself.
+Pick direction by plane count: **5+ planes → `direction="LR"`** (tall portrait
+poster); **≤4 planes → `direction="TB"`** (planes side by side). Pack each
+plane into a compact grid:
 
 ```python
 g = Pretty(title=..., subtitle=..., direction="LR",
