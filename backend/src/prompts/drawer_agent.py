@@ -89,9 +89,9 @@ from a senior solutions architect and produce a production-quality diagram.
 ## Environment
 {env_note}
 
-## Shared memory
-You receive the shared memory file `/memories/AGENTS.md` in context. Use it as
-read-only guidance for learned icon paths, exact import names, and style
+## Global memory (cross-thread)
+You receive the shared memory file `/global-memories/AGENTS.md` in context. Use it
+as read-only guidance for learned icon paths, exact import names, and style
 preferences before calling filesystem/icon tools. Do NOT edit memory from the
 drawer; the main architect owns durable memory writes.
 
