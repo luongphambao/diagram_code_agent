@@ -894,16 +894,14 @@ def export_wbs_excel(
 
 
 # ── tool collections (imported by tools.py) ──────────────────────────────────
+# Only reasoning steps are model-facing. The deterministic tail (rollup /
+# timeline / team / milestones / validate) is code-driven inside finalize_wbs —
+# effort norms ride along in load_solution_context's digest.
 WBS_PLANNER_TOOLS = [
     load_solution_context,
-    get_effort_norms,
     draft_wbs_skeleton,
     add_wbs_items,
-    compute_wbs_rollup,
-    plan_timeline_and_sprints,
-    plan_team_and_resources,
-    define_milestones,
-    validate_wbs,
+    finalize_wbs,
 ]
 
 WBS_GATE_TOOLS = [propose_wbs_skeleton, propose_wbs, export_wbs_excel]
