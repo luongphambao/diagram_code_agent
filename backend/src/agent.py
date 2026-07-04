@@ -127,6 +127,8 @@ class InjectVisionAsUserEdit:
     """
 
     _SENTINEL = "[VISION_RELAY]"
+    _MAX_B64_CHARS = int(os.getenv("VISION_RELAY_MAX_B64_CHARS", "1500000"))
+    _INCLUDE_BLOCK_TEXT = os.getenv("MIMO_IMAGE_BLOCK_TEXT", "").strip().lower() in ("1", "true", "yes")
 
     def apply(self, messages: list[AnyMessage], *, count_tokens: Any) -> None:
         # Remove previously injected relay messages.
