@@ -1013,6 +1013,115 @@ def _append_thank_you(prs: Presentation, thank_you_elements: list) -> None:
         slide.shapes._spTree.insert_element_before(el, "p:extLst")  # noqa: SLF001
 
 
+def _gantt_params_from_wbs(workspace: Path) -> dict[str, Any]:
+    """Master Plan Gantt params from wbs.json — same schedule allocator as the WBS Excel
+    "3. Delivery Plan" sheet (wbs_excel._module_schedule), so deck and Excel never drift.
+    """
+    wbs = read_json_file(workspace / "wbs.json", {})
+    if not isinstance(wbs, dict) or not wbs:
+        return {"weeks": 0, "months": 0, "sprints": 0, "gantt_rows": []}
+    try:
+        from wbs_effort import delivery_grid
+        from wbs_excel import _module_schedule
+        weeks = int((wbs.get("timeline") or {}).get("weeks") or 16)
+        grid = delivery_grid(weeks)
+        rows = [
+            {"code": m["code"], "name": m["name"],
+             "start_week": m["start_week"], "end_week": m["end_week"]}
+            for m in _module_schedule(wbs, grid["weeks"])
+        ] if wbs.get("phases") else []
+        return {"weeks": grid["weeks"], "months": grid["months"],
+                "sprints": grid["sprints"], "gantt_rows": rows}
+    except Exception:  # noqa: BLE001 — never let a schedule glitch break the deck
+        return {"weeks": 0, "months": 0, "sprints": 0, "gantt_rows": []}
+
+
+def _load_current_csm(workspace: Path):
+    """Load the workspace CSM (solution_model.json, else the .prev snapshot). None if absent."""
+    try:
+        from csm import SolutionModel
+    except ImportError:
+        return None
+    for name in ("solution_model.json", "solution_model.prev.json"):
+        path = workspace / name
+        if not path.exists():
+            continue
+        try:
+            return SolutionModel.model_validate(json.loads(path.read_text(encoding="utf-8")))
+        except Exception:  # noqa: BLE001
+            continue
+    return None
+
+
+def _enrich_report_from_csm(report: dict[str, Any], workspace: Path) -> dict[str, Any]:
+    """Backfill empty ``report`` fields from the CSM + wbs.json + out.slide.json.
+
+    In CSM-era workspaces the legacy blueprint/diagram_brief/tech_stack JSON that
+    ``assemble_report_data`` reads are often absent (see docs/bnk_deck_sections.md §8.1),
+    so every downstream block renderer would draw from empty wells and produce a thin
+    deck. This fills only the fields that are empty — the legacy files still win when
+    present — so the fix is additive and safe.
+    """
+    meta = read_json_file(workspace / "out.slide.json", {}) or {}
+    wbs = read_json_file(workspace / "wbs.json", {}) or {}
+
+    if (not report.get("title")) or report.get("title") == "Architecture Blueprint":
+        report["title"] = meta.get("title") or meta.get("diagram_title") or report.get("title")
+    if (not report.get("subtitle")) or report.get("subtitle") == "Client Architecture Report":
+        report["subtitle"] = meta.get("kicker") or report.get("subtitle")
+    if not report.get("brand"):
+        report["brand"] = meta.get("brand") or report.get("brand") or ""
+
+    model = _load_current_csm(workspace)
+    if model is not None:
+        if not report.get("tech_items"):
+            from deck_resolver import _components_by_cluster
+            report["tech_items"] = [
+                {"layer": name, "choice": ", ".join(names[:8]), "rationale": purpose}
+                for name, purpose, names in _components_by_cluster(model)
+            ]
+        brief = dict(report.get("brief") or {})
+        if not brief.get("functional_requirements"):
+            brief["functional_requirements"] = [r.statement for r in model.requirements if r.kind == "functional"]
+        if not brief.get("non_functional_requirements"):
+            brief["non_functional_requirements"] = [r.statement for r in model.requirements if r.kind == "nfr"]
+        report["brief"] = brief
+        blueprint = dict(report.get("blueprint") or {})
+        if not blueprint.get("key_decisions"):
+            blueprint["key_decisions"] = [d.title for d in model.decisions]
+        report["blueprint"] = blueprint
+        if not report.get("executive_points"):
+            biz = [r.statement for r in model.requirements if r.kind == "business"]
+            obj = brief.get("objective") or meta.get("kicker") or ""
+            report["executive_points"] = ([obj] if obj else []) + (
+                biz[:5] or [r.statement for r in model.requirements[:5]])
+        if not report.get("risks"):
+            report["risks"] = [
+                {"type": "Risk", "detail": r.statement, "recommendation": r.mitigation or ""}
+                for r in model.risks
+            ]
+
+    # WBS-derived CAPEX (module costs) — always derivable from the WBS + rate card.
+    totals = wbs.get("effort_totals") or {}
+    if wbs.get("effort_by_module") and not report.get("capex_rows"):
+        try:
+            from wbs_effort import DEFAULT_RATE_CARD_USD_PER_MONTH, rate_per_manday
+            rate = totals.get("rate_card_usd_per_month") or DEFAULT_RATE_CARD_USD_PER_MONTH
+            rows = []
+            for m in wbs["effort_by_module"]:
+                cost = sum(
+                    float(b or 0) * rate_per_manday(rate.get(role, 0))
+                    for role, b in (m.get("breakdown") or {}).items()
+                )
+                rows.append({"module": f"{m.get('code', '')} {m.get('name', '')}".strip(),
+                             "cost": round(cost)})
+            report["capex_rows"] = rows
+            report["capex_total"] = totals.get("total_cost_usd") or round(sum(r["cost"] for r in rows), 2)
+        except Exception:  # noqa: BLE001
+            pass
+    return report
+
+
 def generate_ppt_proposal_file(
     workspace: Path,
     *,
