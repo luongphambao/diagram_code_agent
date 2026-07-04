@@ -175,11 +175,33 @@ class InjectVisionAsUserEdit:
             for block in image_blocks:
                 b64 = block.get("base64", "")
                 mime = block.get("mime_type", "image/png")
-                relay_content.append({
+                # An empty/oversized payload produces a guaranteed-corrupt data
+                # URL — mimo rejects the whole request with 400 "Multimodal data
+                # is corrupted" and the agent burns retries. Skip with a note.
+                if not b64:
+                    relay_content.append({
+                        "type": "text",
+                        "text": "[image unavailable — render produced no preview; "
+                                "rely on the layout audit text]",
+                    })
+                    continue
+                if len(b64) > self._MAX_B64_CHARS:
+                    relay_content.append({
+                        "type": "text",
+                        "text": "[image too large to relay — rely on the layout "
+                                "audit text]",
+                    })
+                    continue
+                img_block: dict = {
                     "type": "image_url",
-                    "text": "[image]",  # mimo requires a non-empty text on every content block
                     "image_url": {"url": f"data:{mime};base64,{b64}"},
-                })
+                }
+                if self._INCLUDE_BLOCK_TEXT:
+                    # Non-standard key; some mimo deployments demanded a non-empty
+                    # text on every block, others reject the extra key. Off by
+                    # default — restore with MIMO_IMAGE_BLOCK_TEXT=1.
+                    img_block["text"] = "[image]"
+                relay_content.append(img_block)
             messages.insert(i + 1, HumanMessage(content=relay_content))
 
 
