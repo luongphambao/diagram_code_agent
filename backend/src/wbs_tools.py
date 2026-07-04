@@ -403,8 +403,10 @@ def compute_wbs_rollup() -> str:
     """Roll up all leaf items into module/phase/role totals and assemble the tree.
 
     Reads the flat items, groups them under their modules, computes effort_by_module,
-    effort_totals (man-days, man-months, by-role split) and writes the nested
-    ``phases`` structure that the Excel export consumes. Call after add_wbs_items.
+    effort_totals (man-days, man-months, by-role split, and USD cost from the default
+    BnK rate card — see wbs_effort.DEFAULT_RATE_CARD_USD_PER_MONTH) and writes the
+    nested ``phases`` structure that the Excel export consumes. Call after
+    add_wbs_items.
     """
     wbs = _read_json(_WBS_FILE)
     if not wbs or not wbs.get("items"):
