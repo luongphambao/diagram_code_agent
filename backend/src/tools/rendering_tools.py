@@ -588,7 +588,32 @@ def _compute_style_plan(
     (current_workspace() / "style_plan.json").write_text(
         json.dumps(plan, indent=2), encoding="utf-8"
     )
-    return json.dumps(plan, indent=2)
+    return plan
+
+
+@tool(parse_docstring=True)
+def plan_style_sizes(
+    node_count: int,
+    longest_label_chars: int = 22,
+    longest_sublabel_chars: int = 26,
+    output: Literal["slide", "diagram", "poster"] = "slide",
+) -> str:
+    """Decide icon/text sizes for a prettygraph render.
+
+    NOTE: style_plan.json is now pre-computed code-side when the blueprint is
+    approved — normally just read that file. Kept for ad-hoc re-planning.
+
+    Args:
+        node_count: number of VISIBLE boxes planned (after collapsing replicas).
+        longest_label_chars: character count of the longest node title.
+        longest_sublabel_chars: character count of the longest sublabel.
+        output: "slide" (pro slide canvas), "diagram" (plain render), or "poster".
+    """
+    return json.dumps(
+        _compute_style_plan(node_count, longest_label_chars,
+                            longest_sublabel_chars, output),
+        indent=2,
+    )
 
 
 class NodeText(BaseModel):
