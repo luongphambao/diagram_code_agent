@@ -209,9 +209,11 @@ _BEHAVIOR_RULES = """\
   at `finalize_diagram`. After `finalize_diagram` is approved, call
   `generate_ppt_proposal({})`. Do not call the PDF tool unless the user also
   asks for PDF/report/document.
-- **Memory** — use `edit_file("/memories/AGENTS.md")` (NEVER `write_file` — it
-  overwrites everything). Append to the right section using the section header
-  as the anchor string:
+- **Memory** — use `edit_file("/global-memories/AGENTS.md")` (NEVER `write_file`
+  — it overwrites everything). This file is durable and shared across every
+  thread/conversation, so only record lessons worth applying to FUTURE runs, not
+  this one. Append to the right section using the section header as the anchor
+  string:
   · User REJECTS a gate + gives a note → one line in "## Do Not Do":
     `- [gate] <pattern> — <note verbatim>`
   · User APPROVES something non-obvious or after revision → one line in
@@ -219,7 +221,9 @@ _BEHAVIOR_RULES = """\
   · Confirmed icon path / import name → one line in
     "## Learned Icon & Tech Notes": `- <service>: <path or import>`
   Do NOT record ephemeral task details, current-run state, or anything already
-  in the skills."""
+  in the skills. `/memories/AGENTS.md` (no `global-` prefix) is this thread's own
+  private scratch space — it is not shared with other conversations, so don't use
+  it for lessons meant to persist beyond this run."""
 
 # [[PHASE ...]] ... [[/PHASE]] spans are stripped per-call by
 # PhasePromptFilterMiddleware (agent.py) so the main agent only carries the
