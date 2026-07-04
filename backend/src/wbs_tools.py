@@ -243,13 +243,6 @@ def draft_wbs_skeleton(project_info: ProjectInfo, phases: list[PhaseMeta],
 # ════════════════════════════════════════════════════════════════════════════
 # 4. add_wbs_items
 # ════════════════════════════════════════════════════════════════════════════
-class DependencyEdge(BaseModel):
-    """A rich DAG edge with optional lag and relationship type."""
-    predecessor_ref: str
-    lag_days: float = 0.0
-    relationship: Literal["FS", "SS", "FF"] = "FS"
-
-
 class LeafIn(BaseModel):
     phase_code: str = Field(description="which phase this leaf belongs to, e.g. 'II'")
     module_code: str = Field(description="which module, e.g. 'II.A'")
