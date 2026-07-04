@@ -402,6 +402,25 @@ def build_solution_model(
     project_compliance(model, workspace)
 
     prev = _read_json(workspace / SOLUTION_MODEL_NAME, {}) or {}
+
+    # Guard against clobbering a rich model with an empty one. build_solution_model
+    # rebuilds from the legacy source artifacts (diagram_brief/blueprint/tech_stack/
+    # analysis); if those are transiently absent the projection collapses to a near-empty
+    # model (only WBS work items survive). Overwriting a previously-rich solution_model.json
+    # with that empty rebuild is how a workspace loses its architecture content (and how
+    # decks downstream go thin). If the fresh model has no architecture entities but the
+    # stored one did, keep the stored model instead of destroying it.
+    fresh_is_empty = not (model.components or model.requirements or model.decisions or model.risks)
+    prev_had_content = bool(
+        prev.get("components") or prev.get("requirements")
+        or prev.get("decisions") or prev.get("risks")
+    )
+    if fresh_is_empty and prev_had_content:
+        try:
+            return SolutionModel.model_validate(prev)
+        except Exception:  # noqa: BLE001 — fall through to normal write if prev is unparseable
+            pass
+
     new_hash = model.content_hash()
     if prev.get("sha256") == new_hash:
         # Nothing changed — keep the prior revision/timestamp so the model is idempotent.
