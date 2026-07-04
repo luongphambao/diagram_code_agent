@@ -30,6 +30,7 @@ from session_state import (
     _display_subagent,
     _is_pdf_followup,
     _is_ppt_followup,
+    _is_wbs_followup,
     _label,
     _last_tool_msg,
     _last_user_text,
