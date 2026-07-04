@@ -658,8 +658,18 @@ def _delivery_effort_slide(prs: Presentation, workspace: Path, slide_no: int, ti
 
 
 def _pricing_slide(prs: Presentation, report: dict[str, Any], slide_no: int, title: str = "PRICING | CAPEX"):
+    # Prefer WBS-derived CAPEX (per-module USD from the rate card) when available — a real
+    # priced quote instead of a list of components with "—" amounts.
+    capex_rows = report.get("capex_rows")
+    if capex_rows:
+        rows: list[list[Any]] = [[r["module"], f"${int(r['cost']):,}"] for r in capex_rows[:12]]
+        total = report.get("capex_total") or sum(r["cost"] for r in capex_rows)
+        rows.append(["Total (NET, excluding taxes/VAT)", f"${int(total):,}"])
+        return _table_slide(
+            prs, title, ["Module", "Cost (USD)"], rows, slide_no, col_widths=[8.5, 3.6],
+        )
     total = report.get("tech_total_cost")
-    rows: list[list[Any]] = []
+    rows = []
     for item in report.get("tech_items", [])[:8]:
         layer = item.get("layer") or "Item"
         if str(layer).strip().lower() in _TECH_META_KEYS:
