@@ -126,6 +126,47 @@ class WorkspaceFile:
     def __repr__(self) -> str:
         return f"WorkspaceFile({self._name!r})"
 
+
+class PerThreadFilesystemBackend(FilesystemBackend):
+    """FilesystemBackend whose root directory tracks the request-scoped
+    ``current_workspace()`` contextvar instead of being fixed once at
+    construction time (fixes the cross-thread artifact leak, §4.10).
+
+    A single instance is built once at process startup in
+    :func:`make_local_backend` and shared by every agent (main + all
+    subagents) for the process lifetime. deepagents' ``FilesystemBackend``
+    reads ``self.cwd`` fresh on every filesystem call rather than caching
+    it, so overriding ``cwd`` as a property (with a no-op setter to swallow
+    the base ``__init__``'s one-time assignment) makes the SAME backend
+    instance transparently serve a different directory for every
+    concurrent thread — no per-request backend/graph rebuild needed, and no
+    reliance on deepagents' deprecated callable-backend-factory path.
+
+    ``subdir``, if given, appends a fixed relative subfolder under the
+    per-thread workspace (used for the per-thread ``/memories/`` route so
+    it doesn't collapse onto the same directory as the default ``/`` route).
+    """
+
+    def __init__(self, *, subdir: str = "", **kwargs) -> None:
+        self._subdir = subdir
+        super().__init__(**kwargs)
+
+    @property
+    def cwd(self) -> Path:  # noqa: D102 - overrides FilesystemBackend.cwd
+        base = current_workspace()
+        if self._subdir:
+            base = base / self._subdir
+            base.mkdir(parents=True, exist_ok=True)
+        return base
+
+    @cwd.setter
+    def cwd(self, _value) -> None:
+        # Swallow FilesystemBackend.__init__'s one-time `self.cwd = ...`
+        # assignment — the property getter above is the single source of
+        # truth for every subsequent access.
+        pass
+
+
 # Procedural skills bundled with the repo (loaded by the deep agent).
 SKILLS_DIR     = _BACKEND_ROOT / "skills"
 
