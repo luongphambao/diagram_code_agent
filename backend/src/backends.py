@@ -1,9 +1,12 @@
 """Agent-space backend configuration using deepagents native backends.
 
 Layout under agent_space/:
-  workspace/   — diagram generation scratch area (FilesystemBackend default)
-  memories/    — persistent semantic memory; /memories/AGENTS.md
-  outputs/     — timestamped run archives
+  workspace/    — shared scratch area; only used for the default/dev thread
+                  ("thread-default") — see PerThreadFilesystemBackend below
+  workspaces/   — per-thread dirs (or ARTIFACTS_DIR/<thread_id> if set), each
+                  with its own workspace/ (default route) + memories/ (/memories/ route)
+  memories/     — durable, cross-thread semantic memory; /global-memories/AGENTS.md
+  outputs/      — timestamped run archives
 
 Paths are resolved relative to this repo so the project is self-contained:
   backend/                 <- _BACKEND_ROOT (parents[1] of this file)
