@@ -787,12 +787,17 @@ class PhaseToolFilterMiddleware(AgentMiddleware):
     def _filtered_tools(self, tools):
         try:
             from backends import current_workspace
-            phase = _detect_phase(current_workspace())
+            workspace = current_workspace()
+            phase = _detect_phase(workspace)
         except Exception:
             return tools  # safe fallback: no filtering
         allowed = _PHASE_TOOLS.get(phase)
         if not allowed:
             return tools
+        # Keep a foundational artifact's producing tool available even past its normal
+        # phase — never let "most-advanced phase wins" permanently lock out backfilling
+        # a step that got skipped (see _missing_artifact_tools).
+        allowed = allowed | _missing_artifact_tools(workspace)
         # Always keep built-ins (filesystem tools, task, write_todos) which don't
         # appear in _PHASE_TOOLS but are always injected by deepagents.
         return [t for t in tools if _tool_name(t) in allowed or not _tool_name(t)]
