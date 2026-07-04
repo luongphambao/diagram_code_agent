@@ -205,9 +205,20 @@ def _audit_code(code: str) -> dict:
             )
 
     if not findings:
-        return json.dumps({"verdict": "PASS", "findings": []}, indent=2)
+        return {"verdict": "PASS", "findings": []}
     verdict = "REVISE" if any(f["severity"] in {"high", "medium"} for f in findings) else "PASS_WITH_NOTES"
-    return json.dumps({"verdict": verdict, "findings": findings}, indent=2)
+    return {"verdict": verdict, "findings": findings}
+
+
+@tool
+def audit_diagram_code(code: str) -> str:
+    """Statically audit a diagram script for known `diagrams`/Graphviz pitfalls.
+
+    NOTE: render_diagram now runs this audit automatically as a pre-flight gate
+    (a REVISE verdict blocks the render without consuming render budget), so a
+    separate call is normally unnecessary. Kept for ad-hoc use.
+    """
+    return json.dumps(_audit_code(code), indent=2)
 
 
 @tool(parse_docstring=True)
