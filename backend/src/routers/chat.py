@@ -226,28 +226,41 @@ async def agui_endpoint(request: Request):
                 desc = _last_user_text(messages)
                 is_pdf_followup = _is_pdf_followup(desc)
                 is_ppt_followup = _is_ppt_followup(desc)
-                preserve_artifacts = (is_pdf_followup or is_ppt_followup) and (ws / "out.png").exists()
+                is_wbs_followup = _is_wbs_followup(desc)
+                preserve_diagram_artifacts = (is_pdf_followup or is_ppt_followup) and (ws / "out.png").exists()
+                preserve_wbs_artifacts = is_wbs_followup and (ws / "wbs.json").exists()
+                preserve_artifacts = preserve_diagram_artifacts or preserve_wbs_artifacts
                 if not preserve_artifacts:
                     clear_stage_markers()
                 else:
                     await _restore_workspace_from_db(request.app.state.pool, thread_id, ws)
-                    artifact_instruction = (
-                        "The user is asking for a PPT/proposal/PowerPoint deck. Do NOT "
-                        "redesign or re-render the diagram. Call `generate_ppt_proposal({})` "
-                        "now so the PPT approval gate is shown, then complete after `out.pptx` "
-                        "is created."
-                        if is_ppt_followup and not is_pdf_followup else
-                        "The user is asking for a PDF/report/document. Do NOT "
-                        "redesign or re-render the diagram. Call `generate_pdf_report({})` "
-                        "now so the PDF approval gate is shown, then complete after `out.pdf` "
-                        "is created."
-                    )
-                    desc = (
-                        (desc + "\n\n" if desc else "")
-                        + "IMPORTANT: A rendered diagram already exists in the workspace "
-                        "(`out.png`, `out.drawio`, `diagram.py`) with approved planning "
-                        f"artifacts. {artifact_instruction}"
-                    )
+                    if preserve_wbs_artifacts:
+                        desc = (
+                            (desc + "\n\n" if desc else "")
+                            + "IMPORTANT: The user is asking to (re-)export/send the WBS "
+                            "deliverable. A WBS plan already exists and was approved "
+                            "(wbs.json). Do NOT re-delegate to wbs_planner or redo the "
+                            "skeleton/estimate gates — just call `export_wbs_excel()` "
+                            "directly to regenerate the file."
+                        )
+                    else:
+                        artifact_instruction = (
+                            "The user is asking for a PPT/proposal/PowerPoint deck. Do NOT "
+                            "redesign or re-render the diagram. Call `generate_ppt_proposal({})` "
+                            "now so the PPT approval gate is shown, then complete after `out.pptx` "
+                            "is created."
+                            if is_ppt_followup and not is_pdf_followup else
+                            "The user is asking for a PDF/report/document. Do NOT "
+                            "redesign or re-render the diagram. Call `generate_pdf_report({})` "
+                            "now so the PDF approval gate is shown, then complete after `out.pdf` "
+                            "is created."
+                        )
+                        desc = (
+                            (desc + "\n\n" if desc else "")
+                            + "IMPORTANT: A rendered diagram already exists in the workspace "
+                            "(`out.png`, `out.drawio`, `diagram.py`) with approved planning "
+                            f"artifacts. {artifact_instruction}"
+                        )
                 attached = _attached_text(file_ids)
                 image_blocks = _attached_images(file_ids)
                 req_file = ws / "requirements.md"
