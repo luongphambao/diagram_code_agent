@@ -260,6 +260,24 @@ def _is_ppt_followup(text: str) -> bool:
     ))
 
 
+def _is_wbs_followup(text: str) -> bool:
+    """Detect a follow-up asking to (re-)export/send the WBS Excel deliverable."""
+    return _matches_whole_phrase(text, (
+        "wbs",
+        "excel",
+        "xlsx",
+        "xuất wbs",
+        "xuat wbs",
+        "xuất lại wbs",
+        "xuat lai wbs",
+        "gửi wbs",
+        "gui wbs",
+        "re-export wbs",
+        "reexport wbs",
+        "export wbs",
+    ))
+
+
 def _read_json(path: Path):
     try:
         return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
