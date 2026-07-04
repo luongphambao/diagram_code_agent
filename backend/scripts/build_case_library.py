@@ -74,8 +74,22 @@ def _first(md: str, pattern: str) -> str:
     return m.group(1).strip() if m else ""
 
 
+def _demark(text: str) -> str:
+    """Strip markdown noise (headers, bold, bullets, table pipes) to plain prose."""
+    lines = []
+    for ln in (text or "").splitlines():
+        ln = ln.strip()
+        if not ln or set(ln) <= {"|", "-", ":", " "}:   # separators / table rules
+            continue
+        ln = re.sub(r"^#{1,6}\s*", "", ln)              # ### headers
+        ln = re.sub(r"^\s*[-*]\s+", "", ln)             # bullet markers
+        ln = ln.replace("|", " ").replace("**", "").replace("`", "")
+        lines.append(ln.strip())
+    return " ".join(lines)
+
+
 def _clip(text: str, limit: int) -> str:
-    text = " ".join((text or "").split())
+    text = " ".join(_demark(text).split())
     return text[:limit].rstrip() + ("…" if len(text) > limit else "")
 
 
