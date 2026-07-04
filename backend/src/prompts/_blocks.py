@@ -421,11 +421,11 @@ _PRETTY_DIAGRAM_DETAIL = """\
 - Density bands (the pro-style skill has the full recipe per band — follow it):
   **standard** = 12-18 visible nodes, implementation details hidden;
   **detailed** (`density="detailed"`, the DEFAULT) = dense flow-driven landscape,
-  ~32-48 nodes, `plan_style_sizes(output="slide")`, flow recipe per the skill's
+  ~32-48 nodes, sizes from `style_plan.json`, flow recipe per the skill's
   "Slide-style production output" section — do NOT cut nodes to force a size and
   do NOT ship a sparse/airy page;
   **poster** (`density="poster"`, ONLY when explicitly requested) = 25-45 nodes in
-  4-8 numbered planes, `flow_layout=False`, `plan_style_sizes(output="poster")`,
+  4-8 numbered planes, `flow_layout=False`, sizes from `style_plan.json`,
   and `declare_poster_grid(...)` BEFORE writing code (it returns the exact
   `g.grid_cluster` calls) — per the skill's "Poster mode" section.
 - Fix and call `render_diagram` again until production-clean (≤3 renders), then
