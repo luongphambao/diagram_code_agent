@@ -341,15 +341,21 @@ SECTION_CONTENT_CONTRACTS: tuple[SectionContract, ...] = (
     SectionContract(
         key="delivery_master_plan", section="delivery_plan", kind="content",
         title="PROJECT DELIVERY | Master Plan & Milestones", role="timeline", layout="Detail-01",
-        block="bullets",
-        data_source="wbs.json.timeline (weeks/months/sprints) + phase durations",
-        status="ready",
+        block="gantt",
+        data_source="wbs.json.phases (module effort) + timeline.weeks, scheduled via the SAME "
+                    "waterfall allocator as the '3. Delivery Plan' Excel sheet (wbs_excel._module_schedule)",
+        status="new_block",
         params=(
-            _p("timeline_phases", "Tentative timeline: phase + duration "
-                                 "(e.g. 'Requirement: 0.5 month', 'Development: 2 months')."),
+            _p("months", "Number of calendar months in the grid (weeks/4, rounded up)."),
+            _p("sprints", "Number of 2-week sprints in the grid."),
+            _p("weeks", "Total project duration in weeks."),
+            _p("gantt_rows", "One row per module: code, name, start_week, end_week — "
+                             "the colored Gantt bar spans [start_week, end_week]."),
         ),
-        required_inputs=("wbs.timeline",),
+        required_inputs=("wbs.timeline", "wbs.phases|wbs.effort_by_module"),
         slide_count=(1, 1),
+        notes="Mirrors the real 'Master Plan' Gantt in the WBS Excel '3. Delivery Plan' sheet "
+              "(same screenshot the user showed) — same schedule model, not a re-derivation.",
     ),
     SectionContract(
         key="delivery_risk", section="risks", kind="content",
