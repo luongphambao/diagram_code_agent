@@ -615,18 +615,18 @@ RECURSION_LIMIT  = 450               # max agent steps per run (used by the serv
 REASONING_EFFORT = "medium"          # used as fallback when no config.yaml present
 
 MAIN_SKILL_PATHS = [
-    str(SKILLS_DIR / "diagrams-as-code"),
-    str(SKILLS_DIR / "pro-style"),
+    (SKILLS_DIR / "diagrams-as-code").as_posix(),
+    (SKILLS_DIR / "pro-style").as_posix(),
 ]
 DRAWER_SKILL_PATHS = [
-    str(SKILLS_DIR / "drawer" / "diagrams-as-code"),
-    str(SKILLS_DIR / "drawer" / "pro-style"),
+    (SKILLS_DIR / "drawer" / "diagrams-as-code").as_posix(),
+    (SKILLS_DIR / "drawer" / "pro-style").as_posix(),
 ]
 WBS_PLANNER_SKILL_PATHS = [
-    str(SKILLS_DIR / "wbs-planning"),
+    (SKILLS_DIR / "wbs-planning").as_posix(),
 ]
 PPT_GENERATOR_SKILL_PATHS = [
-    str(SKILLS_DIR / "ppt-generator"),
+    (SKILLS_DIR / "ppt-generator").as_posix(),
 ]
 
 # Context-management: the conversation is re-sent every turn, so stale tool
