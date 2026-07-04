@@ -14,7 +14,6 @@ from langgraph.types import Command
 import conversations as conv_db
 from agent import RECURSION_LIMIT
 from backends import (
-    WORKSPACE,
     resolve_workspace,
     reset_current_workspace,
     set_current_workspace,
