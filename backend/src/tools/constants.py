@@ -23,6 +23,7 @@ _NODE_SEARCH_BUDGET_FILE = WorkspaceFile("node_search_budget.json")
 _REVISION_COUNT_FILE = WorkspaceFile("revision_count.json")
 _TOOL_SUMMARY_FILE = WorkspaceFile("tool_budget_summary.json")
 _ICON_PLAN_FILE = WorkspaceFile("icon_plan.json")
+_TECH_ICONS_FILE = WorkspaceFile("tech_icons.json")
 
 # Files copied into each session archive folder under OUTPUTS_DIR.
 _SESSION_ARTIFACTS = ("out.png", "out.body.png", "out.drawio", "diagram.py", "out.nodes.json", "out.dot")
