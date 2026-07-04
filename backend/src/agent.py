@@ -41,6 +41,7 @@ from langgraph.config import get_stream_writer
 from langgraph.store.memory import InMemoryStore
 
 from backends import (
+    GLOBAL_MEMORY_PATH,
     LOCAL_ICONS,
     LOCAL_MANIFEST,
     MEMORY_PATH,
