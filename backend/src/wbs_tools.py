@@ -2,13 +2,15 @@
 results of the earlier pipeline steps (diagram_brief / tech_stack / blueprint).
 
 Mirrors the structure of ``email_tools.py``: a self-contained tool module that the
-agent wires in. The estimation pipeline is deliberately **granular** (one tool per
-step) because WBS effort estimation is hard and benefits from explicit stages:
+agent wires in. Only the steps that need model REASONING are model-facing tools;
+the deterministic tail (rollup → timeline → team → milestones → validate) runs
+inside one code-driven ``finalize_wbs`` call — the model never "presses buttons"
+through five separate tool calls (each one used to cost a full ~30K-token model
+turn):
 
-    load_solution_context → get_effort_norms → draft_wbs_skeleton
+    load_solution_context (incl. effort-norms digest) → draft_wbs_skeleton
       → [HITL] propose_wbs_skeleton
-      → add_wbs_items (×N) → compute_wbs_rollup → plan_timeline_and_sprints
-      → plan_team_and_resources → define_milestones → validate_wbs
+      → add_wbs_items (×N) → finalize_wbs
       → [HITL] propose_wbs → [HITL] export_wbs_excel
 
 Effort follows the verified BnK ratio model (see :mod:`wbs_effort`): the planner
