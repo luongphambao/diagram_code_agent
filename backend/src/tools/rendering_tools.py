@@ -662,34 +662,19 @@ def _shorten(text: str, fits) -> tuple[str, str, list[str]]:
     return text, moved, steps
 
 
-@tool(parse_docstring=True)
-def fit_labels(
-    nodes: list[NodeText],
+def _compute_label_fits(
+    nodes: list[dict],
     edge_labels: Optional[list[str]] = None,
     node_width: int = 0,
     icon_size: int = 0,
     title_size: int = 0,
     sublabel_size: int = 0,
-) -> str:
-    """Check node/edge text against the planned card size and shorten what overflows.
+) -> dict:
+    """Check node/edge text against the planned card size; suggest shortenings.
 
-    Text MUST stay inside its card: cards that outgrow `node_width` get
-    auto-widened at render (breaking uniform width), so fix the text FIRST.
-    Returns JSON per node: `fits`, char budgets, and a deterministic `suggestion`
-    (parenthetical -> sublabel, standard abbreviations, vendor prefix drop).
-    Entries with `still_too_long: true` need a manual rename; edge labels longer
-    than ~4 words are flagged with a trimmed suggestion.
-
-    When to use: after `plan_style_sizes` and before writing the render script, to
-    verify every label fits and to pull suggested shortenings.
-
-    Args:
-        nodes: The planned node texts to check (each a NodeText with title/sublabel).
-        edge_labels: Optional list of edge label strings to check for over-length.
-        node_width: Card width override; defaults to the last `plan_style_sizes` result.
-        icon_size: Icon size override; defaults to the last `plan_style_sizes` result.
-        title_size: Title font size override; defaults to the last `plan_style_sizes` result.
-        sublabel_size: Sublabel font size override; defaults to the last `plan_style_sizes` result.
+    Pure text math — computed CODE-SIDE alongside style_plan.json (see
+    write_style_and_fit_plans); the drawer reads label_fits.json. *nodes* is a
+    list of {"label": ..., "sublabel": ...} dicts.
     """
     plan_sizes: dict = {}
     plan_file = current_workspace() / "style_plan.json"
@@ -710,14 +695,16 @@ def fit_labels(
 
     results = []
     for item in nodes:
-        title_fits = len(item.label) <= max_title
-        sub_fits = len(item.sublabel) <= max_sub
-        entry: dict = {"label": item.label, "fits": title_fits and sub_fits}
+        label = str(item.get("label") or "")
+        sublabel = str(item.get("sublabel") or "")
+        title_fits = len(label) <= max_title
+        sub_fits = len(sublabel) <= max_sub
+        entry: dict = {"label": label, "fits": title_fits and sub_fits}
         if not title_fits:
-            new_label, moved, steps = _shorten(item.label,
+            new_label, moved, steps = _shorten(label,
                                                lambda t: len(t) <= max_title)
             if steps:
-                sub = item.sublabel or ""
+                sub = sublabel or ""
                 if moved:
                     sub = f"{moved} · {sub}".strip(" ·") if sub else moved
                 entry["suggestion"] = {"label": new_label, "sublabel": sub,
@@ -727,7 +714,7 @@ def fit_labels(
                 entry["hint"] = (f"rename manually to <= {max_title} chars "
                                  "(or raise node_width and re-run plan_style_sizes)")
         if not sub_fits:
-            new_sub, _, steps = _shorten(item.sublabel,
+            new_sub, _, steps = _shorten(sublabel,
                                          lambda t: len(t) <= max_sub)
             entry.setdefault("suggestion", {})["sublabel"] = new_sub
             entry["sublabel_still_too_long"] = len(new_sub) > max_sub
@@ -742,7 +729,7 @@ def fit_labels(
             item["suggestion"] = " ".join(words[:4])
         edge_results.append(item)
 
-    out = {
+    return {
         "card": {"node_width": node_width, "icon_size": icon_size,
                  "title_size": title_size, "sublabel_size": sublabel_size},
         "max_title_chars": max_title,
@@ -751,7 +738,71 @@ def fit_labels(
         "edges": edge_results,
         "overflowing": sum(1 for r in results if not r["fits"]),
     }
+
+
+@tool(parse_docstring=True)
+def fit_labels(
+    nodes: list[NodeText],
+    edge_labels: Optional[list[str]] = None,
+    node_width: int = 0,
+    icon_size: int = 0,
+    title_size: int = 0,
+    sublabel_size: int = 0,
+) -> str:
+    """Check node/edge text against the planned card size and shorten what overflows.
+
+    NOTE: label_fits.json is now pre-computed code-side when the blueprint is
+    approved — normally just read that file. Kept for ad-hoc re-checks.
+
+    Args:
+        nodes: The planned node texts to check (each a NodeText with title/sublabel).
+        edge_labels: Optional list of edge label strings to check for over-length.
+        node_width: Card width override; defaults to the last `plan_style_sizes` result.
+        icon_size: Icon size override; defaults to the last `plan_style_sizes` result.
+        title_size: Title font size override; defaults to the last `plan_style_sizes` result.
+        sublabel_size: Sublabel font size override; defaults to the last `plan_style_sizes` result.
+    """
+    out = _compute_label_fits(
+        [{"label": n.label, "sublabel": n.sublabel} for n in nodes],
+        edge_labels, node_width, icon_size, title_size, sublabel_size,
+    )
     return json.dumps(out, indent=2, ensure_ascii=False)
+
+
+def write_style_and_fit_plans(render_spec: dict) -> None:
+    """Compute style_plan.json + label_fits.json code-side from a render spec.
+
+    Called by propose_blueprint right after it writes render_spec.json: both
+    outputs are pure deterministic functions of the spec (node count, label
+    lengths, edge labels), so making the drawer request them via tool calls
+    wasted 2 model calls per round AND created a mimo stringify surface
+    (fit_labels(edge_labels='[...]') — real failing trace).
+    """
+    nodes = render_spec.get("nodes") or []
+    node_count = len(nodes)
+    labels = [str(n.get("label") or "") for n in nodes]
+    sublabels = [str(n.get("tech") or "") for n in nodes]
+    output = "poster" if render_spec.get("density") == "poster" else (
+        render_spec.get("presentation_style") or "slide")
+    plan = _compute_style_plan(
+        node_count=node_count,
+        longest_label_chars=max([len(s) for s in labels] or [22]),
+        longest_sublabel_chars=max([len(s) for s in sublabels] or [26]),
+        output=output if output in ("slide", "diagram", "poster") else "slide",
+    )
+    edge_labels = [str(e.get("label")) for e in (render_spec.get("edges") or [])
+                   if e.get("label")]
+    fits = _compute_label_fits(
+        [{"label": lb, "sublabel": sb} for lb, sb in zip(labels, sublabels)],
+        edge_labels,
+        node_width=plan["sizes"]["node_width"],
+        icon_size=plan["sizes"]["icon_size"],
+        title_size=plan["sizes"]["title_size"],
+        sublabel_size=plan["sizes"]["sublabel_size"],
+    )
+    (current_workspace() / "label_fits.json").write_text(
+        json.dumps(fits, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
 
 
 @tool(parse_docstring=True)
