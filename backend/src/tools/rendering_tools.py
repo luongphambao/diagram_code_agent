@@ -228,10 +228,12 @@ def render_diagram(
 ) -> ToolMessage:
     """Render a `diagrams` (mingrammer) Python script and return the resulting image.
 
-    On success the rendered PNG is returned so you can LOOK at it and refine.
-    On failure the error output is returned so you can fix the code and retry.
-    Rendering is budget-capped per round, so fix known defects rather than
-    re-rendering to chase the same warning.
+    A static pre-flight audit runs automatically first: any high/medium finding
+    blocks the render (WITHOUT consuming render budget) and returns the findings
+    to fix — no separate audit call is needed. On success the rendered PNG is
+    returned so you can LOOK at it and refine. On failure the error output is
+    returned so you can fix the code and retry. Rendering is budget-capped per
+    round, so fix known defects rather than re-rendering to chase the same warning.
 
     When to use: after the blueprint is approved and icons are resolved, to draw
     and iteratively refine the diagram.
@@ -246,6 +248,17 @@ def render_diagram(
         return ToolMessage(
             content="Get the architecture approved first: call propose_tech_stack, "
                     "then propose_blueprint, before rendering.",
+            name="render_diagram",
+            tool_call_id=tool_call_id,
+            status="error",
+        )
+    audit_pre = _audit_code(code)
+    if audit_pre["verdict"] == "REVISE":
+        return ToolMessage(
+            content=("PRE-FLIGHT AUDIT blocked this render (NO render budget "
+                     "consumed). Fix every high/medium finding below, then call "
+                     "render_diagram again with the corrected script:\n"
+                     + json.dumps(audit_pre, indent=2)),
             name="render_diagram",
             tool_call_id=tool_call_id,
             status="error",
