@@ -1,9 +1,11 @@
 """The diagram deep agent — a single `create_deep_agent` with tools + memory.
 
 Design: **deep agent + tools + memory**, no shell.
-  - backend : FilesystemBackend (workspace) + a `/memories/` route  (see backends.py)
+  - backend : per-thread FilesystemBackend (workspace) + a per-thread `/memories/`
+              route + a shared `/global-memories/` route  (see backends.py)
   - tools   : render_diagram / export_drawio / search_icons / fetch_logo  (see tools.py)
-  - memory  : /memories/AGENTS.md   (persistent learnings, loaded at startup)
+  - memory  : /global-memories/AGENTS.md (durable, cross-thread learnings) +
+              /memories/AGENTS.md (this thread's own scratch notes)
   - skills  : diagrams-as-code, pro-style   (on-demand know-how)
 
 The agent writes `diagrams` code, calls `render_diagram` to run it and LOOK at the
