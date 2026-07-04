@@ -48,14 +48,12 @@ def _audit_add(findings: list[dict], severity: str, rule: str, detail: str, sugg
     })
 
 
-@tool
-def audit_diagram_code(code: str) -> str:
-    """Statically audit a diagram script for known `diagrams`/Graphviz pitfalls.
+def _audit_code(code: str) -> dict:
+    """Static audit of a diagram script for known `diagrams`/Graphviz pitfalls.
 
-    Call this before `render_diagram` and after substantial edits. It does not
-    execute code or write files; it catches common layout traps such as missing
-    `out` render settings, over-specific edge positioning, unstable large
-    clusters, floating `xlabel`s, and global font settings in the wrong attr bag.
+    Pure function (no execution, no file writes). Runs automatically inside
+    `render_diagram` as a pre-flight gate, so the model no longer needs a
+    separate audit tool call carrying the full script a second time.
     """
     findings: list[dict] = []
     raw_diagram = "Diagram(" in code
