@@ -75,6 +75,16 @@ def _label(tool: str) -> str:
     return _TOOL_LABELS.get(tool, f"Running {tool}")
 
 
+# Human-readable names for subagent identifiers, used only in chat-facing labels/
+# detail text. Internal identifiers (used for event matching/routing/tests) are
+# untouched — see _tool_detail's "task" branch and chat.py's delegate label.
+_SUBAGENT_DISPLAY_NAMES = {"wbs_planner": "WBS Agent"}
+
+
+def _display_subagent(name: str) -> str:
+    return _SUBAGENT_DISPLAY_NAMES.get(name, name)
+
+
 # ---------------------------------------------------------------------------
 # Text / JSON utilities
 # ---------------------------------------------------------------------------
