@@ -245,8 +245,12 @@ MAIN_TOOLS = [
 # Icon resolver subagent tools: node search + icon resolution (runs before drawer).
 ICON_RESOLVER_TOOLS = [search_diagrams_nodes, resolve_icons, search_icons, search_drawio_shapes, fetch_logo]
 
-# Drawer subagent tools: render-refine loop only (icons pre-resolved by icon_resolver).
-DRAWER_TOOLS = [plan_style_sizes, fit_labels, declare_poster_grid, audit_diagram_code, render_diagram, export_drawio]
+# Drawer subagent tools: render-refine loop only. Icons are pre-resolved by
+# icon_resolver; style_plan.json/label_fits.json are pre-computed code-side by
+# propose_blueprint (write_style_and_fit_plans); the static audit runs inside
+# render_diagram as a pre-flight gate. 3 tools — fewer calls, fewer schemas,
+# and no fit_labels(edge_labels=...) stringify surface for mimo.
+DRAWER_TOOLS = [declare_poster_grid, render_diagram, export_drawio]
 
 # Critic subagent tools: read-only review of the rendered diagram.
 CRITIC_TOOLS = [inspect_diagram, submit_critique]
