@@ -766,7 +766,7 @@ def propose_blueprint(blueprint: Blueprint) -> str:
         from .rendering_tools import write_style_and_fit_plans
         write_style_and_fit_plans(render_spec)
     except Exception:
-        logger.debug("write_style_and_fit_plans failed", exc_info=True)
+        pass  # advisory files; the drawer can still re-plan via its prompt rules
 
     # Pre-seed icon_plan.json so the drawer skips redundant search_icons calls.
     _preseed_icon_plan(blueprint, provider)
