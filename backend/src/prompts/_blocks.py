@@ -107,6 +107,7 @@ _MAIN_TOOLS_BLOCK = """\
   them yourself. PAUSES. After approval → call export_wbs_excel.
 - `export_wbs_excel(question, total_mandays, timeline_months)` — WBS gate #3. Copy
   values verbatim from wbs.json. PAUSES.
+[[/PHASE]]
 - Plus `read_file`, `write_file`, `edit_file`, `ls`, `glob`, `grep`, `write_todos`."""
 
 _ICON_RESOLVER_TOOLS_BLOCK = """\
