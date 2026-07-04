@@ -211,7 +211,7 @@ def build_deck_plan(
         ],
         source_refs=wbs_ids)
     add("timeline", section="delivery_plan", title="PROJECT DELIVERY | Master Plan & Milestones",
-        layout="Detail-01", block="bullets",
+        layout="Detail-01", block="gantt",
         bullets=[
             f"Timeline: {totals['weeks']} weeks (~{totals['months']} months)",
             f"Delivery in {totals['sprints']} two-week sprints",
