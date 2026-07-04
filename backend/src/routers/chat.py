@@ -146,9 +146,10 @@ async def agui_endpoint(request: Request):
     messages = body.get("messages", [])
     file_ids = body.get("file_ids", [])
 
-    # §4.10 per-thread isolation: every JSON store / stage marker / render artifact is
-    # resolved against this thread's own workspace dir (the agent's FilesystemBackend +
-    # /memories/ + requirements.md stay on the shared WORKSPACE root — see backends.py).
+    # §4.10 per-thread isolation: every JSON store / stage marker / render artifact —
+    # including the agent's own built-in FilesystemBackend, requirements.md, and the
+    # per-thread /memories/ route — is resolved against this thread's own workspace
+    # dir. Only /global-memories/ stays shared across threads — see backends.py.
     ws = resolve_workspace(thread_id)
 
     config = {
