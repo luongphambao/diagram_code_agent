@@ -267,8 +267,18 @@ def _b_advice(model, wbs, nar, meta, lib):
 
 
 def _b_agenda(model, wbs, nar, meta, lib):
-    sections = [c.title for c in SECTION_CONTENT_CONTRACTS if c.kind == "divider"]
-    return {"section_list": sections}
+    import re as _re
+    sections = [
+        _re.sub(r"^\{roman\}\.\s*", "", c.title).strip()
+        for c in SECTION_CONTENT_CONTRACTS if c.kind == "divider"
+    ]
+    # de-dup while preserving order (optional dividers may repeat a section name)
+    seen, out = set(), []
+    for s in sections:
+        if s and s not in seen:
+            seen.add(s)
+            out.append(s)
+    return {"section_list": out}
 
 
 _BUILDERS = {
