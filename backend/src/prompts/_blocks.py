@@ -118,34 +118,17 @@ _ICON_RESOLVER_TOOLS_BLOCK = """\
 - Plus `read_file`, `ls`, `glob`, `grep`."""
 
 _DRAWER_TOOLS_BLOCK = """\
-## Tools available
-- `render_diagram(code)` — write & RUN the full diagram script; returns the
-  rendered PNG for inspection PLUS a layout audit (page aspect ratio + any
-  label-bearing edges that span too far and will strand); on error returns the
-  traceback — fix and retry.
-- `export_drawio()` — convert `out.dot` → editable `out.drawio` (logos embedded);
-  slide renders already create `out.drawio`, so this confirms without overwriting.
-- `plan_style_sizes(node_count, longest_label_chars, longest_sublabel_chars,
-  output)` — decide icon/title/sublabel/edge/cluster sizes from diagram density
-  BEFORE writing prettygraph code. Pass the returned `pretty_kwargs` verbatim
-  into `Pretty(...)`; re-run after trimming nodes or when text reads too small.
-- `fit_labels(nodes, edge_labels)` — check every planned label/sublabel against
-  the card size and get deterministic shortened suggestions. Run it after
-  `plan_style_sizes` (it reads `style_plan.json`) and again whenever the render
-  audit reports TEXT OVERFLOW. Text must fit INSIDE its card — overflowing
-  cards are auto-widened and break the uniform card grid.
-- `declare_poster_grid(row1, row2)` — **poster mode (the default)**: call this
-  BEFORE writing prettygraph code. Pass the planned region 'planes'; each is
-  `{id, label, anchor_node_id, cols}`. It validates them and returns one
-  `g.grid_cluster(region_id, cols=N)` call PER plane to paste after your boxes —
-  each packs that plane into a dense multi-column logo grid. Use
-  `direction='TB'` so the planes sit side by side across the width (the
-  reference-poster look). Do NOT call `g.poster_grid` (its single-column ranks
-  fight the in-plane grids) and do NOT hand-wire spine/same_rank yourself.
-- `audit_diagram_code(code)` — static pre-render audit for known diagrams/
-  Graphviz pitfalls: missing output settings, floating `xlabel`, unstable large
-  clusters, over-specific positioning, font defaults in the wrong attr bag, and
-  missing poster-mode structure (spine, numbering, same_rank).
+## Tools available (call order: [poster only: declare_poster_grid] → render_diagram → export_drawio)
+- `render_diagram(code)` — write & RUN the full diagram script. A static
+  pre-flight audit runs first: high/medium findings block the run (no render
+  budget consumed) — fix and re-call. On success returns the PNG + layout audit.
+- `export_drawio()` — convert `out.dot` → editable `out.drawio` (logos embedded).
+- `declare_poster_grid(row1, row2)` — poster mode only, BEFORE writing code:
+  pass the planned region 'planes' (`{id, label, anchor_node_id, cols}`); it
+  returns one `g.grid_cluster(...)` call per plane to paste after your boxes.
+- Sizing/label data is PRE-COMPUTED on disk — read, don't recompute:
+  `style_plan.json` (paste `pretty_kwargs` into `Pretty(...)`, follow `notes`)
+  and `label_fits.json` (apply every `suggestion`; rename `still_too_long`).
 - Plus `read_file`, `ls`, `glob`, `grep` for reading skill references."""
 
 _CONTEXT_RULES = """\
