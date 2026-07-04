@@ -113,11 +113,11 @@ export default function WbsApproval({ interrupt, onResolve, onDecision, disabled
           <p className="text-xs leading-relaxed text-slate-400">{question}</p>
 
           {/* Role breakdown */}
-          {effort_by_role && Object.keys(effort_by_role).length > 0 && (
+          {roleMap && Object.keys(roleMap).length > 0 && (
             <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5">
               <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">Effort by Role</p>
               <div className="flex flex-wrap gap-1.5">
-                {Object.entries(effort_by_role).map(([role, md]) => {
+                {Object.entries(roleMap).map(([role, md]) => {
                   const colorClass = ROLE_COLORS[role] ?? "border-white/10 bg-white/6 text-slate-300";
                   const label = ROLE_LABELS[role] ?? role;
                   return (
