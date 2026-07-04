@@ -27,6 +27,7 @@ from session_state import (
     _artifacts,
     _card_for,
     _decision_from_payload,
+    _display_subagent,
     _is_pdf_followup,
     _is_ppt_followup,
     _label,
