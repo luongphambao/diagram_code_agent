@@ -267,9 +267,10 @@ class LeafIn(BaseModel):
     acceptance_criteria: list[str] = Field(
         default_factory=list,
         description="Definition-of-Done checklist, e.g. ['Unit tests pass', 'PR reviewed']")
-    dependencies: list[DependencyEdge] = Field(
-        default_factory=list,
-        description="Rich DAG edges with lag and type (FS/SS/FF); supersedes predecessors when set")
+    # NOTE: rich DAG edges (DependencyEdge with lag/FS-SS-FF) were removed from the
+    # model-facing schema — the 18-field nested shape was mimo's biggest stringify
+    # surface and the planner only ever used plain predecessors. CPM still reads a
+    # "dependencies" key from wbs.json if present (backward compat with old files).
 
 
 class AddItemsArgs(_CoercingModel):
