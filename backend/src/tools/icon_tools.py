@@ -234,6 +234,10 @@ def _tech_layers_from_workspace(workspace: Path) -> dict[str, list[str]]:
             if isinstance(info, dict) and info.get("choice")
         }
 
+    # Prefer whichever CSM snapshot has the most components (solution_model.json is
+    # normally the rich current model, but degenerates to empty if it was last rebuilt
+    # while the legacy source files were absent — then .prev holds the real one).
+    best_layers: dict[str, list[str]] = {}
     for csm_name in ("solution_model.json", "solution_model.prev.json"):
         csm_path = workspace / csm_name
         if not csm_path.exists():
@@ -243,10 +247,12 @@ def _tech_layers_from_workspace(workspace: Path) -> dict[str, list[str]]:
             from deck_resolver import _components_by_cluster
 
             model = SolutionModel.model_validate(json.loads(csm_path.read_text(encoding="utf-8")))
-            return {name: list(names) for name, _purpose, names in _components_by_cluster(model)}
+            layers = {name: list(names) for name, _purpose, names in _components_by_cluster(model)}
+            if len(layers) > len(best_layers):
+                best_layers = layers
         except Exception:  # noqa: BLE001
             continue
-    return {}
+    return best_layers
 
 
 try:
