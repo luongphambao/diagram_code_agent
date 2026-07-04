@@ -484,7 +484,14 @@ class _StreamingSubAgentRunnable:
 
 DEFAULT_MODEL    = "gpt-5.4-mini"
 DEFAULT_STYLE    = "pretty"          # "pretty" (prettygraph) or "plain" (raw diagrams)
-RECURSION_LIMIT  = 160               # max agent steps per run (used by the server)
+RECURSION_LIMIT  = 450               # max agent steps per run (used by the server)
+# Shared across main + every delegated subagent (task-tool invocations propagate
+# the same config, so their steps count against this same budget). Must clear
+# ~2 steps per model call across the worst realistic sum of per-agent
+# ModelCallLimitMiddleware run_limits (main 120 + icon 40 + drawer 40 + critic 40
+# + wbs 120 + ppt 60 = 420 calls -> ~840 steps in the extreme; 450 is set well
+# above the calls actually seen in practice (main ~46, icon ~34) with headroom
+# for a multi-round drawer/critic exchange, while still catching genuine runaways.
 REASONING_EFFORT = "medium"          # used as fallback when no config.yaml present
 
 MAIN_SKILL_PATHS = [
