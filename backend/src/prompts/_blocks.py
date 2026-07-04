@@ -82,13 +82,12 @@ _MAIN_TOOLS_BLOCK = """\
   ("No skeleton yet", "Roll up and plan the WBS first", "No approved WBS to export")
   if you try to call it before wbs_planner has run, wasting a user-facing approval
   round-trip on data you made up. Two-step sequence:
-  STEP 1: description="Draft skeleton: load_solution_context, get_effort_norms,
-  draft_wbs_skeleton. Write wbs_skeleton.json." → read wbs_skeleton.json (do not
-  estimate phases/modules yourself) → call `propose_wbs_skeleton()` (PAUSES) with the
+  STEP 1: description="Draft skeleton: load_solution_context, draft_wbs_skeleton.
+  Write wbs_skeleton.json." → read wbs_skeleton.json (do not estimate
+  phases/modules yourself) → call `propose_wbs_skeleton()` (PAUSES) with the
   phases exactly as read from that file.
-  STEP 2 (immediately after): description="Estimate effort: add_wbs_items,
-  compute_wbs_rollup, plan_timeline_and_sprints, plan_team_and_resources,
-  define_milestones, validate_wbs. Write wbs.json." → read wbs.json (do not estimate
+  STEP 2 (immediately after): description="Estimate effort: add_wbs_items for every
+  module, then finalize_wbs once. Write wbs.json." → read wbs.json (do not estimate
   mandays/timeline/effort splits yourself) → call `propose_wbs()` (PAUSES) with the
   totals exactly as read from that file → call `export_wbs_excel()`.
 - `propose_wbs_skeleton(question, project_name, project_code, phases)` — WBS gate #1.
