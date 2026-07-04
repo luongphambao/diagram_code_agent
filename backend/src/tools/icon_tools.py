@@ -159,6 +159,15 @@ def _squish_tech(s: str) -> str:
     return re.sub(r"[^a-z0-9]", "", s.lower())
 
 
+# Manifest filenames use one canonical spelling; common tech-stack shorthand/aliases
+# don't always match it (e.g. the icon is "k8s.png", not "kubernetes.png"). Tried in
+# addition to the literal name, not instead of it.
+_TECH_ALIASES: dict[str, str] = {
+    "kubernetes": "k8s", "postgres": "postgresql", "mongo": "mongodb",
+    "js": "javascript", "ts": "typescript", "node": "nodejs",
+}
+
+
 def _resolve_one_tech_icon(name: str) -> dict:
     """Bundled icon pack first, then lobe-icons/simple-icons CDN brand logos.
 
@@ -168,11 +177,21 @@ def _resolve_one_tech_icon(name: str) -> dict:
     part of the haystack. Rank candidates by exact filename-stem match first (e.g.
     "onprem/inmemory/redis.png" over "alibabacloud/database/apsaradb-redis.png" for
     query "redis") so the canonical icon wins instead of an arbitrary substring hit.
+    Punctuation (e.g. the dot in "Node.js") breaks substring matching, so it's stripped
+    before searching; common shorthand (kubernetes/k8s, postgres/postgresql, ...) is
+    tried as a second candidate query.
     """
-    hits = _search_icon_hits(name, None, limit=40)
+    squished = _squish_tech(name)
+    candidates = [name.replace(".", ""), squished]
+    if squished in _TECH_ALIASES:
+        candidates.append(_TECH_ALIASES[squished])
+    hits: list[str] = []
+    for cand in candidates:
+        hits = _search_icon_hits(cand, None, limit=40)
+        if hits:
+            break
     if hits:
-        q = _squish_tech(name)
-        best = min(hits, key=lambda p: (0 if _squish_tech(Path(p).stem) == q else 1, len(p)))
+        best = min(hits, key=lambda p: (0 if _squish_tech(Path(p).stem) == squished else 1, len(p)))
         return {"name": name, "path": best, "icon": _icon_rel(best), "source": "bundled"}
     try:
         from aiicons import lookup_ai_logo
