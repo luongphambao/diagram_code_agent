@@ -106,7 +106,9 @@ _MAIN_TOOLS_BLOCK = """\
   WBS gate #2. Copy every value verbatim from wbs.json's totals — do not calculate
   them yourself. PAUSES. After approval → call export_wbs_excel.
 - `export_wbs_excel(question, total_mandays, timeline_months)` — WBS gate #3. Copy
-  values verbatim from wbs.json. PAUSES.
+  values verbatim from wbs.json. PAUSES. Once approved, your ENTIRE reply to the
+  user must be ONLY the resulting file name/path (e.g. `wbs_filled.xlsx`) — no
+  summary, no tables, no extra prose.
 [[/PHASE]]
 - Plus `read_file`, `write_file`, `edit_file`, `ls`, `glob`, `grep`, `write_todos`."""
 
