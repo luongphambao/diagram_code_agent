@@ -198,13 +198,18 @@ class ProjectInfo(BaseModel):
 class DraftSkeletonArgs(_CoercingModel):
     project_info: ProjectInfo
     phases: list[PhaseMeta]
-    ratios: Optional[dict] = Field(
-        None, description="override {ba_on_dev,qc_on_dev,pm_on_total}; default 0.10/0.30/0.10")
+    # Explicit scalar fields instead of a free-form dict: mimo reliably fills
+    # floats but stringifies free dicts (ratios='{"ba_on_dev":...}' — real trace).
+    ba_on_dev: Optional[float] = Field(None, description="BA man-days as a fraction of dev; default 0.10")
+    qc_on_dev: Optional[float] = Field(None, description="QC man-days as a fraction of dev; default 0.30")
+    pm_on_total: Optional[float] = Field(None, description="PM man-days as a fraction of total; default 0.10")
 
 
 @tool(args_schema=DraftSkeletonArgs)
 def draft_wbs_skeleton(project_info: ProjectInfo, phases: list[PhaseMeta],
-                       ratios: Optional[dict] = None) -> str:
+                       ba_on_dev: Optional[float] = None,
+                       qc_on_dev: Optional[float] = None,
+                       pm_on_total: Optional[float] = None) -> str:
     """Define the WBS phase/module skeleton BEFORE estimating any effort.
 
     Use the BnK 3-phase spine — I SET UP & INSTALLATION (Solution Design, System
@@ -215,7 +220,10 @@ def draft_wbs_skeleton(project_info: ProjectInfo, phases: list[PhaseMeta],
     """
     if not phases:
         return "Provide at least one phase with modules."
-    r = {**RATIOS.__dict__, **(ratios or {})}
+    overrides = {k: v for k, v in
+                 (("ba_on_dev", ba_on_dev), ("qc_on_dev", qc_on_dev), ("pm_on_total", pm_on_total))
+                 if v is not None}
+    r = {**RATIOS.__dict__, **overrides}
     skeleton = {
         "project_info": project_info.model_dump(),
         "ratios": r,
