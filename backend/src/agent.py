@@ -749,6 +749,33 @@ def _tool_name(tool) -> str:
     return getattr(tool, "name", "")
 
 
+# Foundational artifact -> the tool that produces it. PhaseToolFilterMiddleware uses
+# "most-advanced phase wins": once wbs.json/deck_plan.json exists, phase advances to
+# "wbs"/"ppt" and _PHASE_TOOLS no longer includes analyze_architecture_requirements /
+# propose_diagram_brief / propose_tech_stack / propose_blueprint — so if one of these
+# was skipped earlier in the session (or its file was lost), the agent can NEVER call
+# the tool to backfill it again; the workspace is stuck with a permanently incomplete
+# artifact set. This is the concrete cause of thin/empty decks downstream (deck
+# generation reads these files/their CSM projection and finds nothing). See
+# _missing_artifact_tools below — it keeps a producing tool available past its normal
+# phase whenever its target file is still missing.
+_ARTIFACT_BACKFILL_TOOLS: dict[str, str] = {
+    "architecture_analysis.json": "analyze_architecture_requirements",
+    "diagram_brief.json": "propose_diagram_brief",
+    "tech_stack.json": "propose_tech_stack",
+    "blueprint.json": "propose_blueprint",
+}
+
+
+def _missing_artifact_tools(workspace: "Path") -> set[str]:
+    """Tool names that produce a foundational artifact currently missing from workspace."""
+    return {
+        tool_name
+        for filename, tool_name in _ARTIFACT_BACKFILL_TOOLS.items()
+        if not (workspace / filename).exists()
+    }
+
+
 class PhaseToolFilterMiddleware(AgentMiddleware):
     """Filter MAIN_TOOLS down to the phase-relevant subset each call.
 
