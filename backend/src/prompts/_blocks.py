@@ -69,8 +69,9 @@ _MAIN_TOOLS_BLOCK = """\
   propose_deck_plan is approved and out.pptx exists.
 - `send_email(recipient_email, subject, project_name, subtitle, recipient_name, attachments)` —
   email workspace deliverables via Gmail. With no `attachments`, auto-attaches
-  whichever of out.pdf / out.pptx / wbs_filled.xlsx exist. Pass `attachments`
-  (workspace filenames) to send a specific file or subset, e.g. `["out.pptx"]`
+  whichever of out.pdf / out.pptx / wbs_filled.xlsx / out.drawio / out.png
+  exist. Pass `attachments` (workspace filenames — any workspace file works,
+  mimetype auto-guessed) to send a specific file or subset, e.g. `["out.pptx"]`
   for just the slide deck. PAUSES. Call ONLY after the relevant deliverable(s)
   were generated and the user asks to send them.
 - `task(subagent_type="wbs_planner", description=...)` — delegate ALL WBS work to the
