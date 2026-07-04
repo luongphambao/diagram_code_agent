@@ -25,6 +25,39 @@ const ROLE_LABELS: Record<string, string> = {
   PM: "PM",
 };
 
+/**
+ * Coerce a possibly-malformed effort_by_role value into a plain {role: number} map.
+ * The model occasionally sends this dict as a JSON/Python-repr string; a raw string
+ * would make Object.entries iterate characters (one "Nmd" chip per char). Returns an
+ * empty object for anything that isn't a role→number map, so the UI shows nothing
+ * rather than garbage.
+ */
+function normalizeRoleMap(value: unknown): Record<string, number> {
+  let v = value;
+  if (typeof v === "string") {
+    const s = v.trim();
+    if (!s || (s[0] !== "{" && s[0] !== "[")) return {};
+    try {
+      v = JSON.parse(s);
+    } catch {
+      try {
+        // tolerate single-quoted Python-repr dicts
+        v = JSON.parse(s.replace(/'/g, '"'));
+      } catch {
+        return {};
+      }
+    }
+  }
+  if (!v || typeof v !== "object" || Array.isArray(v)) return {};
+  const out: Record<string, number> = {};
+  for (const [role, md] of Object.entries(v as Record<string, unknown>)) {
+    const n = typeof md === "number" ? md : Number(md);
+    // keep only sane role→number entries (drops char-index junk like "0": "l")
+    if (role.length > 1 && Number.isFinite(n)) out[role] = n;
+  }
+  return out;
+}
+
 export default function WbsApproval({ interrupt, onResolve, onDecision, disabled = false }: WbsApprovalProps) {
   const [modifications, setModifications] = useState("");
   const [decided, setDecided] = useState(false);
