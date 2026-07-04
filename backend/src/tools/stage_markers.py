@@ -262,4 +262,11 @@ def _inspection_image_b64(png_path: Path) -> tuple[str, str]:
         im.save(buf, format="JPEG", quality=65, optimize=True)
         return base64.standard_b64encode(buf.getvalue()).decode("ascii"), "image/jpeg"
     except Exception:  # noqa: BLE001 — never fail a render over the preview copy
+        import logging
+        logging.getLogger(__name__).warning(
+            "_inspection_image_b64: Pillow downscale failed — sending FULL-SIZE "
+            "raw PNG (%s bytes); large payloads can trigger provider vision 400s",
+            png_path.stat().st_size if png_path.exists() else "?",
+            exc_info=True,
+        )
         return base64.standard_b64encode(png_path.read_bytes()).decode("ascii"), "image/png"
