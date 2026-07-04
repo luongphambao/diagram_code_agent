@@ -176,8 +176,12 @@ LOCAL_ICONS    = str(_RESOURCES / "icons")
 LOCAL_MANIFEST = str(_RESOURCES / "icons_manifest.json")
 LOCAL_NODE_CATALOG = str(_RESOURCES / "node_catalog.json")
 
-# Virtual path prefix the agent uses to read/write persistent memory.
+# Virtual path prefixes the agent uses to read/write memory.
+# `/memories/` is per-thread scratch (empty for every new thread); `/global-memories/`
+# is the durable, cross-thread memory file every agent can read but only the main
+# agent is instructed to edit (see prompts/_blocks.py).
 MEMORY_PATH = "/memories/AGENTS.md"
+GLOBAL_MEMORY_PATH = "/global-memories/AGENTS.md"
 
 
 def _ensure_dirs() -> None:
@@ -194,18 +198,33 @@ def make_local_backend() -> CompositeBackend:
     ``diagrams`` code in a subprocess. This keeps the design to "deep agent + tools
     + memory".
 
+    Built once at process startup and reused for the main agent and every subagent
+    (§4.10) — safe because both routes below resolve their root lazily against the
+    per-request `current_workspace()` contextvar instead of a path baked in here.
+
     Routing:
-      /memories/  → FilesystemBackend rooted at AGENT_SPACE
-                    so /memories/AGENTS.md maps to agent_space/memories/AGENTS.md
-      (default)   → FilesystemBackend rooted at WORKSPACE (real absolute paths)
-                    diagram.py / out.png / out.dot / out.drawio live here.
+      /memories/         → PerThreadFilesystemBackend rooted at
+                            <current thread's workspace>/memories/ — each thread's
+                            own scratch memory, empty by default.
+      /global-memories/  → FilesystemBackend rooted at MEMORIES_DIR
+                            (agent_space/memories/AGENTS.md) — durable, shared across
+                            every thread; read by all agents, written only by the
+                            main agent (by prompt convention).
+      (default)           → PerThreadFilesystemBackend rooted at
+                            <current thread's workspace>/ — diagram.py / out.png /
+                            out.dot / out.drawio / wbs.json / etc. live here.
     """
     _ensure_dirs()
     return CompositeBackend(
-        default=FilesystemBackend(root_dir=str(WORKSPACE), virtual_mode=False),
+        default=PerThreadFilesystemBackend(root_dir=str(WORKSPACE), virtual_mode=False),
         routes={
-            "/memories/": FilesystemBackend(
-                root_dir=str(AGENT_SPACE),
+            "/memories/": PerThreadFilesystemBackend(
+                root_dir=str(WORKSPACE),
+                subdir="memories",
+                virtual_mode=True,
+            ),
+            "/global-memories/": FilesystemBackend(
+                root_dir=str(MEMORIES_DIR),
                 virtual_mode=True,
             ),
         },
