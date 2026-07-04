@@ -1,0 +1,1265 @@
+[
+  {
+    "slug": "aquila-proposal-tran-duc-brilliant-factory",
+    "folder": "_Aquila_ Proposal - Tran Duc Brilliant Factory",
+    "title": "Aquila  Proposal - Tran Duc Brilliant Factory",
+    "client": "Trần Đức Group (nhà sản xuất nội thất khách sạn cao cấp, Việt Nam)",
+    "type": "Proposal (Đề xuất giải pháp kỹ thuật)",
+    "domain": [
+      "manufacturing",
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "IoT",
+      "IIoT",
+      "OEE",
+      "EMS",
+      "SCADA",
+      "HMI",
+      "PLC",
+      "CNC",
+      "AWS IoT Core",
+      "ERP (SAP)",
+      "MES",
+      "CMMS",
+      "QMS",
+      "AI",
+      "ML"
+    ],
+    "problem": "Trần Đức Group đang vận hành một nhà máy hiện đại nhưng chưa khai thác được tiềm năng dữ liệu: Vấn đề Chi tiết Thiếu kết nối IoT ~500 máy, 70–80% là máy hiện đại nhưng chưa nối IoT Dữ liệu rời rạc Dữ liệu cảnh báo sự cố máy tồn tại (80% máy có) nhưng chưa kết nối phần mềm quản lý nào Andon chưa đầy đủ Máy CNC có đèn cảnh báo Andon; nhiều máy khác có khả năng xuất tín hiệu nhưng chưa kích hoạt Chưa…",
+    "solution": "Aquila đề xuất xây dựng Hệ Thống EMS (Efficiency Management System) – một hệ thống giám sát thông minh theo kiến trúc ISA-95, bao gồm: 1. Kết nối IoT Platform – thu thập dữ liệu liên tục từ máy móc (cảm biến, Andon, PLC/CNC) qua AWS IoT Core. 2. Tính toán OEE tự động – theo từng máy, dây chuyền, khu vực sản xuất, ca sản xuất và mã sản phẩm. 3. Bảng điều khiển thời gian thực (Real-time Dashboard) –…",
+    "outcome": "Dựa trên mục tiêu đề ra và dự án tham chiếu, các KPI kỳ vọng bao gồm: KPI Mục tiêu Giám sát năng lượng Chi tiết theo từng máy / công đoạn sản xuất Hiệu quả SX Phân tích OEE theo từng mã hàng, từng thời điểm Thu thập dữ liệu Tự động (IoT sensor / Scan QR / AI sensor) thay thế nhập tay Giảm MTTR Giảm…",
+    "image_ref": "DATA/SLIDE_IMAGES/_Aquila_ Proposal - Tran Duc Brilliant Factory/slide_007.png"
+  },
+  {
+    "slug": "arm-control-system-proposal-en",
+    "folder": "_ARM Control System_ Proposal_EN",
+    "title": "ARM Control System  Proposal EN",
+    "client": "",
+    "type": "",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [],
+    "problem": "Khach hang dang su dung mot trong hai phuong phap: thay khuon thu cong hoac qua he thong AMR (Autonomous Mobile Robot) truyen thong. Ca hai deu ton tai nhieu han che: Van de Mo ta Can nhieu nhan su Thay khuon thu cong doi hoi nguoi lao dong truc tiep, tang rui ro va chi phi nhan su AMR khong on dinh He thong AMR hien tai khong du linh hoat, kho kiem soat trong moi truong nha may phuc tap Thieu kha…",
+    "solution": "BnK de xuat he thong ARCMC (ARC Mold Changer) - mot giai phap tu dong hoa toan dien viec thay khuon trong nha may, khong can su can thiep cua con nguoi. Cac thanh phan he thong He thong bao gom 4 ung dung chinh: Ten ung dung Loai Chuc nang ARC-V Web Application Factory Visualization - Hien thi toan bo nha may ARC-M Web Application ARC Motion Control - Dieu khien chuyen dong robot ARC-CAM Camera Ap…",
+    "outcome": "Proposal khong neu ro KPIs cu the bang con so, tuy nhien dua tren mo ta giai phap, cac chi tieu ky vong bao gom: Tieu chi Ket qua ky vong Tu dong hoa thay khuon 100% - loai bo can thiep thu cong trong quy trinh An toan lao dong Phat hien chuong ngai vat tu dong, tranh tai nan va va cham Tracking chi…",
+    "image_ref": null
+  },
+  {
+    "slug": "bnk-tswork-hdx-wow-in-odc",
+    "folder": "_BnK - TSWork_ HDX - WoW in ODC",
+    "title": "BnK - TSWork  HDX - WoW in ODC",
+    "client": "TSwork (HDX)",
+    "type": "Service Proposal / ODC Engagement Model",
+    "domain": [
+      "ai-ml"
+    ],
+    "tech": [
+      "Agile",
+      "Scrum",
+      "JIRA",
+      "Redmine",
+      "Code Quality Scanning",
+      "AI Mentor"
+    ],
+    "problem": "BnK không trình bày vấn đề của khách hàng một cách tường minh, nhưng deck ngầm định giải quyết các nỗi đau điển hình khi khách hàng muốn xây dựng năng lực kỹ thuật offshore: Nỗi đau Mô tả Gánh nặng vận hành Khách hàng phải tập trung vào kinh doanh, không muốn tự lo hạ tầng, tuyển dụng, đào tạo IT Linh hoạt quy mô Cần nhanh chóng tăng/giảm team theo yêu cầu dự án Chất lượng code review Code review…",
+    "solution": "BnK đề xuất mô hình ODC (Offshore Development Center) hoạt động như một \"extended workbench\" (cánh tay nối dài kỹ thuật) của khách hàng: BnK chịu toàn bộ: môi trường làm việc, hạ tầng IT, tuyển dụng, thay thế nhân sự, đào tạo, và nếu cần cử nhân sự \"on-site\" Khách hàng chỉ cần tập trung vào nghiệp vụ (business specifics) Áp dụng quy trình Agile/Scrum chuẩn hóa với vòng lặp 2 tuần/sprint Vận hành t…",
+    "outcome": "Deck không liệt kê KPI định lượng cụ thể cho dự án của TSwork, nhưng các chỉ tiêu chất lượng nội bộ của BnK được đề cập qua ví dụ PDCA: Mục tiêu Chỉ tiêu Code Review Efficiency Giảm 25% thời gian code review trong 1 sprint thí điểm Process Quality Áp dụng chuẩn hóa checklist + phân công trước (pre-a…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK - TSWork_ HDX - WoW in ODC/slide_007.png"
+  },
+  {
+    "slug": "bnk-bca-finance-case-study",
+    "folder": "_BnK_ BCA Finance - Case Study",
+    "title": "BnK  BCA Finance - Case Study",
+    "client": "BCA Finance (tổ chức tài chính)",
+    "type": "Case Study / IT Services Pitch",
+    "domain": [
+      "banking",
+      "retail",
+      "data-platform",
+      "ai-ml"
+    ],
+    "tech": [
+      "Apache NiFi",
+      "Apache Flink",
+      "Apache Spark",
+      "Python",
+      "TensorFlow",
+      "PyTorch",
+      "PostgreSQL",
+      "MongoDB",
+      "Tableau",
+      "Power BI",
+      "Katalon",
+      "UiPath Test Suite",
+      "Kobiton",
+      "Selenium",
+      "Appium",
+      "Docker",
+      "Kubernetes",
+      "AWS",
+      "GCP",
+      "Microsoft Azure"
+    ],
+    "problem": "Phần I – Customer Data Platform BCA Finance đang có hai nguồn dữ liệu tách biệt: Banking Data (dữ liệu giao dịch, hành vi khách hàng) và IT Solution (hệ thống nội bộ). Hai nguồn này chưa được hợp nhất để phục vụ các mục tiêu kinh doanh như: PR & Marketing không tiếp cận đúng khách hàng qua đúng kênh, chi phí cao. Bộ phận Sale thiếu công cụ gợi ý sản phẩm phù hợp, chưa hỗ trợ Cross-sell / Up-sell.…",
+    "solution": "Phần I – Customer Data Platform (CDP) BnK đề xuất xây dựng một CDP tích hợp kết hợp Banking Data và IT Solution thành một nền tảng thống nhất, cung cấp: Customer Vision 360°: hồ sơ khách hàng toàn diện (Composite Profile – Demographics, Interests, Behavioral, Journey, CLV, Predict Score). AI/ML Engine: dự đoán hành vi, phát hiện gian lận, phân khúc khách hàng tự động. BnK Integration + AI Layer: c…",
+    "outcome": "CDP Lĩnh vực Kết quả kỳ vọng PR & Marketing Giảm chi phí truyền thông; tiếp đúng khách hàng qua đúng kênh Sale Tăng doanh thu Cross-sell / Up-sell qua gợi ý sản phẩm phù hợp Product Cá nhân hóa dịch vụ; nâng cao trải nghiệm khách hàng CRM Tăng tỷ lệ giữ chân; cải thiện vòng đời và giá trị khách hàng…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ BCA Finance - Case Study/slide_007.png"
+  },
+  {
+    "slug": "bnk-clinic-management-proposal",
+    "folder": "_BnK_ Clinic Management - Proposal",
+    "title": "BnK  Clinic Management - Proposal",
+    "client": "Clinic (tên cụ thể không được tiết lộ trong slide)",
+    "type": "Solution Proposal",
+    "domain": [
+      "healthcare",
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "Odoo",
+      "Python",
+      "PostgreSQL",
+      "Flutter",
+      "Docker",
+      "SonarQube"
+    ],
+    "problem": "Phòng khám đang vận hành thủ công hoặc thiếu công cụ tập trung cho các quy trình quan trọng: Vấn đề Tác động Bác sĩ ghi nhận doanh số ca hàng ngày thiếu hệ thống, dễ sai sót Mất kiểm soát doanh thu theo từng bác sĩ/ca Kế toán nhập dữ liệu tài chính thủ công, không có công cụ tính thuế tự động Tốn thời gian, dễ nhầm lẫn trong tính toán Giám đốc không có dashboard/báo cáo doanh số theo thời gian thự…",
+    "solution": "BnK đề xuất xây dựng nền tảng quản lý phòng khám tập trung, dựa trên Odoo ERP được tùy chỉnh chuyên sâu, có thể truy cập qua web browser và ứng dụng di động (iOS/Android) được phát triển bằng Flutter. Hệ thống áp dụng kiến trúc Role-Based Access Control (RBAC) để phân quyền rõ ràng theo vai trò. Các module chính: Module Mô tả Đối tượng sử dụng Patient Management Tạo, xem, chỉnh sửa hồ sơ bệnh nhân…",
+    "outcome": "Slide không liệt kê KPI định lượng rõ ràng, nhưng các kết quả kỳ vọng được ngầm định qua Success Story và mục tiêu: Kết quả kỳ vọng Chỉ báo đo lường Giảm thời gian xử lý hành chính Appointment handling & staff coordination nhanh hơn Tăng độ chính xác ghi nhận doanh thu Bác sĩ tự nhập case entries, í…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ Clinic Management - Proposal/slide_007.png"
+  },
+  {
+    "slug": "bnk-dams-phase-2-proposal",
+    "folder": "_BnK_ DAMS Phase 2 - Proposal",
+    "title": "BnK  DAMS Phase 2 - Proposal",
+    "client": "Tineken Shipping Limited (logistics & shipping services provider)",
+    "type": "Proposal",
+    "domain": [
+      "logistics",
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "Odoo ERP (customization & enhancement)"
+    ],
+    "problem": "Tineken Shipping Limited đang vận hành Odoo ERP nhưng gặp các hạn chế cụ thể sau: Nhóm vấn đề Mô tả chi tiết Trải nghiệm người dùng Thanh tìm kiếm chưa tối ưu; conversation field không cố định gây mất ngữ cảnh; thiếu custom display fields phù hợp với từng vai trò Quản trị & kiểm soát Thiếu quy trình phê duyệt rõ ràng cho PDA/FDA, Invoice, Vendor Bill; phân quyền access rights chưa chặt chẽ theo ng…",
+    "solution": "BnK đề xuất nâng cấp và tùy chỉnh Odoo ERP hiện có của Tineken, chia thành 4 nhóm tính năng: 1. User Experience & Navigation Conversation field được neo cố định ở cuối màn hình (anchored) để luôn hiển thị Tối ưu hóa tính năng search cho kết quả nhanh và chính xác hơn Custom display fields giúp hiển thị thông tin phù hợp với từng vai trò người dùng 2. Governance & Control Quy trình phê duyệt 1 lớp…",
+    "outcome": "Proposal không định nghĩa KPI đo lường định lượng rõ ràng. Tuy nhiên, các kết quả kỳ vọng có thể rút ra: Mục tiêu Kết quả kỳ vọng Hiệu suất người dùng Giảm thời gian tìm kiếm và thao tác hàng ngày trên Odoo Kiểm soát tài chính 100% invoice/vendor bill đi qua quy trình phê duyệt; P&L chính xác theo t…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ DAMS Phase 2 - Proposal/slide_007.png"
+  },
+  {
+    "slug": "bnk-driver-safe-application-proposal",
+    "folder": "_BnK_ Driver Safe Application - Proposal",
+    "title": "BnK  Driver Safe Application - Proposal",
+    "client": "EUP (End-User/Partner – tên viết tắt xuất hiện xuyên suốt tài liệu)",
+    "type": "Proposal",
+    "domain": [
+      "retail",
+      "data-platform",
+      "ai-ml"
+    ],
+    "tech": [
+      "React Native",
+      "Realm",
+      "Firebase",
+      "Google Maps",
+      "Sentry",
+      "Google Analytics",
+      "SonarQube",
+      "FMS System"
+    ],
+    "problem": "Vấn đề hiện tại của khách hàng EUP Khách hàng EUP quản lý một đội xe với tài xế theo hợp đồng (ô tô, xe máy...) và đang gặp phải các vấn đề sau: Vấn đề Mô tả Hành vi lái xe nguy hiểm Không có công cụ phát hiện và ghi nhận các sự kiện như vượt tốc độ, phanh gấp, tăng tốc mạnh, rẽ nguy hiểm Thiếu phản hồi thời gian thực Tài xế không nhận được cảnh báo kịp thời để tự điều chỉnh hành vi lái xe Quản lý…",
+    "solution": "BnK Solution đề xuất xây dựng một ứng dụng di động (mobile-only) với các chức năng cốt lõi sau: Mục tiêu giá trị (Goals & Value Proposition) # Mục tiêu Chi tiết 1 Cải thiện an toàn giao thông Phát hiện & ghi nhận vượt tốc, phanh gấp, rẽ nguy hiểm; cung cấp phản hồi thời gian thực/định kỳ 2 Đơn giản hóa quản lý đội xe Tập trung hóa dữ liệu lái xe; cung cấp bảng điều khiển phân tích hiệu suất tài xế…",
+    "outcome": "Proposal này chưa đề cập trực tiếp đến các KPI cụ thể sau khi go-live. Tuy nhiên, các tiêu chí thành công có thể suy ra từ Non-Functional Requirements và Goals: KPI Mục tiêu Battery consumption Dưới 13% pin/giờ khi GPS polling mỗi giây GPS accuracy / dropout rate Dưới 5% trong điều kiện thực tế Driv…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ Driver Safe Application - Proposal/slide_007.png"
+  },
+  {
+    "slug": "bnk-eexpense-system-revamp-proposal",
+    "folder": "_BnK_ eExpense System Revamp - Proposal",
+    "title": "BnK  eExpense System Revamp - Proposal",
+    "client": "Khach hang chua duoc neu ten cu the (unnamed client)",
+    "type": "Solution Proposal (Migration)",
+    "domain": [
+      "retail",
+      "data-platform",
+      "ai-ml"
+    ],
+    "tech": [
+      "Visual Basic (legacy) → .NET 8",
+      "Angular",
+      "Blazor",
+      "Telerik UI Kit",
+      "MS Copilot (AI-assisted migration)",
+      "Crystal Report",
+      "ETL"
+    ],
+    "problem": "He thong eExpense hien tai duoc viet bang Visual Basic (VB / Web Forms) — mot cong nghe da loi thoi, khong con duoc Microsoft ho tro day du. Khach hang gap cac van de sau: Van de Dien giai Hieu nang kem Ung dung chay cham, khong toi uu Kho bao tri Code VB kho quan ly, no technical debt cao Ket noi han che Khong tuong thich tot voi cac API, cong cu va cong nghe cloud hien dai Rui ro tuong lai VB kh…",
+    "solution": "BnK de xuat revamp toan bo source code tu VB sang .NET 8, giu nguyen business logic cu, chi hien dai hoa nen tang ky thuat. Quy trinh gom 8 buoc: Buoc Ten giai doan Dau ra chinh (Deliverable) 1 Assessment & Analysis Business Requirement Document (BRD) 2 Planning Migration Strategy Detailed Migration Plan 3 Design & Architecture Technical Specification 4 Application Migration Refactored Codebase, M…",
+    "outcome": "Proposal khong neu ro cac KPI dinh luong cu the, nhung cac ket qua mong doi duoc the hien qua 4 muc tieu chinh: Muc tieu Mo ta Performance Enhancement Ung dung chay nhanh hon, hieu qua hon tren .NET 8 Maintainability Code sach hon, giam technical debt, de quan ly va bao tri lau dai Integration Tuong…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ eExpense System Revamp - Proposal/slide_007.png"
+  },
+  {
+    "slug": "bnk-eup-long-term-care-system-proposal-20250805",
+    "folder": "_BnK_ EUP - Long-term Care System - Proposal 20250805",
+    "title": "BnK  EUP - Long-term Care System - Proposal 20250805",
+    "client": "",
+    "type": "",
+    "domain": [
+      "healthcare",
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "Cong nghe",
+      "Java",
+      "Next.js",
+      "React Native",
+      "MS SQL",
+      "Realm (real-time sync)",
+      "Grafana",
+      "Gemini",
+      "SonarQube",
+      "Google Maps",
+      "Google Firebase",
+      "FMS",
+      "CRM (EUP internal)"
+    ],
+    "problem": "He thong hien tai chua co nen tang so hoa thong nhat cho dich vu van chuyen chuyen dung danh cho nguoi cao tuoi va nguoi khuyet tat. Cac van de chinh bao gom: Thieu he thong dat xe tieu chuan hoa, thong nhat tren nhieu tinh thanh va nha khai thac. Dat xe trung lap (duplicate bookings) va su dung sai muc dich nguon luc cong. Quy trinh thu gia va dich vu thieu minh bach, tu dong hoa. Nguoi dung (dac…",
+    "solution": "Long-Term Care System la nen tang so tich hop, phuc vu van chuyen cho doi tuong yeu the. He thong gom 3 san pham chinh: 1. Admin Management System (Web) Quan ly toan bo hoat dong van tai. Giam sat tai xe, chuyen di, doanh thu. Bao cao phan tich va ho tro ra quyet dinh chinh sach. 2. Citizen Booking App (Mobile) Dat xe theo nhu cau ca nhan (nguoi cao tuoi, nguoi khuyet tat). Ho tro dat xe qua nguoi…",
+    "outcome": "KPI Mo ta Tong nhan luc 959.1 MDs thuc hien Tiet kiem nho Starter Kit ~100 MDs SLA Priority I (Urgent) Phan hoi: 1 gio / Xu ly: 8 gio SLA Priority II (High) Phan hoi: 2 gio / Xu ly: 16 gio SLA Priority III (Medium) Phan hoi: 4 gio / Xu ly: 24 gio SLA Priority IV (Low) Phan hoi: 16 gio / Xu ly: 40 gi…",
+    "image_ref": null
+  },
+  {
+    "slug": "bnk-ex-umbra-proposal-ai",
+    "folder": "_BnK_ Ex Umbra - Proposal -AI",
+    "title": "BnK  Ex Umbra - Proposal -AI",
+    "client": "",
+    "type": "",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [],
+    "problem": "HAWK lacks real-time AI interpretation of visual environmental data. Systems are reactive, not real-time. Difficulty analyzing imagery in edge-case conditions (low contrast, heavy shadow). Satellite and ground sensor data is siloed. ESG monitoring is manual and not scalable. No AI-based solar advisory or predictive maintenance planning.",
+    "solution": "4 Geospatial AI Features Feature Data Sources Model GPU Soil Moisture Advisory Sentinel-1, Sentinel-2, ERA5, AOI SwinUNet + MLP Regression 24GB VRAM Soil Temperature Sentinel-1, Sentinel-2, ERA5 TempCNN (NDVI+LST+SAR+ERA5) 24GB VRAM Solar Panel Degradation Sentinel-2, drone, CORINE MaskRCNN/HRNet + Gaussian KDE 16GB VRAM Parking Occupancy Estimation Sentinel-2, drone, CORINE CLIP + MaskRCNN/HRNet…",
+    "outcome": "Module Metric Parking Occupancy (Segmentation) mIOU Parking Occupancy (Detection) mAP Parking Occupancy (Estimation) RMSE, MAE, R2 Soil Moisture MSE (normalized) Soil Temperature MAE (Celsius) Solar Degradation (Segmentation) mIOU Solar Degradation (Classification) Accuracy, F1 Score Business Goals:…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ Ex Umbra - Proposal -AI/slide_007.png"
+  },
+  {
+    "slug": "bnk-fsd-chat-proposal",
+    "folder": "_BnK_ FSD Chat - Proposal",
+    "title": "BnK  FSD Chat - Proposal",
+    "client": "Mouxidea",
+    "type": "Proposal",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "Flutter",
+      "NestJS",
+      "Matrix Synapse (Homeserver)",
+      "PostgreSQL",
+      "MySQL",
+      "Matrix-Dart SDK"
+    ],
+    "problem": "Ứng dụng di động FSD hiện chưa có tính năng giao tiếp nội bộ (in-app communication). Người dùng cần một kênh nhắn tin trực tiếp, an toàn, tích hợp sẵn trong ứng dụng mà không phụ thuộc vào các nền tảng chat bên ngoài. Các thách thức kỹ thuật cụ thể: Tải đồng thời cao: Hệ thống phải xử lý tới 11.000 người dùng cùng lúc (yêu cầu phi chức năng). Bảo mật dữ liệu: Tệp đính kèm (ảnh, video, file) cần đư…",
+    "solution": "BnK Solution đề xuất không xây dựng chat engine từ đầu, thay vào đó tận dụng nền tảng open-source đã được kiểm chứng. Lựa chọn được đề xuất: Matrix (Homeserver – Synapse) + Customized Mobile Client Sau quá trình so sánh 3 giải pháp: Tiêu chí Mattermost Rocket.Chat Matrix + Client tùy chỉnh License MIT MIT Apache 2.0 Architecture Centralized Centralized (optional federation) Decentralized, federate…",
+    "outcome": "Proposal không liệt kê KPI tường minh, nhưng các chỉ số kỹ thuật ngầm định: Chỉ số Mục tiêu Concurrent Users Tối thiểu 11,000 users đồng thời Message Security 100% tin nhắn được E2E Encrypted File Protection 100% file/ảnh upload có watermark Screenshot Protection Watermark nhúng trong mọi screenshot…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ FSD Chat - Proposal/slide_007.png"
+  },
+  {
+    "slug": "bnk-fsd-instant-messager-proposal",
+    "folder": "_BnK_ FSD Instant Messager - Proposal",
+    "title": "BnK  FSD Instant Messager - Proposal",
+    "client": "Mouxidea",
+    "type": "Proposal",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "Flutter",
+      "NestJS",
+      "Matrix Synapse",
+      "PostgreSQL",
+      "MySQL"
+    ],
+    "problem": "Ứng dụng mobile FSD hiện chưa có tính năng giao tiếp nội bộ. Hệ thống cần: Hỗ trợ giao tiếp trong ứng dụng (in-app) cho người dùng. Phân quyền trò chuyện theo cấp bậc người dùng (user rank). Bảo vệ nội dung tài liệu/hình ảnh chia sẻ qua watermark nhúng vào file và ảnh chụp màn hình. Xác thực người dùng thông qua hệ thống DPID (Digital Personal Identifier) hiện có. Chịu tải lên đến 11.000 người dùn…",
+    "solution": "BnK đề xuất tiếp cận bằng cách tái sử dụng nền tảng mã nguồn mở đã được kiểm chứng thay vì xây dựng từ đầu, giúp giảm thời gian phát triển. Ba ứng viên được nghiên cứu so sánh: Tiêu chí Mattermost Rocket.Chat Matrix + Custom Client License MIT MIT Apache 2.0 Kiến trúc Centralized Centralized (optional federation) Decentralized, federated Khả năng mở rộng 10.000+ users 10.000+ (Enterprise only) Unl…",
+    "outcome": "Proposal không liệt kê KPI định lượng cụ thể, nhưng các tiêu chí thành công có thể suy ra: Hiệu năng: Hệ thống xử lý được 11.000 concurrent users không gián đoạn. Bảo mật: 100% file upload và screenshot trong module chat được nhúng watermark; tin nhắn được mã hóa E2E. Chất lượng: Pass Load Test và S…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ FSD Instant Messager - Proposal/slide_007.png"
+  },
+  {
+    "slug": "bnk-ge-solution-proposal-ver-2",
+    "folder": "_BnK_ GE - Solution Proposal_Ver_2",
+    "title": "BnK  GE - Solution Proposal Ver 2",
+    "client": "GE HP Factory",
+    "type": "Proposal",
+    "domain": [
+      "manufacturing",
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "AI Computer Vision",
+      "NVIDIA DeepStream",
+      "PyTorch",
+      "FastAPI",
+      "React Native",
+      "PostgreSQL",
+      "Redis",
+      "Docker"
+    ],
+    "problem": "Tại nhà máy GE HP, stator (linh kiện lớn, nặng) được đưa vào frame bằng cần trục. Hiện tại, việc căn chỉnh phụ thuộc hoàn toàn vào kinh nghiệm công nhân và quan sát bằng mắt thường. Rủi ro đang tồn tại: An toàn lao động: Sai lệch nhỏ khi hạ stator có thể gây nguy hiểm cho người vận hành. Hư hỏng vật tư giá trị cao: Stator và frame là linh kiện đắt tiền; va chạm gây thiệt hại lớn về chi phí và thời…",
+    "solution": "BnK đề xuất hệ thống Camera + AI Computer Vision hoạt động realtime, hỗ trợ công nhân căn chỉnh stator – frame trong quá trình hạ bằng cần trục. Bốn module chức năng chính: 1. Alignment & Distance Detection Nhận diện stator và frame từ 2 camera lắp hai bên cần trục. Ước lượng khoảng cách tương đối theo cm, cập nhật realtime (~1 giây/lần). 2. Safety Zone Warning Đánh giá rủi ro theo 3 cấp: SAFE – W…",
+    "outcome": "Value Proposition (AS-IS vs TO-BE) AS-IS (hiện tại): Phụ thuộc quan sát thủ công, kinh nghiệm cá nhân Phản ứng chậm, không có dữ liệu ghi nhận hệ thống Chất lượng thao tác biến động theo nhân sự TO-BE (sau khi có hệ thống): Giám sát realtime toàn bộ quá trình hạ stator Đánh giá rủi ro tự động theo c…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ GE - Solution Proposal_Ver_2/slide_007.png"
+  },
+  {
+    "slug": "bnk-ggf-sync-feature-boom-to-martignani-cr",
+    "folder": "_BnK_ GGF_ Sync Feature Boom to Martignani_CR",
+    "title": "BnK  GGF  Sync Feature Boom to Martignani CR",
+    "client": "GGF (Green Growth Fund / agricultural client)",
+    "type": "Change Request / Cost Proposal",
+    "domain": [
+      "agriculture",
+      "ai-ml"
+    ],
+    "tech": [
+      "CMS",
+      "Mobile App",
+      "Tablet App",
+      "Backend",
+      "Frontend"
+    ],
+    "problem": "Tài liệu không trình bày rõ ràng bài toán nghiệp vụ. Tuy nhiên, dựa vào tên CR và các task trong bảng, có thể suy luận: Hệ thống Boom (có thể là hệ thống phun thuốc/drone nông nghiệp) cần được đồng bộ dữ liệu với nền tảng Martignani (thương hiệu máy phun thuốc chuyên nghiệp của Ý). Các tính năng liên quan đến MCU (Micro Controller Unit), NDVI Map (bản đồ chỉ số thực vật), Operator Report, Work Ord…",
+    "solution": "BnK Solution đề xuất triển khai 7 nhóm task bao gồm cả development và UAT, trải dài trên các platform: Backend (BE), Frontend Web (FE), Tablet App, Mobile App, QC, và PM. Các tính năng cụ thể: 1. Nâng cấp màn hình MCU App version và thông báo nâng cấp trên Mobile. 2. Thêm màn hình NDVI Map và màn hình Detail Report trên CMS. 3. Xây dựng tính năng Operator Report Management (CMS, Tablet, Mobile). 4…",
+    "outcome": "Tài liệu không liệt kê KPI hay kết quả kỳ vọng rõ ràng. Dựa trên phạm vi công việc, có thể kỳ vọng: Đồng bộ thành công dữ liệu vận hành giữa thiết bị Boom và hệ thống Martignani. Operator có thể xem, quản lý báo cáo và theo dõi hiệu suất phun thuốc qua CMS, Tablet, và Mobile. Bản đồ NDVI hiển thị đú…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ GGF_ Sync Feature Boom to Martignani_CR/slide_003.png"
+  },
+  {
+    "slug": "bnk-ltc-proposal",
+    "folder": "_BnK_ LTC - Proposal",
+    "title": "BnK  LTC - Proposal",
+    "client": "EUP",
+    "type": "Proposal",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "Java",
+      "Next.js",
+      "React Native",
+      "MS SQL Server",
+      "Firebase",
+      "Google Maps"
+    ],
+    "problem": "6 pain points chính trong hệ thống vận chuyển người khuyết tật/cao tuổi hiện tại: # Vấn đề 1 Đặt chỗ trùng lặp (duplicate bookings) 2 Quy trình liên tỉnh không nhất quán 3 Định giá thủ công, thiếu minh bạch 4 Không có tiêu chuẩn đánh giá chất lượng dịch vụ 5 Rủi ro gian lận hoàn thành chuyến đi 6 UX kém thân thiện với người dùng lớn tuổi / không rành công nghệ",
+    "solution": "Ba thành phần platform: Component Mô tả Web Admin Portal Quản lý vận chuyển, tài xế, lịch trình cho điều phối viên Citizen Booking App React Native – hỗ trợ đặt chỗ cho người dùng, người chăm sóc, và call center Driver App Xác nhận chuyến đi bằng QR/OTP, báo cáo sự cố",
+    "outcome": "Không có KPI định lượng rõ ràng trong proposal. Kết quả kỳ vọng ngầm hiểu: Loại bỏ duplicate booking Chuẩn hóa quy trình liên tỉnh Tăng độ minh bạch định giá Giảm gian lận xác nhận chuyến đi SLA cam kết: Priority Response Resolution P1 – Urgent 1 giờ 8 giờ P2 – High 4 giờ 16 giờ P3 – Medium 8 giờ 24…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ LTC - Proposal/slide_007.png"
+  },
+  {
+    "slug": "bnk-maritime-erp-proposal-20250401",
+    "folder": "_BnK_ Maritime ERP - Proposal 20250401",
+    "title": "BnK  Maritime ERP - Proposal 20250401",
+    "client": "Chưa nêu tên cụ thể (khách hàng trong ngành hàng hải / shipping company)",
+    "type": "Proposal",
+    "domain": [
+      "logistics",
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "OutSystems Developer Cloud (ODC)"
+    ],
+    "problem": "Ngành hàng hải đang đối mặt với nhiều thách thức trong quản lý thuyền viên theo cách truyền thống: Phân tán thông tin: Hồ sơ thuyền viên, lịch sử hợp đồng, chứng chỉ, lịch tàu bị lưu rải rác ở nhiều hệ thống/bảng tính. Quản lý chứng chỉ thủ công: Chứng chỉ hàng hải (seafarer certificates) có hạn sử dụng, việc theo dõi bằng tay dễ gây sai sót, vi phạm quy định. Chu trình vận hành thủ công: Từ đăng…",
+    "solution": "BnK đề xuất xây dựng hệ thống gồm 3 thành phần chính: 1. Back-Office Web Portal (Slide 9) Nền tảng web nội bộ dành cho đội ngũ quản lý và điều hành: Home Page: Dashboard với các chỉ số vận hành quan trọng. Crew Management: Quản lý công ty vận tải, tàu, và danh sách thuyền viên tập trung. Operation Management: Toàn bộ vòng đời thuyền viên – từ đăng tuyển, phân công, onboarding, thay ca đến sign-off…",
+    "outcome": "Deck không liệt kê KPI định lượng rõ ràng, nhưng các kết quả kỳ vọng có thể suy ra từ nội dung: Hiệu quả vận hành: Tập trung toàn bộ thông tin thuyền viên vào một hệ thống duy nhất, loại bỏ dữ liệu phân tán Giảm thiểu lỗi thủ công trong quản lý hợp đồng, phân công tàu, gia hạn chứng chỉ Tuân thủ quy…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ Maritime ERP - Proposal 20250401/slide_007.png"
+  },
+  {
+    "slug": "bnk-nueip-offshore-delivery-center",
+    "folder": "_BnK_ NUEIP - Offshore Delivery Center",
+    "title": "BnK  NUEIP - Offshore Delivery Center",
+    "client": "NUEIP (Taiwan - HRM/HR SaaS platform)",
+    "type": "Partnership Proposal / ODC Setup",
+    "domain": [
+      "ai-ml"
+    ],
+    "tech": [
+      "nuHRM",
+      "nuBPM",
+      "OutSystems",
+      "AWS",
+      "GCP",
+      "Azure",
+      "Open API",
+      "Middleware",
+      "DevOps Stack"
+    ],
+    "problem": "NUEIP can mo rong nang luc phat trien san pham de thuc hien lo trinh san pham 2025 voi quy mo lon, bao gom: Tai cau truc nhieu module core (Scheduling, Attendance, BPM Reports). Mo rong sang thi truong Viet Nam (luat lao dong Viet Nam). Tich hop doi tac moi (COMMEET - quan ly chi phi & the doanh nghiep ao, EasyCard Corp. - ESG). Phat trien Open API middleware va SuperAdmin backend. Thach thuc cua…",
+    "solution": "BnK de xuat mo hinh Offshore Development Center (ODC) theo cac nguyen tac van hanh: 5 Nguyen tac ODC cot loi (Slides 10-15) Nguyen tac Noi dung Collaboration Ton trong van hoa; dong bo quy trinh; giai quyet xung dot co path leo thang ro rang; shared KPIs Transparency Bao cao tuan (Working Report + Timesheet); Steering Committee hang thang; dashboard truy cap cho ca 2 phia Consistency Tuan thu quy…",
+    "outcome": "KPI van hanh ODC (suy luan tu cac slide ve Principal & Way of Working) KPI Co che do luong Code review time Giam 25% (vi du PDCA slide 15) Sprint velocity Sprint Burndown / Product Burndown chart Quality gate pass rate DOR & DOD compliance rate Transparency Timesheet + Daily Report + Weekly Working…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ NUEIP - Offshore Delivery Center/slide_007.png"
+  },
+  {
+    "slug": "bnk-nueip-hdx-odc-proposal",
+    "folder": "_BnK_ NUEIP HDX ODC Proposal",
+    "title": "BnK  NUEIP HDX ODC Proposal",
+    "client": "NUEIP HDX (tên đầy đủ không được tiết lộ trong slide)",
+    "type": "ODC (Offshore Development Center) Service Proposal / Rate Card",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "OutSystems",
+      "UiPath",
+      "Odoo",
+      ".NET",
+      "Spring",
+      "Angular",
+      "React",
+      "Vue",
+      "Node.js",
+      "AWS",
+      "GCP",
+      "Azure",
+      "Kubernetes",
+      "Docker"
+    ],
+    "problem": "Tài liệu không mô tả bài toán cụ thể của NUEIP HDX mà định vị ODC như giải pháp tổng quát cho các tổ chức cần: Mở rộng năng lực phát triển phần mềm nhanh chóng mà không cần xây dựng đội ngũ nội bộ. Tiếp cận nguồn nhân lực kỹ thuật cao chất lượng với chi phí cạnh tranh từ Việt Nam. Đảm bảo tính liên tục và khả năng mở rộng (scalability) trong các dự án Digital Transformation. Kết hợp năng lực AI (D…",
+    "solution": "BnK đề xuất mô hình ODC thuần túy – một đội ngũ phát triển chuyên biệt tại Việt Nam, hoạt động như một Single Delivery Team được nhúng vào quy trình của khách hàng. Ngoài ODC, BnK còn cung cấp: Dịch vụ Mô tả Intelligent Automation & Digital Transformation Kết hợp AI (DU + NLP), RPA, BPM, Low-code để hỗ trợ DX Software Service (Fix-cost / ODC / AMS) Tư vấn, thiết kế, triển khai, QA, vận hành toàn v…",
+    "outcome": "Tài liệu không nêu KPIs định lượng cụ thể cho NUEIP HDX, tuy nhiên từ framework ODC Journey, các kết quả kỳ vọng bao gồm: Giai đoạn KPI / Kết quả kỳ vọng Discover ODC Vision Confirmed – roadmap được xác nhận Pilot Pilot Validated – tính khả thi được chứng minh Assessment Assessment Completed – gover…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ NUEIP HDX ODC Proposal/slide_007.png"
+  },
+  {
+    "slug": "bnk-oi-vps-assessment",
+    "folder": "_BnK_ Oi - VPS Assessment",
+    "title": "BnK  Oi - VPS Assessment",
+    "client": "Oi",
+    "type": "Technical Assessment / Proposal",
+    "domain": [
+      "logistics",
+      "retail",
+      "document-ai",
+      "ai-ml"
+    ],
+    "tech": [
+      "ReactJS",
+      "Flutter",
+      "NestJS",
+      "Redis",
+      "Kafka",
+      "PostgreSQL",
+      "Docker",
+      "Kubernetes",
+      "AWS",
+      "BnK IDP (AI)"
+    ],
+    "problem": "Oi đang vận hành dịch vụ VPS nhưng các quy trình hiện tại chưa được tự động hóa và tập trung hóa đầy đủ. Các vấn đề cụ thể bao gồm: Vấn đề Mô tả Xác minh tài liệu vận chuyển thủ công Cần kiểm tra chứng từ shipping từ vendor một cách rời rạc, dễ sai sót Thanh toán hóa đơn vendor chưa tự động Quy trình phối hợp và thực thi thanh toán invoice còn phụ thuộc thủ công Quản lý khiếu nại (claims) phân tán…",
+    "solution": "BnK đề xuất xây dựng một nền tảng VPS toàn diện với các năng lực cốt lõi: 1. Xác minh tài liệu vận chuyển — Tích hợp sFTP để nhận file, sử dụng BnK IDP (AI) để trích xuất và kiểm tra dữ liệu tự động. 2. Quản lý AP (Accounts Payable) — Tự động hóa nhận invoice, xác thực, phê duyệt, và thanh toán cho vendor. 3. Quản lý AR (Accounts Receivable) — Quản lý công nợ, theo dõi khoản phải thu, và thu hồi c…",
+    "outcome": "Deck không liệt kê KPI định lượng cụ thể, nhưng các kết quả kỳ vọng có thể suy ra từ mục tiêu hệ thống: Mục tiêu Kết quả kỳ vọng Tự động hóa xác minh chứng từ Giảm thời gian và sai sót trong kiểm tra tài liệu vận chuyển Tự động hóa AP/AR Rút ngắn chu kỳ thanh toán (payment cycle), giảm xử lý thủ côn…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ Oi - VPS Assessment/slide_007.png"
+  },
+  {
+    "slug": "bnk-precious-metals-trading-proposal-v4",
+    "folder": "_BnK_ Precious Metals Trading - Proposal - v4",
+    "title": "BnK  Precious Metals Trading - Proposal - v4",
+    "client": "ValueMax (Singapore)",
+    "type": "IT Solution Proposal",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "React Native",
+      ".NET Core",
+      "AWS EKS",
+      "Redis",
+      "MySQL",
+      "WebSocket"
+    ],
+    "problem": "ValueMax cần số hóa và mở rộng dịch vụ giao dịch kim loại quý (vốn chỉ có tại cửa hàng) ra kênh mobile để phục vụ khách hàng bán lẻ. Các vấn đề cốt lõi cần giải quyết: Vấn đề Mô tả Thiếu kênh digital Khách hàng chưa có ứng dụng mobile để mua/bán kim loại quý Quản lý giá thủ công Đội Gold Team phải điều chỉnh giá mua/bán theo thời gian thực Kiểm soát giờ giao dịch Cần giới hạn giao dịch theo khung…",
+    "solution": "BnK đề xuất xây dựng 2 ứng dụng riêng biệt phục vụ 2 nhóm người dùng khác nhau: 1. Mobile Application - Dành cho khách hàng bán lẻ (iOS & Android) Tích hợp vào CX App hiện có qua icon/embedded link Cho phép mua/bán spot và lệnh có lịch (scheduled orders) Xem portfolio, lịch sử, download receipt/statement Nhận thông báo push notification, in-app, email 2. Admin Web Portal - Dành cho nội bộ ValueMax…",
+    "outcome": "Proposal không liệt kê KPI dạng số cụ thể (conversion rate, DAU, revenue target). Tuy nhiên, các outcomes có thể suy luận từ objectives: Mục tiêu Outcome kỳ vọng Mở rộng kênh bán lẻ Khách hàng ValueMax có thể giao dịch vàng/bạc/bạch kim qua mobile Tự động hóa định giá Giảm thiểu sai sót thủ công, gi…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ Precious Metals Trading - Proposal - v4/slide_007.png"
+  },
+  {
+    "slug": "bnk-proposal-hlas",
+    "folder": "_BnK_ Proposal - HLAS",
+    "title": "BnK  Proposal - HLAS",
+    "client": "",
+    "type": "",
+    "domain": [
+      "retail"
+    ],
+    "tech": [],
+    "problem": "",
+    "solution": "",
+    "outcome": "",
+    "image_ref": null
+  },
+  {
+    "slug": "bnk-pt-constrans-asia-solution-proposal-pilot",
+    "folder": "_BnK_ PT Constrans Asia -Solution Proposal_Pilot",
+    "title": "BnK  PT Constrans Asia -Solution Proposal Pilot",
+    "client": "PT Constrans Asia (Indonesia)",
+    "type": "Solution Proposal (Pilot)",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "AI",
+      "VLM (Vision-Language Model)",
+      "Cloud (GCP)",
+      "GPU Inference",
+      "RTSP",
+      "ONVIF CCTV",
+      "Web Dashboard"
+    ],
+    "problem": "PT Constrans Asia đang gặp khó khăn trong việc giám sát tuân thủ an toàn lao động trên đội tàu: Kiểm tra thủ công tốn thời gian, dễ bỏ sót vi phạm Hệ thống CCTV hiện có không tự động phát hiện sự cố Khó theo dõi xu hướng và tần suất vi phạm theo thời gian Thiếu bằng chứng số hóa cho báo cáo giám sát và kiểm toán Nhân viên không nhất quán trong việc sử dụng trang bị bảo hộ cá nhân (PPE) gồm: mũ bảo…",
+    "solution": "BnK đề xuất xây dựng AI CCTV Monitoring System – nền tảng AI cloud-based phân tích video từ hệ thống CCTV hiện có, tự động phát hiện vi phạm và tạo báo cáo. Phương thức vận hành (Workflow – Post-Event) CCTV ghi hình → Người dùng tải video từ storage → Upload lên AI Platform → AI phân tích offline → Tạo report + dashboard + danh sách vi phạm Input: 2 video/ngày, trung bình 12 giờ/video (hoặc 1-2 vi…",
+    "outcome": "Slide không liệt kê KPI định lượng cụ thể, nhưng các kết quả kỳ vọng được đề cập: Kết quả kỳ vọng Chi tiết Tăng hiệu quả giám sát Tự động hóa 100% quá trình phát hiện vi phạm PPE Tiết kiệm thời gian Giảm thời gian kiểm tra thủ công Giảm rủi ro bỏ sót vi phạm Hệ thống phát hiện liên tục, không phụ th…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ PT Constrans Asia -Solution Proposal_Pilot/slide_007.png"
+  },
+  {
+    "slug": "bnk-surbana-tech-hdx-odc-proposal",
+    "folder": "_BnK_ Surbana Tech - HDX ODC Proposal",
+    "title": "BnK  Surbana Tech - HDX ODC Proposal",
+    "client": "Surbana Tech (HDX project)",
+    "type": "Offshore Development Center (ODC) Service Proposal",
+    "domain": [
+      "retail"
+    ],
+    "tech": [],
+    "problem": "Surbana Tech can mo rong doi ngu phat trien nhanh chong (HDX project) ma khong muon tang nhan luc noi bo. Can co doi skilled developers OutSystems co the onboard som (June-July 2024). Client co yeu cau cu the: 2 Tech Leads, 8 Developers, 1-2 BA/QAs. Yeu cau theo tieu chuan phan mem quoc te (Agile/Scrum, security scanning, VPN).",
+    "solution": "BnK de xuat mo hinh Offshore Development Center (ODC): 1. Extended Delivery Team: Doi ngu BnK hoat dong nhu phan phong ban mo rong cua Surbana Tech. 2. 2 Scrum Teams hoat dong song song, moi team co Tech Lead, Developers va BA/QA. 3. Management Layer: Delivery Manager (khong tinh phi), Project Manager, Solution Architect. 4. Service Offerings: HDX Delivery: Agile development theo Fixed Cost hoac O…",
+    "outcome": "No specific KPIs defined in the proposal. Based on referenced ODC case studies: Delivery to Japanese software high-standards with VPN + Monthly Security Scanning Quality Management System for Factory (Japan) Distribution Optimization System (Japan) Investment Product Ecosystem & Examination Manageme…",
+    "image_ref": null
+  },
+  {
+    "slug": "bnk-surbana-tech-hdx-odc-proposal-updated",
+    "folder": "_BnK_ Surbana Tech - HDX ODC Proposal - Updated",
+    "title": "BnK  Surbana Tech - HDX ODC Proposal - Updated",
+    "client": "",
+    "type": "",
+    "domain": [
+      "retail"
+    ],
+    "tech": [],
+    "problem": "",
+    "solution": "",
+    "outcome": "",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ Surbana Tech - HDX ODC Proposal - Updated/slide_007.png"
+  },
+  {
+    "slug": "bnk-surbana-tech-hdx-odc-proposal-pdf",
+    "folder": "_BnK_ Surbana Tech - HDX ODC Proposal_PDF",
+    "title": "BnK  Surbana Tech - HDX ODC Proposal PDF",
+    "client": "",
+    "type": "",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [],
+    "problem": "Surbana Tech can mo rong nang luc phat trien phan mem (HDX - High-Performance Digital Transformation) nhung doi mat voi cac thach thuc: 1. Thieu nguon luc chuyen mon OutSystems co kinh nghiem du de thuc hien cac du an phat trien nhanh, chat luong cao. 2. Chi phi thue nhan su tai cho cao: Viec tuyen dung va duy tri doi ngu tai Singapore ton kem va kho khan. 3. Nhu cau mo rong linh hoat: Can co mot…",
+    "solution": "BnK Solution de xuat mo hinh ODC (Offshore Development Center) voi 2 tang dich vu chinh: 1. HDX Delivery - Offshore Development Center Cung cap doi ngu Agile chuyen nghiep lam viec theo mo hinh Extended Team 2 Scrum Teams hoat dong doc lap, co the chay song song nhieu du an Bao gom day du cac vai tro: Tech Lead, Developer, BA/QA, Project Manager 2. HDX Success - Architecture & Consulting Tu van ki…",
+    "outcome": "Dua tren tieu chuan BnK Solution da ap dung cho cac du an ODC truoc do: KPI Mo ta Muc tieu Toc do phat trien Delivery du an nhanh nho OutSystems low-code 3-10x nhanh hon phat trien truyen thong Chat luong code Tuan thu AI Mentor + BonCode standards 0 critical defects ra Production On dinh he thong U…",
+    "image_ref": null
+  },
+  {
+    "slug": "bnk-template-proposal",
+    "folder": "_BnK_ Template - Proposal",
+    "title": "BnK  Template - Proposal",
+    "client": "Generic / {PROPOSAL_TEMPLATE} — chưa điền tên client cụ thể",
+    "type": "Proposal Template (reusable)",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "ReactJS",
+      "Flutter",
+      "NestJS",
+      "Redis",
+      "Kafka",
+      "PostgreSQL",
+      "Docker",
+      "Kubernetes",
+      "AWS (full stack)"
+    ],
+    "problem": "Slide mẫu (slide 7) sử dụng ví dụ về thuốc lá giả và thuốc lá không kiểm soát tại Malaysia như một bối cảnh minh họa: Sản phẩm thuốc lá giả được sản xuất và phân phối không theo tiêu chuẩn an toàn, gây rủi ro nghiêm trọng cho sức khỏe cộng đồng (ung thư, bệnh tim mạch). Các Key Issue / Objective được để trống dưới dạng \"Point 1, Point 2, Point 3\" — cần Presales điền vào. > Lưu ý: Đây là nội dung m…",
+    "solution": "Slide 12 trình bày giải pháp cloud-based tổng quát mang tên NEW_APPLICATION v2.0 (placeholder), với hai nhóm yêu cầu: Functional Requirements: Data Storage: Lưu trữ có khả năng mở rộng cho dữ liệu người dùng (nhật ký hành trình, ảnh, báo cáo môi trường). User Access Control: Phân quyền người dùng free-tier và paid-tier. Journey Logging & Reporting: Ghi nhật ký hành trình và báo cáo vấn đề môi trườ…",
+    "outcome": "Deck template này không định nghĩa KPI cụ thể — phần này cần Presales bổ sung theo từng dự án. Tuy nhiên, từ Success Story mẫu (Smart Agriculture, Slide 9), các chỉ số tham khảo bao gồm: 30% efficiency improvement và significant cost savings (dẫn chứng từ case study nội bộ). Reduced environmental im…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ Template - Proposal/slide_007.png"
+  },
+  {
+    "slug": "bnk-trailwatch-revamp-proposal",
+    "folder": "_BnK_ TrailWatch Revamp - Proposal",
+    "title": "BnK  TrailWatch Revamp - Proposal",
+    "client": "",
+    "type": "",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "ReactJS",
+      "Flutter",
+      "NestJS (Node.js)",
+      "Redis",
+      "PostgreSQL",
+      "Prometheus + Grafana",
+      "Docker",
+      "Kubernetes (K8S)",
+      "GCP (Google Cloud Platform)",
+      "SonarQube",
+      "Apache JMeter",
+      "OpenStreetMap + Google Maps Platform",
+      "GCP Cloud Storage",
+      "Firebase Cloud Messaging (FCM)",
+      "Strapi"
+    ],
+    "problem": "Khach Hang (Client) TrailWatch: Nen tang ra doi nam 2014, muc tieu thuc day vui choi & bao ton moi truong tu nhien tai Hong Kong. Quy mo: 196,600+ nguoi dung; 10.8+ trieu km du lieu hanh trinh. Diem Dau / Pain Points 1. Khoi luong du lieu lon: He thong phai xu ly du lieu khong lo tu hanh trinh, anh, bao cao moi truong. 2. Ha tang cu, loi thoi: Co so ha tang khong con dap ung nhu cau tang truong, g…",
+    "solution": "BnK Solution de xuat TrailWatch v2.0 voi cac tru cot chinh: 1. Infrastructure Upgrade Thay the luu tru cu bang he thong co kha nang mo rong. Di chuyen sang GCP (Google Cloud Platform). Trien khai Docker + Kubernetes. 2. Two-Tier Service Model Tier Features Free Tier Tinh nang co ban, truy cap lich su gioi han, ban do don gian Paid Tier Luu tru anh, ban do nuoc ngoai, tinh nang nang cao, lich su da…",
+    "outcome": "KPI Target System Uptime 99.9% Performance Fast response under high traffic and data load Security Data encryption, secure user data handling Scalability Infrastructure scales with growing user base Compliance Data protection and environmental reporting standards Free CR Allowance 60 MDs during UAT…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ TrailWatch Revamp - Proposal/slide_007.png"
+  },
+  {
+    "slug": "bnk-valuemax-success-auto-modernization-proposal-updated",
+    "folder": "_BnK_ ValueMax - Success Auto Modernization Proposal_Updated",
+    "title": "BnK  ValueMax - Success Auto Modernization Proposal Updated",
+    "client": "ValueMax (Singapore)",
+    "type": "Consulting / Assessment Proposal",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      ".NET Core",
+      "Microservices",
+      "Cloud-Native (AWS)",
+      "MySQL",
+      "BPMN 2.0",
+      "Draw.io",
+      "OutSystems (referenced in case study)"
+    ],
+    "problem": "Phia khach hang - ValueMax ValueMax dang su dung mot ung dung Desktop (WinForm / on-premises) de quan ly nghiep vu \"Success Auto\". He thong nay co cac van de: Van de Mo ta Legacy System Desktop app cu, trien khai on-premises, khong con phu hop voi nhu cau hien tai Technological Gaps Thieu documentation, logic nghiep vu phuc tap khong duoc ghi lai, kho scale va tich hop Competitive Pressure Thi tru…",
+    "solution": "BnK Solution de xuat mot chuong trinh danh gia 5 giai doan (phase) truoc khi bat dau xay dung: Giai doan Ten Mo ta Hinh thuc Dau ra 0 Planning & Engagement Hop kickoff, xac dinh scope, align stakeholders Offshore Defined Assessment Scope 1 Onsite Discovery Cham site, phong van, thu thap thong tin he thong, phan tich ky thuat Onsite Stakeholder Insights Captured 2 System Functionality Tao tai lieu…",
+    "outcome": "Proposal nay la giai doan danh gia, do vay KPIs tap trung vao chat luong cua tai lieu dau ra: KPI Mo ta Baseline System Confirmed AS-IS system duoc tai lieu hoa day du Gap Analysis hoan chinh Xac dinh duoc day du cac khoang cach: feature, integration, security, performance, data governance TO-BE Arc…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ ValueMax - Success Auto Modernization Proposal_Updated/slide_007.png"
+  },
+  {
+    "slug": "bnk-zoustec-application-proposal",
+    "folder": "_BnK_ Zoustec Application - Proposal",
+    "title": "BnK  Zoustec Application - Proposal",
+    "client": "Zoustec",
+    "type": "Proposal (Đề xuất phát triển phần mềm)",
+    "domain": [
+      "logistics",
+      "retail",
+      "data-platform",
+      "ai-ml"
+    ],
+    "tech": [
+      "React Native",
+      "Realm",
+      "Firebase",
+      "SignalR",
+      "Sentry",
+      "SonarQube",
+      "Google Maps",
+      "Google Analytics (optional)"
+    ],
+    "problem": "Zoustec đang vận hành hệ thống sản xuất và logistics cần giải quyết các thách thức sau: Vấn đề Mô tả Thiếu giám sát thời gian thực Không có công cụ theo dõi trực tiếp trạng thái máy móc, dây chuyền sản xuất và hoạt động logistics Quản lý thủ công kém hiệu quả Theo dõi lệnh sản xuất (work order), tỷ lệ tuân thủ (compliance rate) và tiến độ công việc chưa được tự động hóa Phát hiện lỗi chậm Không có…",
+    "solution": "BnK đề xuất xây dựng một ứng dụng di động (Mobile App) tích hợp AI, kết nối với hệ thống backend qua VPN + SignalR, cung cấp các năng lực sau: Ba nhóm năng lực cốt lõi Nhóm Chức năng Live Monitoring & AI Detection Kết nối SignalR server qua VPN để theo dõi thiết bị theo thời gian thực; AI nhận diện hình ảnh phát hiện bất thường; Cảnh báo qua push notification, âm thanh và rung Work Order Managemen…",
+    "outcome": "Proposal không đề cập KPI định lượng cụ thể, nhưng các mục tiêu giá trị được nêu rõ: Mục tiêu Kết quả kỳ vọng Real-time System Monitoring Theo dõi trực tiếp trạng thái thiết bị, dây chuyền sản xuất và logistics Enhanced Operational Efficiency Tối ưu workflow với thu thập dữ liệu tự động và AI analyt…",
+    "image_ref": "DATA/SLIDE_IMAGES/_BnK_ Zoustec Application - Proposal/slide_007.png"
+  },
+  {
+    "slug": "bnk-cag-hive-highlevel-solution-v1-1",
+    "folder": "_Bnk_CAG_HIVE_Highlevel Solution _v1_1",
+    "title": "Bnk CAG HIVE Highlevel Solution  v1 1",
+    "client": "",
+    "type": "",
+    "domain": [
+      "ai-ml"
+    ],
+    "tech": [],
+    "problem": "Boi canh / Context: CAG dang van hanh he thong HIVE tren nen tang OutSystems 11 (O11) - nen tang cu Can migration sang OutSystems Developer Cloud (ODC) - nen tang hien dai hon He thong hien tai co kien truc mixed modules: UI, logic, va data access pha tron; high coupling giua cac service modules Session-centric flows: su dung server session state cho navigation va authorization Phu thuoc vao Forge…",
+    "solution": "BnK Solution de xuat xay dung/migration he thong HIVE len OutSystems Developer Cloud (ODC) voi cac thanh phan sau: Kien truc ung dung (Application Architecture) - 4 tang: 1. Orchestration Modules (Tang dieu phoi) Operations Portal: Giam sat va dieu khien hoat dong theo thoi gian thuc Admin Portal: Cau hinh, quan tri, va quan tri tri thuc Management Dashboards: Insights, KPIs, xu huong, va bao cao…",
+    "outcome": "Khong co KPI dinh luong cu the trong tai lieu. Ket qua mong doi (dinh tinh): He thong HIVE chay on dinh tren nen tang ODC (cloud-native) Kien truc sach hon: tach biet concerns, modular, domain-driven Giam coupling giua cac module Bao mat tot hon: token-based auth, standardized logging/metrics/tracin…",
+    "image_ref": "DATA/SLIDE_IMAGES/_Bnk_CAG_HIVE_Highlevel Solution _v1_1/slide_007.png"
+  },
+  {
+    "slug": "en-bnk-ikm-2",
+    "folder": "_EN_ BnK-IKM 2",
+    "title": "EN  BnK-IKM 2",
+    "client": "",
+    "type": "",
+    "domain": [
+      "ai-ml"
+    ],
+    "tech": [],
+    "problem": "Van de chinh Van de Mo ta Kho tim kiem tai lieu To chuc co DMS/ECM nhung viec tim kiem, ket noi thong tin tu hang trieu tai lieu van la thach thuc lon Xu ly du lieu phuc tap Khoi luong du lieu giao dich lon, nhan vien thieu ky nang xu ly du lieu, kho trich xuat thong tin Tai lieu phap ly dong Tai lieu quy dinh nhieu, thuong xuyen cap nhat, nhan vien kho tim kiem va phan tich Dich vu khach hang thu…",
+    "solution": "BnK IKM duoc dinh nghia la mot lop AI bo sung (supplementary intelligent layer / \"AI brain\") - khong thay the DMS/ECM ma giup khai thac gia tri an ben trong. Tinh nang chinh Tinh nang Mo ta Intelligent Chatbot Giao dien hoi dap ngon ngu tu nhien (NLP), hieu cau hoi phuc tap Smart Search Tim kiem AI tren kho tai lieu dua tren cau hoi tu nhien Data Aggregation & Visualization Tong hop thong tin, ve…",
+    "outcome": "KPI / Ket qua Chi tiet Toc do truy cap tri thuc \"Truy cap tri thuc trong vai phut thay vi mat nhieu ngay\" Giam tai cho nhan vien Tu dong hoa ho tro khach hang va tra loi cau hoi lap lai Bao mat thong tin Chi nguoi co quyen moi truy cap duoc thong tin quan trong Chinh xac va co trich dan Moi cau tra…",
+    "image_ref": null
+  },
+  {
+    "slug": "jnp-e-invoice-system-modernize-proposal-v3-0",
+    "folder": "_JNP_ - E-invoice System Modernize - Proposal - V3_0",
+    "title": "JNP  - E-invoice System Modernize - Proposal - V3 0",
+    "client": "",
+    "type": "",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [],
+    "problem": "J&P Consulting can doi mot giai phap hoa don dien tu hien dai de: Tuan thu yeu cau bat buoc cua Singapore ve InvoiceNow / Peppol (IMDA mandate). Thay the hoac nang cap quy trinh trao doi tai lieu B2B thu cong / lac hau. Ket noi cac he thong ERP hien co (Business Central, SAP, Oracle) voi mang luoi Peppol. Quan ly nhieu UEN (Unique Entity Number) voi phan quyen theo vai tro. Dam bao bao mat, audit…",
+    "solution": "Cac tinh nang chinh / Key Features # Feature Description 1 AS4 Messaging Gateway Secure Peppol-compliant messaging using Oxalis 2 UBL 2.1 Validation E-document validation with schema checks and error mapping 3 SMP & SML Integration Participant endpoint lookup and metadata resolution 4 ERP Integration APIs Accept JSON/XML from SAP, Oracle, Business Central 5 Format Transformer Convert ERP data into…",
+    "outcome": "Proposal khong neu ro KPI cu the ve ROI, nhung huong den: 100% compliance voi OpenPeppol va IMDA Singapore requirements. Dat chung chi IMDA de tro thanh Peppol Access Point chinh thuc. Ket noi thanh cong ERP hien co (Business Central, SAP, Oracle) voi Peppol network. Giam thieu thu cong trong quy tr…",
+    "image_ref": "DATA/SLIDE_IMAGES/_JNP_ - E-invoice System Modernize - Proposal - V3_0/slide_007.png"
+  },
+  {
+    "slug": "mc-x-bnk-landscape-tree-app-revamp-proposal",
+    "folder": "_MC x BnK_ Landscape Tree App Revamp - Proposal",
+    "title": "MC x BnK  Landscape Tree App Revamp - Proposal",
+    "client": "",
+    "type": "",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [],
+    "problem": "Slide deck khong neu ro chi tiet van de hien tai cua ung dung, tuy nhien ten project \"Revamp\" cho thay: Ung dung Landscape Tree hien tai can duoc xay dung lai (revamp), khong chi update nho. Co the gap van de ve: giao dien cu (UI/UX), kien truc monolithic, kho bao tri, thieu scalability. Client (Master Concept) co nhu cau nang cap toan bo he thong len cong nghe hien dai hon. English: The deck does…",
+    "solution": "Kien truc tong the (Omnichannel Experience Technical Stack) BnK de xuat kien truc Microservices voi cac thanh phan sau: Layer Technology Backend Framework Laravel (PHP) Database MySQL Containerization Docker Orchestration Kubernetes Cloud Platform Google Cloud Monitoring Prometheus + Grafana Code Quality SonarQube Mapping Google Maps File Storage Google Cloud Storage Notifications SMTP (Email) Pay…",
+    "outcome": "Slide deck khong neu ro KPI dinh luong. Tuy nhien, dua tren scope va methodology, cac thanh qua ky vong bao gom: He thong moi duoc xay dung tren kien truc microservices hien dai, scalable UI/UX duoc thiet ke lai theo yeu cau client Code chat luong cao (kiem soat boi SonarQube) He thong co monitoring…",
+    "image_ref": "DATA/SLIDE_IMAGES/_MC x BnK_ Landscape Tree App Revamp - Proposal/slide_007.png"
+  },
+  {
+    "slug": "oi-commission-calculation-system-proposal-v2-0",
+    "folder": "_Oi_ - Commission Calculation System - Proposal -V2_0",
+    "title": "Oi  - Commission Calculation System - Proposal -V2 0",
+    "client": "Otto International (OI)",
+    "type": "Proposal",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      ".NET",
+      "Web API",
+      "React (CCS Web UI)",
+      "Azure Entra SSO",
+      "CBX",
+      "Navision",
+      "Qlik",
+      "VPN"
+    ],
+    "problem": "Otto International đang gặp phải các vấn đề trong quản lý hoa hồng bán hàng: Quy trình thủ công, dễ sai sót: Tính toán và xác minh hoa hồng được thực hiện thủ công, tốn nhiều thời gian và dễ phát sinh lỗi. Thiếu tính nhất quán: Không có chuẩn thống nhất trong áp dụng các quy tắc hoa hồng (commission rules) giữa các văn phòng và loại đại lý. Khó kiểm toán: Thiếu audit trail và lịch sử điều chỉnh rõ…",
+    "solution": "BnK Solution đề xuất xây dựng hệ thống CCS với 9 nhóm tính năng chính: 1. Commission Rule Maintenance – Tạo và quản lý quy tắc hoa hồng linh hoạt theo vendor/customer/factory; hỗ trợ kiểm tra xung đột (conflict check), phân cấp ưu tiên, và audit trail đầy đủ. 2. Shipment Extraction – Trích xuất dữ liệu shipment từ CBX (thủ công hoặc tự động); lưu trữ vào working buffer, hỗ trợ refresh và phát hiện…",
+    "outcome": "Dựa trên Goals & Value Proposition từ Executive Summary (Slide 5–6): KPI / Kết quả kỳ vọng Chi tiết Tự động hóa quy trình 100% vòng đời commission từ extraction đến DN/CN generation được tự động hóa Giảm lỗi thủ công Loại bỏ sai sót trong tính toán và xác minh hoa hồng Traceability Toàn bộ bước xử l…",
+    "image_ref": "DATA/SLIDE_IMAGES/_Oi_ - Commission Calculation System - Proposal -V2_0/slide_007.png"
+  },
+  {
+    "slug": "oi-einvoice-interface-system-proposal-v1-1",
+    "folder": "_Oi_ - eInvoice Interface System - Proposal -V1_1",
+    "title": "Oi  - eInvoice Interface System - Proposal -V1 1",
+    "client": "Otto International (_Oi_) / Otto Group",
+    "type": "Proposal (IT Service / System Integration)",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "Navision",
+      "allegroB",
+      "SAP",
+      "ESB",
+      "XML",
+      "Java",
+      "config-driven pipeline"
+    ],
+    "problem": "Otto International đang vận hành hai hệ thống nguồn dữ liệu hóa đơn vận chuyển là Navision (ERP) và allegroB. Vấn đề cốt lõi: Quy trình xuất và truyền hóa đơn sang hệ thống SAP/ESB của Otto Group đang diễn ra thủ công hoặc chưa được chuẩn hóa, dẫn đến nguy cơ sai sót dữ liệu tài chính. Không có cơ chế tự động kiểm tra tính hợp lệ của dữ liệu (Shipment ID, LKZ, barcode, date consistency, amount mis…",
+    "solution": "BnK Solution đề xuất xây dựng eInvoice Interface — một pipeline tích hợp dữ liệu tự động theo mô hình Extract → Validate → Transform → Transmit, cụ thể: Luồng dữ liệu chính (Data Flow): Navision ──┐ ├──► Extract Invoices ──► Data Validation ──► C3 Data Transformation (XML) ──► Data Transmission ──► ESB ──► SAP allegroB ──┘ ▲ ▲ ▲ ▲ │ │ │ │ Job Scheduling Customer Customization Logging & Monitoring…",
+    "outcome": "Mặc dù không có slide KPI định lượng riêng biệt, các kết quả kỳ vọng được ngầm định qua Value Proposition: Chiều Kết quả kỳ vọng Efficiency Loại bỏ hoàn toàn thao tác thủ công trong quy trình transfer hóa đơn Accuracy Dữ liệu tài chính nhất quán, đã được validate trước khi truyền sang SAP/ESB Compli…",
+    "image_ref": "DATA/SLIDE_IMAGES/_Oi_ - eInvoice Interface System - Proposal -V1_1/slide_007.png"
+  },
+  {
+    "slug": "project-proposal-aila-ai-powered-legal-assistant-v0-4",
+    "folder": "_Project Proposal_ Aila_AI-Powered Legal Assistant_ _v0_4_",
+    "title": "Project Proposal  Aila AI-Powered Legal Assistant   v0 4",
+    "client": "AILA Corporation (thị trường pháp lý Đài Loan)",
+    "type": "Solution Proposal (MVP)",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "Java 21",
+      "Spring Boot",
+      "React 18",
+      "OpenAI ChatGPT",
+      "LINE Messaging API",
+      "AWS EKS",
+      "PostgreSQL"
+    ],
+    "problem": "Vấn đề Hệ quả Khối lượng lớn câu hỏi pháp lý cơ bản lặp lại từ khách hàng Tăng tải cho luật sư, trễ phản hồi Lên lịch hẹn tư vấn thủ công qua điện thoại / email Mất thời gian, trải nghiệm khách hàng kém Không có dịch vụ ngoài giờ làm việc Mất cơ hội chuyển đổi khách hàng tiềm năng Phân loại vụ việc (triage) hoàn toàn bằng người Chi phí vận hành cao Luật sư thiếu thông tin tóm tắt trước buổi tư vấn…",
+    "solution": "Aila hoạt động như một middleware chatbot trên LINE, kết nối khách hàng với luật sư thông qua 4 luồng chính: 1. Q&A pháp lý trực tiếp: Khách gửi câu hỏi qua LINE → Aila chuyển tiếp tới ChatGPT → trả lời có disclaimer pháp lý, hỗ trợ hội thoại nhiều lượt (multi-turn). 2. Đặt lịch tư vấn: Aila phát hiện ý định đặt lịch → triage & chọn luật sư phù hợp → kiểm tra Google Calendar → xác nhận slot → tạo…",
+    "outcome": "Tài liệu không liệt kê KPI định lượng cụ thể, nhưng các outcome kỳ vọng được nêu rõ: Mục tiêu Chỉ số / Kỳ vọng Tốc độ phản hồi Câu hỏi thông thường: < 5 giây; Câu hỏi phức tạp (calendar check): < 10 giây Uptime >= 99% monthly uptime Concurrency Hỗ trợ vài trăm CCU (Concurrent Users) không giật lag C…",
+    "image_ref": "DATA/SLIDE_IMAGES/_Project Proposal_ Aila_AI-Powered Legal Assistant_ _v0_4_/slide_007.png"
+  },
+  {
+    "slug": "ai-data-analytics-mvp-proposal",
+    "folder": "AI Data Analytics MVP Proposal",
+    "title": "AI Data Analytics MVP Proposal",
+    "client": "",
+    "type": "",
+    "domain": [
+      "banking",
+      "retail",
+      "data-platform",
+      "ai-ml"
+    ],
+    "tech": [
+      "OpenAI GPT Model (NLP + SQL generation)",
+      "FastAPI (Python)",
+      "PostgreSQL",
+      "Streamlit hoac Power BI",
+      "Docker containers (on-premise)",
+      "Cong cu",
+      "Tool",
+      "Apache Airflow",
+      "Prefect",
+      "GitHub Actions hoac local Jenkins",
+      "OpenAI GPT Enterprise (cloud",
+      "with NDA)"
+    ],
+    "problem": "Pain Points (Slide 3) # Van de / Challenge Mo ta / Description 1 Static & Manual Reporting Moi KPI moi yeu cau IT can thiep, gay tat nghen va cham tre truy cap thong tin 2 Slow Decision Cycles Bao cao mat nhieu ngay de chuan bi, khong phan ung kip thi truong 3 Limited Ad-Hoc Analysis Nguoi dung phi ky thuat khong the khai pha du lieu linh hoat 4 Siloed Data Sources Du lieu POS, chi phi, bien do bi…",
+    "solution": "Vision (Slide 4) Chuyen doi tu bao cao tinh (static dashboards) sang phan tich AI dong (dynamic AI-driven insights) - tu query-based sang conversation-based. > \"Ask your data like you talk to a colleague.\" MVP Use Case (Slide 5) Xay dung Conversational AI Assistant cho phep nguoi dung truy van du lieu POS bang ngon ngu tu nhien. Sample Queries: \"Show total fuel sales trend by site last month\" \"Com…",
+    "outcome": "Business Benefits (Slide 16) KPI / Benefit Description Faster Time-to-Insight Rut ngan thoi gian analytics va bao cao, truy cap insights gan real-time Reduced IT Dependency Doi business tu quan ly du lieu doc lap, giam phu thuoc IT Improved Decision Speed Ra quyet dinh nhanh hon nho AI-assisted anal…",
+    "image_ref": "DATA/SLIDE_IMAGES/AI Data Analytics MVP Proposal/slide_007.png"
+  },
+  {
+    "slug": "bnk-solution-ggf-vat-stream-2-proposal-20230912-1",
+    "folder": "BnK Solution - GGF VAT Stream 2 Proposal_20230912 1",
+    "title": "BnK Solution - GGF VAT Stream 2 Proposal 20230912 1",
+    "client": "Great Giant Foods (GGF)",
+    "type": "Technical Proposal",
+    "domain": [
+      "agriculture",
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "AWS",
+      "NestJS",
+      "ReactJS",
+      "Flutter",
+      "MySQL",
+      "MongoDB",
+      "MQTT",
+      "Docker",
+      "Nginx"
+    ],
+    "problem": "Slide 3 liệt kê 4 vấn đề chính mà GGF đang gặp phải với hệ thống hiện tại: # Vấn đề Mô tả 1 Planning Work / Schedule Module Thiếu tích hợp liền mạch với Fertilizer Management System (FMS) để lên kế hoạch phun thuốc động theo lịch. Quy trình thủ công dẫn đến chậm trễ và lỗi phối hợp nội bộ. 2 Field Spraying Execution Máy phun (boom sprayer) đang dùng ứng dụng hiện có nhưng thiếu khả năng giám sát I…",
+    "solution": "BnK Solution đề xuất xây dựng toàn bộ Stream 2 (Server-side) bao gồm: 1. Lập trình lại MCU (Microcontroller Unit) – Áp dụng Linux OS lên MCU để dễ quản lý, SSH để debug, đọc dữ liệu song song từ 3-4 cảm biến qua UART cùng lúc. 2. Chuyển từ HTTP sang MQTT – Dùng Message Broker (MQTT/Mosquitto) thay HTTP để đảm bảo truyền dữ liệu không mất gói từ MCU đến 2 tablet của vận hành viên/tài xế. 3. Tùy chọ…",
+    "outcome": "Dự án không liệt kê KPI dạng số liệu cụ thể, nhưng các kết quả kỳ vọng có thể suy ra từ bài toán và giải pháp: Mục tiêu Chỉ số kỳ vọng Không mất dữ liệu cảm biến MQTT đảm bảo delivery 100% data points từ MCU đến Tablet Giám sát thời gian thực Dashboard hiển thị trạng thái máy phun real-time Tuân thủ…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK Solution - GGF VAT Stream 2 Proposal_20230912 1/slide_007.png"
+  },
+  {
+    "slug": "bnk-x-seoul-semi-ai-driven-sentiment-system",
+    "folder": "BNK X Seoul semi - AI driven sentiment system",
+    "title": "BNK X Seoul semi - AI driven sentiment system",
+    "client": "Seoul Semi (Korea)",
+    "type": "Solution Proposal (B2B IT Services)",
+    "domain": [
+      "data-platform",
+      "ai-ml"
+    ],
+    "tech": [
+      "Azure OpenAI (GPT-4.1 Mini)",
+      "Microsoft Power Automate",
+      "Power BI",
+      "SQL Database",
+      "On-Prem LLM (Phase 3-4)"
+    ],
+    "problem": "Seoul Semi đang đối mặt với các thách thức trong quản lý chất lượng giao tiếp qua email: Vấn đề Mô tả Thiếu kiểm soát rủi ro Không có cơ chế phát hiện sớm các email có nội dung tiêu cực từ khách hàng Khó theo dõi Không thể tracking hiệu quả giao tiếp của từng nhân viên / phòng ban Quá tải công việc Việc đọc và phân loại email thủ công tiêu tốn nhiều thời gian Trải nghiệm khách hàng Thiếu dữ liệu đ…",
+    "solution": "Hệ thống tự động phân tích cảm xúc email theo 3 trụ cột chính: Trụ cột Công cụ Vai trò Power Automate (Low-code platform) Microsoft Power Automate Tự động hóa luồng xử lý, thu thập và tiền xử lý email từ Exchange Online mà không gián đoạn workflow hiện tại AI Engine Azure OpenAI GPT-4.1 Mini Kết hợp AI với business rules (rule-based) để phân loại cảm xúc chính xác, không bỏ sót rủi ro Power BI Mic…",
+    "outcome": "KPI / Kết quả kỳ vọng Mô tả Fast Deployment Triển khai nhanh nhờ Low-code (Power Automate) + hệ sinh thái Microsoft sẵn có KPI Dashboard per Employee/Department Mỗi nhân viên và phòng ban có dashboard KPI riêng Customer Satisfaction Tăng sự hài lòng khách hàng nhờ phát hiện và xử lý email tiêu cực k…",
+    "image_ref": "DATA/SLIDE_IMAGES/BNK X Seoul semi - AI driven sentiment system/slide_007.png"
+  },
+  {
+    "slug": "bnk-modena-ai-solution",
+    "folder": "BnK-Modena _ AI Solution",
+    "title": "BnK-Modena   AI Solution",
+    "client": "Modena (ngân hàng / tổ chức tài chính – inferred from context)",
+    "type": "Business Proposal / Solution Pitch",
+    "domain": [
+      "banking",
+      "retail",
+      "document-ai",
+      "ai-ml"
+    ],
+    "tech": [
+      "LLM",
+      "RPA",
+      "OCR",
+      "NLP",
+      "CDP",
+      "UiPath",
+      "GPT",
+      "Gemini",
+      "Claude",
+      "Llama",
+      "Mistral"
+    ],
+    "problem": "Lĩnh vực Vấn đề cụ thể AI Chatbot Doanh nghiệp thiếu nền tảng chatbot linh hoạt, có khả năng tùy chỉnh nhanh và tích hợp nhiều nguồn tri thức Document Understanding Khối lượng và sự đa dạng của các mẫu tài liệu (payroll, letter of credit, salary docs) vượt quá khả năng xử lý của OCR truyền thống Payroll (PAI) Quy trình đối soát bảng lương thủ công cho hàng ngàn khách hàng doanh nghiệp – chậm, nhiề…",
+    "solution": "1. AI Chatbot – Smart Assistant Platform Nền tảng chatbot đa năng cho phép doanh nghiệp xây dựng chatbot với prompt tùy chỉnh, không cần lập trình phức tạp. Hỗ trợ các use case: Travel Consultant, Banking Chatbot, Internal Banking Q&A, Sales Chatbot, AI Front-end Interviewer, v.v. 2. AI Document Understanding (DU) Kết hợp OCR + Layout Analysis + Language Model + Attention Mechanism thành pipeline…",
+    "outcome": "Metric Giá trị Module OCR Accuracy > 95% Document Understanding Data Accuracy after OCR > 95% PAI – Payroll AI Salary Expense List Coverage 100% PAI Error & Exception Elimination 100% PAI Document Templates Supported > 700 PAI Fraud Detection Real-time blocking CDP Speech Recognition Speed 60x faste…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK-Modena _ AI Solution/slide_007.png"
+  },
+  {
+    "slug": "bnk-cma-solution-proposal-en-v0-1",
+    "folder": "BnK_CMA Solution Proposal_EN_v0_1",
+    "title": "BnK CMA Solution Proposal EN v0 1",
+    "client": "CMA",
+    "type": "Solution Proposal",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "Microsoft SharePoint",
+      "M365",
+      "Microsoft Fabric (M5 Fabric)",
+      "AI",
+      "LLM (chưa xác định provider)",
+      "AI Orchestration Layer"
+    ],
+    "problem": "CMA đang gặp 4 nhóm thách thức cốt lõi: # Vấn đề Chi tiết 1 Truy xuất thông tin sản phẩm tốn thời gian Nhân viên phải tìm kiếm thủ công qua nhiều nguồn → kéo dài thời gian chuẩn bị tư vấn, giảm năng suất, phản hồi chậm 2 So sánh sản phẩm thiếu chuẩn hóa Chất lượng so sánh phụ thuộc vào nỗ lực cá nhân, tốn thời gian lặp lại, khó đảm bảo logic nhất quán giữa các team 3 Dữ liệu sản phẩm chưa sẵn sàng…",
+    "solution": "Lumin – nền tảng AI product intelligence nội bộ của CMA – với 5 năng lực cốt lõi: Tính năng Mô tả Product Search Tìm kiếm thông tin sản phẩm đã phê duyệt bằng keyword, bộ lọc, hoặc ngôn ngữ tự nhiên AI-Powered Q&A Đặt câu hỏi liên quan đến sản phẩm và nhận câu trả lời AI dựa trên dữ liệu đã được phê duyệt Standardized Product Comparison So sánh sản phẩm theo bộ tham số chuẩn đã được thống nhất trư…",
+    "outcome": "KPI Mục tiêu Thời gian truy xuất thông tin sản phẩm Giảm 20% Thời gian so sánh sản phẩm Giảm 20% Tính nhất quán trong so sánh sản phẩm Tăng (nhờ tham số chuẩn hóa) Công sức thủ công của team sales/product Giảm đáng kể Khả năng tái sử dụng kiến thức sản phẩm đã phê duyệt Cải thiện Mức độ sẵn sàng cho…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK_CMA Solution Proposal_EN_v0_1/slide_007.png"
+  },
+  {
+    "slug": "bnk-dispatch-management-system-and-matching-platform",
+    "folder": "BnK_Dispatch Management System and Matching Platform",
+    "title": "BnK Dispatch Management System and Matching Platform",
+    "client": "Khách hàng trong lĩnh vực thu gom & xử lý chất thải công nghiệp (tên ẩn danh, có thể là công ty Nhật Bản vận hành tại Tokyo)",
+    "type": "Solution Proposal & Feasibility Study",
+    "domain": [
+      "logistics",
+      "ai-ml"
+    ],
+    "tech": [
+      "Google OR-Tools",
+      "AI Optimization Engine",
+      "Kintone Integration",
+      "Cloud-Native Architecture"
+    ],
+    "problem": "Bối cảnh khách hàng Nghiệp vụ cốt lõi: thu gom, vận chuyển và xử lý trung gian chất thải công nghiệp. Quy mô vận hành hiện tại: khoảng 800 lượt điều phối/tháng, 30–40 tài xế, ~45 phương tiện. Hệ thống hiện tại: sử dụng Kintone để quản lý quy trình điều phối, nhưng vẫn phụ thuộc nhiều vào kinh nghiệm thủ công của dispatcher. Tuyến đường không cố định: mỗi công việc có thể khác nhau về địa điểm, khố…",
+    "solution": "BnK đề xuất tiếp cận theo hai workstream song song, ưu tiên xây dựng Dispatch trước: Workstream A — Dispatch Management System (Phase 1) Tính năng Mô tả Dispatch board & planning calendar Bảng điều phối trực quan, lịch kế hoạch tuần/ngày Master data management Quản lý xe, tài xế, khách hàng, địa điểm AI-powered route/assignment recommendation Gợi ý tuyến đường và phân công tối ưu bằng AI Manual ov…",
+    "outcome": "Mặc dù deck không có slide KPI riêng biệt, các chỉ số mục tiêu được suy luận từ nội dung: KPI Mục tiêu / Kỳ vọng Tốc độ tối ưu hóa Tối ưu ~800 lượt dispatch/tháng trong thời gian chấp nhận được (benchmark từ dự án T.: 200 jobs ≤ 60 giây) Giảm tải thủ công Dispatcher chuyển từ nhập liệu sang ra quyết…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK_Dispatch Management System and Matching Platform/slide_007.png"
+  },
+  {
+    "slug": "bnk-pa-case-study-vn",
+    "folder": "BnK_PA_Case_study_VN",
+    "title": "BnK PA Case study VN",
+    "client": "",
+    "type": "",
+    "domain": [],
+    "tech": [],
+    "problem": "",
+    "solution": "",
+    "outcome": "",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK_PA_Case_study_VN/slide_007.png"
+  },
+  {
+    "slug": "bnk-warehouse-operation-automation-solution-proposal-en-v1-2",
+    "folder": "BnK_Warehouse Operation Automation Solution Proposal_EN_v1_2",
+    "title": "BnK Warehouse Operation Automation Solution Proposal EN v1 2",
+    "client": "",
+    "type": "",
+    "domain": [
+      "logistics",
+      "retail",
+      "document-ai",
+      "data-platform",
+      "ai-ml"
+    ],
+    "tech": [
+      "RPA",
+      "AI-OCR",
+      "IDP",
+      "LINE API",
+      "Logizard WMS",
+      "CROSS MALL",
+      "ERP",
+      "e-Hiden (Sagawa)"
+    ],
+    "problem": "Thach thuc Mo ta hien tai Muc tieu tu dong hoa Phat hanh chung tu xuat hang thu cong Nhan vien thuc hien lap lai tren Logizard WMS va e-Hiden Tu dong hoa luong phat hanh chung tu xuat hang duoc chon uu tien (picking list, nhan van chuyen) Xac nhan thu cong sau ket noi du lieu Du lieu don hang da ket noi CROSS MALL -> Logizard nhung xac nhan ha nguon van thu cong Dung RPA thuc thi cac buoc lap lai…",
+    "solution": "BnK de xuat giai phap 4 thanh phan chinh, trien khai theo lo trinh tang dan (Step 0 -> 1A -> 1B/2/3): Thanh phan Mo ta RPA Automation Tu dong hoa cac buoc lap lai tren Logizard WMS, e-Hiden, Excel, import/export file, xac nhan ket qua AI-OCR / IDP Doc packing list, trich xuat san pham va so luong, nhan dien dong co danh dau lien quan den kho, tao data san sang cho nhan vien review Report Automatio…",
+    "outcome": "*(Du lieu thuc te tu Case Study AIG Logistics -- du an tuong tu BnK da trien khai, dung lam bang chung nang luc)* Chi so Ket qua thuc te Thoi gian xu ly trung binh 1 phut 47 giay / ho so (end-to-end) Do chinh xac AI (confidence) Trung binh 97% Do chinh xac voi ground truth 94,2% Ti le false positive…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK_Warehouse Operation Automation Solution Proposal_EN_v1_2/slide_007.png"
+  },
+  {
+    "slug": "cimb-proposal-april-2026-1",
+    "folder": "CIMB_Proposal_April_2026 1",
+    "title": "CIMB Proposal April 2026 1",
+    "client": "",
+    "type": "",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [],
+    "problem": "CIMB dang gap 4 diem dau lon trong phan tich khach hang: Van de Mo ta Phan khuc thu cong RM mat nhieu gio phan tich ho so tu sao ke bang tay, khong tu dong hoa, khong mo rong, thieu nhat quan Du lieu phi cau truc Sao ke PDF/CSV chua duoc phan tich, tin hieu hanh vi bi ket trong tai lieu thu De xuat chung chung Cac giai phap LLM tren thi truong cho de xuat khong phu hop nhu cau thuc su cua khach ha…",
+    "solution": "BnK Solution de xuat Nen tang Neuro-Symbolic ket hop Harness Engineering. Kien truc lop: INPUT: Bank Statement Upload - RM tai len PDF hoac CSV LAYER 1: Document Parsing Vision AI - trich xuat Ngay Merchant So tien D/C LAYER 2 NEURO: LLM Behavioral Classifier - phan loai phan khuc cap bac LAYER 3 SYMBOLIC: GNN Behavioral Twin Finder - tim top-K khach hang tuong tu LAYER 4: Customer Intelligence Pa…",
+    "outcome": "Tu dong phan khuc hanh vi thay the lam thu cong Xu ly 1000+ giao dich Persona scoring 7 chieu voi do tin cay Top-K Behavioral Twins chinh xac cho cross-sell Scalability GCP K8S Kiem soat Hallucination qua Harness Engineering 100% On-Premise khong phu thuoc nha cung cap ben ngoai",
+    "image_ref": null
+  },
+  {
+    "slug": "cimb-proposal-april-2026-1",
+    "folder": "CIMB_Proposal_April_2026_1",
+    "title": "CIMB Proposal April 2026 1",
+    "client": "",
+    "type": "",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [],
+    "problem": "Thach thuc cot loi: Flying Blind in Customer Intelligence CIMB dang doi mat voi bon van de chinh: 1. Phan khuc thu cong (Manual Segmentation): Doi ngu RM (Relationship Manager) phai mat nhieu gio de lap ho so khach hang thu cong. Khong tu dong hoa, khong quy mo, khong nhat quan. 2. Du lieu bi co lap (Siloed Insights): Khong co ket noi giua cac mau giao dich va ho so hanh vi. Thong tin nam trong ba…",
+    "solution": "Kien truc Neuro-Symbolic Intelligence Platform BnK Solution de xuat mot kien truc 4 lop ket hop hai bo nao AI: Layer Ten Mo ta INPUT Bank Statement Upload RM upload PDF/Scan PDF hoac CSV tu bat ky ngan hang nao LAYER 1 Document Parsing - Vision AI & AI Parsing Trich xuat thong tin linh hoat (Date, Merchant, Amount, D/C) LAYER 2 AI LLM - Behavioral Classifier (Neuro) LLM phan loai phan khuc, bac kh…",
+    "outcome": "KPIs ky thuat (tu MVP demo) Xu ly 1,000+ giao dich/lan phan tich Confidence score thuc te: TRAVEL ENTHUSIAST 92%, CONVENIENCE BUYER 75%, DIGITAL NATIVE 65% Confidence threshold toi thieu: >= 0.3 (tu prompt classifier rule) 7-dimension persona scoring voi confidence score 128-dimensional customer emb…",
+    "image_ref": null
+  },
+  {
+    "slug": "ciputra-life-idp-solution-proposal",
+    "folder": "Ciputra Life - IDP Solution Proposal",
+    "title": "Ciputra Life - IDP Solution Proposal",
+    "client": "",
+    "type": "",
+    "domain": [
+      "banking",
+      "insurance",
+      "healthcare",
+      "retail",
+      "document-ai",
+      "ai-ml"
+    ],
+    "tech": [],
+    "problem": "Khách hàng (Ciputra Life) đang đối mặt với thách thức trong việc xử lý hồ sơ yêu cầu bồi thường bảo hiểm theo phương thức thủ công: Thách thức cốt lõi Vấn đề Mô tả Khối lượng tài liệu lớn Hàng ngàn hồ sơ (bank statement, invoice, medical record, form bảo hiểm, v.v.) cần xử lý mỗi ngày Quy trình thủ công chậm Nhân viên phải đọc, trích xuất và kiểm tra dữ liệu thủ công, dẫn đến tốc độ phê duyệt thấp…",
+    "solution": "BnK Solution đề xuất nền tảng BnK IDP – một no-code AI platform cho phép phân loại và trích xuất dữ liệu từ tài liệu không cấu trúc. Giải pháp bao gồm hai lớp chính: 1. IDP Core – Intelligent Document Processing Chức năng Mô tả Document Ingestion & Classification Tự động nhận, phát hiện loại tài liệu và định tuyến hồ sơ (bank statement, invoice, medical paper, form, v.v.) OCR & Data Extraction Trí…",
+    "outcome": "Tài liệu không liệt kê KPI số cụ thể (thời gian xử lý, tỷ lệ chính xác, v.v.), nhưng dựa trên các tính năng và success story đã trình bày, có thể kỳ vọng: KPI Mục tiêu kỳ vọng Tốc độ xử lý hồ sơ Tăng đáng kể so với xử lý thủ công (high-speed bulk processing) Độ chính xác trích xuất Cao hơn thủ công…",
+    "image_ref": null
+  },
+  {
+    "slug": "data-science-predict-case-study",
+    "folder": "Data_science_Predict_Case_Study",
+    "title": "Data science Predict Case Study",
+    "client": "",
+    "type": "",
+    "domain": [
+      "ai-ml"
+    ],
+    "tech": [],
+    "problem": "Thực trạng trước khi có AI Vấn đề Mô tả chi tiết Phụ thuộc kinh nghiệm con người Phương pháp truyền thống dựa hoàn toàn vào kinh nghiệm của nông dân và hồi quy tuyến tính Dự đoán thiếu chính xác Kết quả dự đoán năng suất có biến động rất lớn (high variation), không đáng tin cậy Thiếu hiểu biết hệ thống Hệ thống canh tác thiếu mô hình hóa toàn diện, không thể mô phỏng được ảnh hưởng của các tham số…",
+    "solution": "Giải pháp AI được triển khai theo 2 hướng chính: 1. Hệ thống Dự đoán Năng suất (Yield Prediction) Sử dụng AutoML để tự động thực hiện feature engineering và chạy thử nghiệm mô hình. Phân tích khối lượng lớn dữ liệu phức tạp để xác định các biến quan trọng nhất. Dự báo năng suất theo từng tháng (month-by-month) thay vì chỉ dự báo cuối vụ. Chạy thử nghiệm trên hơn 100 thuật toán để tìm mô hình tốt n…",
+    "outcome": "Kết quả đạt được (Situation After) KPI Mục tiêu Kết quả thực tế Độ chính xác dự đoán Cao hơn phương pháp truyền thống > 95% Quy mô ứng dụng Toàn bộ diện tích canh tác 34.000 ha Số thuật toán thử nghiệm Tối đa hóa tìm kiếm mô hình > 100 algorithms Báo cáo mô hình Insights chi tiết 20+ best models Tiế…",
+    "image_ref": null
+  },
+  {
+    "slug": "eup-proposal-driversafetyapp",
+    "folder": "EUP-Proposal_DriverSafetyApp",
+    "title": "EUP-Proposal DriverSafetyApp",
+    "client": "",
+    "type": "",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [],
+    "problem": "Van de duoc suy ra tu executive summary va requirements (khong co slide problem rieng): Rui ro an toan giao thong: Tai xe thieu nhan thuc ve hanh vi nguy hiem (qua toc do, phanh gap, re gat manh). Thieu cong cu giam sat doi xe: Quan ly doi xe kho theo doi hieu suat tai xe, kho tao bao cao hieu suat. Khong co co che khuyen khich: Thieu he thong khuyen khich tai xe tu cai thien. Kho danh gia rui ro…",
+    "solution": "BnK Solution de xuat phat trien ung dung mobile da nen tang (React Native) voi cac module: 1. Driving Behavior Monitoring Phat hien: qua toc do, tang toc manh, phanh gap, cua gat giang, lai xe lien tuc Dua tren GPS + cam bien thiet bi (accelerometer, gyroscope) 2. Trip Management & GPS Theo doi thoi gian thuc va dinh ky Chuyen doi giua che do cong viec / ca nhan Chinh sua chuyen trinh thu cong Off…",
+    "outcome": "Tai lieu khong neu KPI ro rang. Cac ket qua mong doi co the suy ra: Tang ti le lai xe tuan thu toc do gioi han Giam tai nan / su co trong doi xe Quan ly doi xe hieu qua hon Cai thien diem an toan trung binh tai xe theo thoi gian Giam chi phi bao hiem (du lieu phuc vu danh gia rui ro) Ghi nhan chinh…",
+    "image_ref": "DATA/SLIDE_IMAGES/EUP-Proposal_DriverSafetyApp/slide_007.png"
+  },
+  {
+    "slug": "ggf-b-k-yield-prediction-v2",
+    "folder": "GGF-B_K - Yield Prediction_V2",
+    "title": "GGF-B K - Yield Prediction V2",
+    "client": "GGF (Golden Gate Futures – hoặc tên viết tắt tương đương, hoạt động trong lĩnh vực nông nghiệp/đồn điền tại Indonesia)",
+    "type": "Technical Proposal / Solution Design",
+    "domain": [
+      "banking",
+      "agriculture",
+      "ai-ml"
+    ],
+    "tech": [
+      "Python",
+      "Streamlit",
+      "AutoML",
+      "Machine Learning (Decision Tree",
+      "Linear Regression)",
+      "REST API"
+    ],
+    "problem": "GGF cần dự đoán sản lượng nông nghiệp (Yield) dựa trên các yếu tố đầu vào như: lượng phân bón dự kiến, trọng lượng cây, mật độ dân số cây, tính đồng nhất, màu lá, tỷ lệ ra hoa, chi phí, thời tiết và nhiều biến khác. Dữ liệu hiện tại phân tán ở nhiều bảng khác nhau, thiếu tài liệu hóa và cần được làm sạch, kiểm định trước khi đưa vào mô hình. Các mô hình phi tuyến (non-linear) khó giải thích cho bê…",
+    "solution": "BnK đề xuất một pipeline ML hoàn chỉnh từ khám phá dữ liệu đến triển khai API và Simulator, được chia thành 3 giai đoạn chính: Giai đoạn Tên Thời gian Nội dung chính 01 Access 4 tuần Data Discovery, Data Mapping, xác định nguồn dữ liệu mới Add-on Data Understanding & Validation +4 tuần Hiểu nghiệp vụ sâu (GGF-A1), kiểm định & tài liệu hóa dữ liệu (GGF-A2) 02 Build 6 tuần Xây dựng tối thiểu 20 mô h…",
+    "outcome": "Metrics đánh giá mô hình Metric Ý nghĩa RMSE (Root Mean Square Error) Sai số bình phương trung bình gốc – nhạy với outliers MSE (Mean Square Error) Sai số bình phương trung bình MAE (Mean Absolute Error) Sai số tuyệt đối trung bình – dễ diễn giải R² (R-squared) Hệ số xác định – đo mức độ giải thích…",
+    "image_ref": "DATA/SLIDE_IMAGES/GGF-B_K - Yield Prediction_V2/slide_007.png"
+  },
+  {
+    "slug": "makalot-x-bnk-ai-proposal",
+    "folder": "Makalot x BnK - AI Proposal",
+    "title": "Makalot x BnK - AI Proposal",
+    "client": "Makalot (Taiwanese clothing manufacturer)",
+    "type": "Proposal",
+    "domain": [
+      "manufacturing",
+      "retail",
+      "document-ai",
+      "ai-ml"
+    ],
+    "tech": [
+      "LLM (fine-tuned)",
+      "OCR",
+      "Python",
+      "PostgreSQL",
+      "Redis",
+      "GPU A100",
+      "Web App (BE",
+      "FE)"
+    ],
+    "problem": "Makalot đang phải xử lý số lượng lớn tài liệu PDF và thực hiện thủ công việc trích xuất dữ liệu vào file Excel – một quy trình tốn thời gian, dễ sai sót và khó mở rộng. Cụ thể: Tài liệu đầu vào ở định dạng PDF (bao gồm cả dạng scan). Cần trích xuất dữ liệu có cấu trúc ra Excel để phục vụ các nghiệp vụ nội bộ. Tài liệu đa dạng ngôn ngữ: tiếng Anh, Trung (phồn/giản thể), Pháp, Việt, Nhật. Một số tài…",
+    "solution": "BnK đề xuất pipeline AI gồm 3 bước xử lý chính: Pipeline xử lý tài liệu PDF Input --> [Template Matching / OCR] --> [LLM Engine] --> Excel Output +-------------------+--------------------+ [Simple format] [Complex format (tables)] Key Information Extraction Table Extraction Engine --> JSON / Excel output --> Excel output Chi tiết từng bước: 1. PDF Processing: Chuyển đổi file PDF sang dạng raw text…",
+    "outcome": "Proposal không liệt kê KPI định lượng tường minh, nhưng các kết quả kỳ vọng có thể suy ra: Kỳ vọng Chi tiết Tự động hóa trích xuất dữ liệu Thay thế quy trình thủ công PDF → Excel Hỗ trợ xử lý đồng thời Tối thiểu 20 concurrent processing sessions Đa ngôn ngữ 6 ngôn ngữ hỗ trợ (EN, ZH-T, ZH-S, FR, VI,…",
+    "image_ref": "DATA/SLIDE_IMAGES/Makalot x BnK - AI Proposal/slide_007.png"
+  },
+  {
+    "slug": "makalot-x-bnk-ai-proposal-pdf",
+    "folder": "Makalot x BnK - AI Proposal_PDF",
+    "title": "Makalot x BnK - AI Proposal PDF",
+    "client": "",
+    "type": "",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [],
+    "problem": "Khach hang: Makalot - nha san xuat quan ao hang dau Dai Loan Van de: Can mot cach hieu qua de trich xuat thong tin tu nhieu tai lieu PDF sang file Excel Hien trang: Quy trinh thu cong ton nhieu thoi gian, de sai sot Muc tieu: Tu dong hoa toan bo quy trinh trich xuat, giam tai cho nhan vien, tang chinh xac Luong xu ly hien tai (thu cong): PDF Documents --> [Thu cong nhap lieu] --> Excel Files Luong…",
+    "solution": "Kien truc xu ly chinh PDF Files --> Template Matching --> OCR --> Large Language Model --> [Phan nhanh] [Contain complex table?] / \\ NO YES Key Information Table Extraction Extraction (JSON) Engine \\ / --> Excel Output <-- Cac thanh phan chinh Thanh phan Mo ta Template Matching Nhan dang kieu mau tai lieu dau vao OCR Engine Xu ly va chuyen doi PDF sang dinh dang van ban thu Large Language Model LL…",
+    "outcome": "Tuy khong neu KPI chinh thuc trong tai lieu, cac chi tieu co the suy ra: Chi tieu Muc tieu Do chinh xac trich xuat thong tin > 85% So nguoi dung dong thoi 20 concurrent users So mau tai lieu chuan 50 mau (10 Easy + 15 Medium + 25 Hard) Thoi gian trien khai Web App ~19 tuan Thoi gian trien khai On-pr…",
+    "image_ref": null
+  },
+  {
+    "slug": "monday-integration-proposal-fn",
+    "folder": "Monday Integration Proposal_FN",
+    "title": "Monday Integration Proposal FN",
+    "client": "",
+    "type": "",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [],
+    "problem": "Slide deck khong trinh bay tuong minh pain points, nhung suy luan tu giai phap: Pain Points (suy luan): Du lieu phan manh giua Monday.com va cac he thong doanh nghiep (Epicor ERP, Vitals ESP, SOLIDWORKS PDM) Nguoi dung phai nhap lieu thu cong giua cac he thong, gay mat thoi gian va sai sot Quy trinh phe duyet ban ve ky thuat (SOLIDWORKS PDM) chua tu dong hoa Don hang tu Monday khong tu dong tao/ca…",
+    "solution": "Core: Adapter Application Dong vai tro cau noi trung gian (intermediary bridge), co 3 chuc nang chinh: 1. Request Forwarding: Nhan tu Monday, xu ly, chuyen den he thong tuong ung 2. Response Reception & Forwarding: Nhan ket qua tu he thong thu ba, tra lai Monday 3. Connection Management: Quan ly ket noi on dinh va bao mat Adapter duoc trien khai tai moi truong khach hang (on client environment), K…",
+    "outcome": "De xuat khong co KPI cu the. Gia tri ky vong suy ra: Giam thoi gian nhap lieu thu cong giua cac he thong Tu dong hoa quy trinh luu tai lieu Monday -> Vitals ESP Tu dong hoa quy trinh don hang Monday <-> Epicor ERP Tu dong hoa quy trinh ban ve ky thuat Monday <-> SOLIDWORKS PDM Giam sai sot do nhap l…",
+    "image_ref": "DATA/SLIDE_IMAGES/Monday Integration Proposal_FN/slide_007.png"
+  },
+  {
+    "slug": "protenlindo-proposal-update-2-2",
+    "folder": "Protenlindo Proposal_Update-2 2",
+    "title": "Protenlindo Proposal Update-2 2",
+    "client": "",
+    "type": "Business Proposal (Initial Proposal)",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [],
+    "problem": "Protelindo quan ly mang luoi lon cac tram BTS tai Indonesia. Ky thuat vien chup anh hien truong va kiem tra thu cong 32 danh muc thiet bi tren moi tram. Quy trinh thu cong ton nhan luc, khong dong deu va kho dam bao tieu chuan. Mo hinh AI hien co chua duoc huan luyen theo chuan Protelindo.",
+    "solution": "1. Nhan anh tu he thong Protelindo qua API, phan loai va tien xu ly. 2. AI Inference: mo hinh Computer Vision phat hien trang thai/van de tu anh. 3. Rule Engine: so sanh ket qua AI voi nguong tieu chi Protelindo (Pass/Fail). 4. Web Application: quan ly quy tac, xem ket qua, bao cao, hieu chinh mo hinh. 5. Tra ket qua ve he thong Protelindo theo thoi gian thuc.",
+    "outcome": "Toc do xu ly: ~3 giay/anh (voi 4 x A100 GPU) Pham vi: 32 danh muc duoc tu dong hoa Tich hop API vao he thong Protelindo hien tai Go-live sau 4.5 thang",
+    "image_ref": null
+  },
+  {
+    "slug": "protenlindo-proposal-update-2-2",
+    "folder": "Protenlindo Proposal_Update-2_2",
+    "title": "Protenlindo Proposal Update-2 2",
+    "client": "",
+    "type": "",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [],
+    "problem": "Protelindo quản lý và vận hành số lượng lớn tháp BTS tại Indonesia. Quy trình kiểm tra bảo trì hiện tại đòi hỏi kỹ thuật viên chụp ảnh hiện trường theo 32 hạng mục kiểm tra khác nhau (ví dụ: tình trạng ăn mòn, căn chỉnh ăng-ten, tình trạng hàng rào, điều kiện nối đất, v.v.). Việc đánh giá các hình ảnh này hiện được thực hiện thủ công, dẫn đến: Tốc độ xử lý chậm khi khối lượng ảnh lớn Thiếu nhất qu…",
+    "solution": "BnK đề xuất xây dựng hệ thống end-to-end gồm 5 thành phần chính: Thành phần Mô tả Công nghệ API Service Tiếp nhận ảnh và thông tin từ hệ thống Protelindo; trả kết quả phân loại NestJS (microservice) AI Service Thực hiện inference để nhận diện lỗi từ ảnh; dùng các model đã tune FastAPI (microservice) Rule Engine Áp dụng quy tắc/ngưỡng nghiệp vụ của Protelindo lên kết quả AI để quyết định Pass/Fail…",
+    "outcome": "Tài liệu không liệt kê KPI một cách tường minh, nhưng dựa trên nội dung đề xuất, có thể suy ra các mục tiêu hiệu suất kỳ vọng sau: KPI Mục tiêu kỳ vọng Tốc độ xử lý ảnh ~3 giây/ảnh (với 4 x A100) Số hạng mục hỗ trợ 32 categories Độ chính xác AI Đạt tiêu chuẩn Pass/Fail theo metrics của Protelindo (x…",
+    "image_ref": null
+  },
+  {
+    "slug": "tfsvn-idp-solution-proposal",
+    "folder": "TFSVN - IDP Solution Proposal",
+    "title": "TFSVN - IDP Solution Proposal",
+    "client": "Công ty TNHH MTV Tài Chính Toyota Việt Nam (TFSVN)",
+    "type": "Solution Proposal (Đề xuất giải pháp)",
+    "domain": [
+      "retail",
+      "document-ai",
+      "ai-ml"
+    ],
+    "tech": [
+      "AI OCR",
+      "NLP",
+      "Agentic AI",
+      "LLM",
+      "Workflow Automation"
+    ],
+    "problem": "TFSVN đang thực hiện kiểm tra hồ sơ tín dụng thủ công trước khi giải ngân — một quy trình tốn nhiều thời gian, dễ xảy ra sai sót, và khó chuẩn hóa. Cụ thể: Khối lượng tài liệu lớn và đa dạng: Bộ hồ sơ tín dụng gồm nhiều loại chứng từ khác nhau (Đề nghị cấp tín dụng, Hợp đồng tín dụng, Đăng ký GDBĐ, Thư chấp thuận tín dụng, v.v.). Kiểm tra thủ công chậm và rủi ro sai sót cao: Nhân viên phải đọc và…",
+    "solution": "BnK IDP Workflow Automation — một nền tảng no-code AI kết hợp ba lớp công nghệ: Luồng xử lý chính Upload bộ hồ sơ tín dụng → Tự động phân loại từng loại chứng từ → Trích xuất dữ liệu chi tiết (AI OCR + NLP) → Kiểm tra theo validation rules (business logic) → Kiểm tra chéo giữa các chứng từ → Chuẩn hóa kết quả → Xuất checklist cho người dùng review Năm năng lực cốt lõi # Năng lực Mô tả 1 Document C…",
+    "outcome": "Slide deck không liệt kê KPI định lượng cụ thể cho TFSVN, nhưng từ nội dung đề xuất có thể tổng hợp các kết quả kỳ vọng: KPI / Outcome Mô tả Giảm thời gian kiểm tra hồ sơ Thay thế kiểm tra thủ công bằng tự động, rút ngắn đáng kể thời gian xử lý mỗi bộ hồ sơ Giảm tỷ lệ sai sót Loại bỏ lỗi do con ngườ…",
+    "image_ref": "DATA/SLIDE_IMAGES/TFSVN - IDP Solution Proposal/slide_007.png"
+  },
+  {
+    "slug": "vat3-4-ggf",
+    "folder": "VAT3_4_GGF",
+    "title": "VAT3 4 GGF",
+    "client": "GGF (Great Giant Foods)",
+    "type": "Solution Proposal",
+    "domain": [
+      "agriculture",
+      "retail"
+    ],
+    "tech": [
+      "Flutter",
+      "NestJS",
+      "ReactJS",
+      "MQTT (Mosquitto)",
+      "MongoDB",
+      "PostgreSQL",
+      "Ubuntu (MCU)"
+    ],
+    "problem": "GGF đang vận hành đội xe boom sprayer phun thuốc bảo vệ thực vật trên quy mô lớn và gặp các thách thức sau: # Vấn đề Hậu quả 1 Lộ trình và thể tích phun được quyết định thủ công, không dựa trên tình trạng thực tế của cây trồng Phun không đều, lãng phí hóa chất 2 Thiếu khả năng đo lường sự tuân thủ (conformance) giữa kế hoạch và thực tế theo địa điểm, vùng và người vận hành Không có cơ sở để đánh g…",
+    "solution": "BnK Solution đề xuất xây dựng một nền tảng số tích hợp VAT 3.4 Platform gồm ba thành phần chính: Kiến trúc tổng thể [Edge / Field Devices] [VAT 3.4 Platform] [External Systems] Boom Sprayer (In-field) --> IoT Gateway / MQTT Broker --> NDVI / GIS Data MCU (Ubuntu) Backend (NestJS) TPM API Tablet App (Flutter) Frontend CMS (ReactJS) SAP IoT / Engage API GPS, Sensors MongoDB + PostgreSQL CRM / Ticket…",
+    "outcome": "Dựa trên các module và business need được mô tả, các kết quả kỳ vọng bao gồm: KPI / Kết quả Module liên quan Tăng độ chính xác thể tích phun (Volume Accuracy %) so với target M2, M15 Tăng tỷ lệ tuân thủ lộ trình theo địa điểm và vùng M7, M8 Cải thiện điểm số vận hành cá nhân (Operator Score) M9, M5…",
+    "image_ref": "DATA/SLIDE_IMAGES/VAT3_4_GGF/slide_007.png"
+  }
+]

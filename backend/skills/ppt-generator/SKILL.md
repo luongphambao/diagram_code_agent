@@ -49,15 +49,24 @@ recorded a `reason_for_subset`.  Never silently drop sections.
 
 Sections that require specific files:
 - `architecture_diagram` — needs `out.png` in the workspace
-- `technical_stack` — needs `tech_stack.json`
+- `technical_stack` — needs `tech_stack.json` (or the CSM's component clusters if that
+  file is absent — see `resolve_tech_stack_icons`)
 - `pricing` — needs cost data in `tech_stack.json`
 
-### 4. Generate the deck
+### 4. Resolve tech-stack icons (if rendering `technical_stack`)
+
+Call `resolve_tech_stack_icons()` — fetches and groups a logo per technology (by
+layer) from the bundled icon pack, falling back to lobe-icons/simple-icons for
+brands not bundled. Writes `tech_icons.json`. Works even when `tech_stack.json` is
+missing (falls back to the CSM). Skip this step if `technical_stack` is not in the
+section list.
+
+### 5. Generate the deck
 
 Call `create_pptx(title, subtitle, brand, include_sections)` with the values
 you derived in steps 2-3.  Pass `include_sections=None` to render all sections.
 
-### 5. Return a concise status
+### 6. Return a concise status
 
 Return a short report (≤ 5 lines) containing:
 - Confirmed title / subtitle / brand
