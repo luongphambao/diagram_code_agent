@@ -760,6 +760,14 @@ def propose_blueprint(blueprint: Blueprint) -> str:
     render_spec = _build_render_spec(blueprint, provider)
     _RENDER_SPEC_FILE.write_text(json.dumps(render_spec, indent=2), encoding="utf-8")
 
+    # Pre-compute style_plan.json + label_fits.json code-side (pure functions of
+    # the spec) so the drawer reads them instead of spending 2 model calls.
+    try:
+        from .rendering_tools import write_style_and_fit_plans
+        write_style_and_fit_plans(render_spec)
+    except Exception:
+        logger.debug("write_style_and_fit_plans failed", exc_info=True)
+
     # Pre-seed icon_plan.json so the drawer skips redundant search_icons calls.
     _preseed_icon_plan(blueprint, provider)
 
