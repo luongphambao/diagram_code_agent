@@ -55,23 +55,21 @@ def _write_json(path: Path, data) -> None:
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-# ── mimo-safe base: coerce {"0":..,"1":..} dicts to lists for list fields ────
+# ── mimo-safe base: shared coercion (str→json, numeric-dict→list, None→[]) ───
 class _CoercingModel(BaseModel):
-    """Normalise mimo's numeric-keyed-dict payloads into lists before validation."""
+    """Normalise mimo's malformed payloads before validation.
+
+    Delegates to tool_coercion.coerce_model_values — the shared helper that also
+    backs ToolArgCoercionMiddleware — so the str→json.loads branch (the one this
+    class used to lack, which let draft_wbs_skeleton(ratios='{...}') fail) lives
+    in one place.
+    """
 
     @model_validator(mode="before")
     @classmethod
     def _coerce(cls, values):
-        if not isinstance(values, dict):
-            return values
-        for name, field in cls.model_fields.items():
-            v = values.get(name)
-            ann = str(field.annotation)
-            if isinstance(v, dict) and "list" in ann.lower():
-                keys = list(v.keys())
-                if keys and all(str(k).isdigit() for k in keys):
-                    values[name] = [v[k] for k in sorted(v, key=lambda x: int(x))]
-        return values
+        from tool_coercion import coerce_model_values
+        return coerce_model_values(cls, values)
 
 
 # ════════════════════════════════════════════════════════════════════════════
