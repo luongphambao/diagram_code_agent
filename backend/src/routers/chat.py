@@ -335,8 +335,8 @@ async def agui_endpoint(request: Request):
                                         _pending_tasks[tcid] = record
                                         logger.info("→ delegate to %s: %s", sa_name, sa_desc[:80])
                                         yield _sse(_activity_event("start", name,
-                                                    label=f"Delegating to {sa_name}", subagent=sa_name,
-                                                    detail=detail))
+                                                    label=f"Delegating to {_display_subagent(sa_name)}",
+                                                    subagent=sa_name, detail=detail))
                                         all_delegations = _completed_delegations + list(_pending_tasks.values())
                                         yield _sse({"type": "STATE_DELTA", "delta": [
                                             {"op": "add", "path": "/delegations", "value": all_delegations}
