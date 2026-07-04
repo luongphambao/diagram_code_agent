@@ -563,9 +563,39 @@ class _StreamingSubAgentRunnable:
                 "subagent %s streaming failed, falling back to ainvoke", self._name,
                 exc_info=True,
             )
-            return await self._runnable.ainvoke(state, config, **kwargs) or {}
+            return self._flag_call_limit_stop(
+                await self._runnable.ainvoke(state, config, **kwargs) or {}
+            )
 
-        return final_values or {}
+        return self._flag_call_limit_stop(final_values or {})
+
+    def _flag_call_limit_stop(self, result: dict) -> dict:
+        """Make a call-limit stop LOUD instead of silent.
+
+        ModelCallLimitMiddleware(exit_behavior="end") terminates the subagent
+        with a bare "Model call limits exceeded: ..." AIMessage; the main agent
+        used to read that as an ordinary (confusing) status. Prefix it so main
+        knows the work is partial and must be reported to the user — never
+        silently re-dispatched.
+        """
+        msgs = (result or {}).get("messages") or []
+        if msgs:
+            last = msgs[-1]
+            content = getattr(last, "content", "")
+            if isinstance(content, str) and content.startswith("Model call limits exceeded"):
+                logger.warning("subagent %s stopped at its model-call limit", self._name)
+                note = (
+                    f"SUBAGENT {self._name} STOPPED AT ITS SAFETY CALL LIMIT — the "
+                    "work is PARTIAL; whatever was produced is already on disk in "
+                    "the workspace. Tell the user this stage hit its safety limit, "
+                    "continue from the existing artifacts, and do NOT re-dispatch "
+                    "the same task without changing the approach. "
+                )
+                try:
+                    msgs[-1] = last.model_copy(update={"content": note + content})
+                except Exception:  # noqa: BLE001 — never break the task result
+                    pass
+        return result
 
 
 DEFAULT_MODEL    = "gpt-5.4-mini"
