@@ -118,6 +118,51 @@ def test_per_thread_filesystem_backend_isolates_threads(tmp_path, monkeypatch):
     assert (a / "foo.txt").read_text(encoding="utf-8") == "from-a"  # thread A untouched
 
 
+def test_default_route_absolute_path_does_not_leak_to_shared_workspace(tmp_path, monkeypatch):
+    """Regression test: an absolute path (e.g. echoed back by the model from a
+    stale ls()/read() result under a different thread's cwd) must not bypass
+    the per-thread `cwd` and land in the shared WORKSPACE. virtual_mode=False
+    (deepagents' legacy default) treats absolute paths as real filesystem paths,
+    ignoring `cwd` entirely — the production default route now sets
+    virtual_mode=True (see make_local_backend), which re-roots even
+    absolute-looking paths under whatever thread is currently bound."""
+    from backends import PerThreadFilesystemBackend
+
+    a, b = tmp_path / "ta", tmp_path / "tb"
+    backend = PerThreadFilesystemBackend(root_dir=str(tmp_path), virtual_mode=True)
+
+    _bind(monkeypatch, a)
+    write_res = backend.write("icon_plan.json", "from-a")
+    assert write_res.error is None
+
+    # Model echoes back an absolute-looking path it saw while thread A's
+    # workspace happened to be bound (e.g. from an `ls` result).
+    _bind(monkeypatch, b)
+    leaked = tmp_path / "app" / "backend" / "agent_space" / "workspace" / "icon_plan.json"
+    write_res = backend.write(str(leaked), "from-b-absolute")
+    assert write_res.error is None
+    # Re-rooted under thread B's own cwd — never touches thread A's file or any
+    # literal host path outside the bound thread's directory.
+    assert (b / "app" / "backend" / "agent_space" / "workspace" / "icon_plan.json").read_text(
+        encoding="utf-8"
+    ) == "from-b-absolute"
+    assert (a / "icon_plan.json").read_text(encoding="utf-8") == "from-a"
+    assert not leaked.exists()
+
+
+def test_make_local_backend_default_route_uses_virtual_mode(monkeypatch, tmp_path):
+    """make_local_backend()'s default route (read_file/write_file/edit_file/ls/
+    glob/grep for render_spec.json, icon_plan.json, etc.) must use
+    virtual_mode=True — flipping this back to False reopens the absolute-path
+    leak covered above."""
+    monkeypatch.setattr(backends, "MEMORIES_DIR", tmp_path / "memories")
+    monkeypatch.setattr(backends, "WORKSPACE", tmp_path / "workspace")
+    monkeypatch.setattr(backends, "OUTPUTS_DIR", tmp_path / "outputs")
+
+    backend = backends.make_local_backend()
+    assert backend.default.virtual_mode is True
+
+
 def test_per_thread_memories_subdir_isolates_threads(tmp_path, monkeypatch):
     """The per-thread /memories/ route (subdir="memories") must not collapse onto
     the default route, and must isolate the same way as the default route."""
