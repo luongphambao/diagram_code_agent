@@ -191,13 +191,18 @@ def pert_percentile(o: float, m: float, p: float, q: float) -> float:
     return _round(mu + q * sigma)
 
 
+def rate_per_manday(monthly_rate: float) -> float:
+    """Monthly rate -> per-man-day rate, using the 20-workday rate-card convention."""
+    return _round(float(monthly_rate or 0) / RATE_CARD_WORKDAYS_PER_MONTH, 2)
+
+
 def cost_by_role(
     effort_by_role: dict[str, float], rate_card: dict[str, float] | None = None
 ) -> dict[str, float]:
-    """USD cost per role: ``man-days / MANDAYS_PER_MONTH * monthly rate``."""
+    """USD cost per role: ``man-days * (monthly rate / RATE_CARD_WORKDAYS_PER_MONTH)``."""
     rc = rate_card or DEFAULT_RATE_CARD_USD_PER_MONTH
     return {
-        role: _round(float(md or 0) / MANDAYS_PER_MONTH * rc.get(role, 0.0), 2)
+        role: _round(float(md or 0) * rate_per_manday(rc.get(role, 0.0)), 2)
         for role, md in effort_by_role.items()
     }
 
