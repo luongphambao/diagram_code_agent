@@ -646,7 +646,10 @@ CONTEXT_TRIGGER_TOKENS = 30_000   # main context is lean (no images/icons), can 
 # so the model-call ceiling is the real backstop for a stuck drawer — keep it
 # comfortably above the intended budget, not 8x looser.
 # Override via env for experiments.
-_RUN_CALL_LIMIT = int(os.getenv("RUN_CALL_LIMIT", "120"))         # main only
+# Lowered 120→80 (main) after the retry-storm fixes (arg coercion, pre-flight
+# audit, code-driven WBS tail): the happy path needs far fewer calls now, and a
+# lower ceiling stops a residual runaway ~1.2M input tokens sooner.
+_RUN_CALL_LIMIT = int(os.getenv("RUN_CALL_LIMIT", "80"))          # main only
 _CRITIC_CALL_LIMIT = int(os.getenv("CRITIC_CALL_LIMIT", "40"))    # inspect+critique only
 
 # Per-stage (per-subagent) model-call budgets (§4.10 "per-stage budget"). Each
