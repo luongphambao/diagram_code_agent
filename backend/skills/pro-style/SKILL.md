@@ -65,7 +65,7 @@ says `presentation_style="diagram"`. The body diagram stays auditable/editable.
 ```python
 from prettygraph import Pretty, render_slide
 
-# sizes from plan_style_sizes(node_count=..., output="slide") —
+# sizes pre-computed in style_plan.json —
 # paste its pretty_kwargs so icons/text scale with the cards:
 g = Pretty("Document Understanding System Architecture",
            subtitle="end-to-end architecture",
@@ -137,15 +137,15 @@ Slide-mode hard rules:
   top-level region** — thin 1-2 box regions leave empty bands; fold them into the
   adjacent tier they serve.
 - `theme="pro"` plus fixed `node_width` / `node_height`.
-- Size with `plan_style_sizes(output="slide")` and pass `pretty_kwargs` verbatim.
-- Verify text with `fit_labels(nodes=[...])` before rendering.
+- Sizes are pre-computed in `style_plan.json` — pass its `pretty_kwargs` verbatim.
+- Label fits are pre-computed in `label_fits.json` — apply every suggestion before rendering.
 - Every top-level cluster has `number=1`, `number=2`, ... and a clear label.
 - Include `legend` whenever >2 edge colors/styles appear.
 - Still call `export_drawio()` after `render_diagram`.
 
 ## Poster mode (blueprint `density="poster"` — use ONLY when explicitly requested)
 A dense wall-grid layout with 25-40 nodes. **Set `flow_layout=False`.**
-Call `plan_style_sizes(node_count=<n>, output="poster")`.
+Read the pre-computed sizes from `style_plan.json` (poster mode).
 
 Group nodes into 4-8 numbered region planes. Pick direction by plane count:
 **5+ planes → `direction="LR"`** (tall portrait poster); **≤4 planes →
@@ -170,7 +170,7 @@ g.link("ai0", "db0", label="query")
 ```
 
 `cols=2` for ≤24 nodes, `cols=3` for denser posters (or per the `grid_cols` value
-from `plan_style_sizes`). The panel auto-fits the body — fill the WIDTH with planes.
+from `style_plan.json`). The panel auto-fits the body — fill the WIDTH with planes.
 
 **Sub-groups encouraged:** nest clusters inside a plane for natural groupings
 (model families, storage tiers, KB sources, parser types):
@@ -313,8 +313,8 @@ flow in one direction, arrows are short and rarely cross.
 - For health/status overlays, encode state with red/dashed edges, alert nodes,
   or status side-channels. Do not try to draw custom crosses or borders on
   built-in nodes.
-- Call `audit_diagram_code(code=...)` before `render_diagram`; fix high/medium
-  findings before rendering unless the finding is clearly irrelevant.
+- `render_diagram` runs the static audit automatically as a pre-flight gate;
+  fix every high/medium finding it returns and re-call (no budget consumed).
 
 ## Pattern: AWS Multi-Account Production Focus
 Use this when requirements mention AWS Organizations, governance, security

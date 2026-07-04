@@ -196,3 +196,27 @@ async def test_middleware_async_path():
         handler,
     )
     assert seen["edge_labels"] == ["a", "b"]
+
+
+# ── critic lenient enum coercion (findings.py) ──────────────────────────────
+
+def test_diagram_finding_lenient_enums():
+    from findings import DiagramFinding
+    f = DiagramFinding.model_validate({
+        "severity": "major",          # off-enum → medium
+        "confidence": "certain",      # off-enum → medium
+        "category": "visual",         # off-enum → style (aesthetic, never blocks)
+        "title": "x", "detail": "y",
+    })
+    assert f.severity == "medium"
+    assert f.confidence == "medium"
+    assert f.category == "style"
+
+    ok = DiagramFinding.model_validate({
+        "severity": "CRITICAL",       # case-normalised, still valid
+        "confidence": "high",
+        "category": "completeness",
+        "title": "x", "detail": "y",
+    })
+    assert ok.severity == "critical"
+    assert ok.category == "completeness"

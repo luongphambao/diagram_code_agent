@@ -98,8 +98,8 @@ with Diagram("Title", filename="/workspace/out", outformat=["png", "dot"],
 - To show unhealthy/degraded state, encode status with a red/dashed edge, a small
   status/alert node, or a red alert side-channel. Built-in nodes are not good
   targets for custom cross marks or per-node border overlays.
-- Before rendering, call `audit_diagram_code(code=...)` and fix high/medium
-  findings unless they are clearly irrelevant.
+- `render_diagram` runs the static audit automatically as a pre-flight gate;
+  fix every high/medium finding it returns and re-call (no budget consumed).
 
 ## Recipe for a clean diagram
 1. Pick `direction`. 2. Declare nodes as variables, grouped by `Cluster`.

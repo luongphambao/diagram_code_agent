@@ -17,23 +17,24 @@ internally consistent and matches how BnK actually builds these spreadsheets.
 
 ## The estimation pipeline (call the tools IN THIS ORDER)
 
-1. `load_solution_context()` — pull objective, functional requirements, tech layers
-   and blueprint clusters/nodes. Your modules and features must trace back to these.
-2. `get_effort_norms()` — benchmark dev man-day ranges per feature type. Anchor every
-   estimate to these; do not invent numbers far outside the ranges without a reason.
-3. `draft_wbs_skeleton(project_info, phases)` — define the phase/module tree only
+1. `load_solution_context()` — pull objective, functional requirements, tech layers,
+   blueprint clusters/nodes AND the benchmark effort-norms table. Your modules and
+   features must trace back to these; anchor every estimate to the norms — do not
+   invent numbers far outside the ranges without a reason.
+2. `draft_wbs_skeleton(project_info, phases)` — define the phase/module tree only
    (no effort yet). Use the 3-phase spine + module catalog below.
-4. **`propose_wbs_skeleton()` — HITL gate.** Get the STRUCTURE approved before
+3. **`propose_wbs_skeleton()` — HITL gate.** Get the STRUCTURE approved before
    estimating. If rejected, revise the skeleton and re-propose.
-5. `add_wbs_items(items)` — add leaf features one module at a time. Estimate only
-   be/fe/mobile/ai; set `phase_type` correctly (it gates which roles apply).
-6. `compute_wbs_rollup()` — aggregate to module/phase/role totals.
-7. `plan_timeline_and_sprints()` — duration, 2-week sprints, months, Gantt grid.
-8. `plan_team_and_resources()` — team composition from the role totals.
-9. `define_milestones()` — defaults to the BnK 5-milestone spine.
-10. `validate_wbs()` — fix any warnings you can.
-11. **`propose_wbs()` — HITL gate.** Get the full plan/effort approved.
-12. **`export_wbs_excel()` — HITL gate.** Produce the `.xlsx` deliverable.
+4. `add_wbs_items(items)` — `items` accepts an arbitrary-length list: batch ALL leaf
+   features for an entire PHASE into a single call (not one module at a time).
+   Estimate only be/fe/mobile/ai; set `phase_type` correctly (it gates which roles
+   apply).
+5. `finalize_wbs()` — ONE call after the last add_wbs_items. Runs the whole
+   deterministic tail in code: rollup → timeline/sprints → team/resources →
+   milestones (BnK 5-milestone spine) → validation. Fix any warnings you can
+   (usually by adjusting items and calling finalize_wbs again).
+6. **`propose_wbs()` — HITL gate.** Get the full plan/effort approved.
+7. **`export_wbs_excel()` — HITL gate.** Produce the `.xlsx` deliverable.
 
 ## The 3-phase spine (always use these phase codes/names)
 
@@ -89,7 +90,7 @@ total = dev + BA + QC + PM ≈ 1.54 × dev
 
 ## Sizing guidance
 
-- Anchor each leaf to `get_effort_norms()` (e.g. Login ~1–4.6 total, Registration ~13,
+- Anchor each leaf to the effort-norms table in `load_solution_context()` (e.g. Login ~1–4.6 total, Registration ~13,
   Dashboard ~4.6, a CRUD module ~2–8.5, KYC ~12.3, a 3rd-party integration ~1.5–18.5,
   a report ~7.7–17). See `reference/effort-norms.md`.
 - Decompose to leaves of roughly **0.5–10 dev MD**. Split anything bigger.
