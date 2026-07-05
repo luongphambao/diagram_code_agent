@@ -401,9 +401,12 @@ def _build_delivery_sheet(wb, wbs: dict, wbs_last_row: int) -> dict:
             if ws.cell(r, c).value is not None:
                 ws.cell(r, c).value = None
             ws.cell(r, c).fill = PatternFill(fill_type=None)
+            ws.cell(r, c).border = Border()
 
     thin = Side(style="thin", color="FFBFBFBF")
+    medium = Side(style="medium", color="FF000000")
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    month_border = Border(left=medium, right=medium, top=medium, bottom=medium)
     month_fill = PatternFill("solid", fgColor="FFD9E1F2")
     sprint_fill = PatternFill("solid", fgColor="FFE2EFDA")
     head_fill = PatternFill("solid", fgColor="FF0094AA")
