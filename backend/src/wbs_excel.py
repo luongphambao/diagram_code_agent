@@ -425,11 +425,17 @@ def _build_delivery_sheet(wb, wbs: dict, wbs_last_row: int) -> dict:
         mc = ws.cell(3, c0)
         mc.value = f"{_MONTH_ORD[mi] if mi < len(_MONTH_ORD) else str(mi+1)+'th'} Month"
         mc.fill = month_fill; mc.font = bold; mc.alignment = center
+        for c in range(c0, c0 + 4):
+            ws.cell(3, c).fill = month_fill
+            ws.cell(3, c).border = month_border
     for si in range(grid["sprints"]):
         c0 = FIRST + si * 2
         ws.merge_cells(start_row=4, start_column=c0, end_row=4, end_column=c0 + 1)
         sc = ws.cell(4, c0)
         sc.value = f"Sprint {si+1}"; sc.fill = sprint_fill; sc.font = bold; sc.alignment = center
+        for c in range(c0, c0 + 2):
+            ws.cell(4, c).fill = sprint_fill
+            ws.cell(4, c).border = border
     for hc, lbl in ((2, "#"), (3, "Module"), (4, "Start"), (5, "End")):
         cell = ws.cell(5, hc); cell.value = lbl; cell.fill = head_fill
         cell.font = whitebold; cell.alignment = center; cell.border = border
