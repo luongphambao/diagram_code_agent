@@ -210,6 +210,54 @@ class InjectVisionAsUserEdit:
             messages.insert(i + 1, HumanMessage(content=relay_content))
 
 
+class SanitizeToolTextBlocksEdit:
+    """Replace any ToolMessage content block missing a "text" key with a placeholder.
+
+    mimo rejects any content block with no (or empty) "text" field — see
+    InjectVisionAsUserEdit, which handles this for render_diagram/inspect_diagram
+    specifically. Those are not the only source though: deepagents' built-in
+    `read_file` tool (available to every agent, including icon_resolver, via the
+    always-on FilesystemMiddleware) returns
+    `content_blocks=[{"type": "image"/"file"/..., "base64": ..., "mime_type": ...}]`
+    with no "text" key whenever the model reads a binary file (e.g. an icon
+    .png) — this slipped straight through to mimo and 400'd, since neither
+    KeepLatestImagesEdit nor InjectVisionAsUserEdit filter by tool name and
+    read_file isn't in _IMAGE_TOOLS. This is a blanket safety net: it runs for
+    every agent and every tool, stripping the (unusable — no vision-relay path
+    for arbitrary tools) base64 payload and leaving a short text note instead.
+
+    Must run AFTER KeepLatestImagesEdit/InjectVisionAsUserEdit in the edits list
+    so it never touches the render_diagram/inspect_diagram flow those already
+    handle correctly (by the time this edit runs, those ToolMessages are already
+    text-only or "[rendered]").
+    """
+
+    def apply(self, messages: list[AnyMessage], *, count_tokens: Any) -> None:
+        for i, msg in enumerate(messages):
+            if not isinstance(msg, LCToolMessage):
+                continue
+            content = msg.content
+            if not isinstance(content, list):
+                continue
+            changed = False
+            new_content = []
+            for block in content:
+                if isinstance(block, dict) and block.get("type") != "text" and not block.get("text"):
+                    mime = block.get("mime_type", "")
+                    kind = block.get("type", "file")
+                    suffix = f" ({mime})" if mime else ""
+                    new_content.append({
+                        "type": "text",
+                        "text": f"[non-text {kind}{suffix} content omitted — "
+                                "refer to the file path instead of inline content]",
+                    })
+                    changed = True
+                else:
+                    new_content.append(block)
+            if changed:
+                messages[i] = msg.model_copy(update={"content": new_content})
+
+
 _OFFLOAD_GATE_TOOLS = frozenset({"propose_blueprint", "propose_tech_stack"})
 
 
