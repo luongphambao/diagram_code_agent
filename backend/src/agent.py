@@ -1044,6 +1044,7 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
     if use_vision_relay:
         edits.append(InjectVisionAsUserEdit())
     edits += [
+        SanitizeToolTextBlocksEdit(),
         OffloadGateArgsEdit(),
         ClearToolUsesEdit(
             trigger=CONTEXT_TRIGGER_TOKENS,
