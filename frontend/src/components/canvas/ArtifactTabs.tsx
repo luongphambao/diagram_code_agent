@@ -137,9 +137,10 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
 
           {/* Download group */}
           <div className="flex items-center gap-2">
-            {(["PNG", ".drawio", "PDF", "PPT"] as const).map((label) => {
-              const disabled = label === "PNG" ? !png_base64 : label === ".drawio" ? !drawio : label === "PDF" ? !pdf_base64 : !pptx_base64;
-              const handler = label === "PNG" ? downloadPng : label === ".drawio" ? downloadDrawio : label === "PDF" ? downloadPdf : downloadPptx;
+            {(["PNG", ".drawio", "PDF", "PPT", "WBS"] as const).map((label) => {
+              if (label === "WBS" && !hasWbs) return null;
+              const disabled = label === "PNG" ? !png_base64 : label === ".drawio" ? !drawio : label === "PDF" ? !pdf_base64 : label === "PPT" ? !pptx_base64 : !wbs_xlsx_base64;
+              const handler = label === "PNG" ? downloadPng : label === ".drawio" ? downloadDrawio : label === "PDF" ? downloadPdf : label === "PPT" ? downloadPptx : downloadWbsXlsx;
               return (
                 <button key={label} onClick={handler} disabled={disabled}
                   className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/4 px-3 py-1.5 text-xs font-medium text-slate-400 transition-colors hover:bg-white/8 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30">
