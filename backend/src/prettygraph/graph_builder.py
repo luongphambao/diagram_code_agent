@@ -236,6 +236,30 @@ class Pretty:
             p = Path(self.icons_root) / icon
         return str(p) if p.exists() else None
 
+    def _resolve_stencil_name(self, cat: object, icon_path: str | None) -> str | None:
+        """Map a node's icon file to a ground-truth draw.io stencil name.
+
+        Direct stem match first (icon filename stem == catalog name); then a
+        conservative fuzzy fallback bridging mingrammer naming (hyphens) vs aws4
+        catalog naming (underscores), e.g. ``elastic-container-service`` →
+        ``elastic_container_service``. Only near-exact matches (score >= 85) are
+        accepted, so a fuzzy guess never yields a wrong (blank-rendering) stencil.
+        """
+        if not (cat and _catalog_get_icon and icon_path):
+            return None
+        stem = Path(icon_path).stem.lower()
+        if _catalog_get_icon(cat, stem):
+            return stem
+        if not _catalog_search:
+            return None
+        query = stem.replace("-", " ").replace("_", " ").strip()
+        if not query:
+            return None
+        hits = _catalog_search(cat, query, kind="icon", limit=1)
+        if hits and hits[0].get("score", 0) >= 85:
+            return hits[0]["name"]
+        return None
+
     # ---- style resolution (theme-aware; shared by DOT + drawio sidecar) ---- #
     def _accent_map(self) -> dict[str, tuple[str, str, str]]:
         cached = getattr(self, "_amap_cache", None)
