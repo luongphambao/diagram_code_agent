@@ -59,6 +59,10 @@ def dot_to_drawio(dot_path: str, sidecar_path: str, out_path: str) -> str:
     H = y1
     cells: list[str] = []
     gvid_to_cell: dict[int, str] = {}
+    # Native AWS group frames only when the diagram is already AWS-stencil-native
+    # (at least one node resolved a stencil), so a non-AWS diagram never gets an
+    # aws4 container by accident.
+    has_native = any(m.get("stencil_name") for m in snodes.values())
 
     for o in g.get("objects", []):
         name = o.get("name", "")
@@ -69,13 +73,21 @@ def dot_to_drawio(dot_path: str, sidecar_path: str, out_path: str) -> str:
             meta = sclusters.get(cid, {})
             cx0, cy0, cx1, cy1 = (float(v) for v in o["bb"].split(","))
             gx, gy, gw, gh = cx0, H - cy1, cx1 - cx0, cy1 - cy0
-            style = (
-                f"rounded=1;arcSize=4;whiteSpace=wrap;html=1;"
-                f"fillColor={meta.get('fill', '#fafafa')};"
-                f"strokeColor={meta.get('stroke', '#cfcfcf')};verticalAlign=top;"
-                f"align=left;spacingLeft=10;spacingTop=6;fontSize={cluster_fs};fontStyle=1;"
-                "fontColor=#5a6270;"
+            group_obj = (
+                _style_for_group(_cat, meta["group_name"])
+                if _cat and _style_for_group and has_native and meta.get("group_name")
+                else None
             )
+            if group_obj:
+                style = group_obj["style"] + f"fontSize={cluster_fs};"
+            else:
+                style = (
+                    f"rounded=1;arcSize=4;whiteSpace=wrap;html=1;"
+                    f"fillColor={meta.get('fill', '#fafafa')};"
+                    f"strokeColor={meta.get('stroke', '#cfcfcf')};verticalAlign=top;"
+                    f"align=left;spacingLeft=10;spacingTop=6;fontSize={cluster_fs};fontStyle=1;"
+                    "fontColor=#5a6270;"
+                )
             cells.append(
                 f'<mxCell id="c{o["_gvid"]}" value="{html.escape(meta.get("label", ""))}" '
                 f'style="{style}" vertex="1" parent="1"><mxGeometry x="{gx:.0f}" '
