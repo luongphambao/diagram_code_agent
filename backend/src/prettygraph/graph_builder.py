@@ -550,7 +550,10 @@ class Pretty:
         for c in self.clusters.values():
             fill, stroke = self._cluster_style(c.id)
             label = c.label if c.number is None else f"{c.number} · {c.label}"
-            cluster_meta[c.id] = {"label": label, "fill": fill, "stroke": stroke}
+            cluster_meta[c.id] = {
+                "label": label, "fill": fill, "stroke": stroke,
+                "group_name": _aws_group_for_label(c.label),
+            }
         style = dict(self._sizes())
         if self.node_width is not None:
             style["node_width"] = int(self.node_width)
