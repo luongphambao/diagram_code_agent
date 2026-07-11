@@ -92,6 +92,7 @@ from .rendering_tools import (
     audit_diagram_code,
     declare_poster_grid,
     export_drawio,
+    export_drawio_native,
     finalize_diagram,
     fit_labels,
     list_saved_diagrams,
