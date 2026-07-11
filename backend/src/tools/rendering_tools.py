@@ -432,6 +432,59 @@ def export_drawio() -> str:
 
 
 @tool
+def export_drawio_native() -> str:
+    """Build an editable out.drawio straight from render_spec.json with the NATIVE
+    layout engine — deterministic geometry, ground-truth AWS stencils, and an
+    obstacle-avoiding edge router. No Graphviz, no mingrammer code.
+
+    Best for canonical cloud (AWS) architectures where a blueprint exists. Call
+    after propose_blueprint instead of render_diagram + export_drawio. Falls back
+    with a clear message if render_spec.json is missing.
+    """
+    from .constants import _RENDER_SPEC_FILE
+    out = current_workspace() / "out.drawio"
+    if not _RENDER_SPEC_FILE.exists():
+        return "No render_spec.json — call propose_blueprint first (native export needs a blueprint)."
+    try:
+        spec = json.loads(_RENDER_SPEC_FILE.read_text(encoding="utf-8"))
+        from prettygraph.native.topology import build_drawio_from_spec
+        name = spec.get("slide_title") or spec.get("diagram_title") or "Architecture"
+        xml, stats = build_drawio_from_spec(spec, name)
+        out.write_text(xml, encoding="utf-8")
+    except Exception as exc:  # noqa: BLE001 — surface to the agent
+        return f"export_drawio_native failed: {exc}"
+    if not out.exists():
+        return "export_drawio_native produced no file."
+    record_report_step(
+        current_workspace(),
+        "export_drawio_native",
+        summary=(f"Native draw.io: {stats['native_icons']} stencils, "
+                 f"{stats['native_groups']} group frames ({out.stat().st_size} bytes)."),
+        data={"artifacts": record_artifact_inventory(current_workspace()), "native_stats": stats},
+    )
+    lint = ""
+    try:
+        from validate_drawio import validate_file
+        report = validate_file(str(out))
+        lint = (f"\nLint: {report['error_count']} error(s), "
+                f"{report['warning_count']} warning(s), "
+                f"{report.get('advice_count', 0)} advice.")
+        if report["errors"]:
+            lint += f" Errors: {'; '.join(report['errors'][:5])}"
+        if report.get("advice"):
+            lint += f"\nDesign advice: {'; '.join(report['advice'][:5])}"
+    except Exception:  # noqa: BLE001
+        pass
+    return (
+        f"Wrote out.drawio ({out.stat().st_size} bytes) via native engine. "
+        f"Fidelity: {stats['native_icons']}/{stats['nodes']} native stencils, "
+        f"{stats['native_groups']} native group frames. "
+        f"Routing: {stats['edge_cross']} edge-through-node, "
+        f"{stats['edge_overlaps']} parallel overlaps.{lint}"
+    )
+
+
+@tool
 def list_saved_diagrams() -> str:
     """List all previously saved diagram sessions from the outputs archive.
 
