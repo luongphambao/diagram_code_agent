@@ -18,13 +18,56 @@ from .constants import (
 )
 
 try:
-    from ..drawio_catalog import load_catalog as _load_catalog, get_icon as _catalog_get_icon
+    from ..drawio_catalog import (
+        load_catalog as _load_catalog,
+        get_icon as _catalog_get_icon,
+        search_icon as _catalog_search,
+    )
 except (ImportError, ValueError):
     try:
-        from drawio_catalog import load_catalog as _load_catalog, get_icon as _catalog_get_icon  # type: ignore[no-redef]
+        from drawio_catalog import (  # type: ignore[no-redef]
+            load_catalog as _load_catalog,
+            get_icon as _catalog_get_icon,
+            search_icon as _catalog_search,
+        )
     except ImportError:
         _load_catalog = None  # type: ignore[assignment]
         _catalog_get_icon = None  # type: ignore[assignment]
+        _catalog_search = None  # type: ignore[assignment]
+
+
+# Keyword → AWS group-stencil name, most specific first (matched against a
+# cluster's label, case-insensitive). Lets a native AWS diagram render its
+# containers as real ``mxgraph.aws4.group`` frames (official colour + corner
+# icon) instead of a plain rounded box. Ground-truth names from catalog/aws.json.
+_AWS_GROUP_KEYWORDS: tuple[tuple[str, str], ...] = (
+    ("security group", "group_security_group"),
+    ("availability zone", "group_availability_zone"),
+    ("auto scaling", "group_auto_scaling_group"),
+    ("corporate data center", "group_corporate_data_center"),
+    ("corporate data centre", "group_corporate_data_center"),
+    ("on-premise", "group_on_premise"),
+    ("on premise", "group_on_premise"),
+    ("on-prem", "group_on_premise"),
+    ("data center", "group_corporate_data_center"),
+    ("datacenter", "group_corporate_data_center"),
+    ("public subnet", "group_subnet"),
+    ("private subnet", "group_subnet"),
+    ("subnet", "group_subnet"),
+    ("aws cloud", "group_aws_cloud_alt"),
+    ("region", "group_region"),
+    ("account", "group_account"),
+    ("vpc", "group_vpc"),
+)
+
+
+def _aws_group_for_label(label: str | None) -> str | None:
+    """Best AWS group-stencil name for a cluster label, or None if none fits."""
+    text = f" {(label or '').lower()} "
+    for keyword, group in _AWS_GROUP_KEYWORDS:
+        if keyword in text:
+            return group
+    return None
 
 
 def _est_text_w(s: str, size: int, *, bold: bool = False) -> float:
