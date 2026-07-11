@@ -539,11 +539,7 @@ class Pretty:
         for n in self.nodes.values():
             fill, stroke, _, _ = self._node_style(n)
             icon_path = self._icon_path(n.icon)
-            stencil_name: str | None = None
-            if _cat and _catalog_get_icon and icon_path:
-                stem = Path(icon_path).stem.lower()
-                if _catalog_get_icon(_cat, stem):
-                    stencil_name = stem
+            stencil_name = self._resolve_stencil_name(_cat, icon_path)
             node_meta[n.id] = {
                 "label": n.label, "sublabel": n.sublabel, "kind": n.kind,
                 "fill": fill, "stroke": stroke, "icon": icon_path,
