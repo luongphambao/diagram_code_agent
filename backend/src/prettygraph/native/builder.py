@@ -159,7 +159,7 @@ class Diagram:
         p = self.R.get(parent)
         ox, oy = (0, 0) if parent == "1" or not p else (p["x"], p["y"])
         self.R[id] = {"x": xy[0], "y": xy[1], "w": w, "h": 30}
-        self.cells.append(
+        self._emit_cell(id,
             f'<mxCell id="{id}" value="{_esc(label)}" style="text;html=1;align=center;'
             f'fontStyle=1;fontSize={fs};fontColor=light-dark(#232F3E,#E8E8E8);" '
             f'vertex="1" parent="{parent}"><mxGeometry x="{xy[0] - ox:.0f}" '
