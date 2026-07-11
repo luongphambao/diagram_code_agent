@@ -167,6 +167,136 @@ def test_sidecar_stencil_name_for_known_icon(tmp_path):
     )
 
 
+def test_sidecar_fuzzy_stencil_name_bridges_hyphens(tmp_path):
+    """Icon stems that differ only by hyphen-vs-underscore still resolve (Tier 1.1)."""
+    from prettygraph.graph_builder import Pretty
+
+    cat = dc.load_catalog()
+    # Pick a real multi-word catalog icon and present it as a hyphenated file stem
+    # (the mingrammer naming style) — the fuzzy fallback must map it back.
+    target = next(n for n, e in cat.by_name.items()
+                  if e.get("kind") == "icon" and n.count("_") >= 2)
+    hyphen_stem = target.replace("_", "-")
+
+    icon_dir = tmp_path / "icons"
+    icon_dir.mkdir()
+    (icon_dir / f"{hyphen_stem}.png").write_bytes(b"")
+
+    g = Pretty("Test", icons_root=str(icon_dir))
+    g.box("n1", "Some Service", kind="compute", icon=f"{hyphen_stem}.png")
+
+    sidecar_path = tmp_path / "out.nodes.json"
+    g._write_sidecar(str(sidecar_path))
+    import json
+    data = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    assert data["nodes"]["n1"]["stencil_name"] == target
+
+
+def test_sidecar_cluster_group_name(tmp_path):
+    """A cluster labelled like an AWS container gets a group_name (Tier 1.2)."""
+    from prettygraph.graph_builder import Pretty
+    import json
+
+    g = Pretty("Test")
+    g.cluster("c_vpc", "Production VPC", "Network")
+    g.cluster("c_sub", "Private Subnet", "Network", parent="c_vpc")
+    g.cluster("c_plain", "Business Logic", "Compute")
+
+    sidecar_path = tmp_path / "out.nodes.json"
+    g._write_sidecar(str(sidecar_path))
+    clusters = json.loads(sidecar_path.read_text(encoding="utf-8"))["clusters"]
+    assert clusters["c_vpc"]["group_name"] == "group_vpc"
+    assert clusters["c_sub"]["group_name"] == "group_subnet"
+    assert clusters["c_plain"]["group_name"] is None
+
+
+def _gv_with_cluster() -> str:
+    import json
+    return json.dumps({
+        "bb": "0,0,400,300",
+        "objects": [
+            {"_gvid": 0, "name": "clustervpc", "bb": "10,10,390,290"},
+            {"_gvid": 1, "name": "n1", "pos": "200,150", "width": "0.7", "height": "0.7"},
+        ],
+        "edges": [],
+    })
+
+
+def _fake_gv(monkeypatch, gv_json: str) -> None:
+    import subprocess
+    def _fake_run(cmd, **kw):
+        class _R:
+            stdout = gv_json
+            returncode = 0
+        return _R()
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+
+
+def test_dot_to_drawio_native_group_when_aws_native(tmp_path, monkeypatch):
+    """Clusters render as native grIcon frames when the diagram is AWS-stencil-native (1.2)."""
+    import json
+    from prettygraph.drawio import dot_to_drawio
+
+    _fake_gv(monkeypatch, _gv_with_cluster())
+    sidecar = {
+        "nodes": {"n1": {"label": "EC2", "sublabel": None, "kind": "compute",
+                         "fill": "#eee", "stroke": "#999", "icon": None,
+                         "shadow": 0, "stencil_name": "ec2"}},
+        "clusters": {"vpc": {"label": "VPC", "fill": "#eee", "stroke": "#999",
+                             "group_name": "group_vpc"}},
+        "style": {},
+    }
+    sp = tmp_path / "out.nodes.json"
+    sp.write_text(json.dumps(sidecar), encoding="utf-8")
+    xml = dot_to_drawio("fake.dot", str(sp), str(tmp_path / "out.drawio"))
+    assert "grIcon=mxgraph.aws4.group_vpc" in xml
+    assert "resIcon=mxgraph.aws4.ec2" in xml
+
+
+def test_dot_to_drawio_no_native_group_when_not_aws_native(tmp_path, monkeypatch):
+    """Without any native node stencil, a cluster stays a plain box (no aws4 group leak)."""
+    import json
+    from prettygraph.drawio import dot_to_drawio
+
+    _fake_gv(monkeypatch, _gv_with_cluster())
+    sidecar = {
+        "nodes": {"n1": {"label": "Thing", "sublabel": None, "kind": "process",
+                         "fill": "#eee", "stroke": "#999", "icon": None,
+                         "shadow": 0, "stencil_name": None}},
+        "clusters": {"vpc": {"label": "VPC", "fill": "#eee", "stroke": "#999",
+                             "group_name": "group_vpc"}},
+        "style": {},
+    }
+    sp = tmp_path / "out.nodes.json"
+    sp.write_text(json.dumps(sidecar), encoding="utf-8")
+    xml = dot_to_drawio("fake.dot", str(sp), str(tmp_path / "out.drawio"))
+    assert "grIcon" not in xml
+
+
+def test_audit_flags_floating_arrowhead(tmp_path):
+    """An edge anchored to a transparent (fillColor=none) leaf is flagged (Tier 1.4)."""
+    ghost = ('<mxCell id="ghost" value="" style="rounded=0;fillColor=none;'
+             'strokeColor=none;html=1;" vertex="1" parent="1">'
+             '<mxGeometry x="300" y="300" width="60" height="60" as="geometry"/></mxCell>')
+    xml = _build_native_drawio().replace(
+        '</root>',
+        ghost + '<mxCell id="ef" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" '
+                'edge="1" parent="1" source="s3" target="ghost">'
+                '<mxGeometry relative="1" as="geometry"/></mxCell></root>')
+    path = tmp_path / "float.drawio"
+    path.write_text(xml, encoding="utf-8")
+    advice = vd.validate_file(str(path))["advice"]
+    assert any("invisible leaf" in a for a in advice)
+
+
+def test_audit_no_floating_flag_for_solid_nodes(tmp_path):
+    """A clean native diagram (solid icons) raises no invisible-leaf advice."""
+    path = tmp_path / "clean.drawio"
+    path.write_text(_build_native_drawio(), encoding="utf-8")
+    advice = vd.validate_file(str(path))["advice"]
+    assert not any("invisible leaf" in a for a in advice)
+
+
 def test_dot_to_drawio_uses_native_stencil(tmp_path, monkeypatch):
     """dot_to_drawio should emit resIcon stencil style when sidecar has stencil_name."""
     import json
