@@ -183,6 +183,35 @@ def test_topology_is_deterministic():
     assert a.mxfile("t") == b.mxfile("t")
 
 
+def test_router_avoids_icons_and_overlaps(tmp_path):
+    from prettygraph.native.topology import build_tree
+    # a fan-out (api -> 3 services) is the classic spaghetti case for a naive router
+    d, _ = build_tree(_AWS_SPEC)
+    xml = d.mxfile("t")
+    assert d._cross == 0, "an edge cuts through an icon it does not connect to"
+    assert d._overlaps == 0, "parallel edge runs overlap on the same track"
+    p = tmp_path / "routed.drawio"
+    p.write_text(xml, encoding="utf-8")
+    advice = vd.validate_file(str(p))["advice"]
+    assert not any("run THROUGH a node" in a for a in advice)
+    assert not any("invisible leaf" in a for a in advice)
+
+
+def test_router_bakes_waypoints():
+    from prettygraph.native.topology import build_tree
+    d, _ = build_tree(_AWS_SPEC)  # topology uses contract="bake"
+    xml = d.mxfile("t")
+    assert "<mxPoint" in xml            # obstacle-avoiding waypoints are frozen
+    assert "exitX=" in xml and "entryX=" in xml  # de-collided port pins
+
+
+def test_router_is_deterministic():
+    from prettygraph.native.topology import build_tree
+    a, _ = build_tree(_AWS_SPEC)
+    b, _ = build_tree(_AWS_SPEC)
+    assert a.mxfile("t") == b.mxfile("t")  # router has no RNG / order dependence
+
+
 def test_topology_non_aws_falls_back_without_aws_group_leak():
     from prettygraph.native.topology import build_tree
     spec = {
