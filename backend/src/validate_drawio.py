@@ -536,6 +536,32 @@ def audit_edges(xml: str) -> list[str]:
         shown = ", ".join(list(hit)[:4]) + ("…" if len(hit) > 4 else "")
         advice.append(f"Edge(s) run THROUGH a node they don't connect to ({shown}) — "
                       "keep clearance: route around it or move the node.")
+
+    # Floating arrowheads: an edge anchored to a transparent leaf (not a real
+    # container). has_children guards out AWS Cloud/Region/AZ/VPC group frames —
+    # those legitimately use fillColor=none.
+    def _is_empty_leaf(c: dict) -> bool:
+        if c["edge"] == "1" or c["id"] in has_children:
+            return False
+        style = c["style"] or ""
+        if re.search(r"(?:^|;)text;", style) or c["id"] == "__title":
+            return False
+        return "fillColor=none" in style and "grIcon=" not in style
+
+    empty_leaves = {c["id"] for c in cells if c["id"] and _is_empty_leaf(c)}
+    floaters: list[str] = []
+    for c in cells:
+        if c["edge"] != "1":
+            continue
+        if c["target"] and c["target"] in empty_leaves:
+            floaters.append(f'{c["source"]}→{c["target"]}')
+        if c["source"] and c["source"] in empty_leaves:
+            floaters.append(f'{c["source"]}→{c["target"]} (source)')
+    if floaters:
+        uniq = list(dict.fromkeys(floaters))
+        shown = ", ".join(uniq[:4]) + ("…" if len(floaters) > 4 else "")
+        advice.append(f"Edge(s) connect to an invisible leaf node ({shown}) — "
+                      "anchor to a solid icon card instead of a transparent placeholder.")
     return advice
 
 
