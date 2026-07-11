@@ -141,7 +141,9 @@ def build_tree(spec: dict):
         top_children = [box("__empty", "(empty diagram)")]
     root = phantom("__root", "", {"dir": root_dir, "gap": 60}, top_children)
 
-    d = Diagram(spec.get("pattern", "pipeline"))
+    # contract="bake" freezes the router's obstacle-avoiding waypoints as explicit
+    # mxPoints (scaffold would drop them and let draw.io re-route from pins only).
+    d = Diagram(spec.get("pattern", "pipeline"), contract="bake")
     render_tree(d, root)
 
     title = spec.get("slide_title") or spec.get("diagram_title")
@@ -151,8 +153,9 @@ def build_tree(spec: dict):
     for e in spec.get("edges", []):
         s, t = e.get("from"), e.get("to")
         if s in d.R and t in d.R:
-            d.link(s, t, e.get("label") or "", style=e.get("style"),
-                   color=_flow_color(e.get("flow")))
+            d.link(s, t, e.get("label") or "",
+                   dash=(str(e.get("style") or "").lower() == "dashed"),
+                   stroke=_flow_color(e.get("flow")))
     return d, root
 
 
