@@ -126,3 +126,74 @@ def test_link_rejects_unknown_node():
         assert False, "expected ValueError for unknown node id"
     except ValueError as exc:
         assert "ghost" in str(exc)
+
+
+# --------------------------------------------------------------------------- #
+# auto-topology from render_spec
+# --------------------------------------------------------------------------- #
+
+_AWS_SPEC = {
+    "provider": "aws", "pattern": "microservices",
+    "layout_intent": "left_to_right_pipeline", "slide_title": "Shop",
+    "clusters": [
+        {"id": "edge", "label": "Edge", "tier": "frontend", "parent": "", "accent": "blue", "number": 1},
+        {"id": "vpc", "label": "Application VPC", "tier": "backend", "parent": "", "accent": "violet", "number": 2},
+        {"id": "svc", "label": "Services", "tier": "backend", "parent": "vpc", "accent": "violet", "number": None},
+        {"id": "data", "label": "Data", "tier": "data", "parent": "", "accent": "green", "number": 3},
+    ],
+    "nodes": [
+        {"id": "cf", "label": "CDN", "tech": "Amazon CloudFront", "cluster": "edge", "type": "cdn"},
+        {"id": "api", "label": "API", "tech": "Amazon API Gateway", "cluster": "svc", "type": "gateway"},
+        {"id": "orders", "label": "Orders", "tech": "AWS Lambda", "cluster": "svc", "type": "service"},
+        {"id": "db", "label": "DB", "tech": "Amazon RDS", "cluster": "data", "type": "database"},
+        {"id": "q", "label": "Queue", "tech": "Amazon SQS", "cluster": "data", "type": "queue"},
+    ],
+    "edges": [
+        {"from": "cf", "to": "api", "flow": "data"},
+        {"from": "api", "to": "orders", "flow": "data"},
+        {"from": "orders", "to": "db", "flow": "data"},
+        {"from": "orders", "to": "q", "flow": "control", "style": "dashed"},
+    ],
+}
+
+
+def test_topology_resolves_all_aws_stencils():
+    from prettygraph.native.topology import build_tree
+    d, _ = build_tree(_AWS_SPEC)
+    xml = d.mxfile("t")
+    assert xml.count("resIcon=mxgraph.aws4.") == 5   # every node got a ground-truth stencil
+    assert "grIcon=mxgraph.aws4.group_vpc" in xml     # "Application VPC" -> native group
+
+
+def test_topology_nests_subcluster_and_validates(tmp_path):
+    from prettygraph.native.topology import build_tree
+    d, _ = build_tree(_AWS_SPEC)
+    assert _contains(d.R["vpc"], d.R["svc"])          # svc nested inside its parent vpc
+    assert _contains(d.R["svc"], d.R["api"])          # node inside its cluster
+    p = tmp_path / "topo.drawio"
+    p.write_text(d.mxfile("t"), encoding="utf-8")
+    rep = vd.validate_file(str(p))
+    assert rep["error_count"] == 0, rep["errors"]     # edges routed naively but no hard errors
+
+
+def test_topology_is_deterministic():
+    from prettygraph.native.topology import build_tree
+    a, _ = build_tree(_AWS_SPEC)
+    b, _ = build_tree(_AWS_SPEC)
+    assert a.mxfile("t") == b.mxfile("t")
+
+
+def test_topology_non_aws_falls_back_without_aws_group_leak():
+    from prettygraph.native.topology import build_tree
+    spec = {
+        "provider": "gcp", "pattern": "monolith", "layout_intent": "top_down_stack",
+        "clusters": [{"id": "net", "label": "VPC Network", "tier": "infra",
+                      "parent": "", "accent": "blue", "number": None}],
+        "nodes": [{"id": "x", "label": "Custom Widget", "tech": "In-House Thing",
+                   "cluster": "net", "type": "service"}],
+        "edges": [],
+    }
+    d, _ = build_tree(spec)
+    xml = d.mxfile("t")
+    # provider != aws -> the "VPC Network" label must NOT become an aws4 group
+    assert "grIcon=mxgraph.aws4." not in xml
