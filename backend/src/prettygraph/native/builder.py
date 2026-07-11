@@ -42,6 +42,7 @@ class Diagram:
         self.contract = contract
         self.page = list(page)
         self.cells: list[str] = []
+        self._cell_index: dict[str, int] = {}  # id -> position in self.cells
         self.R: dict[str, dict] = {}
         self.phantoms: set[str] = set()
         self.edge_specs: list[dict] = []
@@ -49,12 +50,23 @@ class Diagram:
         if title:
             self.text("__title", [0, 24], page[0], title, fs=14)
 
+    def _emit_cell(self, id, xml: str) -> None:
+        """Append a cell, or replace in place if this id was already emitted —
+        so re-emitting (e.g. title() after the page size is known) never yields a
+        duplicate id."""
+        ix = self._cell_index.get(id)
+        if ix is None:
+            self._cell_index[id] = len(self.cells)
+            self.cells.append(xml)
+        else:
+            self.cells[ix] = xml
+
     # ---- primitive ---- #
     def _put(self, id, parent, x, y, w, h, style, label) -> dict:
         self.R[id] = {"x": x, "y": y, "w": w, "h": h}
         p = self.R.get(parent)
         ox, oy = (p["x"], p["y"]) if p else (0, 0)  # layer parents ("1") -> offset 0
-        self.cells.append(
+        self._emit_cell(id,
             f'<mxCell id="{id}" value="{_esc(label)}" style="{style}" vertex="1" '
             f'parent="{parent}"><mxGeometry x="{x - ox:.0f}" y="{y - oy:.0f}" '
             f'width="{w:.0f}" height="{h:.0f}" as="geometry"/></mxCell>')
