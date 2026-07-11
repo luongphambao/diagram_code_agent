@@ -46,6 +46,9 @@ class Diagram:
         self.R: dict[str, dict] = {}
         self.phantoms: set[str] = set()
         self.edge_specs: list[dict] = []
+        self.eid = 0
+        self._cross = 0
+        self._overlaps = 0
         self._edges_built = False
         if title:
             self.text("__title", [0, 24], page[0], title, fs=14)
