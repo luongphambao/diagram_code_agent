@@ -48,16 +48,26 @@ def _flow_color(flow: str | None) -> str | None:
     return None
 
 
+def _clean_query(q: str) -> str:
+    """Drop vendor/filler words so "AWS Lambda" -> "lambda", "Amazon RDS" -> "rds"."""
+    toks = [t for t in re.split(r"[^a-z0-9]+", (q or "").lower())
+            if t and t not in _VENDOR_WORDS]
+    return " ".join(toks)
+
+
 def _resolve_node_icon(cat, node: dict) -> str | None:
     """Best ground-truth stencil name for a node (by tech, then label), or None."""
     if not (cat and _search_icon):
         return None
-    for query in (node.get("tech"), node.get("label")):
-        if not query:
+    for raw in (node.get("tech"), node.get("label")):
+        if not raw:
             continue
-        hits = _search_icon(cat, query, limit=1, kind="icon")
-        if hits and hits[0].get("score", 0) >= _ICON_SCORE_MIN:
-            return hits[0]["name"]
+        for query in (_clean_query(raw), raw):  # cleaned first, then the raw text
+            if not query:
+                continue
+            hits = _search_icon(cat, query, limit=1, kind="icon")
+            if hits and hits[0].get("score", 0) >= _ICON_SCORE_MIN:
+                return hits[0]["name"]
     return None
 
 
