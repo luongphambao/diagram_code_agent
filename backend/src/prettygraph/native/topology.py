@@ -14,6 +14,8 @@ Input schema (subset of render_spec.json):
 
 from __future__ import annotations
 
+import re
+
 from .layout_engine import group, frame, grid, icon, box, phantom, render_tree
 from .builder import Diagram
 from .theme import THEME
