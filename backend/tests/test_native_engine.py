@@ -212,6 +212,23 @@ def test_router_is_deterministic():
     assert a.mxfile("t") == b.mxfile("t")  # router has no RNG / order dependence
 
 
+def test_build_drawio_from_spec_reports_stats(tmp_path):
+    from prettygraph.native.topology import build_drawio_from_spec
+    xml, stats = build_drawio_from_spec(_AWS_SPEC, "Shop")
+    assert stats["native_icons"] == 5
+    assert stats["native_groups"] >= 1
+    assert stats["edge_cross"] == 0 and stats["edge_overlaps"] == 0
+    assert stats["nodes"] == 5 and stats["edges"] == 4
+    p = tmp_path / "spec.drawio"
+    p.write_text(xml, encoding="utf-8")
+    assert vd.validate_file(str(p))["error_count"] == 0
+
+
+def test_export_drawio_native_tool_registered():
+    import tools
+    assert any(getattr(t, "name", "") == "export_drawio_native" for t in tools.DIAGRAM_TOOLS)
+
+
 def test_topology_non_aws_falls_back_without_aws_group_leak():
     from prettygraph.native.topology import build_tree
     spec = {
