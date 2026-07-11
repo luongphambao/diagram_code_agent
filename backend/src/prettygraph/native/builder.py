@@ -204,27 +204,15 @@ class Diagram:
         return self
 
     def _build_edges(self) -> None:
-        """Emit edges. Phase 2.2 placeholder: plain orthogonal source→target
-        connectors (draw.io auto-routes). Phase 2.4 replaces this with the
-        A*/nudge obstacle-avoiding router."""
+        """Route + emit all edges via the deterministic A*/nudge router."""
         if self._edges_built:
             return
         self._edges_built = True
-        for i, e in enumerate(self.edge_specs):
-            if e["src"] not in self.R or e["tgt"] not in self.R:
-                continue  # skip phantom-only endpoints (no rect to anchor)
-            opts = e["opts"]
-            color = opts.get("color") or THEME.edge_stroke
-            dashed = "dashed=1;dashPattern=6 6;" if opts.get("style") == "dashed" else ""
-            style = (
-                "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;"
-                f"strokeColor={color};strokeWidth={THEME.edge_stroke_width};"
-                f"fontColor={THEME.edge_font_color};labelBackgroundColor={THEME.edge_label_bg};"
-                + dashed)
-            self.cells.append(
-                f'<mxCell id="e{i}" value="{_esc(e["label"])}" style="{style}" edge="1" '
-                f'parent="1" source="{e["src"]}" target="{e["tgt"]}">'
-                '<mxGeometry relative="1" as="geometry"/></mxCell>')
+        # drop edges whose endpoints have no rect (phantom-only) before routing
+        self.edge_specs = [e for e in self.edge_specs
+                           if e["src"] in self.R and e["tgt"] in self.R]
+        from .router import build_edges
+        build_edges(self)
 
     # ---- export ---- #
     def to_xml(self) -> str:
