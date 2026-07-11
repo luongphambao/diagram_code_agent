@@ -78,13 +78,6 @@ def build_tree(spec: dict):
     loose: list[dict] = []
     for n in nodes:
         cid = n.get("cluster")
-        (nodes_by_cluster.setdefault(cid, []) if cid in clusters else loose).append(n) \
-            if cid in clusters else loose.append(n)
-    # (readability) rebuild cleanly — the ternary above only appends to loose on miss
-    nodes_by_cluster = {}
-    loose = []
-    for n in nodes:
-        cid = n.get("cluster")
         if cid in clusters:
             nodes_by_cluster.setdefault(cid, []).append(n)
         else:
