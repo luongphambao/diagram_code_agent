@@ -30,7 +30,10 @@ except (ImportError, ValueError):  # pragma: no cover - import fallback
     from prettygraph.constants import PRO_ACCENTS, FLOW_COLORS  # type: ignore
 
 _NEUTRAL_STROKE = "#8593A3"
-_ICON_SCORE_MIN = 60  # top-hit score to accept a stencil for a node (else a plain box)
+_ICON_SCORE_MIN = 50  # top-hit score to accept a stencil for a node (else a plain box)
+# Vendor / filler words that dilute a stencil search ("AWS Lambda" -> "lambda").
+_VENDOR_WORDS = {"aws", "amazon", "azure", "gcp", "google", "microsoft", "cloud",
+                 "apache", "the", "a", "for", "service", "services", "managed"}
 
 
 def _accent_stroke(accent: str | None) -> str:
