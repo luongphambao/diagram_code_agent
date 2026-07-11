@@ -163,3 +163,22 @@ def render_spec_to_drawio(spec: dict, name: str = "Architecture") -> str:
     """Convenience: build from spec and return the full .drawio (mxfile) XML."""
     d, _ = build_tree(spec)
     return d.mxfile(name)
+
+
+def build_drawio_from_spec(spec: dict, name: str = "Architecture") -> tuple[str, dict]:
+    """Build a native .drawio from a render_spec and return (xml, stats).
+
+    stats reports fidelity + routing quality for the caller to log: native icon /
+    group counts, and the router's residual edge crossings / parallel overlaps.
+    """
+    d, _ = build_tree(spec)
+    xml = d.mxfile(name)
+    stats = {
+        "nodes": len(spec.get("nodes", [])),
+        "edges": len(spec.get("edges", [])),
+        "native_icons": xml.count("resIcon=mxgraph.aws4."),
+        "native_groups": xml.count("grIcon=mxgraph.aws4."),
+        "edge_cross": getattr(d, "_cross", 0),
+        "edge_overlaps": getattr(d, "_overlaps", 0),
+    }
+    return xml, stats
