@@ -69,7 +69,10 @@ def dot_to_drawio(dot_path: str, sidecar_path: str, out_path: str) -> str:
         if name.startswith("cluster"):
             if not o.get("bb"):
                 continue
-            cid = name[len("cluster"):]
+            # Graphviz names subgraphs "cluster_<id>"; strip the FULL prefix so the
+            # sidecar lookup (keyed by <id>) matches. Stripping only "cluster" left a
+            # leading "_", silently losing every cluster's label, colour and group_name.
+            cid = name[len("cluster_"):] if name.startswith("cluster_") else name[len("cluster"):]
             meta = sclusters.get(cid, {})
             cx0, cy0, cx1, cy1 = (float(v) for v in o["bb"].split(","))
             gx, gy, gw, gh = cx0, H - cy1, cx1 - cx0, cy1 - cy0
