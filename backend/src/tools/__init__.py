@@ -176,6 +176,7 @@ DIAGRAM_TOOLS = [
     audit_diagram_code,
     render_diagram,
     export_drawio,
+    export_drawio_native,
     list_saved_diagrams,
     search_diagrams_nodes,
     search_icons,
