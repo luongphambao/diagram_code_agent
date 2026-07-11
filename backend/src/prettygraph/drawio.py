@@ -13,13 +13,22 @@ from subprocess_utils import run_graphviz
 from .constants import EDGE_COLOR, EDGE_FONTCOLOR
 
 try:
-    from ..drawio_catalog import load_catalog as _load_catalog, style_for_icon as _style_for_icon
+    from ..drawio_catalog import (
+        load_catalog as _load_catalog,
+        style_for_icon as _style_for_icon,
+        style_for_group as _style_for_group,
+    )
 except (ImportError, ValueError):
     try:
-        from drawio_catalog import load_catalog as _load_catalog, style_for_icon as _style_for_icon  # type: ignore[no-redef]
+        from drawio_catalog import (  # type: ignore[no-redef]
+            load_catalog as _load_catalog,
+            style_for_icon as _style_for_icon,
+            style_for_group as _style_for_group,
+        )
     except ImportError:
         _load_catalog = None  # type: ignore[assignment]
         _style_for_icon = None  # type: ignore[assignment]
+        _style_for_group = None  # type: ignore[assignment]
 
 
 def _b64(path: str | None) -> str | None:
