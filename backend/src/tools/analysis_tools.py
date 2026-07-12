@@ -771,6 +771,17 @@ def propose_blueprint(blueprint: Blueprint) -> str:
     # Pre-seed icon_plan.json so the drawer skips redundant search_icons calls.
     _preseed_icon_plan(blueprint, provider)
 
+    # Deterministic NATIVE pre-render: build out.drawio (+ out.png / out.slide.json)
+    # from the spec NOW, so a canonical architecture ALWAYS gets the native engine
+    # (deterministic layout + ground-truth stencils + obstacle-avoiding router)
+    # regardless of the drawer LLM's later choice. Non-fatal — the drawer inspects
+    # out.png and finalizes, or re-renders if it needs a change.
+    try:
+        from .rendering_tools import _render_native_from_spec
+        _render_native_from_spec(render_spec, current_workspace())
+    except Exception:  # noqa: BLE001 — advisory; never block approval
+        pass
+
     # --- deterministic validators (warnings only, do not block) ---
     warnings: list[str] = []
 
