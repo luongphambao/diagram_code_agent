@@ -525,7 +525,7 @@ def export_drawio_native() -> str:
     except Exception:  # noqa: BLE001
         pass
     return (
-        f"Wrote out.drawio ({out.stat().st_size} bytes) via native engine. "
+        f"Wrote out.drawio ({out.stat().st_size} bytes) via native engine.{png_note} "
         f"Fidelity: {stats['native_icons']}/{stats['nodes']} native stencils, "
         f"{stats['native_groups']} native group frames. "
         f"Routing: {stats['edge_cross']} edge-through-node, "
