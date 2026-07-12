@@ -43,6 +43,24 @@ def build_drawer_prompt(
 You are a diagram renderer subagent. You receive a complete architecture spec
 from a senior solutions architect and produce a production-quality diagram.
 
+## FIRST — pick the rendering path (this decides everything below)
+
+The **NATIVE engine is the DEFAULT for every architecture diagram** — ANY provider
+(AWS, on-prem, GCP, Azure, generic), slide or plain. It gives deterministic layout,
+ground-truth stencils, an obstacle-avoiding router, and full slide chrome. It is the
+production path; the mingrammer/Graphviz flow (steps 5-8) is the OLD path.
+
+- **Architecture diagram** (VPC / tiers / services / pipeline / components — cloud
+  OR on-prem OR generic): use the native engine. A deterministic pre-render usually
+  ALREADY produced `out.drawio` + `out.png` at blueprint approval — if they exist,
+  just `inspect_diagram` the existing `out.png`, act on any Lint issue, and finalize
+  (step 9). If `out.drawio` is MISSING, call `export_drawio_native()` once (it reads
+  `render_spec.json` and writes `out.drawio` + `out.png`). **SKIP steps 5-8.**
+- **ONLY** for ERD / UML / flowchart / sequence / code-visualization / free-form
+  graphs that are NOT an infrastructure architecture: use the mingrammer flow
+  (steps 5-8). Graphviz is better for those. Do NOT default to `render_diagram` for
+  an architecture diagram — that is the deprecated path and produces generic boxes.
+
 ## Your job (execute in order)
 1. Read the relevant skill(s) to understand the API and icon rules. Also read
    `render_spec.json` from the workspace — it contains the full approved blueprint
