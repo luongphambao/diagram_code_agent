@@ -431,6 +431,47 @@ def export_drawio() -> str:
     return f"Wrote out.drawio ({out.stat().st_size} bytes).{lint}{archive_note}{gate_note}"
 
 
+def _find_drawio_cli() -> str | None:
+    """Locate the draw.io desktop CLI (env DRAWIO_CLI, PATH, then common installs)."""
+    import shutil
+    env = os.environ.get("DRAWIO_CLI")
+    if env and Path(env).exists():
+        return env
+    for name in ("drawio", "draw.io"):
+        found = shutil.which(name)
+        if found:
+            return found
+    candidates = [
+        Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "draw.io" / "draw.io.exe",
+        Path("C:/Program Files/draw.io/draw.io.exe"),
+        Path("/usr/bin/drawio"), Path("/opt/drawio/drawio"),
+        Path("/Applications/draw.io.app/Contents/MacOS/draw.io"),
+    ]
+    for p in candidates:
+        try:
+            if str(p) and p.exists():
+                return str(p)
+        except OSError:
+            continue
+    return None
+
+
+def _render_drawio_png(drawio_path: Path, png_path: Path, scale: int = 2) -> bool:
+    """Render a .drawio to PNG via the draw.io CLI; False if the CLI is unavailable."""
+    exe = _find_drawio_cli()
+    if not exe:
+        return False
+    try:
+        subprocess.run(
+            [exe, "--export", "--format", "png", "--scale", str(scale), "--border", "20",
+             "--output", str(png_path), str(drawio_path), "--no-sandbox"],
+            timeout=120, capture_output=True,
+        )
+    except (subprocess.SubprocessError, OSError):
+        return False
+    return png_path.exists()
+
+
 @tool
 def export_drawio_native() -> str:
     """Build an editable out.drawio straight from render_spec.json with the NATIVE
