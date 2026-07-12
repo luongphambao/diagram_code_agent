@@ -28,8 +28,8 @@ from pathlib import Path
 
 FAMILY = "mxgraph.aws4"
 
-# backend/src/drawio_catalog.py -> parents[2] == repo root
-_CATALOG_DIR = Path(__file__).resolve().parents[2] / "resources" / "drawio_catalog"
+# backend/src/domain/diagram/drawio_catalog.py -> parents[4] == repo root
+_CATALOG_DIR = Path(__file__).resolve().parents[4] / "resources" / "drawio_catalog"
 # AWS is the primary file; sibling packs (bigdata/database/...) merge on top.
 _PRIMARY = _CATALOG_DIR / "aws.json"
 
