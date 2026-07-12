@@ -666,10 +666,10 @@ MAIN_SKILL_PATHS = [
     (SKILLS_DIR / "diagrams-as-code").as_posix(),
     (SKILLS_DIR / "pro-style").as_posix(),
 ]
-DRAWER_SKILL_PATHS = [
-    (SKILLS_DIR / "drawer" / "diagrams-as-code").as_posix(),
-    (SKILLS_DIR / "drawer" / "pro-style").as_posix(),
-]
+# Drawer and main now share a single canonical copy of these skills. The former
+# `skills/drawer/*` duplicates had silently drifted (the top-level copies went
+# stale); they were consolidated into the top-level dirs to remove the drift.
+DRAWER_SKILL_PATHS = list(MAIN_SKILL_PATHS)
 WBS_PLANNER_SKILL_PATHS = [
     (SKILLS_DIR / "wbs-planning").as_posix(),
 ]
