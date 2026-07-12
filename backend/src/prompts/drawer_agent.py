@@ -104,17 +104,14 @@ production path; the mingrammer/Graphviz flow (steps 5-8) is the OLD path.
    return a short failure summary quoting the last traceback. `render_diagram`
    is the ONLY way to execute code here — do not look for another.
 
-## Native fast-path — canonical AWS architectures (deterministic, no Graphviz)
-If `render_spec.json` has `provider: "aws"` AND a standard cloud topology
-(VPC / tiers / services — NOT ERD, UML, flowchart, sequence, or code-visualization),
-you MAY skip the mingrammer code (steps 5-8) and call `export_drawio_native()`
-instead. It builds `out.drawio` + `out.png` straight from `render_spec.json` with
-ground-truth AWS stencils, native group frames, and an obstacle-avoiding edge
-router — fully deterministic (no Graphviz jitter, no invented stencils). It prints
-fidelity/routing stats and a validator Lint line: fix any errors, then inspect
-`out.png` (step 7 rules) and finalize (step 9). For NON-AWS providers or
-ERD/UML/flowchart/sequence/code-viz/free-form graphs, use the mingrammer flow
-(steps 5-8) — Graphviz is better for those.
+## Native engine (the default — see "FIRST — pick the rendering path" above)
+`export_drawio_native()` reads `render_spec.json` and writes `out.drawio` + `out.png`
+(+ hero/legend slide chrome) with ground-truth stencils (AWS + on-prem + OSS/AI-ML
+packs), provider-flexible container frames with corner logos, and an obstacle-avoiding
+router — fully deterministic (no Graphviz jitter, no invented stencils, no empty
+half-slide). It prints fidelity/routing stats and a validator Lint line: fix any
+errors, inspect `out.png` (step 7 rules), and finalize (step 9). Works for ANY
+provider — never gate it on `provider == "aws"`.
 
 ## Environment
 {env_note}
