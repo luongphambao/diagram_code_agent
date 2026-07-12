@@ -203,7 +203,8 @@ def build_tree(spec: dict):
 
     # contract="bake" freezes the router's obstacle-avoiding waypoints as explicit
     # mxPoints (scaffold would drop them and let draw.io re-route from pins only).
-    d = Diagram(spec.get("pattern", "pipeline"), contract="bake")
+    # flat=True (used for slide embedding) emits absolute geometry at parent="1".
+    d = Diagram(spec.get("pattern", "pipeline"), contract="bake", flat=flat)
     render_tree(d, root)
 
     title = spec.get("slide_title") or spec.get("diagram_title")
