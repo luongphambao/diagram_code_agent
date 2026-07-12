@@ -666,6 +666,7 @@ def audit_xml(xml: str, profile: str = "auto") -> list[str]:
     advice += audit_edge_labels(xml)
     advice += audit_geometry(xml)
     advice += audit_edges(xml)
+    advice += audit_bpmn(xml)
     return advice
 
 
