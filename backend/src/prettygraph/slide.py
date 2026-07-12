@@ -331,6 +331,33 @@ def _compose_slide_drawio(body_xml: str, out_path: str, *, title: str,
     return xml_out
 
 
+def compose_native_slide(body_xml: str, out_path: str, *, title: str,
+                         kicker: str | None = None, brand: str | None = None,
+                         diagram_title: str | None = None, legend=None,
+                         include_hero: bool = True) -> str:
+    """Wrap a NATIVE-engine body .drawio in the standard slide chrome (hero band,
+    panel, caption, legend) — the drawio counterpart of render_slide for a body
+    produced WITHOUT Graphviz. Panel/body geometry mirrors ``_compose_slide_png``.
+    """
+    legend_items = _normal_legend(legend or [])
+    legend_h = 118 if legend_items else 0
+    caption_area = 74
+    panel_x = SLIDE_MARGIN
+    panel_y = SLIDE_HERO_H + 34 if include_hero else SLIDE_MARGIN
+    panel_w = SLIDE_SIZE - SLIDE_MARGIN * 2
+    max_w = panel_w - SLIDE_PANEL_PAD * 2
+    slide_h = round(SLIDE_SIZE / SLIDE_PAGE_RATIO)
+    avail_h = max(slide_h - panel_y - SLIDE_MARGIN - caption_area
+                  - SLIDE_PANEL_PAD - legend_h, 100)
+    panel_h = caption_area + avail_h + SLIDE_PANEL_PAD + legend_h
+    body_box = [panel_x + SLIDE_PANEL_PAD, panel_y + caption_area, max_w, avail_h]
+    panel = [panel_x, panel_y, panel_w, panel_h]
+    return _compose_slide_drawio(
+        body_xml, out_path, title=title, kicker=kicker, brand=brand,
+        diagram_title=diagram_title, legend=legend or [], body_box=body_box,
+        panel=panel, include_hero=include_hero, slide_h=slide_h)
+
+
 def render_slide(g, out_basename: str, *, title: str,
                  kicker: str | None = None, brand: str | None = None,
                  diagram_title: str | None = None, legend=None,
