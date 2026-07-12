@@ -599,6 +599,57 @@ def audit_edges(xml: str) -> list[str]:
     return advice
 
 
+def audit_bpmn(xml: str) -> list[str]:
+    """BPMN semantic checks (self-gated: only runs when mxgraph.bpmn shapes exist).
+
+    - a gateway must split (>=2 outgoing) or merge (>=2 incoming) sequence flow
+    - a start event has no incoming; an end event has no outgoing
+    - no orphan flow object (a node connected to no sequence flow)
+    Ported from drawio-ai-kit/src/core.mjs auditBpmn.
+    """
+    if "mxgraph.bpmn." not in xml:
+        return []
+    cells = []
+    for tag in _RE_OPENCELL.findall(xml):
+        cells.append({"id": _attr(tag, "id"), "edge": _attr(tag, "edge"),
+                      "source": _attr(tag, "source"), "target": _attr(tag, "target"),
+                      "style": _attr(tag, "style") or ""})
+    flow = [c for c in cells if "shape=mxgraph.bpmn." in c["style"]]
+    if not flow:
+        return []
+    out_deg: dict[str, int] = {}
+    in_deg: dict[str, int] = {}
+    for c in cells:
+        if c["edge"] != "1" or not c["source"] or not c["target"]:
+            continue
+        out_deg[c["source"]] = out_deg.get(c["source"], 0) + 1
+        in_deg[c["target"]] = in_deg.get(c["target"], 0) + 1
+    advice: list[str] = []
+    for c in flow:
+        sm = re.search(r"shape=mxgraph\.bpmn\.([^;]+)", c["style"])
+        sh = sm.group(1) if sm else ""
+        om = re.search(r"outline=([^;]+)", c["style"])
+        outl = om.group(1) if om else ""
+        out = out_deg.get(c["id"], 0)
+        ins = in_deg.get(c["id"], 0)
+        is_gateway = sh.startswith("gateway")
+        is_start = sh.startswith("event") and outl == "standard"
+        is_end = sh.startswith("event") and outl == "end"
+        if is_gateway and out < 2 and ins < 2:
+            advice.append(f'BPMN gateway "{c["id"]}" neither splits (≥2 outgoing) nor '
+                          "merges (≥2 incoming) — a gateway should branch or join paths.")
+        if is_start and ins > 0:
+            advice.append(f'BPMN start event "{c["id"]}" has an incoming sequence flow — '
+                          "a start event should have no incoming edges.")
+        if is_end and out > 0:
+            advice.append(f'BPMN end event "{c["id"]}" has an outgoing sequence flow — '
+                          "an end event should have no outgoing edges.")
+        if out == 0 and ins == 0:
+            advice.append(f'BPMN flow object "{c["id"]}" ({sh}) is not connected to any '
+                          "sequence flow — orphan node.")
+    return advice
+
+
 def audit_xml(xml: str, profile: str = "auto") -> list[str]:
     """Run the design audits and return the combined advice list.
 
