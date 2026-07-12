@@ -186,8 +186,13 @@ def build_tree(spec: dict):
         gname = _aws_group_for_label(label) if provider == "aws" else None
         if gname:
             return group(cid, gname, label, {"dir": "col", "gap": 20}, kids)
-        return frame(cid, label, {"dir": "col", "gap": 18,
-                                  "stroke": _accent_stroke(c.get("accent"))}, kids)
+        # Non-AWS: the "AWS look" (framed container + corner logo) with a SWAPPABLE
+        # logo — on-prem / k8s / db / server etc. — instead of an AWS group stencil.
+        opts = {"dir": "col", "gap": 18, "stroke": _accent_stroke(c.get("accent"))}
+        logo = _container_logo(cat, c)
+        if logo:
+            opts["cornerIcon"] = logo
+        return frame(cid, label, opts, kids)
 
     top_children = [build_cluster(cid) for cid in roots]
     top_children += [build_node(n) for n in loose]
