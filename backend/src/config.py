@@ -4,7 +4,7 @@ Usage
 -----
 from config import get_model, make_llm
 
-llm = make_llm(get_model("main", fallback="gpt-5.4-mini"))
+llm = make_llm(get_model("main", fallback="mimo-v2.5"))
 """
 
 from __future__ import annotations
