@@ -24,7 +24,7 @@ BNK_WHITE = RGBColor(0xFF, 0xFF, 0xFF)
 BNK_TEXT = RGBColor(0x33, 0x33, 0x33)
 BNK_FONT = "Calibri"
 
-from reporting import (
+from domain.reporting.reporting import (
     DEFAULT_REPORT_SECTIONS,
     assemble_report_data,
     normalize_sections,
@@ -180,8 +180,8 @@ class PPTProposalError(RuntimeError):
 
 
 def _template_path() -> Path:
-    # parents[0]=src/, parents[1]=backend/ — bundled alongside the package
-    return Path(__file__).resolve().parents[1] / "templates" / "bnk_proposal_template.pptx"
+    # parents[0]=domain/reporting/, [1]=domain/, [2]=src/, [3]=backend/ — bundled alongside the package
+    return Path(__file__).resolve().parents[3] / "templates" / "bnk_proposal_template.pptx"
 
 
 def _clip(text: Any, limit: int = 220) -> str:
@@ -1091,8 +1091,8 @@ def _gantt_params_from_wbs(workspace: Path) -> dict[str, Any]:
     if not isinstance(wbs, dict) or not wbs:
         return {"weeks": 0, "months": 0, "sprints": 0, "gantt_rows": []}
     try:
-        from wbs_effort import delivery_grid
-        from wbs_excel import _module_schedule
+        from domain.wbs.wbs_effort import delivery_grid
+        from domain.wbs.wbs_excel import _module_schedule
         weeks = int((wbs.get("timeline") or {}).get("weeks") or 16)
         grid = delivery_grid(weeks)
         rows = [
@@ -1156,7 +1156,7 @@ def _enrich_report_from_csm(report: dict[str, Any], workspace: Path) -> dict[str
     model = _load_current_csm(workspace)
     if model is not None:
         if not report.get("tech_items"):
-            from deck_resolver import _components_by_cluster
+            from domain.deck.deck_resolver import _components_by_cluster
             report["tech_items"] = [
                 {"layer": name, "choice": ", ".join(names[:8]), "rationale": purpose}
                 for name, purpose, names in _components_by_cluster(model)
@@ -1186,7 +1186,7 @@ def _enrich_report_from_csm(report: dict[str, Any], workspace: Path) -> dict[str
     totals = wbs.get("effort_totals") or {}
     if wbs.get("effort_by_module") and not report.get("capex_rows"):
         try:
-            from wbs_effort import DEFAULT_RATE_CARD_USD_PER_MONTH, rate_per_manday
+            from domain.wbs.wbs_effort import DEFAULT_RATE_CARD_USD_PER_MONTH, rate_per_manday
             rate = totals.get("rate_card_usd_per_month") or DEFAULT_RATE_CARD_USD_PER_MONTH
             rows = []
             for m in wbs["effort_by_module"]:
@@ -1246,7 +1246,7 @@ def generate_ppt_proposal_file(
     outline_source = "hardcoded layout"
     deck_revision: int | None = None
     try:
-        from deck import load_deck_plan
+        from domain.deck.deck import load_deck_plan
         plan = load_deck_plan(workspace)
         if plan and plan.slides:
             deck_revision = plan.revision
