@@ -72,11 +72,15 @@ class Diagram:
     # ---- primitive ---- #
     def _put(self, id, parent, x, y, w, h, style, label) -> dict:
         self.R[id] = {"x": x, "y": y, "w": w, "h": h}
-        p = self.R.get(parent)
-        ox, oy = (p["x"], p["y"]) if p else (0, 0)  # layer parents ("1") -> offset 0
+        if self.flat:
+            eff_parent, ox, oy = "1", 0, 0  # flat: all cells at root, absolute coords
+        else:
+            eff_parent = parent
+            p = self.R.get(parent)
+            ox, oy = (p["x"], p["y"]) if p else (0, 0)  # layer parents ("1") -> offset 0
         self._emit_cell(id,
             f'<mxCell id="{id}" value="{_esc(label)}" style="{style}" vertex="1" '
-            f'parent="{parent}"><mxGeometry x="{x - ox:.0f}" y="{y - oy:.0f}" '
+            f'parent="{eff_parent}"><mxGeometry x="{x - ox:.0f}" y="{y - oy:.0f}" '
             f'width="{w:.0f}" height="{h:.0f}" as="geometry"/></mxCell>')
         return self.R[id]
 
