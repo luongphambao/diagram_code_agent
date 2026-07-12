@@ -301,6 +301,31 @@ def audit_aws_conventions(xml: str) -> list[str]:
         shown = ", ".join(rounded[:6]) + ("…" if len(rounded) > 6 else "")
         advice.append(f"Rounded frame(s) found ({len(rounded)}: {shown}) — "
                       "AWS diagrams use SQUARE corners; set rounded=0.")
+
+    # Managed/global services must sit outside the VPC (rules/aws-architecture.md).
+    def _enclosing_vpc(c: dict) -> str | None:
+        p, guard = by_id.get(c["parent"]), 0
+        while p and guard < 50:
+            guard += 1
+            g = group_tok(p["style"])
+            if g is not None and _GROUP_LEVEL.get(g, 0) >= _GROUP_LEVEL["group_vpc"]:
+                return g
+            p = by_id.get(p["parent"])
+        return None
+
+    misplaced = []
+    for c in cells:
+        m = re.search(r"resIcon=mxgraph\.aws4\.([a-zA-Z0-9_]+)", c["style"])
+        if not m or m.group(1) not in _MANAGED_GLOBAL:
+            continue
+        inside = _enclosing_vpc(c)
+        if inside:
+            misplaced.append(f"{m.group(1)} (in {inside})")
+    if misplaced:
+        shown = ", ".join(misplaced[:5]) + ("…" if len(misplaced) > 5 else "")
+        advice.append(f"Managed/global service(s) nested inside a VPC/subnet ({shown}) — "
+                      "S3/IAM/KMS/CloudWatch/Route 53/DynamoDB/CloudFront are global; "
+                      "place them in the AWS Cloud band, outside the VPC.")
     return advice
 
 
