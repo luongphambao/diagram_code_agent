@@ -276,13 +276,17 @@ def _compose_slide_drawio(body_xml: str, out_path: str, *, title: str,
                           kicker: str | None, brand: str | None,
                           diagram_title: str | None, legend, body_box: list[int],
                           panel: list[int], include_hero: bool = False,
-                          slide_h: int = SLIDE_SIZE) -> str:
+                          slide_h: int = SLIDE_SIZE,
+                          hero_h: int = SLIDE_HERO_H) -> str:
     from .drawio import _page_dims
 
     body_w, body_h = _page_dims(body_xml)
     bx, by, bw, bh = body_box
     scale = min(bw / body_w, bh / body_h) if body_w and body_h else 1.0
-    body_inner = _transform_drawio_body(body_xml, x=bx, y=by, scale=scale)
+    # centre the scaled body inside its box (else a wide/short body strands to a corner)
+    off_x = bx + max(0, (bw - body_w * scale) / 2)
+    off_y = by + max(0, (bh - body_h * scale) / 2)
+    body_inner = _transform_drawio_body(body_xml, x=off_x, y=off_y, scale=scale)
 
     cells: list[str] = [
         _drawio_rect_cell("slide_bg", 0, 0, SLIDE_SIZE, slide_h, fill="#FFFFFF"),
