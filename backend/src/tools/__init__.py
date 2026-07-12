@@ -102,64 +102,69 @@ from .rendering_tools import (
 )
 
 # --- analysis / HITL tools + Pydantic models ---
-from .analysis_tools import (
-    BPCluster,
-    BPEdge,
-    BPNode,
-    Blueprint,
-    CoercingModel,
+from .schemas.coercion import CoercingModel, _mimo_coerce_before, _wants_structural
+from .schemas.brief import DiagramBrief
+from .schemas.tech_stack import (
     CostRange,
     DataAssumptions,
-    DiagramBrief,
-    LegendEntry,
-    NFRMapping,
-    PdfReportConfig,
-    PillarCoverage,
     ProposeTechStackArgs,
-    PptProposalConfig,
     ScalingPhase,
     SolutionAssumptions,
+    TeamAssumptions,
     TechAlternative,
     TechChoice,
     TechCriteria,
     TechRisk,
-    TeamAssumptions,
     UserScaleAssumptions,
+)
+from .schemas.blueprint import (
+    BPCluster,
+    BPEdge,
+    BPNode,
+    Blueprint,
+    LegendEntry,
+    NFRMapping,
+    PillarCoverage,
     WAFPillar,
+)
+from .analysis.architecture import analyze_architecture_requirements
+from .analysis.blueprint_tools import (
     _build_render_spec,
     _detect_provider,
-    _mimo_coerce_before,
     _preseed_icon_plan,
     _req_soft_match,
     _validate_nfr_mapping,
     _validate_pillar_coverage,
     _validate_req_coverage,
-    _wants_structural,
-    add_comment,
-    analyze_architecture_requirements,
-    apply_compliance_pack,
-    compare_revisions,
+    inspect_diagram,
+    propose_blueprint,
+    propose_diagram_brief,
+    propose_tech_stack,
+    submit_critique,
+)
+from .analysis.gates import compare_revisions, query_change_impact
+from .analysis.reporting_gates import (
+    PdfReportConfig,
+    PptProposalConfig,
     create_pptx,
+    generate_pdf_report,
+    generate_ppt_proposal,
+    plan_deck,
+    propose_deck_plan,
+)
+from .analysis.research import web_research
+from .analysis.findings import (
+    add_comment,
+    apply_compliance_pack,
     edit_entity,
     export_adr_pack,
     export_to_delivery,
-    generate_pdf_report,
-    generate_ppt_proposal,
-    inspect_diagram,
-    plan_deck,
-    propose_blueprint,
-    propose_deck_plan,
-    propose_diagram_brief,
-    propose_tech_stack,
-    query_change_impact,
+    quality_summary,
     reality_sync,
     record_evidence,
     resolve_comment,
     resolve_finding,
-    quality_summary,
-    submit_critique,
     waive_finding,
-    web_research,
 )
 
 # ---------------------------------------------------------------------------
@@ -207,7 +212,7 @@ DIAGRAM_TOOLS = [
 
 # Late imports (same as original tools.py bottom section)
 from integrations import send_email, propose_meeting_slots, create_client_meeting  # noqa: E402
-from wbs_tools import (  # noqa: E402
+from domain.wbs.wbs_tools import (  # noqa: E402
     WBS_PLANNER_TOOLS, propose_wbs_skeleton, propose_wbs, export_wbs_excel,
 )
 
