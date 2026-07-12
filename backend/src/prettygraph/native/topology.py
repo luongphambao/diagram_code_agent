@@ -21,11 +21,13 @@ from .builder import Diagram
 from .theme import THEME
 
 try:
-    from ..drawio_catalog import load_catalog as _load_catalog, search_icon as _search_icon
+    from ..drawio_catalog import (load_catalog as _load_catalog,
+                                  search_icon as _search_icon, get_icon as _get_icon)
     from ..graph_builder import _aws_group_for_label
     from ..constants import PRO_ACCENTS, FLOW_COLORS
 except (ImportError, ValueError):  # pragma: no cover - import fallback
-    from drawio_catalog import load_catalog as _load_catalog, search_icon as _search_icon  # type: ignore
+    from drawio_catalog import (load_catalog as _load_catalog,  # type: ignore
+                                search_icon as _search_icon, get_icon as _get_icon)
     from prettygraph.graph_builder import _aws_group_for_label  # type: ignore
     from prettygraph.constants import PRO_ACCENTS, FLOW_COLORS  # type: ignore
 
@@ -34,6 +36,51 @@ _ICON_SCORE_MIN = 50  # top-hit score to accept a stencil for a node (else a pla
 # Vendor / filler words that dilute a stencil search ("AWS Lambda" -> "lambda").
 _VENDOR_WORDS = {"aws", "amazon", "azure", "gcp", "google", "microsoft", "cloud",
                  "apache", "the", "a", "for", "service", "services", "managed"}
+
+# Corner-logo for NON-AWS container frames (the "AWS look" — a framed group with a
+# logo in the corner — but the logo is swappable per provider/on-prem). Keyword in
+# the cluster label/tier → a ground-truth catalog icon name (all verified to exist).
+# Most specific first. A cluster may override via an explicit `icon` field.
+_CONTAINER_LOGO: tuple[tuple[str, str], ...] = (
+    ("corporate data center", "corporate_data_center"),
+    ("data center", "corporate_data_center"),
+    ("datacenter", "corporate_data_center"),
+    ("on-prem", "corporate_data_center"),
+    ("on prem", "corporate_data_center"),
+    ("onprem", "corporate_data_center"),
+    ("kubernetes", "kubernetes"),
+    ("k8s", "kubernetes"),
+    ("container", "kubernetes"),
+    ("firewall", "generic_firewall"),
+    ("security", "generic_firewall"),
+    ("network", "generic_firewall"),
+    ("database", "generic_database"),
+    ("data store", "generic_database"),
+    ("storage", "generic_database"),
+    ("data", "generic_database"),
+    ("gpu", "traditional_server"),
+    ("compute", "traditional_server"),
+    ("infra", "traditional_server"),
+    ("server", "traditional_server"),
+)
+
+
+def _container_logo(cat, cluster: dict) -> str | None:
+    """Pick a corner-logo icon name for a non-AWS container frame (or None).
+
+    Priority: an explicit `cluster["icon"]` → keyword match on label/tier. Only
+    returns a name that actually exists in the catalog (so corner_icon never fails).
+    """
+    candidate = cluster.get("icon")
+    if not candidate:
+        text = f" {(cluster.get('label') or '').lower()} {(cluster.get('tier') or '').lower()} "
+        for kw, logo in _CONTAINER_LOGO:
+            if kw in text:
+                candidate = logo
+                break
+    if candidate and cat and _get_icon and _get_icon(cat, candidate):
+        return candidate
+    return None
 
 
 def _accent_stroke(accent: str | None) -> str:
