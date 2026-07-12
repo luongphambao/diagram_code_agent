@@ -8,6 +8,7 @@ an in-memory dict so no workspace files or API key are needed.
 import json
 
 from tools import analysis_tools as at
+from tools.analysis import research as _research
 from tools.constants import WEB_SEARCH_CATEGORY_CAPS, WEB_SEARCH_SESSION_CAP
 
 
