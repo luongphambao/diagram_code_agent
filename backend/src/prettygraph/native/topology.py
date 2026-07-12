@@ -208,8 +208,10 @@ def build_tree(spec: dict, flat: bool = False):
     d = Diagram(spec.get("pattern", "pipeline"), contract="bake", flat=flat)
     render_tree(d, root)
 
+    # In slide mode (flat) the slide chrome supplies the title — adding it to the
+    # body too would duplicate it. Only title the body for standalone diagrams.
     title = spec.get("slide_title") or spec.get("diagram_title")
-    if title:
+    if title and not flat:
         d.title(title)
 
     for e in spec.get("edges", []):
