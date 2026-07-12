@@ -494,7 +494,24 @@ def export_drawio_native() -> str:
         from prettygraph.native.topology import build_drawio_from_spec
         name = spec.get("slide_title") or spec.get("diagram_title") or "Architecture"
         xml, stats = build_drawio_from_spec(spec, name)
-        out.write_text(xml, encoding="utf-8")
+        # Slide presentations (the default) get the hero-band + legend chrome by
+        # wrapping the native body .drawio — same look as the Graphviz slide path.
+        presentation = str(spec.get("presentation_style") or "slide").lower()
+        if presentation == "slide":
+            from prettygraph.slide import compose_native_slide
+            compose_native_slide(
+                xml, str(out),
+                title=spec.get("slide_title") or name,
+                kicker=spec.get("slide_kicker") or None,
+                brand=spec.get("brand") or None,
+                diagram_title=spec.get("diagram_title") or None,
+                legend=spec.get("legend") or [], include_hero=True)
+            (current_workspace() / "out.slide.json").write_text(
+                json.dumps({"drawio": "out.drawio", "png": "out.png",
+                            "engine": "native", "style": "slide"}),
+                encoding="utf-8")
+        else:
+            out.write_text(xml, encoding="utf-8")
     except Exception as exc:  # noqa: BLE001 — surface to the agent
         return f"export_drawio_native failed: {exc}"
     if not out.exists():
