@@ -390,6 +390,26 @@ def test_dot_to_drawio_fallback_to_b64(tmp_path, monkeypatch):
     assert "resIcon" not in xml
 
 
+def test_audit_flags_managed_service_inside_vpc(tmp_path):
+    """S3/IAM/etc. nested inside a VPC/subnet is flagged (Tier 3.1, beyond the kit)."""
+    # move S3 (at x=400 in the cloud band) into the private subnet
+    xml = _build_native_drawio().replace(
+        'parent="cloud"><mxGeometry x="400"',
+        'parent="subnet"><mxGeometry x="400"')
+    path = tmp_path / "s3invpc.drawio"
+    path.write_text(xml, encoding="utf-8")
+    advice = vd.validate_file(str(path), profile="aws_native")["advice"]
+    assert any("Managed/global service" in a and "s3" in a for a in advice)
+
+
+def test_audit_no_managed_flag_when_outside_vpc(tmp_path):
+    """S3 in the AWS Cloud band (outside the VPC) raises no managed-service advice."""
+    path = tmp_path / "clean.drawio"
+    path.write_text(_build_native_drawio(), encoding="utf-8")
+    advice = vd.validate_file(str(path), profile="aws_native")["advice"]
+    assert not any("Managed/global service" in a for a in advice)
+
+
 def test_audits_on_committed_sample():
     sample = _REPO_ROOT / "out_aws_drawio.drawio"
     if not sample.exists():
