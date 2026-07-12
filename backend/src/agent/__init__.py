@@ -18,7 +18,7 @@ into cohesive submodules:
   agent/constants.py    — models, skill paths, call-limit tunables
   agent/middleware/     — context-editing edits, phase filter, drawer gate, vision
                            fallback, usage logging, and the ``_middleware()`` assembler
-  agent/subagents/      — one config-factory function per subagent role
+  agent/subagents/      — declarative SubagentSpec per role (spec.py) + registry
   agent/streaming.py    — _StreamingSubAgentRunnable (outer-stream relay for task() calls)
   agent/harness.py      — process-global deepagents harness-profile tuning
   agent/persistence.py  — make_persistence() (checkpointer + store)
