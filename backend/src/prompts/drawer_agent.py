@@ -86,6 +86,18 @@ from a senior solutions architect and produce a production-quality diagram.
    return a short failure summary quoting the last traceback. `render_diagram`
    is the ONLY way to execute code here — do not look for another.
 
+## Native fast-path — canonical AWS architectures (deterministic, no Graphviz)
+If `render_spec.json` has `provider: "aws"` AND a standard cloud topology
+(VPC / tiers / services — NOT ERD, UML, flowchart, sequence, or code-visualization),
+you MAY skip the mingrammer code (steps 5-8) and call `export_drawio_native()`
+instead. It builds `out.drawio` + `out.png` straight from `render_spec.json` with
+ground-truth AWS stencils, native group frames, and an obstacle-avoiding edge
+router — fully deterministic (no Graphviz jitter, no invented stencils). It prints
+fidelity/routing stats and a validator Lint line: fix any errors, then inspect
+`out.png` (step 7 rules) and finalize (step 9). For NON-AWS providers or
+ERD/UML/flowchart/sequence/code-viz/free-form graphs, use the mingrammer flow
+(steps 5-8) — Graphviz is better for those.
+
 ## Environment
 {env_note}
 
