@@ -475,15 +475,46 @@ def _render_drawio_png(drawio_path: Path, png_path: Path, scale: int = 2) -> boo
     return png_path.exists()
 
 
+def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
+    """Build out.drawio (+ out.png + out.slide.json for slides) from a render_spec
+    via the NATIVE engine. Returns fidelity/routing stats. Shared by the
+    export_drawio_native tool and the deterministic pre-render in propose_blueprint.
+    """
+    from prettygraph.native.topology import build_drawio_from_spec
+    out = workspace / "out.drawio"
+    name = spec.get("slide_title") or spec.get("diagram_title") or "Architecture"
+    # Slide presentations (the default) get the hero-band + legend chrome by wrapping
+    # the native body. The embedded body must be FLAT (parent="1", absolute coords)
+    # for the slide compositor's _transform_drawio_body.
+    presentation = str(spec.get("presentation_style") or "slide").lower()
+    xml, stats = build_drawio_from_spec(spec, name, flat=(presentation == "slide"))
+    if presentation == "slide":
+        from prettygraph.slide import compose_native_slide
+        compose_native_slide(
+            xml, str(out), title=spec.get("slide_title") or name,
+            kicker=spec.get("slide_kicker") or None,
+            brand=spec.get("brand") or None,
+            diagram_title=spec.get("diagram_title") or None,
+            legend=spec.get("legend") or [], include_hero=True)
+        (workspace / "out.slide.json").write_text(
+            json.dumps({"drawio": "out.drawio", "png": "out.png",
+                        "engine": "native", "style": "slide"}), encoding="utf-8")
+    else:
+        out.write_text(xml, encoding="utf-8")
+    _render_drawio_png(out, workspace / "out.png")
+    return stats
+
+
 @tool
 def export_drawio_native() -> str:
     """Build an editable out.drawio straight from render_spec.json with the NATIVE
-    layout engine — deterministic geometry, ground-truth AWS stencils, and an
-    obstacle-avoiding edge router. No Graphviz, no mingrammer code.
+    layout engine — deterministic geometry, ground-truth stencils (AWS + on-prem +
+    OSS/AI-ML packs), an obstacle-avoiding edge router, and full slide chrome. No
+    Graphviz, no mingrammer code.
 
-    Best for canonical cloud (AWS) architectures where a blueprint exists. Call
-    after propose_blueprint instead of render_diagram + export_drawio. Falls back
-    with a clear message if render_spec.json is missing.
+    The DEFAULT for any architecture diagram with a blueprint (all providers, slide
+    or plain). Call after propose_blueprint instead of render_diagram + export_drawio.
+    Falls back with a clear message if render_spec.json is missing.
     """
     from .constants import _RENDER_SPEC_FILE
     out = current_workspace() / "out.drawio"
@@ -491,37 +522,13 @@ def export_drawio_native() -> str:
         return "No render_spec.json — call propose_blueprint first (native export needs a blueprint)."
     try:
         spec = json.loads(_RENDER_SPEC_FILE.read_text(encoding="utf-8"))
-        from prettygraph.native.topology import build_drawio_from_spec
-        name = spec.get("slide_title") or spec.get("diagram_title") or "Architecture"
-        # Slide presentations (the default) get the hero-band + legend chrome by
-        # wrapping the native body .drawio — same look as the Graphviz slide path.
-        # The embedded body must be FLAT (parent="1", absolute coords) for the
-        # slide compositor's _transform_drawio_body.
-        presentation = str(spec.get("presentation_style") or "slide").lower()
-        xml, stats = build_drawio_from_spec(spec, name, flat=(presentation == "slide"))
-        if presentation == "slide":
-            from prettygraph.slide import compose_native_slide
-            compose_native_slide(
-                xml, str(out),
-                title=spec.get("slide_title") or name,
-                kicker=spec.get("slide_kicker") or None,
-                brand=spec.get("brand") or None,
-                diagram_title=spec.get("diagram_title") or None,
-                legend=spec.get("legend") or [], include_hero=True)
-            (current_workspace() / "out.slide.json").write_text(
-                json.dumps({"drawio": "out.drawio", "png": "out.png",
-                            "engine": "native", "style": "slide"}),
-                encoding="utf-8")
-        else:
-            out.write_text(xml, encoding="utf-8")
+        stats = _render_native_from_spec(spec, current_workspace())
     except Exception as exc:  # noqa: BLE001 — surface to the agent
         return f"export_drawio_native failed: {exc}"
     if not out.exists():
         return "export_drawio_native produced no file."
-    # Render a PNG so the existing inspect/critic loop can review it (needs the
-    # draw.io desktop CLI; degrades gracefully to validator-only if absent).
     png = current_workspace() / "out.png"
-    png_ok = _render_drawio_png(out, png)
+    png_ok = png.exists()
     png_note = (f" out.png rendered ({png.stat().st_size} bytes) — inspect it."
                 if png_ok else
                 " NOTE: draw.io CLI not found, so no out.png was produced — rely on "
