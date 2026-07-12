@@ -5,8 +5,7 @@ import json
 import backends
 import session_state as server
 import tools
-import tools.analysis_tools as analysis_tools
-import reporting
+import domain.reporting.reporting as reporting
 from tools import GATE_TOOL_NAMES
 
 
