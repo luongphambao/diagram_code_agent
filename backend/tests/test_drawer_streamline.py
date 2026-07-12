@@ -21,9 +21,11 @@ def _bind(monkeypatch, ws):
     )
 
 
-def test_drawer_toolset_is_three_tools():
+def test_drawer_toolset():
+    # render-refine loop (declare_poster_grid, render_diagram, export_drawio) plus
+    # the deterministic native fast-path for canonical AWS (export_drawio_native).
     assert [t.name for t in DRAWER_TOOLS] == [
-        "declare_poster_grid", "render_diagram", "export_drawio",
+        "declare_poster_grid", "render_diagram", "export_drawio", "export_drawio_native",
     ]
 
 
