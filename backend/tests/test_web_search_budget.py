@@ -37,11 +37,17 @@ def test_budget_report_math():
 
 
 def _patch_state(monkeypatch, state: dict) -> dict:
-    """Drive web_research's budget off an in-memory dict (no files, no network)."""
+    """Drive web_research's budget off an in-memory dict (no files, no network).
+
+    web_research's body resolves these names via tools.analysis.research's own
+    module globals (that's where it now lives), so the patch target must be that
+    module — not the tools.analysis_tools re-export shim (`at`), whose copy of
+    the name is a separate binding that the function body never reads.
+    """
     saved = {}
-    monkeypatch.setattr(at, "_web_search_state", lambda: state)
-    monkeypatch.setattr(at, "_save_web_search_state", lambda s: saved.update(s))
-    monkeypatch.setattr(at, "_bump_tool_summary", lambda *a, **k: None)
+    monkeypatch.setattr(_research, "_web_search_state", lambda: state)
+    monkeypatch.setattr(_research, "_save_web_search_state", lambda s: saved.update(s))
+    monkeypatch.setattr(_research, "_bump_tool_summary", lambda *a, **k: None)
     return saved
 
 
