@@ -133,10 +133,11 @@ def _node_label(node: dict) -> str:
     return f"{label}\n{tech}"
 
 
-def build_tree(spec: dict):
+def build_tree(spec: dict, flat: bool = False):
     """Build a native layout tree (+ Diagram, edges) from a render_spec dict.
 
     Returns (diagram, root_tree) with the tree already rendered into the diagram.
+    flat=True emits absolute geometry at parent="1" (for slide embedding).
     """
     cat = _load_catalog() if _load_catalog else None
     provider = str(spec.get("provider") or "aws").lower()
