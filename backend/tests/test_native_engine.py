@@ -229,6 +229,45 @@ def test_export_drawio_native_tool_registered():
     assert any(getattr(t, "name", "") == "export_drawio_native" for t in tools.DIAGRAM_TOOLS)
 
 
+def test_native_slide_framing(tmp_path):
+    """Slide mode wraps the flat native body in hero + legend chrome and validates clean."""
+    from prettygraph.native.topology import build_drawio_from_spec
+    from prettygraph.slide import compose_native_slide
+    spec = {**_AWS_SPEC, "presentation_style": "slide"}
+    xml, _ = build_drawio_from_spec(spec, "Shop", flat=True)
+    out = tmp_path / "slide.drawio"
+    compose_native_slide(xml, str(out), title="Shop", kicker="Kick", brand="ACME",
+                         diagram_title="Arch", legend=[{"label": "Data Flow", "flow": "data"}],
+                         include_hero=True)
+    slide_xml = out.read_text(encoding="utf-8")
+    assert "slide_hero" in slide_xml and "legend_box" in slide_xml
+    assert "slide_title" in slide_xml
+    assert vd.validate_file(str(out))["error_count"] == 0, vd.validate_file(str(out))["errors"]
+
+
+def test_native_cornericon_logo_for_nonaws():
+    """A non-AWS container gets a swappable corner logo (not an AWS group stencil)."""
+    from prettygraph.native.topology import build_drawio_from_spec
+    spec = {
+        "provider": "onprem", "pattern": "pipeline",
+        "layout_intent": "left_to_right_pipeline",
+        "clusters": [{"id": "d", "label": "Vector Data Store", "tier": "data", "accent": "green"}],
+        "nodes": [{"id": "q", "label": "Qdrant", "tech": "qdrant", "cluster": "d"}],
+        "edges": [],
+    }
+    xml, _ = build_drawio_from_spec(spec, "x")
+    assert "grIcon=mxgraph.aws4.group" not in xml           # no AWS group leak
+    assert "mxgraph.aws4.generic_database" in xml           # corner logo on the data frame
+
+
+def test_concept_icons_resolve():
+    """AI/ML infra terms missing from the OSS packs now resolve to a real stencil."""
+    from prettygraph.native.topology import _resolve_node_icon, _load_catalog
+    cat = _load_catalog()
+    for tech in ("gpu", "nvidia", "triton", "vlm", "faiss"):
+        assert _resolve_node_icon(cat, {"tech": tech, "label": tech}) == tech
+
+
 def test_topology_non_aws_falls_back_without_aws_group_leak():
     from prettygraph.native.topology import build_tree
     spec = {
