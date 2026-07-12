@@ -84,10 +84,4 @@ from .middleware.usage import (
 from .middleware.vision import VisionErrorFallbackMiddleware
 from .persistence import make_persistence
 from .streaming import _StreamingSubAgentRunnable
-from .subagents import (
-    _critic_subagent,
-    _drawer_subagent,
-    _icon_resolver_subagent,
-    _ppt_generator_subagent,
-    _wbs_planner_subagent,
-)
+from .subagents import SubagentSpec, build_subagent_specs
