@@ -458,15 +458,18 @@ def _find_drawio_cli() -> str | None:
 
 def _render_drawio_png(drawio_path: Path, png_path: Path, scale: int = 2) -> bool:
     """Render a .drawio to PNG via the draw.io CLI; False if the CLI is unavailable."""
+    import shutil
     exe = _find_drawio_cli()
     if not exe:
         return False
+    cmd = [exe, "--export", "--format", "png", "--scale", str(scale), "--border", "20",
+           "--output", str(png_path), str(drawio_path), "--no-sandbox"]
+    # draw.io desktop is an Electron app; on headless Linux (containers) it needs an
+    # X server. Wrap in xvfb-run when available so export works without a display.
+    if sys.platform.startswith("linux") and shutil.which("xvfb-run"):
+        cmd = ["xvfb-run", "-a", *cmd]
     try:
-        subprocess.run(
-            [exe, "--export", "--format", "png", "--scale", str(scale), "--border", "20",
-             "--output", str(png_path), str(drawio_path), "--no-sandbox"],
-            timeout=120, capture_output=True,
-        )
+        subprocess.run(cmd, timeout=120, capture_output=True)
     except (subprocess.SubprocessError, OSError):
         return False
     return png_path.exists()
