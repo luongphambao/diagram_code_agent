@@ -110,8 +110,8 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
     _set_general_purpose_enabled(False, set(role_models.values()) | {main_model})
 
     logger.info(
-        "build_agent  main=%s  " + "  ".join(f"{n}=%s" for n in role_models),
-        main_model, *role_models.values(),
+        "build_agent  main=%s  style=%s  roles=%s",
+        main_model, style, role_models,
     )
 
     compiled_subagents: list[dict] = []
