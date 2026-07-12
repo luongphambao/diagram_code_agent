@@ -251,9 +251,9 @@ ICON_RESOLVER_TOOLS = [search_diagrams_nodes, resolve_icons, search_icons, searc
 # Drawer subagent tools: render-refine loop only. Icons are pre-resolved by
 # icon_resolver; style_plan.json/label_fits.json are pre-computed code-side by
 # propose_blueprint (write_style_and_fit_plans); the static audit runs inside
-# render_diagram as a pre-flight gate. 3 tools — fewer calls, fewer schemas,
-# and no fit_labels(edge_labels=...) stringify surface for mimo.
-DRAWER_TOOLS = [declare_poster_grid, render_diagram, export_drawio]
+# render_diagram as a pre-flight gate. export_drawio_native is the deterministic
+# fast-path for canonical AWS architectures (spec -> native engine, no Graphviz).
+DRAWER_TOOLS = [declare_poster_grid, render_diagram, export_drawio, export_drawio_native]
 
 # Critic subagent tools: read-only review of the rendered diagram.
 CRITIC_TOOLS = [inspect_diagram, submit_critique]
