@@ -223,6 +223,15 @@ _GROUP_LEVEL = {
     "group_subnet": 4, "group_security_group": 5,
 }
 
+# Managed / global AWS services that belong in the AWS Cloud band, NOT nested
+# inside a VPC/subnet (rules/aws-architecture.md: "Managed/global services live
+# outside the VPC"). Kept tight to the unambiguously-global ones to avoid false
+# positives. Stencil names as they appear in mxgraph.aws4.*.
+_MANAGED_GLOBAL = {
+    "s3", "identity_and_access_management", "key_management_service",
+    "cloudwatch", "route_53", "organizations", "dynamodb", "cloudfront",
+}
+
 
 def audit_aws_conventions(xml: str) -> list[str]:
     """Recolored icons / wrong nesting order / rounded frames in AWS diagrams."""
