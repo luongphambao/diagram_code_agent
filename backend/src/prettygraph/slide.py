@@ -253,11 +253,23 @@ def _transform_drawio_body(xml: str, *, x: float, y: float, scale: float,
         return (f'<mxGeometry x="{gx:.0f}" y="{gy:.0f}" width="{gw:.0f}" '
                 f'height="{gh:.0f}"')
 
-    return re.sub(
+    inner = re.sub(
         r'<mxGeometry x="(-?[\d.]+)" y="(-?[\d.]+)" width="([\d.]+)" height="([\d.]+)"',
         _geo,
         inner,
     )
+
+    # Edge waypoints (baked routing) live in <mxPoint x= y=/> — scale/translate them
+    # the SAME way as vertices, else a scaled native body's routed edges point at
+    # stale coordinates (shoot off into the slide chrome). Skip named endpoints
+    # (sourcePoint/targetPoint) — those aren't used inside an embedded body's edges.
+    def _pt(mt: "re.Match[str]") -> str:
+        px = float(mt.group(1)) * scale + x
+        py = float(mt.group(2)) * scale + y
+        return f'<mxPoint x="{px:.0f}" y="{py:.0f}"'
+
+    inner = re.sub(r'<mxPoint x="(-?[\d.]+)" y="(-?[\d.]+)"(?!\s+as=)', _pt, inner)
+    return inner
 
 
 def _compose_slide_drawio(body_xml: str, out_path: str, *, title: str,
