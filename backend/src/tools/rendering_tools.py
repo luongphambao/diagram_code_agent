@@ -496,6 +496,14 @@ def export_drawio_native() -> str:
         return f"export_drawio_native failed: {exc}"
     if not out.exists():
         return "export_drawio_native produced no file."
+    # Render a PNG so the existing inspect/critic loop can review it (needs the
+    # draw.io desktop CLI; degrades gracefully to validator-only if absent).
+    png = current_workspace() / "out.png"
+    png_ok = _render_drawio_png(out, png)
+    png_note = (f" out.png rendered ({png.stat().st_size} bytes) — inspect it."
+                if png_ok else
+                " NOTE: draw.io CLI not found, so no out.png was produced — rely on "
+                "the validator lint below (set DRAWIO_CLI or install draw.io desktop to preview).")
     record_report_step(
         current_workspace(),
         "export_drawio_native",
