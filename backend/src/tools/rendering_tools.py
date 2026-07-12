@@ -21,7 +21,7 @@ from langchain_core.tools import InjectedToolCallId, tool
 from pydantic import BaseModel, Field
 
 from backends import OUTPUTS_DIR, current_workspace
-from reporting import record_artifact_inventory, record_report_step
+from domain.reporting.reporting import record_artifact_inventory, record_report_step
 from runtime.sandbox.guards import _audit_add, _audit_code
 from runtime.sandbox.render_exec import run_render
 from .constants import (
@@ -207,7 +207,7 @@ def export_drawio() -> str:
             from prettygraph import dot_to_drawio
             dot_to_drawio(str(dot), str(sidecar), str(out))
         else:
-            from gv_to_drawio import convert
+            from domain.diagram.gv_to_drawio import convert
             convert(str(dot), str(out))
     except Exception as exc:  # noqa: BLE001 — surface to the agent
         return f"export_drawio failed: {exc}"
@@ -222,7 +222,7 @@ def export_drawio() -> str:
     # Structural + design lint — fast pre-check before the (slow) visual critic.
     lint = ""
     try:
-        from validate_drawio import validate_file
+        from domain.validation.validate_drawio import validate_file
         report = validate_file(str(out))
         lint = (f"\nLint: {report['error_count']} error(s), "
                 f"{report['warning_count']} warning(s), "
@@ -248,7 +248,7 @@ def export_drawio() -> str:
     # Diagram quality gate — convert lint findings to SolutionFindings, persist lifecycle.
     gate_note = ""
     try:
-        from .analysis_tools import _diagram_gate_note
+        from .analysis.gates import _diagram_gate_note
         gate_note = _diagram_gate_note(block=False)
     except Exception:  # noqa: BLE001
         pass
@@ -367,7 +367,7 @@ def export_drawio_native() -> str:
     )
     lint = ""
     try:
-        from validate_drawio import validate_file
+        from domain.validation.validate_drawio import validate_file
         report = validate_file(str(out))
         lint = (f"\nLint: {report['error_count']} error(s), "
                 f"{report['warning_count']} warning(s), "
