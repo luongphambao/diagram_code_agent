@@ -8,7 +8,7 @@ All calls enforce:
 
 Import pattern::
 
-    from subprocess_utils import run_graphviz, run_tred
+    from runtime.subprocess_utils import run_graphviz, run_tred
 """
 
 from __future__ import annotations
