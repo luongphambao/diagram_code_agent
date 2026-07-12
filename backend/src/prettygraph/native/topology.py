@@ -188,8 +188,9 @@ def build_tree(spec: dict):
             return group(cid, gname, label, {"dir": "col", "gap": 20}, kids)
         # Non-AWS: the "AWS look" (framed container + corner logo) with a SWAPPABLE
         # logo — on-prem / k8s / db / server etc. — instead of an AWS group stencil.
+        # (AWS diagrams keep pure AWS group stencils or plain frames — no mixed logos.)
         opts = {"dir": "col", "gap": 18, "stroke": _accent_stroke(c.get("accent"))}
-        logo = _container_logo(cat, c)
+        logo = _container_logo(cat, c) if provider != "aws" else None
         if logo:
             opts["cornerIcon"] = logo
         return frame(cid, label, opts, kids)
