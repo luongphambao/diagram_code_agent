@@ -72,11 +72,18 @@ def _resolve_node_icon(cat, node: dict) -> str | None:
 
 
 def _node_label(node: dict) -> str:
-    tech = node.get("tech") or ""
-    label = node.get("label") or node.get("id") or ""
-    if tech and tech != label:
-        return f"{label}\n{tech}"
-    return label
+    tech = (node.get("tech") or "").strip()
+    label = (node.get("label") or node.get("id") or "").strip()
+    if not tech:
+        return label
+    if not label:
+        return tech
+    # avoid redundant "CloudFront\nAmazon CloudFront" when one contains the other
+    if label.lower() in tech.lower():
+        return tech
+    if tech.lower() in label.lower():
+        return label
+    return f"{label}\n{tech}"
 
 
 def build_tree(spec: dict):
