@@ -649,7 +649,7 @@ class _StreamingSubAgentRunnable:
         return result
 
 
-DEFAULT_MODEL    = "gpt-5.4-mini"
+DEFAULT_MODEL    = "mimo-v2.5"
 DEFAULT_STYLE    = "pretty"          # "pretty" (prettygraph) or "plain" (raw diagrams)
 RECURSION_LIMIT  = 450               # max agent steps per run (used by the server)
 # Shared across main + every delegated subagent (task-tool invocations propagate
