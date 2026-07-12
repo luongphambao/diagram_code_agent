@@ -51,7 +51,7 @@ def reload_config() -> None:
     get_config()
 
 
-def get_model(role: str, fallback: str = "gpt-5.4-mini") -> str:
+def get_model(role: str, fallback: str = "mimo-v2.5") -> str:
     """Return the configured model name for *role*, or *fallback* if not set."""
     return get_config().get("models", {}).get(role) or fallback
 
