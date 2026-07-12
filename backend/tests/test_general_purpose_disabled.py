@@ -41,7 +41,11 @@ def _tool_names(graph) -> set[str]:
 
 
 def test_general_purpose_disabled_everywhere(monkeypatch, fake_llm_keys):
-    real_create = agent_module.create_deep_agent
+    # build_agent() (agent/builder.py) resolves `create_deep_agent` via its own
+    # module globals (that's where the call site lives), so the patch target
+    # must be agent.builder — not the agent package's re-exported copy, which
+    # is a separate binding the function body never reads.
+    real_create = agent_builder.create_deep_agent
     snapshots: list[tuple[str, object]] = []
     graphs: list = []
 
@@ -53,7 +57,7 @@ def test_general_purpose_disabled_everywhere(monkeypatch, fake_llm_keys):
         graphs.append(graph)
         return graph
 
-    monkeypatch.setattr(agent_module, "create_deep_agent", recording_create)
+    monkeypatch.setattr(agent_builder, "create_deep_agent", recording_create)
     main_graph = agent_module.build_agent()
 
     # 6 create_deep_agent calls: wbs_planner, 4 workers, then main.
