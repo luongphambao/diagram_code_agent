@@ -294,18 +294,25 @@ def _compose_slide_drawio(body_xml: str, out_path: str, *, title: str,
                           fill="#FFFFFF", stroke="#D7DEE8", rounded=1, shadow=1),
     ]
     if include_hero:
-        cells.insert(1, _drawio_rect_cell("slide_hero", 0, 0, SLIDE_SIZE, SLIDE_HERO_H,
+        cells.insert(1, _drawio_rect_cell("slide_hero", 0, 0, SLIDE_SIZE, hero_h,
                                           fill="#075985"))
     if include_hero and brand:
-        cells.append(_drawio_text_cell("slide_brand", brand, SLIDE_SIZE - 368, 44,
-                                       330, 70, size=36, color="#FFFFFF",
-                                       bold=True, align="right"))
+        cells.append(_drawio_text_cell("slide_brand", brand, SLIDE_SIZE - 368,
+                                       round(hero_h * 0.075), 330, 70,
+                                       size=min(36, round(hero_h * 0.13)),
+                                       color="#FFFFFF", bold=True, align="right"))
     if include_hero and kicker:
-        cells.append(_drawio_text_cell("slide_kicker", kicker, 244, 258, 1560, 86,
-                                       size=42, color="#F8FAFC"))
+        cells.append(_drawio_text_cell("slide_kicker", kicker, 90,
+                                       round(hero_h * 0.27), 1868,
+                                       round(hero_h * 0.16),
+                                       size=min(42, round(hero_h * 0.12)),
+                                       color="#F8FAFC"))
     if include_hero:
-        cells.append(_drawio_text_cell("slide_title", title, 90, 352, 1868, 132,
-                                       size=50, color="#FFFFFF", bold=True))
+        cells.append(_drawio_text_cell("slide_title", title, 90,
+                                       round(hero_h * 0.48), 1868,
+                                       round(hero_h * 0.40),
+                                       size=min(50, round(hero_h * 0.17)),
+                                       color="#FFFFFF", bold=True))
     cells.append(_drawio_text_cell("slide_diagram_title",
                                    diagram_title or "System Architecture",
                                    panel[0] + 30, panel[1] + 18, panel[2] - 60, 48,
