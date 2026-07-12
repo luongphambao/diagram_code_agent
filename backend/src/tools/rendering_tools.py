@@ -493,10 +493,12 @@ def export_drawio_native() -> str:
         spec = json.loads(_RENDER_SPEC_FILE.read_text(encoding="utf-8"))
         from prettygraph.native.topology import build_drawio_from_spec
         name = spec.get("slide_title") or spec.get("diagram_title") or "Architecture"
-        xml, stats = build_drawio_from_spec(spec, name)
         # Slide presentations (the default) get the hero-band + legend chrome by
         # wrapping the native body .drawio — same look as the Graphviz slide path.
+        # The embedded body must be FLAT (parent="1", absolute coords) for the
+        # slide compositor's _transform_drawio_body.
         presentation = str(spec.get("presentation_style") or "slide").lower()
+        xml, stats = build_drawio_from_spec(spec, name, flat=(presentation == "slide"))
         if presentation == "slide":
             from prettygraph.slide import compose_native_slide
             compose_native_slide(
