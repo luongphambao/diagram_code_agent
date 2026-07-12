@@ -121,13 +121,7 @@ def render_diagram(
     (current_workspace() / "diagram.py").write_text(code, encoding="utf-8")
 
     try:
-        proc = subprocess.run(
-            [sys.executable, "diagram.py"],
-            cwd=str(current_workspace()),
-            capture_output=True,
-            text=True,
-            timeout=RENDER_TIMEOUT_S,
-        )
+        proc = run_render(current_workspace(), timeout=RENDER_TIMEOUT_S)
     except subprocess.TimeoutExpired:
         return ToolMessage(
             content=f"Render #{attempt}/{RENDER_HARD_CAP} TIMED OUT after {RENDER_TIMEOUT_S}s. "
