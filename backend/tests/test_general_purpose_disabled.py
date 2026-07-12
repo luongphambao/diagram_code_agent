@@ -13,6 +13,7 @@ burned 1.66M tokens (42% of a 4M-token run) via the drawer.
 import pytest
 
 import agent as agent_module
+import agent.builder as agent_builder
 from deepagents.profiles.harness.harness_profiles import _HARNESS_PROFILES
 
 
