@@ -34,12 +34,17 @@ class Diagram:
     """Declarative diagram builder — feed it via the layout engine's render_tree."""
 
     def __init__(self, type="pipeline", *, title="", page=(2000, 1200),
-                 contract="scaffold"):
+                 contract="scaffold", flat=False):
         if contract not in ("scaffold", "bake"):
             raise ValueError(f'Invalid contract "{contract}" — use "scaffold" or "bake".')
         self.c = _load_catalog()
         self.type = type
         self.contract = contract
+        # flat=True emits every vertex at parent="1" with ABSOLUTE geometry (no
+        # container nesting) — needed when the body is embedded into a slide, whose
+        # _transform_drawio_body assumes a flat body. self.R stays absolute either
+        # way, so the router is unaffected.
+        self.flat = flat
         self.page = list(page)
         self.cells: list[str] = []
         self._cell_index: dict[str, int] = {}  # id -> position in self.cells
