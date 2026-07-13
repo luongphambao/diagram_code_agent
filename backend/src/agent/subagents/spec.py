@@ -36,3 +36,8 @@ class SubagentSpec:
     prompt_kwargs: dict = field(default_factory=dict)
     skills: list[str] | None = None
     use_vision_relay: bool = False
+    # deepagents FilesystemPermission list, forwarded verbatim to this subagent's
+    # own create_deep_agent() call — enforces path/operation rules at the tool
+    # layer instead of relying on prompt text alone (e.g. icon_resolver denying
+    # write_file/edit_file on icon_plan.json).
+    permissions: list | None = None
