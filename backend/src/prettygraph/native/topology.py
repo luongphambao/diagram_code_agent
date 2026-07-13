@@ -354,7 +354,7 @@ def build_tree(spec: dict, flat: bool = False):
     # body too would duplicate it. Only title the body for standalone diagrams.
     title = spec.get("slide_title") or spec.get("diagram_title")
     if title and not flat:
-        d.title(title, fs=18)
+        d.title(title)
 
     flows_seen: list[str] = []
     for e in spec.get("edges", []):
