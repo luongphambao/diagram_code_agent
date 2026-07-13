@@ -18,7 +18,7 @@ try:
         style_for_group as _style_for_group,
     )
 except (ImportError, ValueError):  # pragma: no cover - import fallback
-    from drawio_catalog import (  # type: ignore[no-redef]
+    from domain.diagram.drawio_catalog import (  # type: ignore[no-redef]
         load_catalog as _load_catalog,
         style_for_icon as _style_for_icon,
         style_for_group as _style_for_group,
@@ -112,6 +112,58 @@ class Diagram:
         r = self._put(id, parent, xy[0], xy[1], wh[0], wh[1], style, label)
         r["ob"] = ob
         return r
+
+    def card(self, id, xy, wh, icon_name=None, title="", sub="", *, parent="1",
+             fill=None, stroke=None) -> dict:
+        """Rounded card node: catalog icon on the LEFT, bold title + grey sub-label.
+
+        The value is HTML (html=1): the inner text is escaped here, the whole
+        value again by _put for the XML attribute — draw.io decodes the XML
+        layer, then renders the remaining tags/entities as HTML.
+        """
+        ic = 30
+        label = f"<b>{_esc(title)}</b>"
+        if sub:
+            label += (f'<br><font style="font-size: 10px" color="#647687">'
+                      f"{_esc(sub)}</font>")
+        pad_l = ic + 20 if icon_name else 12
+        style = (f"rounded=1;arcSize=12;whiteSpace=wrap;html=1;"
+                 f"fillColor={fill or THEME.base};strokeColor={stroke or '#AEB9C4'};"
+                 f"fontColor={THEME.font_color};fontSize=12;align=left;"
+                 f"spacingLeft={pad_l};spacingRight=6;verticalAlign=middle;")
+        r = self._put(id, parent, xy[0], xy[1], wh[0], wh[1], style, label)
+        r["ob"] = True  # leaf obstacle (router avoids)
+        if icon_name:
+            s = _style_for_icon(self.c, icon_name)
+            if not s:
+                raise ValueError(f'card icon not found in catalog: "{icon_name}".')
+            ir = self._put(f"{id}__ic", id, round(xy[0] + 10),
+                           round(xy[1] + (wh[1] - ic) / 2), ic, ic, s["style"], "")
+            ir["ob"] = False
+        return r
+
+    def legend(self, entries, xy, *, id="__legend") -> dict | None:
+        """Legend box at ``xy``: one row per (label, color, dashed) flow entry."""
+        entries = [e for e in (entries or []) if e and e[0]]
+        if not entries:
+            return None
+        row_h, pad, sw = 24, 12, 36
+        w = max(170, max(len(str(l)) for l, _, _ in entries) * 7 + sw + pad * 3)
+        h = pad * 2 + 24 + row_h * len(entries)
+        x, y = xy
+        self.box(id, [x, y], [w, h], "LEGEND", fill=THEME.base, stroke="#AEB9C4",
+                 va="top", bold=True, fs=12, round=True, ob=False)
+        for i, (label, color, dashed) in enumerate(entries):
+            ry = y + pad + 24 + i * row_h
+            self._put(f"{id}__ln{i}", id, x + pad, ry + 8, sw, 8,
+                      f"line;html=1;strokeWidth=2;strokeColor={color};fillColor=none;"
+                      + ("dashed=1;" if dashed else ""), "")
+            lb = self._put(f"{id}__lb{i}", id, x + pad + sw + 8, ry,
+                           w - sw - pad * 2 - 8, row_h,
+                           "text;html=1;align=left;verticalAlign=middle;fontSize=11;"
+                           f"fontColor={THEME.font_color};", label)
+            lb["ob"] = False
+        return self.R[id]
 
     def group(self, id, gname, xy, wh, label="", *, parent="1", fill=None,
               stroke=None) -> dict:
