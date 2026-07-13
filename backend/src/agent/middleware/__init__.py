@@ -5,7 +5,9 @@ without updating that test):
   ContextEditing -> UsageLogging -> ModelCallLimit -> ToolArgCoercion (must
   precede DrawerReviseGate — gate decisions assume well-formed task args) ->
   VisionErrorFallback -> ToolCallLimit(task) -> DrawerReviseGate ->
-  PhaseToolFilter + PhasePromptFilter -> LLMToolSelector -> [ModelFallback].
+  DrawerContextInject (must follow DrawerReviseGate — only augment dispatches
+  that weren't blocked) -> PhaseToolFilter + PhasePromptFilter ->
+  LLMToolSelector -> [ModelFallback].
 
 ``exit_behavior``: ModelCallLimitMiddleware uses "end"; the `task`
 ToolCallLimitMiddleware uses "continue" ("end" raises NotImplementedError with
