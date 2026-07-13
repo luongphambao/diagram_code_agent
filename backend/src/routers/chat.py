@@ -271,8 +271,6 @@ async def agui_endpoint(request: Request):
                             "(`out.png`, `out.drawio`, `diagram.py`) with approved planning "
                             f"artifacts. {artifact_instruction}"
                         )
-                attached = _attached_text(file_ids)
-                image_blocks = _attached_images(file_ids)
                 req_file = ws / "requirements.md"
                 if attached:
                     ws.mkdir(parents=True, exist_ok=True)
