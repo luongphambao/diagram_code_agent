@@ -309,11 +309,17 @@ def _p_group(n):
             _place(c, cx, cy)
             cx += c["w"] + eg
     else:
+        eff_gap = eg
+        if n.get("justify") and len(n["children"]) > 1:
+            total_h = sum(c["h"] for c in n["children"])
+            free = inner_h - total_h - eg * (len(n["children"]) - 1)
+            if free > 0:
+                eff_gap = eg + free / (len(n["children"]) - 1)
         cy = inner_top
         for c in n["children"]:
             cx = inner_x if n["align"] == "left" else inner_x + (inner_w - c["w"]) / 2
             _place(c, cx, cy)
-            cy += c["h"] + eg
+            cy += c["h"] + eff_gap
 
 
 # --------------------------------------------------------------------------- #
