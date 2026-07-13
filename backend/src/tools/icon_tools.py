@@ -495,6 +495,91 @@ try:
         _bump_tool_summary("update_icon_plan_entry")
         return json.dumps({"status": "OK", "updated": match}, indent=2)
 
+    class MissingIconRetry(BaseModel):
+        """One NOT_FOUND icon_plan.json entry to retry, batched with the rest."""
+        label: str = Field(description="the NOT_FOUND label in icon_plan.json to retry")
+        broader_keyword: Optional[str] = Field(
+            None, description="broader search keyword to try; defaults to the label text")
+        provider: str = Field(
+            "", description="provider subtree override; defaults to the entry's existing provider")
+
+    @tool(parse_docstring=True)
+    def resolve_missing_icons(retries: list[MissingIconRetry]) -> str:
+        """Retry every NOT_FOUND icon_plan.json entry in ONE batched call.
+
+        For each entry: tries a broader icon-pack search, then falls back to a brand
+        logo lookup (same sources as `fetch_logo`), and persists every result to
+        `icon_plan.json` in a single write.
+
+        When to use: after `resolve_icons`, if any entries are still `status=NOT_FOUND`,
+        call this ONCE with every NOT_FOUND label together — do NOT call `search_icons` +
+        `update_icon_plan_entry` one node at a time; that costs two model turns per node
+        and is the #1 cause of icon_resolver context blowups. Pass an explicit
+        `broader_keyword` only when the label itself is a poor search term (e.g. a long
+        descriptive phrase); otherwise omit it and the label is used as-is.
+
+        Args:
+            retries: Every NOT_FOUND label to retry together, one `MissingIconRetry` each.
+        """
+        if not _ICON_PLAN_FILE.exists():
+            return json.dumps({
+                "status": "ERROR",
+                "message": "icon_plan.json does not exist yet — call resolve_icons first.",
+            }, indent=2)
+        from .stage_markers import _read_json_file
+        entries = _read_json_file(_ICON_PLAN_FILE, [])
+        by_label = {e.get("label"): e for e in entries}
+
+        updated: list[dict] = []
+        still_not_found: list[str] = []
+        for item in retries:
+            entry = by_label.get(item.label)
+            if entry is None:
+                updated.append({
+                    "label": item.label, "status": "ERROR",
+                    "message": "no matching icon_plan.json entry",
+                })
+                continue
+            keyword = item.broader_keyword or item.label
+            provider = item.provider or entry.get("provider") or None
+            entry.setdefault("tried_keywords", []).append(keyword)
+
+            hits = _search_icon_hits(keyword, provider, limit=5)
+            best = hits[0] if hits else None
+            if not best:
+                try:
+                    from domain.diagram.aiicons import lookup_ai_logo
+                    best = lookup_ai_logo(item.label, str(LOCAL_ICONS))
+                except Exception:  # noqa: BLE001
+                    best = None
+            if not best:
+                try:
+                    from domain.diagram.logo_fetch import get_logo
+                    fetched = get_logo(item.label, str(LOCAL_ICONS), str(current_workspace()))
+                    best = fetched if fetched and not fetched.startswith("NOT_FOUND") else None
+                except Exception:  # noqa: BLE001
+                    best = None
+
+            if best:
+                entry["status"] = "FOUND"
+                entry["path"] = best
+                entry["icon"] = _icon_rel(best)
+                updated.append({
+                    "label": item.label, "status": "FOUND",
+                    "path": best, "icon": entry["icon"],
+                })
+            else:
+                entry["status"] = "NOT_FOUND"
+                updated.append({"label": item.label, "status": "NOT_FOUND"})
+                still_not_found.append(item.label)
+
+        current_workspace().mkdir(parents=True, exist_ok=True)
+        _ICON_PLAN_FILE.write_text(json.dumps(entries, indent=2), encoding="utf-8")
+        _bump_tool_summary("resolve_missing_icons", missing_icons_retried=len(retries))
+        return json.dumps({
+            "status": "OK", "updated": updated, "still_not_found": still_not_found,
+        }, indent=2)
+
     @tool(parse_docstring=True)
     def resolve_tech_stack_icons() -> str:
         """Fetch and group icons for every technology in the tech stack, by layer.
