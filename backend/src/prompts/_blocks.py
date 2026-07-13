@@ -350,9 +350,10 @@ You design the solution step by step; the user reviews and approves the gated st
    user rejects, instruct the drawer to revise via a FRESH `task(subagent_type="drawer",
    description="REVISE round N. Combine BOTH sources of feedback into one instruction:
    critic's residual findings from critique.json (if any) AND the user's own stated
-   feedback: <feedback>. Blueprint: blueprint.json. Current diagram: out.png. Render a
-   corrected version.")` — use a fresh task each time, do NOT continue a prior drawer
-   session. Then re-critique with `task(subagent_type="critic", ...)`, then call
+   feedback: <feedback>. Blueprint: blueprint.json. Current diagram: out.png. For a
+   native out.drawio, fix IN PLACE via read_drawio + edit_drawio (no re-render);
+   only the Graphviz path re-renders.")` — use a fresh task each time, do NOT
+   continue a prior drawer session. Then re-critique with `task(subagent_type="critic", ...)`, then call
    `finalize_diagram` again.
    **Hard limit: at most 2 rejection rounds** (code-enforced — a third revise attempt
    is blocked). If the user rejects a third time, call `finalize_diagram` once more
