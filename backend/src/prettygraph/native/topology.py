@@ -284,11 +284,10 @@ def build_tree(spec: dict, flat: bool = False):
         if cnodes:
             items = [build_node(n) for n in cnodes]
             wrap_at = 6 if (depth == 0 and band_dir == "row") else 3
-            if band_dir == "col" and depth == 0 and len(items) > 1:
-                # sidebar column: stack cards singly (invisible 1-col grid)
-                items = [grid(f"{cid}__grid", None, "",
-                              {"cols": 1, "gap": 18, "pad": 0, "stroke": "none"}, items)]
-            elif len(items) > wrap_at and not children_of.get(cid):
+            # sidebar column (depth-0 col band) keeps cards as direct children so
+            # justify can spread them over the stretched height — never a grid.
+            if (len(items) > wrap_at and not children_of.get(cid)
+                    and not (depth == 0 and band_dir == "col")):
                 cols = 2 if len(items) <= 6 else 3
                 items = [grid(f"{cid}__grid", None, "",
                               {"cols": cols, "gap": 22, "stroke": "none"}, items)]
