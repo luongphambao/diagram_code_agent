@@ -47,9 +47,10 @@ from openpyxl.drawing.image import Image as XLImage
 from openpyxl.worksheet.worksheet import Worksheet
 
 # The blank BnK template shipped inside the package (cloned for every export).
-DEFAULT_TEMPLATE = Path(__file__).resolve().parent / "data" / "wbs_template.xlsx"
+# parents[0]=domain/wbs, [1]=domain, [2]=src — data lives at src/data/.
+DEFAULT_TEMPLATE = Path(__file__).resolve().parents[2] / "data" / "wbs_template.xlsx"
 # Company logo stamped onto the "0. How to use" cover sheet.
-DEFAULT_LOGO = Path(__file__).resolve().parent / "data" / "logo.png"
+DEFAULT_LOGO = Path(__file__).resolve().parents[2] / "data" / "logo.png"
 
 # ── Column map for the "2. WBS" sheet (1-based) ──────────────────────────────
 C_NUM, C_REF, C_FEAT, C_DESC, C_TOTAL = 2, 3, 4, 5, 6
@@ -386,7 +387,7 @@ def _build_delivery_sheet(wb, wbs: dict, wbs_last_row: int) -> dict:
     """
     from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
-    from wbs_effort import delivery_grid
+    from domain.wbs.wbs_effort import delivery_grid
 
     ws = wb["3. Delivery Plan"]
     weeks = int(wbs.get("timeline", {}).get("weeks") or 16)
@@ -531,7 +532,7 @@ def _write_master_data_rate_card(wb, rate_card: dict[str, float] | None = None) 
     with :func:`wbs_effort.rate_per_manday` (20-workday month, NOT the 22 used for
     total_manmonths elsewhere — see that module for why).
     """
-    from wbs_effort import DEFAULT_RATE_CARD_USD_PER_MONTH, rate_per_manday
+    from domain.wbs.wbs_effort import DEFAULT_RATE_CARD_USD_PER_MONTH, rate_per_manday
 
     rc = rate_card or DEFAULT_RATE_CARD_USD_PER_MONTH
     md = wb["4. Master Data"]
