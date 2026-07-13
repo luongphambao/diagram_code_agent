@@ -56,6 +56,9 @@ production path; the mingrammer/Graphviz flow (steps 5-8) is the OLD path.
   just `inspect_diagram` the existing `out.png`, act on any Lint issue, and finalize
   (step 9). If `out.drawio` is MISSING, call `export_drawio_native()` once (it reads
   `render_spec.json` and writes `out.drawio` + `out.png`). **SKIP steps 5-8.**
+  To FIX findings on the native output (validator gate, critic revision), edit the
+  XML in place: `read_drawio()` → ONE batched `edit_drawio(ops)` call (max 2
+  batches). NEVER call `render_diagram` or re-export to fix a native diagram.
 - **ONLY** for ERD / UML / flowchart / sequence / code-visualization / free-form
   graphs that are NOT an infrastructure architecture: use the mingrammer flow
   (steps 5-8). Graphviz is better for those. Do NOT default to `render_diagram` for
