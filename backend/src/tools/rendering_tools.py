@@ -561,10 +561,11 @@ def read_drawio() -> str:
         report = validate_file(str(out))
         lint = ("\n\nValidator: "
                 f"{report['error_count']} error(s), {report['warning_count']} "
-                f"warning(s), {report.get('advice_count', 0)} advice.")
-        for kind in ("errors", "warnings", "advice"):
+                f"warning(s), {report.get('polish_count', 0)} polish gate, "
+                f"{report.get('advice_count', 0)} advice.")
+        for kind in ("errors", "warnings", "polish", "advice"):
             for msg in (report.get(kind) or [])[:6]:
-                lint += f"\n- [{kind[:-1]}] {msg}"
+                lint += f"\n- [{kind.rstrip('s')}] {msg}"
     except Exception:  # noqa: BLE001
         pass
     rounds_left = max(0, _DRAWIO_EDIT_CAP - _drawio_edit_rounds())
