@@ -387,6 +387,376 @@ def export_drawio_native() -> str:
     )
 
 
+# --------------------------------------------------------------------------- #
+# Targeted .drawio XML editing (read_drawio / edit_drawio)
+#
+# The hybrid quality loop: the native builder produces a production-styled
+# out.drawio deterministically; when the validator/critic still flags issues the
+# drawer FIXES THE XML IN PLACE with small ops instead of regenerating —
+# mirroring the drawio-ai-kit "author XML → validate → render → loop" workflow.
+# --------------------------------------------------------------------------- #
+
+_DRAWIO_EDIT_CAP = 2          # edit_drawio batches per exported diagram
+_EDIT_ROUNDS_FILE = ".drawio_edit_rounds"
+
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _reset_drawio_edit_rounds() -> None:
+    p = current_workspace() / _EDIT_ROUNDS_FILE
+    if p.exists():
+        try:
+            p.unlink()
+        except OSError:
+            pass
+
+
+def _bump_drawio_edit_rounds() -> int:
+    p = current_workspace() / _EDIT_ROUNDS_FILE
+    n = 0
+    if p.exists():
+        try:
+            n = int(p.read_text(encoding="utf-8").strip() or 0)
+        except (OSError, ValueError):
+            n = 0
+    n += 1
+    p.write_text(str(n), encoding="utf-8")
+    return n
+
+
+def _drawio_edit_rounds() -> int:
+    p = current_workspace() / _EDIT_ROUNDS_FILE
+    try:
+        return int(p.read_text(encoding="utf-8").strip() or 0) if p.exists() else 0
+    except (OSError, ValueError):
+        return 0
+
+
+def _style_get(style: str, key: str) -> str | None:
+    for part in (style or "").split(";"):
+        if "=" in part and part.split("=", 1)[0] == key:
+            return part.split("=", 1)[1]
+    return None
+
+
+def _style_set(style: str, key: str, value) -> str:
+    """Set/replace ``key=value`` in a draw.io style string; None/"" removes it."""
+    parts = [p for p in (style or "").split(";") if p]
+    out, done = [], False
+    for p in parts:
+        if "=" in p and p.split("=", 1)[0] == key:
+            done = True
+            if value is None or value == "":
+                continue
+            out.append(f"{key}={value}")
+        else:
+            out.append(p)
+    if not done and value not in (None, ""):
+        out.append(f"{key}={value}")
+    return ";".join(out) + ";"
+
+
+def _load_drawio_model(path: Path):
+    """Parse out.drawio and return (tree, model_root) where model_root is the
+    <root> element holding the mxCells. Raises ValueError on compressed files."""
+    import xml.etree.ElementTree as ET
+    tree = ET.parse(str(path))
+    root = tree.getroot()
+    model = root.find(".//mxGraphModel")
+    if model is None:
+        raise ValueError("no mxGraphModel found — is the diagram compressed? "
+                         "Re-export with export_drawio_native.")
+    cell_root = model.find("root")
+    if cell_root is None:
+        raise ValueError("mxGraphModel has no <root>.")
+    return tree, cell_root
+
+
+def _clean_label(value: str, limit: int = 48) -> str:
+    txt = _HTML_TAG_RE.sub(" ", value or "").replace("&nbsp;", " ")
+    txt = re.sub(r"\s+", " ", txt).strip()
+    return (txt[: limit - 1] + "…") if len(txt) > limit else txt
+
+
+def _shape_summary(style: str) -> str:
+    m = re.search(r"resIcon=mxgraph\.aws4\.([a-zA-Z0-9_]+)", style or "")
+    if m:
+        return f"stencil:{m.group(1)}"
+    if "image=data:" in (style or ""):
+        return "image-icon"
+    m = re.search(r"grIcon=mxgraph\.aws4\.([a-zA-Z0-9_]+)", style or "")
+    if m:
+        return f"group:{m.group(1)}"
+    if (style or "").startswith(("text;", "line;")):
+        return (style or "").split(";", 1)[0]
+    return "box"
+
+
+@tool
+def read_drawio() -> str:
+    """Compact inventory of out.drawio for targeted edits — one line per cell.
+
+    Vertices: `V <id> p=<parent> [x,y w*h] "<label>" fill/stroke/font + shape`.
+    Edges: `E <id> <source> -> <target> "<label>" stroke/dashed/pins/waypoints`.
+    Coordinates are RELATIVE to the parent cell (absolute when parent is "1").
+    Ends with the current validator findings so you know exactly what to fix
+    with edit_drawio. Use this instead of reading the raw XML (much cheaper).
+    """
+    out = current_workspace() / "out.drawio"
+    if not out.exists():
+        return "No out.drawio — export the diagram first (export_drawio_native)."
+    try:
+        _, cell_root = _load_drawio_model(out)
+    except Exception as exc:  # noqa: BLE001 — surface to the agent
+        return f"read_drawio failed: {exc}"
+    lines: list[str] = []
+    for cell in cell_root.iter("mxCell"):
+        cid = cell.get("id") or ""
+        if cid in ("0", "1"):
+            continue
+        style = cell.get("style") or ""
+        geo = cell.find("mxGeometry")
+        if cell.get("edge") == "1":
+            pins = "".join(
+                f" {k}={_style_get(style, k)}" for k in
+                ("exitX", "exitY", "entryX", "entryY") if _style_get(style, k))
+            npts = len(geo.findall(".//mxPoint")) if geo is not None else 0
+            bits = [f'E {cid} {cell.get("source")} -> {cell.get("target")}']
+            lbl = _clean_label(cell.get("value") or "")
+            if lbl:
+                bits.append(f'"{lbl}"')
+            sc = _style_get(style, "strokeColor")
+            if sc:
+                bits.append(sc)
+            if _style_get(style, "dashed") == "1":
+                bits.append("dashed")
+            if pins:
+                bits.append(pins.strip())
+            if npts:
+                bits.append(f"wp:{npts}")
+            lines.append(" | ".join(bits))
+        else:
+            g = ""
+            if geo is not None:
+                g = (f'[{geo.get("x", "0")},{geo.get("y", "0")} '
+                     f'{geo.get("width", "?")}x{geo.get("height", "?")}]')
+            bits = [f'V {cid} p={cell.get("parent")}', g,
+                    f'"{_clean_label(cell.get("value") or "")}"',
+                    _shape_summary(style)]
+            for k in ("fillColor", "strokeColor", "fontSize"):
+                v = _style_get(style, k)
+                if v:
+                    bits.append(f"{k[0:4]}={v}")
+            lines.append(" | ".join(b for b in bits if b))
+    if len(lines) > 250:
+        lines = lines[:250] + [f"... ({len(lines) - 250} more cells truncated)"]
+    lint = ""
+    try:
+        from domain.validation.validate_drawio import validate_file
+        report = validate_file(str(out))
+        lint = ("\n\nValidator: "
+                f"{report['error_count']} error(s), {report['warning_count']} "
+                f"warning(s), {report.get('advice_count', 0)} advice.")
+        for kind in ("errors", "warnings", "advice"):
+            for msg in (report.get(kind) or [])[:6]:
+                lint += f"\n- [{kind[:-1]}] {msg}"
+    except Exception:  # noqa: BLE001
+        pass
+    rounds_left = max(0, _DRAWIO_EDIT_CAP - _drawio_edit_rounds())
+    return ("\n".join(lines) + lint
+            + f"\n\nedit_drawio batches left: {rounds_left}. Batch ALL fixes into one call.")
+
+
+class DrawioOp(BaseModel):
+    """One targeted edit operation on out.drawio."""
+    op: Literal["set_style", "move", "resize", "set_label",
+                "pin_edge", "delete", "add_edge"] = Field(
+        description="Operation kind.")
+    id: str = Field(description="Target cell id (for add_edge: the NEW edge id).")
+    key: Optional[str] = Field(None, description="set_style: style key, e.g. fillColor.")
+    value: Optional[str] = Field(
+        None, description="set_style: value (empty removes the key). "
+                          "set_label: the new label text.")
+    x: Optional[float] = Field(None, description="move: new x (relative to parent).")
+    y: Optional[float] = Field(None, description="move: new y (relative to parent).")
+    dx: Optional[float] = Field(None, description="move: x delta (alternative to x).")
+    dy: Optional[float] = Field(None, description="move: y delta (alternative to y).")
+    w: Optional[float] = Field(None, description="resize: new width.")
+    h: Optional[float] = Field(None, description="resize: new height.")
+    exitX: Optional[float] = Field(None, description="pin_edge: source-side X pin (0..1).")
+    exitY: Optional[float] = Field(None, description="pin_edge: source-side Y pin (0..1).")
+    entryX: Optional[float] = Field(None, description="pin_edge: target-side X pin (0..1).")
+    entryY: Optional[float] = Field(None, description="pin_edge: target-side Y pin (0..1).")
+    source: Optional[str] = Field(None, description="add_edge: source cell id.")
+    target: Optional[str] = Field(None, description="add_edge: target cell id.")
+    label: Optional[str] = Field(None, description="add_edge: edge label.")
+    dashed: Optional[bool] = Field(None, description="add_edge: dashed line.")
+    color: Optional[str] = Field(None, description="add_edge: stroke color hex.")
+
+
+@tool(parse_docstring=True)
+def edit_drawio(
+    ops: list[DrawioOp],
+    tool_call_id: Annotated[str, InjectedToolCallId],
+) -> ToolMessage:
+    """Apply targeted edits to out.drawio in place, then auto re-validate and re-render out.png.
+
+    FIX the exported diagram instead of regenerating it: batch every fix into ONE
+    call (max 2 batches per export). Ops: set_style {id,key,value}, move {id,x,y
+    or dx,dy}, resize {id,w,h}, set_label {id,value}, pin_edge {id,exitX,exitY,
+    entryX,entryY} (clears baked waypoints), delete {id} (also drops its edges),
+    add_edge {id,source,target,label,color,dashed}. Use read_drawio first to see
+    cell ids, geometry and current validator findings.
+
+    Args:
+        ops: The list of edit operations to apply, in order.
+    """
+    out = current_workspace() / "out.drawio"
+    if not out.exists():
+        return ToolMessage(content="No out.drawio to edit — export the diagram first.",
+                           name="edit_drawio", tool_call_id=tool_call_id, status="error")
+    if _drawio_edit_rounds() >= _DRAWIO_EDIT_CAP:
+        return ToolMessage(
+            content=f"EDIT BUDGET EXHAUSTED ({_DRAWIO_EDIT_CAP} edit batches). Keep the "
+                    "current out.drawio and report residual findings in your summary.",
+            name="edit_drawio", tool_call_id=tool_call_id, status="error")
+    import xml.etree.ElementTree as ET
+    try:
+        tree, cell_root = _load_drawio_model(out)
+    except Exception as exc:  # noqa: BLE001
+        return ToolMessage(content=f"edit_drawio failed to parse: {exc}",
+                           name="edit_drawio", tool_call_id=tool_call_id, status="error")
+    cells = {c.get("id"): c for c in cell_root.iter("mxCell") if c.get("id")}
+    applied: list[str] = []
+    failed: list[str] = []
+
+    def _geo(cell):
+        g = cell.find("mxGeometry")
+        if g is None:
+            g = ET.SubElement(cell, "mxGeometry", {"as": "geometry"})
+        return g
+
+    for op in ops:
+        cell = cells.get(op.id)
+        if op.op != "add_edge" and cell is None:
+            failed.append(f"{op.op} {op.id}: unknown id")
+            continue
+        try:
+            if op.op == "set_style":
+                if not op.key:
+                    failed.append(f"set_style {op.id}: missing key")
+                    continue
+                cell.set("style", _style_set(cell.get("style") or "", op.key, op.value))
+                applied.append(f"set_style {op.id} {op.key}={op.value}")
+            elif op.op == "move":
+                g = _geo(cell)
+                nx = op.x if op.x is not None else float(g.get("x") or 0) + (op.dx or 0)
+                ny = op.y if op.y is not None else float(g.get("y") or 0) + (op.dy or 0)
+                g.set("x", f"{nx:.0f}")
+                g.set("y", f"{ny:.0f}")
+                applied.append(f"move {op.id} -> {nx:.0f},{ny:.0f}")
+            elif op.op == "resize":
+                g = _geo(cell)
+                if op.w is not None:
+                    g.set("width", f"{op.w:.0f}")
+                if op.h is not None:
+                    g.set("height", f"{op.h:.0f}")
+                applied.append(f"resize {op.id}")
+            elif op.op == "set_label":
+                cell.set("value", op.value or "")
+                applied.append(f"set_label {op.id}")
+            elif op.op == "pin_edge":
+                style = cell.get("style") or ""
+                for k, v in (("exitX", op.exitX), ("exitY", op.exitY),
+                             ("entryX", op.entryX), ("entryY", op.entryY)):
+                    if v is not None:
+                        style = _style_set(style, k, v)
+                        style = _style_set(style, k.replace("X", "Dx").replace("Y", "Dy"), 0)
+                cell.set("style", style)
+                g = cell.find("mxGeometry")
+                if g is not None:  # clear baked waypoints so the pins take effect
+                    for arr in list(g.findall("Array")):
+                        if arr.get("as") == "points":
+                            g.remove(arr)
+                applied.append(f"pin_edge {op.id}")
+            elif op.op == "delete":
+                doomed = {op.id}
+                for c in list(cell_root.iter("mxCell")):
+                    if c.get("parent") in doomed or c.get("source") in doomed \
+                            or c.get("target") in doomed:
+                        doomed.add(c.get("id"))
+                for c in list(cell_root):
+                    if c.get("id") in doomed:
+                        cell_root.remove(c)
+                cells = {c.get("id"): c for c in cell_root.iter("mxCell") if c.get("id")}
+                applied.append(f"delete {op.id} (+{len(doomed) - 1} dependents)")
+            elif op.op == "add_edge":
+                if not (op.source in cells and op.target in cells):
+                    failed.append(f"add_edge {op.id}: unknown source/target")
+                    continue
+                if op.id in cells:
+                    failed.append(f"add_edge {op.id}: id already exists")
+                    continue
+                color = op.color or "light-dark(#2D6A9F,#5B9BD5)"
+                style = ("edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;jettySize=auto;"
+                         f"orthogonalLoop=1;fontSize=10;strokeColor={color};strokeWidth=2;"
+                         "labelBackgroundColor=light-dark(#FFFFFF,#0B0F14);"
+                         + ("dashed=1;" if op.dashed else ""))
+                e = ET.SubElement(cell_root, "mxCell", {
+                    "id": op.id, "style": style, "edge": "1", "parent": "1",
+                    "source": op.source, "target": op.target})
+                if op.label:
+                    e.set("value", op.label)
+                ET.SubElement(e, "mxGeometry", {"relative": "1", "as": "geometry"})
+                cells[op.id] = e
+                applied.append(f"add_edge {op.id} {op.source}->{op.target}")
+        except Exception as exc:  # noqa: BLE001
+            failed.append(f"{op.op} {op.id}: {exc}")
+
+    if not applied:
+        return ToolMessage(
+            content="No op applied.\n" + "\n".join(f"- {f}" for f in failed),
+            name="edit_drawio", tool_call_id=tool_call_id, status="error")
+
+    xml_text = ET.tostring(tree.getroot(), encoding="unicode")
+    out.write_text(xml_text, encoding="utf-8")
+    rounds = _bump_drawio_edit_rounds()
+
+    lint = ""
+    try:
+        from domain.validation.validate_drawio import validate_file
+        report = validate_file(str(out))
+        lint = (f"\nLint: {report['error_count']} error(s), "
+                f"{report['warning_count']} warning(s), "
+                f"{report.get('advice_count', 0)} advice.")
+        if report["errors"]:
+            lint += f" Errors: {'; '.join(report['errors'][:5])}"
+        if report.get("advice"):
+            lint += f"\nDesign advice: {'; '.join(report['advice'][:5])}"
+    except Exception:  # noqa: BLE001
+        pass
+    png = current_workspace() / "out.png"
+    png_ok = _render_drawio_png(out, png)
+    record_report_step(
+        current_workspace(), "edit_drawio",
+        summary=f"Applied {len(applied)} drawio edit(s), batch {rounds}/{_DRAWIO_EDIT_CAP}.",
+        data={"applied": applied, "failed": failed},
+    )
+    text = (f"Applied {len(applied)} op(s) (batch {rounds}/{_DRAWIO_EDIT_CAP})."
+            + ("\nFailed: " + "; ".join(failed) if failed else "") + lint
+            + ("" if png_ok else "\nNOTE: draw.io CLI unavailable — out.png NOT "
+                                 "re-rendered; rely on the Lint line."))
+    include_image = os.getenv("RENDER_INCLUDES_IMAGE", "1").lower() not in ("0", "false", "no")
+    if png_ok and include_image:
+        b64, mime = _inspection_image_b64(png)
+        return ToolMessage(
+            content_blocks=[{"type": "text", "text": text},
+                            {"type": "image", "base64": b64, "mime_type": mime}],
+            name="edit_drawio", tool_call_id=tool_call_id, status="success")
+    return ToolMessage(content=text, name="edit_drawio",
+                       tool_call_id=tool_call_id, status="success")
+
+
 @tool
 def list_saved_diagrams() -> str:
     """List all previously saved diagram sessions from the outputs archive.
