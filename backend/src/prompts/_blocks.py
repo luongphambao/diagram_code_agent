@@ -166,6 +166,10 @@ _CONTEXT_RULES = """\
 
 _DRAWER_CONTEXT_RULES = """\
 ## Keep your context small (IMPORTANT)
+- Workspace files have stable names — read them by bare name (`render_spec.json`,
+  `icon_plan.json`, `diagram.py`). The workspace root is `/workspace`. NEVER prefix
+  a path with `/app`, `/app/workspace`, or `/app/backend` — those paths do not
+  exist here and will fail with path_not_found.
 - If revising an existing diagram, read `diagram.py` and optionally
   `icon_plan.json` / `out.nodes.json` directly. Do NOT list the root workspace
   or search the filesystem to rediscover them.
@@ -174,6 +178,9 @@ _DRAWER_CONTEXT_RULES = """\
 - NEVER `read_file` a large reference file in full. The skill's `reference/*.md`
   (esp. `nodes.md`) and the icon manifest are thousands of lines — use `grep` to
   find ONLY the specific class/name you need (e.g. `grep "Fargate" …nodes.md`).
+- Do NOT `read_file` the `prettygraph/*.py` source to learn the API — the full
+  API is in the `pro-style` skill. If you truly must open a source file, read it
+  ONCE with `limit=1000`; do NOT paginate it in 20-30 line chunks.
 - To find icons use `resolve_icons` once for the planned list, then `search_icons`
   only for misses — do NOT `read_file` the icon manifest.
 - Read a whole file only when it is small (a SKILL.md, your own `diagram.py`)."""
