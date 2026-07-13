@@ -155,9 +155,10 @@ class Diagram:
                  va="top", bold=True, fs=12, round=True, ob=False)
         for i, (label, color, dashed) in enumerate(entries):
             ry = y + pad + 24 + i * row_h
-            self._put(f"{id}__ln{i}", id, x + pad, ry + 8, sw, 8,
-                      f"line;html=1;strokeWidth=2;strokeColor={color};fillColor=none;"
-                      + ("dashed=1;" if dashed else ""), "")
+            ln = self._put(f"{id}__ln{i}", id, x + pad, ry + 8, sw, 8,
+                           f"line;html=1;strokeWidth=2;strokeColor={color};fillColor=none;"
+                           + ("dashed=1;" if dashed else ""), "")
+            ln["ob"] = False
             lb = self._put(f"{id}__lb{i}", id, x + pad + sw + 8, ry,
                            w - sw - pad * 2 - 8, row_h,
                            "text;html=1;align=left;verticalAlign=middle;fontSize=11;"
