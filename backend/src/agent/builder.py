@@ -131,6 +131,7 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
                     backend=backend,
                     memory=[GLOBAL_MEMORY_PATH, MEMORY_PATH],
                     skills=spec.skills,
+                    permissions=spec.permissions,
                     middleware=_middleware(
                         run_limit=spec.run_limit, agent_name=spec.name,
                         model=role_model, use_vision_relay=spec.use_vision_relay,
