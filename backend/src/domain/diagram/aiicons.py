@@ -26,7 +26,8 @@ import sys
 import urllib.request
 from pathlib import Path
 
-MANIFEST = os.path.join(os.path.dirname(__file__), "data", "lobe-icons.json")
+# parents[0]=domain/diagram, [1]=domain, [2]=src — data lives at src/data/.
+MANIFEST = str(Path(__file__).resolve().parents[2] / "data" / "lobe-icons.json")
 _DRAWIO_STYLE = ("shape=image;html=1;imageAspect=0;aspect=fixed;"
                  "verticalLabelPosition=bottom;verticalAlign=top;image=")
 _VARIANT = re.compile(r"-(color|text)$")
