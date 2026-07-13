@@ -141,7 +141,17 @@ _ICON_RESOLVER_TOOLS_BLOCK = """\
 - Plus `read_file`, `ls`, `glob`, `grep`."""
 
 _DRAWER_TOOLS_BLOCK = """\
-## Tools available (call order: [poster only: declare_poster_grid] → render_diagram → export_drawio)
+## Tools available
+NATIVE path (architecture default): export_drawio_native → [read_drawio → edit_drawio]
+Graphviz path (ERD/UML/flowchart only): [declare_poster_grid] → render_diagram → export_drawio
+- `export_drawio_native()` — build `out.drawio` + `out.png` straight from
+  `render_spec.json` with the native engine (deterministic, production-styled).
+- `read_drawio()` — compact per-cell inventory of `out.drawio` (ids, geometry,
+  styles, edges) + the current validator findings. Call before editing.
+- `edit_drawio(ops)` — fix the exported XML IN PLACE (set_style / move / resize /
+  set_label / pin_edge / delete / add_edge), then it auto re-validates and
+  re-renders `out.png`. Max 2 batches per export — batch ALL fixes in one call.
+  NEVER re-export or regenerate to fix a finding the ops can address.
 - `render_diagram(code)` — write & RUN the full diagram script. A static
   pre-flight audit runs first: high/medium findings block the run (no render
   budget consumed) — fix and re-call. On success returns the PNG + layout audit.
