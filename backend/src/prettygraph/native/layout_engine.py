@@ -332,6 +332,12 @@ def _e_box(d, n, parent):
           va=n.get("va", "middle"), bold=n.get("bold", False), fs=n.get("fs", 11))
 
 
+def _e_card(d, n, parent):
+    d.card(n["id"], [n["x"], n["y"]], [n["w"], n["h"]], n.get("icon"),
+           n.get("title") or "", n.get("sub") or "", parent=parent,
+           fill=n.get("fill"), stroke=n.get("stroke"))
+
+
 def _e_group(d, n, parent):
     if n.get("gname"):
         d.group(n["id"], n["gname"], [n["x"], n["y"]], [n["w"], n["h"]], n["label"],
