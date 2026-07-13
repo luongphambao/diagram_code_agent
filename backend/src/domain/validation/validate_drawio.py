@@ -124,7 +124,7 @@ def check_stencils(xml: str, strict: bool = False) -> tuple[list[str], list[str]
     if the catalog cannot be loaded.
     """
     try:
-        import drawio_catalog as dc
+        import domain.diagram.drawio_catalog as dc
         cat = dc.load_catalog()
     except Exception:  # noqa: BLE001 — catalog optional; skip stencil check
         return [], []
@@ -237,7 +237,7 @@ def audit_aws_conventions(xml: str) -> list[str]:
     """Recolored icons / wrong nesting order / rounded frames in AWS diagrams."""
     advice: list[str] = []
     try:
-        import drawio_catalog as dc
+        import domain.diagram.drawio_catalog as dc
         cat = dc.load_catalog()
     except Exception:  # noqa: BLE001
         cat = None
@@ -650,6 +650,85 @@ def audit_bpmn(xml: str) -> list[str]:
     return advice
 
 
+_WHITE_FILLS = re.compile(
+    r"fillColor=(none|#f{3}(?:f{3})?|#FFFFFF|#ffffff|light-dark\(#ffffff[^)]*\))(;|$)")
+
+
+def audit_production_polish(xml: str) -> list[str]:
+    """Deterministic PRODUCTION-POLISH gate (0 LLM tokens) — the measurable half of
+    what the visual critic used to flag as advisory-only. Each finding names the
+    edit_drawio op that fixes it. Returned as the report's `polish` bucket
+    (medium severity) so it forces exactly one in-place edit round.
+    """
+    findings: list[str] = []
+    cells = [c for c in _parse_cells(xml) if c["id"]]
+    by_id = {c["id"]: c for c in cells}
+    has_children = {c["parent"] for c in cells if c["parent"]}
+    is_text = lambda c: bool(re.search(r"(?:^|;)(text|line);", c["style"])) \
+        or (c["id"] or "").startswith(("__title", "__legend"))
+    vertices = [c for c in cells if c["edge"] != "1" and c["geo"] and not is_text(c)]
+
+    # 1) Layer bands not tinted: 3+ container frames, every one white/none.
+    frames = [c for c in vertices
+              if c["id"] in has_children and "fillColor=" in c["style"]
+              and not re.search(r"shape=image|resIcon=", c["style"])]
+    if len(frames) >= 3 and all(_WHITE_FILLS.search(c["style"]) for c in frames):
+        findings.append(
+            f"{len(frames)} container frames are ALL white/untinted — give each "
+            "top-level layer a pale tint (edit_drawio set_style fillColor, e.g. "
+            "light-dark(#eaf3ec,#16241b)) so layers read as bands.")
+
+    # 2) Legend missing when 2+ edge flow colours are used.
+    edge_colors = {m.group(1) for c in cells if c["edge"] == "1"
+                   for m in [re.search(r"strokeColor=([^;]+)", c["style"])] if m}
+    if len(edge_colors) >= 2 and "legend" not in xml.lower():
+        findings.append(
+            f"{len(edge_colors)} edge colours but NO legend — add a legend box "
+            "mapping each colour/dash to its flow meaning.")
+
+    # 3) Icon coverage: too many plain boxes among leaf nodes.
+    leaves = [c for c in vertices if c["id"] not in has_children
+              and (c["geo"]["w"] or 0) >= 40 and (c["geo"]["h"] or 0) >= 30]
+    if len(leaves) >= 5:
+        def _has_icon(c):
+            if re.search(r"resIcon=|image=data:|shape=mxgraph\.", c["style"]):
+                return True
+            return any(k.get("parent") == c["id"]
+                       and re.search(r"resIcon=|image=data:", k["style"])
+                       for k in cells)
+        plain = [c for c in leaves if not _has_icon(c)]
+        if len(plain) / len(leaves) > 0.4:
+            findings.append(
+                f"{len(plain)}/{len(leaves)} nodes have NO vendor icon (plain boxes) "
+                "— resolve icons for the main services (nodes: "
+                + ", ".join((c["id"] or "?") for c in plain[:6]) + "…).")
+
+    # 4) Excess whitespace: content bounding box vs page area.
+    m = re.search(r'pageWidth="([\d.]+)"\s+pageHeight="([\d.]+)"', xml)
+    top = [c for c in vertices if c["parent"] in ("1", "boundaries")]
+    if m and top:
+        pw, ph = float(m.group(1)), float(m.group(2))
+        gs = [c["absGeo"] or c["geo"] for c in top]
+        x0 = min(g["x"] for g in gs)
+        y0 = min(g["y"] for g in gs)
+        x1 = max(g["x"] + g["w"] for g in gs)
+        y1 = max(g["y"] + g["h"] for g in gs)
+        if pw * ph > 0 and ((x1 - x0) * (y1 - y0)) / (pw * ph) < 0.5:
+            findings.append(
+                f"Content fills only {round(100 * (x1 - x0) * (y1 - y0) / (pw * ph))}% "
+                "of the page — shrink the page or spread/scale the layout "
+                "(a production diagram hugs its content).")
+
+    # 5) Unreadably small vertex labels.
+    tiny = sorted({int(v) for c in vertices
+                   for v in [_num(c["style"], "fontSize")] if v and v < 9})
+    if tiny:
+        findings.append(
+            f"Vertex label font size(s) {tiny} are below 9px — unreadable at "
+            "slide scale (edit_drawio set_style fontSize).")
+    return findings
+
+
 def audit_xml(xml: str, profile: str = "auto") -> list[str]:
     """Run the design audits and return the combined advice list.
 
@@ -741,7 +820,7 @@ def findings_from_validation(result: dict) -> list:
     entity_ids is intentionally empty; stable_finding_id keys on dimension+title so
     the same defect produces the same SF- id across runs.
     """
-    from solution_validator import SolutionFinding
+    from domain.validation.solution_validator import SolutionFinding
     findings = []
     for msg in result.get("errors", []):
         findings.append(SolutionFinding(
