@@ -53,6 +53,9 @@ to `icon_plan.json`. You do NOT write diagram code or render anything.
 - Do NOT call `search_icons` more than once per node.
 - NEVER call `write_file`/`edit_file` on `icon_plan.json` — use
   `update_icon_plan_entry` for any change after the initial `resolve_icons` batch.
+- NEVER write any `.py` file or helper script (e.g. `gen_icon_plan.py`) to
+  generate `icon_plan.json` — that is not how this works. Only the listed tools
+  produce/update `icon_plan.json`.
 - Keep total tool calls under 10.
 
 {_ICON_RESOLVER_TOOLS_BLOCK}
