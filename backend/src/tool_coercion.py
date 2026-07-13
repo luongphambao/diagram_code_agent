@@ -188,17 +188,51 @@ def coerce_args(args: dict, schema) -> dict:
     return args
 
 
-def compact_invocation_error(text: str) -> str | None:
+def _required_fields(schema) -> list[str] | None:
+    """Required field names for *schema* (Pydantic model class or JSON-schema dict)."""
+    if isinstance(schema, type) and issubclass(schema, BaseModel):
+        return [name for name, field in schema.model_fields.items() if field.is_required()]
+    if isinstance(schema, dict):
+        req = schema.get("required")
+        if isinstance(req, list):
+            return list(req)
+    return None
+
+
+def compact_invocation_error(text: str, schema=None, args: dict | None = None) -> str | None:
     """Rewrite the default tool-invocation error (which echoes the full kwargs
-    blob) to a short corrective message. Returns None if *text* isn't one."""
+    blob) to a short corrective message. Returns None if *text* isn't one.
+
+    When *schema* is given and EVERY required field is absent from *args* (the
+    model called the tool with empty/near-empty args rather than a shape
+    mistake), a distinct message names the missing fields and tells the model
+    to copy the values from context instead of retrying blind — this is the
+    "resolve_finding() with no args, 4 times in a row" failure mode, which the
+    generic structural-mismatch message below doesn't address.
+    """
     m = _INVOCATION_ERROR_RE.match(text)
     if not m:
         return None
+    name = m.group("name")
+
+    required = _required_fields(schema)
+    if required:
+        present = set((args or {}).keys())
+        missing = [f for f in required if f not in present]
+        if missing and len(missing) == len(required):
+            return (
+                f"Tool '{name}' was called with no usable arguments — every required "
+                f"field is missing: {', '.join(required)}. Copy the exact values from "
+                "the most recent relevant tool output above (e.g. the SF-xxxx id from "
+                "CROSS-ARTIFACT CHECK) — do not guess, invent, or retry with empty "
+                "args again. Call the tool again with every required field set."
+            )
+
     error = " ".join(m.group("error").split())
     if len(error) > _MAX_ERROR_CHARS:
         error = error[:_MAX_ERROR_CHARS] + "..."
     return (
-        f"Tool '{m.group('name')}' argument validation failed: {error}\n"
+        f"Tool '{name}' argument validation failed: {error}\n"
         "Fix ONLY the invalid fields and call the tool again. Pass lists and "
         "objects as real JSON types (e.g. [\"a\",\"b\"]), never as quoted strings."
     )
