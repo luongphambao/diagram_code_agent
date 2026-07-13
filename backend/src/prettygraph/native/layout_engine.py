@@ -68,6 +68,8 @@ def group(id, gname, label="", opts=None, children=None):
         "align": opts.get("align", "center"),
         "fill": opts.get("fill"), "stroke": opts.get("stroke"),
         "fs": opts.get("fs"),
+        # col only: spread children over the full inner height (stretched frames)
+        "justify": opts.get("justify", False),
         # a catalog icon drawn at the container's top-left (Azure/GCP frames).
         "cornerIcon": opts.get("cornerIcon"),
         # min gap enforced between children when routing lanes pass between them.
