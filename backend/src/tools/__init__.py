@@ -252,7 +252,10 @@ MAIN_TOOLS = [
 ]
 
 # Icon resolver subagent tools: node search + icon resolution (runs before drawer).
-ICON_RESOLVER_TOOLS = [search_diagrams_nodes, resolve_icons, search_icons, search_drawio_shapes, fetch_logo]
+ICON_RESOLVER_TOOLS = [
+    search_diagrams_nodes, resolve_icons, search_icons, search_drawio_shapes, fetch_logo,
+    update_icon_plan_entry,
+]
 
 # Drawer subagent tools: render-refine loop only. Icons are pre-resolved by
 # icon_resolver; style_plan.json/label_fits.json are pre-computed code-side by
