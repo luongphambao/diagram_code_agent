@@ -355,7 +355,7 @@ def _e_group(d, n, parent):
         # stroke "none" = layout-only wrapper (no border) -> ob None so router ignores it.
         d.box(n["id"], [n["x"], n["y"]], [n["w"], n["h"]], n["label"], parent=parent,
               va="top", bold=True, fill=n.get("fill") or "#FFFFFF",
-              stroke=n.get("stroke") or "#999999",
+              stroke=n.get("stroke") or "#999999", fs=n.get("fs") or 11,
               ob=(None if n.get("stroke") == "none" else False))
     for c in n["children"]:
         _emit(d, c, n["id"])
