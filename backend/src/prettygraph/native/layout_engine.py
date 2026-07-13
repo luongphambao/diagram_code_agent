@@ -186,6 +186,13 @@ def _m_box(n):
     pass  # w,h provided by box()
 
 
+def _m_card(n):
+    ic = 30 if n.get("icon") else 0
+    text_w = max(len(n.get("title") or "") * 7.2, len(n.get("sub") or "") * 5.8)
+    n["w"] = n.get("w") or round(min(260, max(150, text_w + ic + 44)))
+    n["h"] = n.get("h") or 54
+
+
 def _m_pool(n):
     for c in n["children"]:
         _measure(c)
