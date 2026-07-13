@@ -68,14 +68,17 @@ _CRITIC_CALL_LIMIT = int(os.getenv("CRITIC_CALL_LIMIT", "40"))    # inspect+crit
 # the whole session; tune independently via env without touching the others.
 # Token/cost per stage is recorded separately by UsageLoggingMiddleware → usage.json
 # (keyed by agent_name), which the quality dashboard reads for spend-to-quality.
-# icon_resolver's own prompt budgets "under 10 tool calls" for the happy path
-# (one resolve_icons batch + a few NOT_FOUND retries) — was defaulting to
-# _CRITIC_CALL_LIMIT (40), which let a defecting run (manually read/edit/grep-ing
-# icon_plan.json instead of using resolve_icons/update_icon_plan_entry) burn the
-# full 40 calls / ~1M tokens before the hard cap even engaged. Decoupled and
-# lowered to ~1.5x the prompt's own target, leaving headroom for legitimate
-# NOT_FOUND retries without permitting a full manual-edit runaway.
-_ICON_CALL_LIMIT = int(os.getenv("ICON_CALL_LIMIT", "15"))
+# icon_resolver's own prompt budgets "under 6 tool calls" for the happy path
+# (one resolve_icons batch + a few NOT_FOUND retries). It was briefly lowered to
+# 15 after a defecting run (manually read/edit/grep-ing icon_plan.json instead of
+# using resolve_icons/update_icon_plan_entry) burned ~40 calls / ~1M tokens. That
+# specific manual-edit runaway is now blocked independently at the permission
+# layer (_ICON_PLAN_WRITE_DENY in subagents/icon_resolver.py) and resolve_icons/
+# resolve_missing_icons self-reject repeat calls, so the call ceiling is now a
+# backstop rather than the primary defense. Restored to 40 for generous headroom
+# on legitimate NOT_FOUND / brand-logo retries (stubborn off-catalog labels)
+# without reopening the blowout path. Env-overridable.
+_ICON_CALL_LIMIT = int(os.getenv("ICON_CALL_LIMIT", "40"))
 _DRAWER_CALL_LIMIT = int(os.getenv("DRAWER_CALL_LIMIT", "40"))    # ~2.5x the ≤15-call budget
 # wbs_planner: 60 is ample now that the deterministic tail is one finalize_wbs
 # call (Pass 2 ≈ N add_wbs_items + 1).
