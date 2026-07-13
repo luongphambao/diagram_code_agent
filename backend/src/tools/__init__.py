@@ -79,6 +79,7 @@ from .icon_tools import (
     search_diagrams_nodes,
     search_drawio_shapes,
     search_icons,
+    update_icon_plan_entry,
 )
 
 # --- rendering tools ---
