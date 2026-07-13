@@ -79,7 +79,7 @@ def resolve_workspace(thread_id: str | None) -> Path:
     if not thread_id or thread_id == "thread-default":
         WORKSPACE.mkdir(parents=True, exist_ok=True)
         return WORKSPACE
-    from safe_path import safe_filename
+    from runtime.safe_path import safe_filename
     ws = WORKSPACES_DIR / safe_filename(thread_id)
     ws.mkdir(parents=True, exist_ok=True)
     return ws
@@ -261,6 +261,21 @@ def make_local_backend() -> CompositeBackend:
             # why the ppt_generator subagent's reads all 404'd. Bare names (`blueprint.json`)
             # still resolve via the default route, so both forms now work per-thread.
             "/workspace/": PerThreadFilesystemBackend(
+                root_dir=str(WORKSPACE),
+                virtual_mode=True,
+            ),
+            # Defensive aliases: mimo sometimes fabricates a Docker-flavoured
+            # `/app/workspace/...` (or bare `/app/...`) prefix from its training
+            # prior — that string exists nowhere in our prompts/skills. Without a
+            # route it falls to `default` and virtual_mode nests it as
+            # `<thread-ws>/app/workspace/...`, which never exists (path_not_found).
+            # Alias both to the same per-thread workspace so a hallucinated prefix
+            # still resolves to the right file. (Same pattern as `/workspace/`.)
+            "/app/workspace/": PerThreadFilesystemBackend(
+                root_dir=str(WORKSPACE),
+                virtual_mode=True,
+            ),
+            "/app/": PerThreadFilesystemBackend(
                 root_dir=str(WORKSPACE),
                 virtual_mode=True,
             ),
