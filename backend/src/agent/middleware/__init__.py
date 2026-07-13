@@ -42,6 +42,7 @@ from .context_edits import (
     OffloadGateArgsEdit,
     SanitizeToolTextBlocksEdit,
 )
+from .drawer_context_inject import DrawerContextInjectMiddleware
 from .drawer_gate import DrawerReviseGateMiddleware
 from .phase_filter import PhasePromptFilterMiddleware, PhaseToolFilterMiddleware
 from .usage import UsageLoggingMiddleware
