@@ -379,12 +379,16 @@ def export_drawio_native() -> str:
             lint += f"\nDesign advice: {'; '.join(report['advice'][:5])}"
     except Exception:  # noqa: BLE001
         pass
+    vendor_icons = stats["native_icons"] + stats.get("image_icons", 0)
     return (
         f"Wrote out.drawio ({out.stat().st_size} bytes) via native engine.{png_note} "
-        f"Fidelity: {stats['native_icons']}/{stats['nodes']} native stencils, "
-        f"{stats['native_groups']} native group frames. "
+        f"Fidelity: {vendor_icons}/{stats['nodes']} vendor icons "
+        f"({stats['native_icons']} AWS stencils + {stats.get('image_icons', 0)} "
+        f"image tiles), {stats['native_groups']} native group frames. "
         f"Routing: {stats['edge_cross']} edge-through-node, "
-        f"{stats['edge_overlaps']} parallel overlaps.{lint}"
+        f"{stats['edge_overlaps']} parallel overlaps.{lint}\n"
+        "If Lint reports gate findings, fix them IN PLACE: read_drawio -> one "
+        "batched edit_drawio call (do NOT re-export)."
     )
 
 
