@@ -67,6 +67,7 @@ def group(id, gname, label="", opts=None, children=None):
         "header": (opts.get("header", 36) if label else opts.get("header", 14)),
         "align": opts.get("align", "center"),
         "fill": opts.get("fill"), "stroke": opts.get("stroke"),
+        "fs": opts.get("fs"),
         # a catalog icon drawn at the container's top-left (Azure/GCP frames).
         "cornerIcon": opts.get("cornerIcon"),
         # min gap enforced between children when routing lanes pass between them.
