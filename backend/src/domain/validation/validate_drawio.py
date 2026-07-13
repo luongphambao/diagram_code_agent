@@ -763,6 +763,7 @@ def validate_file(path: str, profile: str = "auto") -> dict:
         errors += e
         warns += w
     advice: list[str] = []
+    polish: list[str] = []
     try:
         xml = ""
         try:
@@ -774,15 +775,18 @@ def validate_file(path: str, profile: str = "auto") -> dict:
             errors += se
             warns += sw
             advice = audit_xml(xml, profile)
+            polish = audit_production_polish(xml)
     except Exception:  # noqa: BLE001 — design audits are best-effort
         pass
     return {
         "errors": errors,
         "warnings": warns,
         "advice": advice,
+        "polish": polish,
         "error_count": len(errors),
         "warning_count": len(warns),
         "advice_count": len(advice),
+        "polish_count": len(polish),
         "ok": len(errors) == 0,
     }
 
