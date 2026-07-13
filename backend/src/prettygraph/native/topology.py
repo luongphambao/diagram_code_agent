@@ -33,6 +33,10 @@ except (ImportError, ValueError):  # pragma: no cover - import fallback
 
 _NEUTRAL_STROKE = "#8593A3"
 _ICON_SCORE_MIN = 50  # top-hit score to accept a stencil for a node (else a plain card)
+# Vendor-pack (gcp_*/azure_*) hits score lower than they deserve: their names
+# embed the provider prefix, which the query never contains. Accept them at a
+# lower score — but only when every significant query token appears in the name.
+_ICON_SCORE_VENDOR = 28
 # Vendor / filler words that dilute a stencil search ("AWS Lambda" -> "lambda").
 _VENDOR_WORDS = {"aws", "amazon", "azure", "gcp", "google", "microsoft", "cloud",
                  "apache", "the", "a", "for", "service", "services", "managed"}
