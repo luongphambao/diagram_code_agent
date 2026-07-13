@@ -186,6 +186,8 @@ DIAGRAM_TOOLS = [
     render_diagram,
     export_drawio,
     export_drawio_native,
+    read_drawio,
+    edit_drawio,
     list_saved_diagrams,
     search_diagrams_nodes,
     search_icons,
