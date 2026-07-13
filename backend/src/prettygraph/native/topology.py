@@ -298,6 +298,11 @@ def build_tree(spec: dict, flat: bool = False):
         gname = _aws_group_for_label(label) if provider == "aws" else None
         if gname:
             return group(cid, gname, label, {"dir": "col", "gap": 20}, kids)
+        # Corner logos stay an on-prem/hybrid affordance: GCP/Azure diagrams keep
+        # plain frames (no group stencils exist; the icons carry the identity).
+        logo = (_container_logo(cat, c)
+                if provider not in ("aws", "gcp", "google", "azure", "microsoft")
+                else None)
         if depth == 0:
             # Top-level LAYER BAND: pale tint + matching stroke (Gemini/production
             # look) — the band carries the layer identity, icons carry the vendor.
@@ -306,6 +311,8 @@ def build_tree(spec: dict, flat: bool = False):
                     "pad": 20, "fill": fill, "stroke": stroke, "fs": 13,
                     "align": "top" if band_dir == "row" else "center",
                     "justify": band_dir == "col"}
+            if logo:
+                opts["cornerIcon"] = logo
             return frame(cid, label.upper(), opts, kids)
         # Nested sub-frame: white card frame with an accent border. Inside a
         # horizontal band, small sub-frames flow row-wise to stay compact.
