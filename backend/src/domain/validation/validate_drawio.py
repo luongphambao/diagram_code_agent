@@ -820,12 +820,24 @@ def findings_from_validation(result: dict) -> list:
 
     Errors become diagram_structural/patch_blueprint (high severity — must fix).
     Warnings become diagram_layout/auto_repair (medium — can auto-fix or waive).
+    Polish becomes diagram_style/auto_repair (medium — production-polish gate:
+    forces one in-place edit_drawio round, never a regeneration).
     Advice becomes diagram_style/none (low — informational, no action required).
     entity_ids is intentionally empty; stable_finding_id keys on dimension+title so
     the same defect produces the same SF- id across runs.
     """
     from domain.validation.solution_validator import SolutionFinding
     findings = []
+    for msg in result.get("polish", []):
+        findings.append(SolutionFinding(
+            severity="medium",
+            dimension="diagram_style",
+            artifact_type="blueprint",
+            entity_ids=[],
+            title=msg[:120],
+            detail=msg,
+            repair_strategy="auto_repair",
+        ))
     for msg in result.get("errors", []):
         findings.append(SolutionFinding(
             severity="high",
