@@ -734,9 +734,12 @@ def edit_drawio(
         report = validate_file(str(out))
         lint = (f"\nLint: {report['error_count']} error(s), "
                 f"{report['warning_count']} warning(s), "
+                f"{report.get('polish_count', 0)} polish gate finding(s), "
                 f"{report.get('advice_count', 0)} advice.")
         if report["errors"]:
             lint += f" Errors: {'; '.join(report['errors'][:5])}"
+        if report.get("polish"):
+            lint += f"\nPolish gate: {'; '.join(report['polish'][:5])}"
         if report.get("advice"):
             lint += f"\nDesign advice: {'; '.join(report['advice'][:5])}"
     except Exception:  # noqa: BLE001
