@@ -8,6 +8,8 @@ refactor, in ``agent/middleware/``). They are load-bearing:
     the ToolMessage history to a single live image before the relay edit scans.
   * ``ToolArgCoercionMiddleware`` MUST precede ``DrawerReviseGateMiddleware`` —
     the gate assumes well-formed ``task`` args.
+  * ``DrawerReviseGateMiddleware`` MUST precede ``DrawerContextInjectMiddleware``
+    — only augment ``task(drawer, ...)`` dispatches that weren't blocked.
   * ``ModelCallLimitMiddleware`` uses ``exit_behavior="end"``; the ``task``
     ``ToolCallLimitMiddleware`` uses ``"continue"`` ("end" raises
     NotImplementedError with pending parallel calls).
