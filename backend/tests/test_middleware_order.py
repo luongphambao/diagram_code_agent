@@ -64,6 +64,7 @@ def test_full_middleware_order():
         "VisionErrorFallbackMiddleware",
         "ToolCallLimitMiddleware",
         "DrawerReviseGateMiddleware",
+        "DrawerContextInjectMiddleware",
         "PhaseToolFilterMiddleware",
         "PhasePromptFilterMiddleware",
     ]
