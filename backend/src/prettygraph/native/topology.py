@@ -320,10 +320,6 @@ def build_tree(spec: dict, flat: bool = False):
                             and not children_of.get(cid)) else "col"
         opts = {"dir": sub_dir, "gap": 18, "fill": THEME.base,
                 "stroke": _accent_stroke(c.get("accent"))}
-        # Corner logos stay an on-prem/hybrid affordance: GCP/Azure diagrams keep
-        # plain frames (no group stencils exist; the icons carry the identity).
-        logo = (_container_logo(cat, c)
-                if provider not in ("aws", "gcp", "google", "azure", "microsoft") else None)
         if logo:
             opts["cornerIcon"] = logo
         return frame(cid, label, opts, kids)
