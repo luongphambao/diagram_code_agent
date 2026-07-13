@@ -277,16 +277,25 @@ def build_tree(spec: dict, flat: bool = False):
     def build_cluster(cid: str, depth: int = 0, band_i: int = 0, band_dir: str = "col"):
         c = clusters[cid]
         label = c["label"] if c.get("number") is None else f'{c["number"]} · {c["label"]}'
-        kids = [build_cluster(sub, depth + 1) for sub in children_of.get(cid, [])]
+        sub_frames = [build_cluster(sub, depth + 1, band_dir=band_dir)
+                      for sub in children_of.get(cid, [])]
         cnodes = nodes_by_cluster.get(cid, [])
+        items: list = []
         if cnodes:
             items = [build_node(n) for n in cnodes]
             wrap_at = 6 if (depth == 0 and band_dir == "row") else 3
-            if len(items) > wrap_at and not children_of.get(cid):
+            if band_dir == "col" and depth == 0 and len(items) > 1:
+                # sidebar column: stack cards singly (invisible 1-col grid)
+                items = [grid(f"{cid}__grid", None, "",
+                              {"cols": 1, "gap": 18, "pad": 0, "stroke": "none"}, items)]
+            elif len(items) > wrap_at and not children_of.get(cid):
                 cols = 2 if len(items) <= 6 else 3
-                kids.append(grid(f"{cid}__grid", None, "", {"cols": cols, "gap": 22}, items))
-            else:
-                kids.extend(items)
+                items = [grid(f"{cid}__grid", None, "",
+                              {"cols": cols, "gap": 22, "stroke": "none"}, items)]
+        # In a horizontal layer band the flow reads left→right: direct nodes
+        # first, sub-frames after; nested frames keep the frame-first order.
+        kids = (items + sub_frames) if (depth == 0 and band_dir == "row") \
+            else (sub_frames + items)
         gname = _aws_group_for_label(label) if provider == "aws" else None
         if gname:
             return group(cid, gname, label, {"dir": "col", "gap": 20}, kids)
@@ -296,7 +305,8 @@ def build_tree(spec: dict, flat: bool = False):
             fill, stroke = _band_tint(c, band_i)
             opts = {"dir": band_dir, "gap": 36 if band_dir == "row" else 18,
                     "pad": 20, "fill": fill, "stroke": stroke, "fs": 13,
-                    "align": "top" if band_dir == "row" else "center"}
+                    "align": "top" if band_dir == "row" else "center",
+                    "justify": band_dir == "col"}
             return frame(cid, label.upper(), opts, kids)
         # Nested sub-frame: white card frame with an accent border. Inside a
         # horizontal band, small sub-frames flow row-wise to stay compact.
