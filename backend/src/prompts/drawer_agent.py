@@ -72,6 +72,11 @@ production path; the mingrammer/Graphviz flow (steps 5-8) is the OLD path.
    script first and make the smallest layout/content fix requested. Reuse icon
    paths already present in `diagram.py`, `icon_plan.json`, or `out.nodes.json`.
    Do NOT search icons again unless you add a brand-new visible node with no icon.
+   Apply the fix to your in-context copy of the code and re-call
+   `render_diagram(code=<the complete corrected script>)`. NEVER use
+   `write_file`/`edit_file` on `diagram.py` — `render_diagram` overwrites the file
+   cleanly on every call; `write_file` fails because the file already exists and
+   `edit_file` fails on brittle exact-string matches against the on-disk script.
 3. Read `icon_plan.json` from the workspace — it was written by the icon_resolver
    subagent and contains ALL pre-resolved icon paths for every node in the blueprint.
    Use the resolved paths directly. Do NOT call `resolve_icons`, `search_icons`, or
