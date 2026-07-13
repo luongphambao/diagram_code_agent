@@ -68,7 +68,17 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
         OffloadGateArgsEdit(),
         ClearToolUsesEdit(
             trigger=CONTEXT_TRIGGER_TOKENS,
-            clear_at_least=8_000,
+            # ClearToolUsesEdit.apply() breaks out of its clearing loop as soon as
+            # `clear_at_least` tokens have been reclaimed, even if older clearable
+            # ToolMessages remain (langchain/agents/middleware/context_editing.py).
+            # Edits are ephemeral (recomputed from the full persisted checkpoint on
+            # every model call, never written back), so a small clear_at_least only
+            # ever trims a flat slice off the front — on a long-lived thread (many
+            # accumulated user turns) the untouched remainder dominates and the
+            # per-call floor keeps climbing indefinitely instead of settling near
+            # `trigger`. Set far above any real context size so the loop always
+            # clears every candidate outside `keep` instead of stopping early.
+            clear_at_least=1_000_000,
             keep=4,
             clear_tool_inputs=True,
             exclude_tools=exclude,
