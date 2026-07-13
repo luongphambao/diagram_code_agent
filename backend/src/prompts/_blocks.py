@@ -126,6 +126,12 @@ _ICON_RESOLVER_TOOLS_BLOCK = """\
   UML actor, etc.) in the exported .drawio file. NEVER guess mxgraph.* names.
 - `fetch_logo(name)` — resolve a brand logo (lobe-icons first, then web
   scraping). Use after search_icons.
+- `update_icon_plan_entry(label, path=None, icon=None, status="FOUND", tried_keyword=None)`
+  — after `search_icons`/`fetch_logo` resolves a NOT_FOUND retry, call this to
+  persist the result. NEVER use `write_file`/`edit_file` on `icon_plan.json`:
+  it already exists (write_file rejects the overwrite) and its exact JSON
+  formatting makes edit_file's string match brittle. This is the only
+  supported way to update an entry after the initial `resolve_icons` batch.
 - Plus `read_file`, `ls`, `glob`, `grep`."""
 
 _DRAWER_TOOLS_BLOCK = """\
