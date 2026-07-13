@@ -68,7 +68,14 @@ _CRITIC_CALL_LIMIT = int(os.getenv("CRITIC_CALL_LIMIT", "40"))    # inspect+crit
 # the whole session; tune independently via env without touching the others.
 # Token/cost per stage is recorded separately by UsageLoggingMiddleware → usage.json
 # (keyed by agent_name), which the quality dashboard reads for spend-to-quality.
-_ICON_CALL_LIMIT = int(os.getenv("ICON_CALL_LIMIT", str(_CRITIC_CALL_LIMIT)))
+# icon_resolver's own prompt budgets "under 10 tool calls" for the happy path
+# (one resolve_icons batch + a few NOT_FOUND retries) — was defaulting to
+# _CRITIC_CALL_LIMIT (40), which let a defecting run (manually read/edit/grep-ing
+# icon_plan.json instead of using resolve_icons/update_icon_plan_entry) burn the
+# full 40 calls / ~1M tokens before the hard cap even engaged. Decoupled and
+# lowered to ~1.5x the prompt's own target, leaving headroom for legitimate
+# NOT_FOUND retries without permitting a full manual-edit runaway.
+_ICON_CALL_LIMIT = int(os.getenv("ICON_CALL_LIMIT", "15"))
 _DRAWER_CALL_LIMIT = int(os.getenv("DRAWER_CALL_LIMIT", "40"))    # ~2.5x the ≤15-call budget
 # wbs_planner: 60 is ample now that the deterministic tail is one finalize_wbs
 # call (Pass 2 ≈ N add_wbs_items + 1).
