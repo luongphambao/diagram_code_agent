@@ -18,9 +18,9 @@ from backends import (
     reset_current_workspace,
     set_current_workspace,
 )
-from safe_path import safe_workspace_path
+from runtime.safe_path import safe_workspace_path
 from context import SessionContext
-from reporting import record_report_step
+from domain.reporting.reporting import record_report_step
 from tools import GATE_TOOL_NAMES, allowed_decisions_for, clear_stage_markers
 import session_state as ss
 from session_state import (
@@ -82,7 +82,7 @@ def _persist_decision_record(payload: dict, gate: str | None, approver: str,
     try:
         from datetime import datetime, timezone
 
-        from decisions import append_decision, next_seq
+        from memory.stores.decisions import append_decision, next_seq
         from session_state import decision_record_from_payload
         from tools import can_approve
 
@@ -193,7 +193,7 @@ async def agui_endpoint(request: Request):
                 # immutable approved revision (approved/REV-<n>.json) for audit/repro.
                 if decision.get("type") == "approve" and pending_name in GATE_TOOL_NAMES:
                     try:
-                        from csm_adapter import archive_approved_revision
+                        from memory.stores.csm_adapter import archive_approved_revision
                         archive_approved_revision(ws)
                     except Exception as exc:  # noqa: BLE001
                         logger.debug("approved-revision archive skipped: %s", exc)
@@ -225,11 +225,20 @@ async def agui_endpoint(request: Request):
                 # Fresh run.
                 from routers.upload import _attached_images, _attached_text
                 desc = _last_user_text(messages)
+                attached = _attached_text(file_ids)
+                image_blocks = _attached_images(file_ids)
                 is_pdf_followup = _is_pdf_followup(desc)
                 is_ppt_followup = _is_ppt_followup(desc)
                 is_wbs_followup = _is_wbs_followup(desc)
-                preserve_diagram_artifacts = (is_pdf_followup or is_ppt_followup) and (ws / "out.png").exists()
-                preserve_wbs_artifacts = is_wbs_followup and (ws / "wbs.json").exists()
+                # A newly attached document is fresh intake for a (possibly new) project,
+                # not a request to re-export the existing diagram/WBS — never preserve
+                # stale artifacts over it, no matter what followup phrase matched.
+                preserve_diagram_artifacts = (
+                    (is_pdf_followup or is_ppt_followup) and (ws / "out.png").exists() and not attached
+                )
+                preserve_wbs_artifacts = (
+                    is_wbs_followup and (ws / "wbs.json").exists() and not attached
+                )
                 preserve_artifacts = preserve_diagram_artifacts or preserve_wbs_artifacts
                 if not preserve_artifacts:
                     clear_stage_markers()
