@@ -117,6 +117,9 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
         ))
     if use_drawer_revise_gate:
         layers.append(DrawerReviseGateMiddleware())
+        # Must follow DrawerReviseGateMiddleware: only augment task(drawer, ...)
+        # dispatches that weren't blocked by the gate above.
+        layers.append(DrawerContextInjectMiddleware())
     if use_phase_filter:
         layers.append(PhaseToolFilterMiddleware())
         layers.append(PhasePromptFilterMiddleware())
