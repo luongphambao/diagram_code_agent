@@ -49,6 +49,13 @@ def box(id, label="", **opts):
     return node
 
 
+def card(id, icon_name, title, sub="", **opts):
+    """Rounded card node: catalog icon on the LEFT, bold title + grey sub-label.
+    icon_name may be None (text-only card)."""
+    return {"kind": "card", "id": id, "icon": icon_name or None,
+            "title": title, "sub": sub, "label": title, **opts}
+
+
 def group(id, gname, label="", opts=None, children=None):
     opts = opts or {}
     children = children if children is not None else []
