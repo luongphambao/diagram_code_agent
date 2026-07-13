@@ -75,6 +75,7 @@ from .icon_tools import (
     _tokens,
     fetch_logo,
     resolve_icons,
+    resolve_missing_icons,
     resolve_tech_stack_icons,
     search_diagrams_nodes,
     search_drawio_shapes,
