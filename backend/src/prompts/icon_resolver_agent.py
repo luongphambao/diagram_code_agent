@@ -33,30 +33,34 @@ to `icon_plan.json`. You do NOT write diagram code or render anything.
    `{{label, provider, icon_keyword}}`. Derive `icon_keyword` from the node label
    or tech (e.g. label="Redis Cache" → icon_keyword="redis").
    This writes `icon_plan.json`.
-4. For any entry in `icon_plan.json` with `status=NOT_FOUND`, call
-   `search_icons(query, provider)` with a broader keyword (max ONE retry per node),
-   then call `update_icon_plan_entry(label, path=..., icon=..., status="FOUND",
-   tried_keyword=...)` to persist the result — this is the ONLY way to update
-   `icon_plan.json` after the initial `resolve_icons` batch.
-5. For entries still NOT_FOUND after `search_icons`, call `fetch_logo(name)` —
-   it resolves 321 AI/LLM brands + 18 data stores via lobe-icons CDN before web
-   scraping, so call it for ANY named technology still NOT_FOUND. Only leave
-   NOT_FOUND for truly generic boxes. Persist a FOUND result the same way, via
-   `update_icon_plan_entry(...)`.
-6. **Return a short summary** — list how many icons were FOUND vs NOT_FOUND and
+4. If ANY entries in `icon_plan.json` have `status=NOT_FOUND`, call
+   `resolve_missing_icons(retries=[...])` **ONCE** with every NOT_FOUND label
+   together — one `MissingIconRetry` per label. It tries a broader icon-pack
+   search then falls back to a brand-logo lookup (same sources as `fetch_logo`)
+   for each, and persists all results to `icon_plan.json` in one write. Only
+   pass `broader_keyword` for a label when the label itself is a poor search
+   term; otherwise omit it. Do NOT retry the same batch of labels twice.
+5. **Return a short summary** — list how many icons were FOUND vs NOT_FOUND and
    confirm `icon_plan.json` is written. Example: "Done. icon_plan.json written:
    12 FOUND, 2 NOT_FOUND (Prometheus, Grafana — use built-in or omit icon)."
 
 ## Rules
 - Do NOT render or write diagram code.
 - Do NOT call `resolve_icons` more than once.
-- Do NOT call `search_icons` more than once per node.
-- NEVER call `write_file`/`edit_file` on `icon_plan.json` — use
-  `update_icon_plan_entry` for any change after the initial `resolve_icons` batch.
+- Do NOT call `resolve_missing_icons` more than once — pass every NOT_FOUND
+  label in that single call, not one at a time.
+- NEVER call `search_icons` or `update_icon_plan_entry` one node at a time for
+  NOT_FOUND retries — `resolve_missing_icons` replaces that entire per-node
+  loop with one batched call. (`search_icons`/`update_icon_plan_entry` still
+  exist for rare one-off fixes, but the batch path is now step 4.)
+- NEVER call `write_file`/`edit_file` on `icon_plan.json` — this is enforced
+  (the tool call will be denied), not just a style preference. Only
+  `resolve_icons`/`resolve_missing_icons`/`update_icon_plan_entry` may write it.
 - NEVER write any `.py` file or helper script (e.g. `gen_icon_plan.py`) to
   generate `icon_plan.json` — that is not how this works. Only the listed tools
   produce/update `icon_plan.json`.
-- Keep total tool calls under 10.
+- Keep total tool calls under 6 (1 search_diagrams_nodes batch + 1 resolve_icons
+  + at most 1 resolve_missing_icons + summary).
 
 {_ICON_RESOLVER_TOOLS_BLOCK}
 """
