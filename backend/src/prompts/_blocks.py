@@ -245,6 +245,8 @@ _BEHAVIOR_RULES = """\
     "## Style Preferences"
   · Confirmed icon path / import name → one line in
     "## Learned Icon & Tech Notes": `- <service>: <path or import>`
+  · Confirmed estimation/rollup rule (BA/QC/PM ratios, phase_type mapping,
+    schedule scaling) → one line in "## Learned WBS Norms": `- <fact>`
   Do NOT record ephemeral task details, current-run state, or anything already
   in the skills. `/memories/AGENTS.md` (no `global-` prefix) is this thread's own
   private scratch space — it is not shared with other conversations, so don't use
