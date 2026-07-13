@@ -119,19 +119,25 @@ _ICON_RESOLVER_TOOLS_BLOCK = """\
   planned imports into ONE call via `queries=[...]`.
 - `resolve_icons(icons)` — batch resolve a planned icon list in ONE call. Each
   item is `{label, provider, icon_keyword}`. Writes `icon_plan.json`.
-- `search_icons(query, provider=None)` — find exact icon `.png` paths for
-  `Custom`. Use ONLY for nodes where `resolve_icons` returned NOT_FOUND.
+- `resolve_missing_icons(retries=[{label, broader_keyword?, provider?}, ...])`
+  — batch-retry EVERY `NOT_FOUND` entry from `resolve_icons` in ONE call: tries
+  a broader icon-pack search then a brand-logo fallback per label, persists all
+  results to `icon_plan.json` in one write. Use this instead of looping
+  `search_icons`/`update_icon_plan_entry` one node at a time — that per-node
+  pattern is exactly what causes icon_resolver's worst context blowups.
+- `search_icons(query, provider=None)` / `update_icon_plan_entry(...)` — still
+  available for a rare single-entry fix, but `resolve_missing_icons` is the
+  normal path for NOT_FOUND retries.
+- `fetch_logo(name)` — resolve a brand logo (lobe-icons first, then web
+  scraping) for a one-off case outside `resolve_missing_icons`.
 - `search_drawio_shapes(query, limit=5)` — search 10,446 official draw.io shapes
   for exact `style=` strings. Use when you need vendor shapes (AWS Lambda, k8s Pod,
   UML actor, etc.) in the exported .drawio file. NEVER guess mxgraph.* names.
-- `fetch_logo(name)` — resolve a brand logo (lobe-icons first, then web
-  scraping). Use after search_icons.
-- `update_icon_plan_entry(label, path=None, icon=None, status="FOUND", tried_keyword=None)`
-  — after `search_icons`/`fetch_logo` resolves a NOT_FOUND retry, call this to
-  persist the result. NEVER use `write_file`/`edit_file` on `icon_plan.json`:
-  it already exists (write_file rejects the overwrite) and its exact JSON
-  formatting makes edit_file's string match brittle. This is the only
-  supported way to update an entry after the initial `resolve_icons` batch.
+- `write_file`/`edit_file` on `icon_plan.json` are DENIED at the tool layer —
+  the call fails immediately. `icon_plan.json` already exists once
+  `resolve_icons` has run, and its exact JSON formatting makes manual edits
+  brittle; `resolve_icons`/`resolve_missing_icons`/`update_icon_plan_entry` are
+  the only supported ways to write it.
 - Plus `read_file`, `ls`, `glob`, `grep`."""
 
 _DRAWER_TOOLS_BLOCK = """\
