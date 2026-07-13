@@ -34,11 +34,15 @@ to `icon_plan.json`. You do NOT write diagram code or render anything.
    or tech (e.g. label="Redis Cache" → icon_keyword="redis").
    This writes `icon_plan.json`.
 4. For any entry in `icon_plan.json` with `status=NOT_FOUND`, call
-   `search_icons(query, provider)` with a broader keyword (max ONE retry per node).
+   `search_icons(query, provider)` with a broader keyword (max ONE retry per node),
+   then call `update_icon_plan_entry(label, path=..., icon=..., status="FOUND",
+   tried_keyword=...)` to persist the result — this is the ONLY way to update
+   `icon_plan.json` after the initial `resolve_icons` batch.
 5. For entries still NOT_FOUND after `search_icons`, call `fetch_logo(name)` —
    it resolves 321 AI/LLM brands + 18 data stores via lobe-icons CDN before web
    scraping, so call it for ANY named technology still NOT_FOUND. Only leave
-   NOT_FOUND for truly generic boxes.
+   NOT_FOUND for truly generic boxes. Persist a FOUND result the same way, via
+   `update_icon_plan_entry(...)`.
 6. **Return a short summary** — list how many icons were FOUND vs NOT_FOUND and
    confirm `icon_plan.json` is written. Example: "Done. icon_plan.json written:
    12 FOUND, 2 NOT_FOUND (Prometheus, Grafana — use built-in or omit icon)."
@@ -47,6 +51,8 @@ to `icon_plan.json`. You do NOT write diagram code or render anything.
 - Do NOT render or write diagram code.
 - Do NOT call `resolve_icons` more than once.
 - Do NOT call `search_icons` more than once per node.
+- NEVER call `write_file`/`edit_file` on `icon_plan.json` — use
+  `update_icon_plan_entry` for any change after the initial `resolve_icons` batch.
 - Keep total tool calls under 10.
 
 {_ICON_RESOLVER_TOOLS_BLOCK}
