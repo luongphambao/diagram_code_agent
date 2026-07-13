@@ -194,7 +194,11 @@ def _resolve_node_icon(cat, node: dict, provider: str = "aws") -> str | None:
     for raw in (node.get("tech"), node.get("label")):
         if not raw:
             continue
-        for query in (_clean_query(raw, prov), raw):  # cleaned first, then the raw text
+        cleaned = _clean_query(raw, prov)
+        # last resort: the first two significant words ("Pub/Sub Commands" ->
+        # "pub sub") so role qualifiers don't hide the product name.
+        head = " ".join(cleaned.split(" ")[:2])
+        for query in dict.fromkeys((cleaned, raw, head)):  # de-duped, in order
             if not query:
                 continue
             hits = _search_icon(cat, query, limit=8, kind="icon")
