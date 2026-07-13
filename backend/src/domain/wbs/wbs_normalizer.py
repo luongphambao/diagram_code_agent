@@ -13,11 +13,12 @@ import os
 from pathlib import Path
 from typing import Any
 
-from wbs_schema import WbsProject
+from domain.wbs.wbs_schema import WbsProject
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_DATA_DIR = Path(__file__).parent.parent.parent.parent / "DATA" / "SOLUTION_WBS"
+# backend/src/domain/wbs/wbs_normalizer.py -> repo root (5 levels up)
+_DEFAULT_DATA_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "DATA" / "SOLUTION_WBS"
 
 
 def load_all_projects(
