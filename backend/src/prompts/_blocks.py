@@ -146,7 +146,11 @@ _DRAWER_TOOLS_BLOCK = """\
 - Sizing/label data is PRE-COMPUTED on disk — read, don't recompute:
   `style_plan.json` (paste `pretty_kwargs` into `Pretty(...)`, follow `notes`)
   and `label_fits.json` (apply every `suggestion`; rename `still_too_long`).
-- Plus `read_file`, `ls`, `glob`, `grep` for reading skill references."""
+- Plus `read_file`, `ls`, `glob`, `grep` for reading skill references.
+- `write_file`/`edit_file` exist but are OFF-LIMITS for `diagram.py` — only
+  `render_diagram(code=...)` may write that file. To change the diagram, re-call
+  `render_diagram` with the full corrected script; never write_file/edit_file it
+  (write_file rejects the existing file; edit_file's exact-string match is brittle)."""
 
 _CONTEXT_RULES = """\
 ## Keep your context small (IMPORTANT)
