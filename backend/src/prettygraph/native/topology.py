@@ -141,24 +141,36 @@ def _node_provider(node: dict, default: str) -> str:
     return default
 
 
-def _pick_hit(hits: list[dict], prefix: str | None) -> str | None:
+def _pick_hit(hits: list[dict], prefix: str | None, query: str) -> str | None:
     """Choose the best catalog hit while keeping vendor identity honest:
     provider-prefixed packs first, then provider-neutral icons — never another
     vendor's branded icon."""
-    eligible = [h for h in hits if h.get("score", 0) >= _ICON_SCORE_MIN]
     if prefix:  # gcp/azure diagram node
-        for h in eligible:
-            if h["name"].startswith(prefix):
+        # significant tokens = the query minus vendor/filler words; a vendor-pack
+        # hit is accepted at a reduced score only when it contains ALL of them.
+        sig = [t for t in re.split(r"[^a-z0-9]+", query.lower())
+               if t and t not in _VENDOR_WORDS]
+        for h in hits:
+            if not h["name"].startswith(prefix):
+                continue
+            if h.get("score", 0) < _ICON_SCORE_VENDOR:
+                break  # hits are ranked — nothing better follows
+            compact = h["name"].replace("_", "")
+            if sig and all(t in compact for t in sig):
                 return h["name"]
-        for h in eligible:
+        for h in hits:
+            if h.get("score", 0) < _ICON_SCORE_MIN:
+                break
             if h["name"].startswith(("gcp_", "azure_")):
-                continue  # the other vendor's pack
+                continue  # the other vendor's pack (own-prefix handled above)
             if ("mxgraph.aws4" in (h.get("style") or "")
                     and not _GENERIC_AWS_OK.match(h["name"])):
                 continue  # AWS-branded stencil in a non-AWS diagram
             return h["name"]
         return None
-    for h in eligible:  # aws / on-prem: skip the gcp_/azure_ image packs
+    for h in hits:  # aws / on-prem: skip the gcp_/azure_ image packs
+        if h.get("score", 0) < _ICON_SCORE_MIN:
+            break
         if not h["name"].startswith(("gcp_", "azure_")):
             return h["name"]
     return None
