@@ -189,7 +189,7 @@ def _resolve_node_icon(cat, node: dict, provider: str = "aws") -> str | None:
             if not query:
                 continue
             hits = _search_icon(cat, query, limit=8, kind="icon")
-            name = _pick_hit(hits, prefix)
+            name = _pick_hit(hits, prefix, query)
             if name:
                 return name
     return None
