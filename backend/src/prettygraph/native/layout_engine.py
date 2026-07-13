@@ -243,11 +243,17 @@ def _measure_container(n):
         # so side-by-side frames share a bottom edge (leaf icons/boxes keep size).
         max_h = _max(lambda c: c["h"])
         for c in ch:
-            if c["kind"] in ("group", "grid", "pool"):
+            if c["kind"] in ("group", "grid", "pool", "phantom"):
                 c["h"] = max(c["h"], max_h)
         n["w"] = p * 2 + _sum(lambda c: c["w"]) + eg * max(0, len(ch) - 1)
         n["h"] = head + p * 2 + _max(lambda c: c["h"])
     else:  # col
+        # equal-width siblings: stretch container blocks in a column to the widest
+        # so stacked layer bands share left/right edges (leaf icons/boxes keep size).
+        max_w = _max(lambda c: c["w"])
+        for c in ch:
+            if c["kind"] in ("group", "grid", "pool", "phantom"):
+                c["w"] = max(c["w"], max_w)
         n["w"] = p * 2 + _max(lambda c: c["w"])
         n["h"] = head + p * 2 + _sum(lambda c: c["h"]) + eg * max(0, len(ch) - 1)
 
