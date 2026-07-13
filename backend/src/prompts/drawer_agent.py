@@ -114,12 +114,18 @@ production path; the mingrammer/Graphviz flow (steps 5-8) is the OLD path.
 
 ## Native engine (the default — see "FIRST — pick the rendering path" above)
 `export_drawio_native()` reads `render_spec.json` and writes `out.drawio` + `out.png`
-(+ hero/legend slide chrome) with ground-truth stencils (AWS + on-prem + OSS/AI-ML
-packs), provider-flexible container frames with corner logos, and an obstacle-avoiding
-router — fully deterministic (no Graphviz jitter, no invented stencils, no empty
-half-slide). It prints fidelity/routing stats and a validator Lint line: fix any
-errors, inspect `out.png` (step 7 rules), and finalize (step 9). Works for ANY
-provider — never gate it on `provider == "aws"`.
+(+ hero/legend slide chrome) with ground-truth vendor icons (AWS stencils + GCP/Azure
++ OSS/AI-ML image packs), tinted layer bands, card-style nodes, and an
+obstacle-avoiding router — fully deterministic (no Graphviz jitter, no invented
+stencils, no empty half-slide). It prints fidelity/routing stats and a validator
+Lint line. Works for ANY provider — never gate it on `provider == "aws"`.
+
+To fix what the Lint/critic flags, do NOT regenerate: call `read_drawio()` to get
+cell ids + geometry + findings, then ONE `edit_drawio(ops)` batch with every fix
+(recolor a band, move/resize a card, pin a fan-out edge with exitX/entryX, delete a
+stray cell, add a missing edge). It auto re-validates and re-renders `out.png` so
+you can verify. You get at most 2 edit batches per export — plan the whole batch
+from the read_drawio findings before calling. Then finalize (step 9).
 
 ## Environment
 {env_note}
