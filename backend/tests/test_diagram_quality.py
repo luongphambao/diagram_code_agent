@@ -11,8 +11,8 @@ import textwrap
 
 import pytest
 
-import validate_drawio as vd
-from solution_validator import AUTO_REPAIR_STRATEGIES
+import domain.validation.validate_drawio as vd
+from domain.validation.solution_validator import AUTO_REPAIR_STRATEGIES
 
 
 # --------------------------------------------------------------------------- #
@@ -100,11 +100,15 @@ def test_findings_from_validation_advice_map_to_style():
     )
     result = _validate(xml)
     findings = vd.findings_from_validation(result)
-    style = [f for f in findings if f.dimension == "diagram_style"]
+    style = [f for f in findings if f.dimension == "diagram_style"
+             and f.severity == "low"]
     assert style, "5 distinct font sizes must produce a diagram_style finding"
     f = style[0]
     assert f.repair_strategy == "none"
-    assert f.severity == "low"
+    # fontSize=8 also trips the production-polish gate (medium, auto_repair).
+    polish = [f for f in findings if f.dimension == "diagram_style"
+              and f.severity == "medium"]
+    assert polish and polish[0].repair_strategy == "auto_repair"
 
 
 def test_stable_finding_id_consistent_across_runs():
