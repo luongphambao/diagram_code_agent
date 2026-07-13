@@ -11,8 +11,8 @@ from langchain_core.messages import ToolMessage
 from langchain_core.tools import InjectedToolCallId, tool
 
 from backends import current_workspace
-from findings import DiagramFinding, format_critique, prune, verdict_for
-from reporting import record_report_step
+from domain.diagram.findings import DiagramFinding, format_critique, prune, verdict_for
+from domain.reporting.reporting import record_report_step
 from ..constants import (
     CRITIC_REVISION_HARD_CAP,
     _ARCH_ANALYSIS_FILE,
@@ -380,16 +380,22 @@ def propose_blueprint(blueprint: Blueprint) -> str:
     # Deterministic NATIVE pre-render: build out.drawio (+ out.png / out.slide.json)
     # from the spec NOW, so a canonical architecture ALWAYS gets the native engine
     # (deterministic layout + ground-truth stencils + obstacle-avoiding router)
-    # regardless of the drawer LLM's later choice. Non-fatal — the drawer inspects
-    # out.png and finalizes, or re-renders if it needs a change.
+    # regardless of the drawer LLM's later choice. Non-fatal — but a failure MUST
+    # be surfaced: a silent miss here is what strands runs on the Graphviz path.
+    native_prerender_err: str | None = None
     try:
         from ..rendering_tools import _render_native_from_spec
         _render_native_from_spec(render_spec, current_workspace())
-    except Exception:  # noqa: BLE001 — advisory; never block approval
-        pass
+    except Exception as exc:  # noqa: BLE001 — advisory; never block approval
+        native_prerender_err = f"{type(exc).__name__}: {exc}"
 
     # --- deterministic validators (warnings only, do not block) ---
     warnings: list[str] = []
+    if native_prerender_err:
+        warnings.append(
+            f"native pre-render FAILED ({native_prerender_err}) — out.drawio was not "
+            "produced; the drawer must call export_drawio_native() itself and report "
+            "the error if it recurs (do NOT silently fall back to render_diagram).")
 
     pillar_warns = _validate_pillar_coverage(blueprint)
     if pillar_warns:
