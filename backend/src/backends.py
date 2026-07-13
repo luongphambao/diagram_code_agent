@@ -228,6 +228,10 @@ def make_local_backend() -> CompositeBackend:
                             list (see agent/constants.py's *_SKILL_PATHS) is an
                             absolute SKILLS_DIR-rooted path, so this one route
                             covers all of them by prefix match.
+      /app/workspace/    → alias of the per-thread workspace, and
+      /app/                 defensive routes for a fabricated Docker-style
+                            `/app/workspace/...` / `/app/...` prefix the model
+                            sometimes invents (see the inline note below).
       (default)           → PerThreadFilesystemBackend rooted at
                             <current thread's workspace>/ — diagram.py / out.png /
                             out.dot / out.drawio / wbs.json / etc. live here.
