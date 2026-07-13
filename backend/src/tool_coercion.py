@@ -275,19 +275,24 @@ class ToolArgCoercionMiddleware(AgentMiddleware):
         return request.override(tool_call={**tc, "args": new_args})
 
     @staticmethod
-    def _compacted(result):
+    def _compacted(result, request):
         if (
             isinstance(result, ToolMessage)
             and getattr(result, "status", None) == "error"
             and isinstance(result.content, str)
         ):
-            compact = compact_invocation_error(result.content)
+            tool = request.tool
+            schema = getattr(tool, "args_schema", None) if tool is not None else None
+            args = request.tool_call.get("args")
+            compact = compact_invocation_error(result.content, schema, args)
             if compact is not None:
                 return result.model_copy(update={"content": compact})
         return result
 
     def wrap_tool_call(self, request, handler):
-        return self._compacted(handler(self._coerced_request(request)))
+        coerced = self._coerced_request(request)
+        return self._compacted(handler(coerced), coerced)
 
     async def awrap_tool_call(self, request, handler):
-        return self._compacted(await handler(self._coerced_request(request)))
+        coerced = self._coerced_request(request)
+        return self._compacted(await handler(coerced), coerced)
