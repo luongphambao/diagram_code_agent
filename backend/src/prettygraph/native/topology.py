@@ -155,13 +155,17 @@ def _pick_hit(hits: list[dict], prefix: str | None, query: str) -> str | None:
                 continue
             if h.get("score", 0) < _ICON_SCORE_VENDOR:
                 break  # hits are ranked — nothing better follows
-            if h.get("score", 0) >= _ICON_SCORE_MIN:
-                return h["name"]  # strong hit — trust the ranker
             compact = h["name"].replace("_", "")
-            # weak hit: every significant token must appear (5-char stems allow
-            # morphology like balancer/balancing)
-            if sig and all(t in compact or (len(t) >= 5 and t[:5] in compact)
-                           for t in sig):
+            hit = lambda t, _c=compact: t in _c or (len(t) >= 5 and t[:5] in _c)
+            if h.get("score", 0) >= _ICON_SCORE_MIN:
+                # strong hit — trust the ranker, but demand at least one
+                # significant token so filler words alone can't match.
+                if not sig or any(hit(t) for t in sig):
+                    return h["name"]
+                continue
+            # weak hit: EVERY significant token must appear (5-char stems allow
+            # morphology like balancer/balancing).
+            if sig and all(hit(t) for t in sig):
                 return h["name"]
         for h in hits:
             if h.get("score", 0) < _ICON_SCORE_MIN:
