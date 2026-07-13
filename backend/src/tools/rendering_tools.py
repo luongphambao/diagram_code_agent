@@ -327,6 +327,7 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     else:
         out.write_text(xml, encoding="utf-8")
     _render_drawio_png(out, workspace / "out.png")
+    _reset_drawio_edit_rounds()  # fresh export -> fresh edit_drawio budget
     return stats
 
 
