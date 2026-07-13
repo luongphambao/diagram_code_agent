@@ -805,12 +805,14 @@ def main() -> None:
     report = validate_file(args.file, profile=args.profile)
     for a in report["advice"]:
         print(f"advice: {a}")
+    for p in report.get("polish", []):
+        print(f"polish: {p}")
     for w in report["warnings"]:
         print(f"warning: {w}")
     for e in report["errors"]:
         print(f"error: {e}")
     print(f"{report['error_count']} error(s), {report['warning_count']} warning(s), "
-          f"{report['advice_count']} advice")
+          f"{report.get('polish_count', 0)} polish, {report['advice_count']} advice")
     if not report["ok"] or (args.strict and report["warning_count"]):
         sys.exit(1)
 
