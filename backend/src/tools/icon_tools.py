@@ -206,7 +206,7 @@ def _resolve_one_tech_icon(name: str) -> dict:
         )
         return {"name": name, "path": best, "icon": _icon_rel(best), "source": "bundled"}
     try:
-        from aiicons import lookup_ai_logo
+        from domain.diagram.aiicons import lookup_ai_logo
         path = lookup_ai_logo(name, str(LOCAL_ICONS))
         if path:
             return {"name": name, "path": path, "icon": _icon_rel(path), "source": "cdn"}
@@ -243,8 +243,8 @@ def _tech_layers_from_workspace(workspace: Path) -> dict[str, list[str]]:
         if not csm_path.exists():
             continue
         try:
-            from csm import SolutionModel
-            from deck_resolver import _components_by_cluster
+            from memory.stores.csm import SolutionModel
+            from domain.deck.deck_resolver import _components_by_cluster
 
             model = SolutionModel.model_validate(json.loads(csm_path.read_text(encoding="utf-8")))
             layers = {name: list(names) for name, _purpose, names in _components_by_cluster(model)}
@@ -448,6 +448,54 @@ try:
         return json.dumps(resolved, indent=2)
 
     @tool(parse_docstring=True)
+    def update_icon_plan_entry(
+        label: str,
+        path: Optional[str] = None,
+        icon: Optional[str] = None,
+        status: str = "FOUND",
+        tried_keyword: Optional[str] = None,
+    ) -> str:
+        """Update one entry in icon_plan.json after a search_icons/fetch_logo retry.
+
+        Use this — never write_file/edit_file — to persist a NOT_FOUND retry result.
+        icon_plan.json already exists (resolve_icons wrote it), so write_file rejects
+        a blind overwrite, and edit_file's exact-string match against machine-formatted
+        JSON is brittle. This finds the entry matching `label` and updates it in place.
+
+        Args:
+            label: the node label to update — must match an existing icon_plan.json entry.
+            path: absolute icon path from search_icons/fetch_logo's result, or omit if
+                still NOT_FOUND.
+            icon: prettygraph-relative icon path (search_icons's "icon" field, or
+                fetch_logo's local cache path), or omit if still NOT_FOUND.
+            status: "FOUND" or "NOT_FOUND" — the outcome of this retry.
+            tried_keyword: the keyword just tried, recorded for the audit trail.
+        """
+        if not _ICON_PLAN_FILE.exists():
+            return json.dumps({
+                "status": "ERROR",
+                "message": "icon_plan.json does not exist yet — call resolve_icons first.",
+            }, indent=2)
+        from .stage_markers import _read_json_file
+        entries = _read_json_file(_ICON_PLAN_FILE, [])
+        match = next((e for e in entries if e.get("label") == label), None)
+        if match is None:
+            return json.dumps({
+                "status": "ERROR",
+                "message": f"No icon_plan.json entry with label={label!r}.",
+                "known_labels": [e.get("label") for e in entries],
+            }, indent=2)
+        match["status"] = status
+        match["path"] = path
+        match["icon"] = icon
+        if tried_keyword:
+            match.setdefault("tried_keywords", []).append(tried_keyword)
+        current_workspace().mkdir(parents=True, exist_ok=True)
+        _ICON_PLAN_FILE.write_text(json.dumps(entries, indent=2), encoding="utf-8")
+        _bump_tool_summary("update_icon_plan_entry")
+        return json.dumps({"status": "OK", "updated": match}, indent=2)
+
+    @tool(parse_docstring=True)
     def resolve_tech_stack_icons() -> str:
         """Fetch and group icons for every technology in the tech stack, by layer.
 
@@ -522,14 +570,14 @@ try:
             name: The brand or product name to resolve, e.g. "OpenAI", "Snowflake", "Stripe".
         """
         try:
-            from aiicons import lookup_ai_logo
+            from domain.diagram.aiicons import lookup_ai_logo
             path = lookup_ai_logo(name, str(LOCAL_ICONS))
             if path:
                 return path
         except Exception:  # noqa: BLE001
             pass
         try:
-            from logo_fetch import get_logo
+            from domain.diagram.logo_fetch import get_logo
             path = get_logo(name, str(LOCAL_ICONS), str(current_workspace()))
         except Exception as exc:  # noqa: BLE001
             return f"NOT_FOUND: fetch_logo error: {exc}"
@@ -551,7 +599,7 @@ try:
             limit: Max number of matching shapes to return (default 5).
         """
         try:
-            from shapesearch import search_shapes
+            from domain.diagram.shapesearch import search_shapes
             results = search_shapes(query, limit)
             if not results:
                 return json.dumps({"status": "NOT_FOUND", "query": query,
