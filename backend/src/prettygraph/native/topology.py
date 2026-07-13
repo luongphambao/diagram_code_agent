@@ -16,9 +16,9 @@ from __future__ import annotations
 
 import re
 
-from .layout_engine import group, frame, grid, icon, box, phantom, render_tree
+from .layout_engine import group, frame, grid, icon, box, card, phantom, render_tree
 from .builder import Diagram
-from .theme import THEME
+from .theme import THEME, stage_fill, stage_stroke
 
 try:
     from ..drawio_catalog import (load_catalog as _load_catalog,
@@ -26,16 +26,32 @@ try:
     from ..graph_builder import _aws_group_for_label
     from ..constants import PRO_ACCENTS, FLOW_COLORS
 except (ImportError, ValueError):  # pragma: no cover - import fallback
-    from drawio_catalog import (load_catalog as _load_catalog,  # type: ignore
+    from domain.diagram.drawio_catalog import (load_catalog as _load_catalog,  # type: ignore
                                 search_icon as _search_icon, get_icon as _get_icon)
     from prettygraph.graph_builder import _aws_group_for_label  # type: ignore
     from prettygraph.constants import PRO_ACCENTS, FLOW_COLORS  # type: ignore
 
 _NEUTRAL_STROKE = "#8593A3"
-_ICON_SCORE_MIN = 50  # top-hit score to accept a stencil for a node (else a plain box)
+_ICON_SCORE_MIN = 50  # top-hit score to accept a stencil for a node (else a plain card)
 # Vendor / filler words that dilute a stencil search ("AWS Lambda" -> "lambda").
 _VENDOR_WORDS = {"aws", "amazon", "azure", "gcp", "google", "microsoft", "cloud",
                  "apache", "the", "a", "for", "service", "services", "managed"}
+
+# name prefix per provider in the merged catalog (gcp.json / azure.json packs).
+_PROVIDER_PREFIX = {"gcp": "gcp_", "google": "gcp_",
+                    "azure": "azure_", "microsoft": "azure_"}
+# aws4 stencils that are provider-NEUTRAL (safe inside a GCP/Azure diagram);
+# every other mxgraph.aws4 icon is AWS-branded and must not leak cross-vendor.
+_GENERIC_AWS_OK = re.compile(
+    r"^(generic_|traditional_server$|corporate_data_center$|users?$|client$"
+    r"|mobile_client$|internet(_alt[12])?$|office_building$|servers?$|globe$)")
+
+# Top-level clusters matching this are CROSS-CUTTING concerns: rendered as the
+# neutral grey sidebar column (the "Management, Security & CI/CD" lane) instead
+# of a tinted pipeline layer band.
+_CROSS_CUT = re.compile(
+    r"security|secret|iam\b|identity|ci\s*/?\s*cd|cicd|management|observab"
+    r"|monitor|logging|governance|devops|compliance|audit", re.IGNORECASE)
 
 # Corner-logo for NON-AWS container frames (the "AWS look" — a framed group with a
 # logo in the corner — but the logo is swappable per provider/on-prem). Keyword in
@@ -95,26 +111,71 @@ def _flow_color(flow: str | None) -> str | None:
     return None
 
 
-def _clean_query(q: str) -> str:
-    """Drop vendor/filler words so "AWS Lambda" -> "lambda", "Amazon RDS" -> "rds"."""
+def _clean_query(q: str, provider: str = "aws") -> str:
+    """Drop vendor/filler words so "AWS Lambda" -> "lambda", "Amazon RDS" -> "rds".
+
+    For GCP, "cloud" is part of the product identity ("Cloud Run", "Cloud Tasks")
+    — stripping it would leave queries too generic to hit the gcp_* pack."""
+    drop = set(_VENDOR_WORDS)
+    if _PROVIDER_PREFIX.get(provider) == "gcp_":
+        drop.discard("cloud")
     toks = [t for t in re.split(r"[^a-z0-9]+", (q or "").lower())
-            if t and t not in _VENDOR_WORDS]
+            if t and t not in drop]
     return " ".join(toks)
 
 
-def _resolve_node_icon(cat, node: dict) -> str | None:
+def _node_provider(node: dict, default: str) -> str:
+    """Per-node provider: the node's own text wins over the diagram default
+    (a migration diagram may mix e.g. one Amazon S3 node into a GCP target)."""
+    text = f" {node.get('tech') or ''} {node.get('label') or ''} ".lower()
+    if re.search(r"\b(aws|amazon)\b", text):
+        return "aws"
+    if re.search(r"\b(azure|microsoft)\b", text):
+        return "azure"
+    if re.search(r"\b(gcp|google)\b", text):
+        return "gcp"
+    return default
+
+
+def _pick_hit(hits: list[dict], prefix: str | None) -> str | None:
+    """Choose the best catalog hit while keeping vendor identity honest:
+    provider-prefixed packs first, then provider-neutral icons — never another
+    vendor's branded icon."""
+    eligible = [h for h in hits if h.get("score", 0) >= _ICON_SCORE_MIN]
+    if prefix:  # gcp/azure diagram node
+        for h in eligible:
+            if h["name"].startswith(prefix):
+                return h["name"]
+        for h in eligible:
+            if h["name"].startswith(("gcp_", "azure_")):
+                continue  # the other vendor's pack
+            if ("mxgraph.aws4" in (h.get("style") or "")
+                    and not _GENERIC_AWS_OK.match(h["name"])):
+                continue  # AWS-branded stencil in a non-AWS diagram
+            return h["name"]
+        return None
+    for h in eligible:  # aws / on-prem: skip the gcp_/azure_ image packs
+        if not h["name"].startswith(("gcp_", "azure_")):
+            return h["name"]
+    return None
+
+
+def _resolve_node_icon(cat, node: dict, provider: str = "aws") -> str | None:
     """Best ground-truth stencil name for a node (by tech, then label), or None."""
     if not (cat and _search_icon):
         return None
+    prov = _node_provider(node, provider)
+    prefix = _PROVIDER_PREFIX.get(prov)
     for raw in (node.get("tech"), node.get("label")):
         if not raw:
             continue
-        for query in (_clean_query(raw), raw):  # cleaned first, then the raw text
+        for query in (_clean_query(raw, prov), raw):  # cleaned first, then the raw text
             if not query:
                 continue
-            hits = _search_icon(cat, query, limit=1, kind="icon")
-            if hits and hits[0].get("score", 0) >= _ICON_SCORE_MIN:
-                return hits[0]["name"]
+            hits = _search_icon(cat, query, limit=8, kind="icon")
+            name = _pick_hit(hits, prefix)
+            if name:
+                return name
     return None
 
 
@@ -131,6 +192,33 @@ def _node_label(node: dict) -> str:
     if tech.lower() in label.lower():
         return label
     return f"{label}\n{tech}"
+
+
+def _card_texts(node: dict) -> tuple[str, str]:
+    """(title, sub) for a card node — sub only when tech adds information."""
+    label = (node.get("label") or node.get("id") or "").strip()
+    tech = (node.get("tech") or "").strip()
+    if not label:
+        return tech, ""
+    if not tech or tech.lower() == label.lower():
+        return label, ""
+    if label.lower() in tech.lower():
+        return tech, ""
+    if tech.lower() in label.lower():
+        return label, ""
+    return label, tech
+
+
+def _band_tint(c: dict, i: int) -> tuple[str, str]:
+    """(fill, stroke) for a top-level layer band: cross-cutting -> neutral grey,
+    an explicit accent -> its pale tint, else the cycling stage palette."""
+    text = f"{c.get('label') or ''} {c.get('tier') or ''}"
+    if _CROSS_CUT.search(text):
+        return THEME.band, THEME.band_stroke
+    accent = c.get("accent")
+    if accent in PRO_ACCENTS:
+        return PRO_ACCENTS[accent][0], PRO_ACCENTS[accent][1]
+    return stage_fill(i), stage_stroke(i)
 
 
 def build_tree(spec: dict, flat: bool = False):
@@ -162,24 +250,39 @@ def build_tree(spec: dict, flat: bool = False):
         else:
             roots.append(cid)
 
-    horiz = not str(spec.get("layout_intent", "")).lower().startswith("top")
-    root_dir = "row" if horiz else "col"
+    intent = str(spec.get("layout_intent", "")).lower()
+    horiz = not intent.startswith("top")
+    # LAYERED mode (the production architecture look): stacked full-width tinted
+    # layer bands + a grey cross-cutting sidebar. Chosen explicitly via
+    # layout_intent="layered", or by default once there are 3+ top-level layers.
+    cross_roots = [cid for cid in roots
+                   if _CROSS_CUT.search(f"{clusters[cid].get('label') or ''} "
+                                        f"{clusters[cid].get('tier') or ''}")]
+    main_roots = [cid for cid in roots if cid not in cross_roots]
+    layered = intent.startswith("layer") or len(main_roots) >= 3
 
     def build_node(n: dict):
-        name = _resolve_node_icon(cat, n)
-        label = _node_label(n)
-        if name:
-            return icon(n["id"], name, label)
-        return box(n["id"], label, fill=THEME.base, stroke=_accent_stroke(None), fs=11)
+        name = _resolve_node_icon(cat, n, provider)
+        if provider == "aws" and name and "mxgraph.aws4" in ((_get_icon(cat, name) or {}).get("style") or ""):
+            # AWS convention: native resourceIcon with the label below.
+            return icon(n["id"], name, _node_label(n))
+        title, sub = _card_texts(n)
+        if name or sub:
+            return card(n["id"], name, title, sub)
+        if name is None and provider == "aws":
+            return box(n["id"], _node_label(n), fill=THEME.base,
+                       stroke=_accent_stroke(None), fs=11)
+        return card(n["id"], name, title, sub)
 
-    def build_cluster(cid: str):
+    def build_cluster(cid: str, depth: int = 0, band_i: int = 0, band_dir: str = "col"):
         c = clusters[cid]
         label = c["label"] if c.get("number") is None else f'{c["number"]} · {c["label"]}'
-        kids = [build_cluster(sub) for sub in children_of.get(cid, [])]
+        kids = [build_cluster(sub, depth + 1) for sub in children_of.get(cid, [])]
         cnodes = nodes_by_cluster.get(cid, [])
         if cnodes:
             items = [build_node(n) for n in cnodes]
-            if len(items) > 3 and not children_of.get(cid):
+            wrap_at = 6 if (depth == 0 and band_dir == "row") else 3
+            if len(items) > wrap_at and not children_of.get(cid):
                 cols = 2 if len(items) <= 6 else 3
                 kids.append(grid(f"{cid}__grid", None, "", {"cols": cols, "gap": 22}, items))
             else:
@@ -187,20 +290,49 @@ def build_tree(spec: dict, flat: bool = False):
         gname = _aws_group_for_label(label) if provider == "aws" else None
         if gname:
             return group(cid, gname, label, {"dir": "col", "gap": 20}, kids)
-        # Non-AWS: the "AWS look" (framed container + corner logo) with a SWAPPABLE
-        # logo — on-prem / k8s / db / server etc. — instead of an AWS group stencil.
-        # (AWS diagrams keep pure AWS group stencils or plain frames — no mixed logos.)
-        opts = {"dir": "col", "gap": 18, "stroke": _accent_stroke(c.get("accent"))}
-        logo = _container_logo(cat, c) if provider != "aws" else None
+        if depth == 0:
+            # Top-level LAYER BAND: pale tint + matching stroke (Gemini/production
+            # look) — the band carries the layer identity, icons carry the vendor.
+            fill, stroke = _band_tint(c, band_i)
+            opts = {"dir": band_dir, "gap": 36 if band_dir == "row" else 18,
+                    "pad": 20, "fill": fill, "stroke": stroke, "fs": 13,
+                    "align": "top" if band_dir == "row" else "center"}
+            return frame(cid, label.upper(), opts, kids)
+        # Nested sub-frame: white card frame with an accent border. Inside a
+        # horizontal band, small sub-frames flow row-wise to stay compact.
+        sub_dir = "row" if (depth == 1 and band_dir == "row" and len(kids) <= 3
+                            and not children_of.get(cid)) else "col"
+        opts = {"dir": sub_dir, "gap": 18, "fill": THEME.base,
+                "stroke": _accent_stroke(c.get("accent"))}
+        # Corner logos stay an on-prem/hybrid affordance: GCP/Azure diagrams keep
+        # plain frames (no group stencils exist; the icons carry the identity).
+        logo = (_container_logo(cat, c)
+                if provider not in ("aws", "gcp", "google", "azure", "microsoft") else None)
         if logo:
             opts["cornerIcon"] = logo
         return frame(cid, label, opts, kids)
 
-    top_children = [build_cluster(cid) for cid in roots]
-    top_children += [build_node(n) for n in loose]
-    if not top_children:
-        top_children = [box("__empty", "(empty diagram)")]
-    root = phantom("__root", "", {"dir": root_dir, "gap": 60}, top_children)
+    if layered:
+        band_frames = [build_cluster(cid, 0, i, band_dir="row")
+                       for i, cid in enumerate(main_roots)]
+        band_frames += [build_node(n) for n in loose]
+        bands_col = phantom("__bands", "", {"dir": "col", "gap": 26, "pad": 0}, band_frames)
+        if cross_roots:
+            side_frames = [build_cluster(cid, 0, i, band_dir="col")
+                           for i, cid in enumerate(cross_roots)]
+            sidebar = (side_frames[0] if len(side_frames) == 1 else
+                       phantom("__side", "", {"dir": "col", "gap": 26, "pad": 0}, side_frames))
+            root = phantom("__root", "", {"dir": "row", "gap": 44, "pad": 0},
+                           [sidebar, bands_col])
+        else:
+            root = bands_col
+    else:
+        root_dir = "row" if horiz else "col"
+        top_children = [build_cluster(cid, 0, i) for i, cid in enumerate(roots)]
+        top_children += [build_node(n) for n in loose]
+        if not top_children:
+            top_children = [box("__empty", "(empty diagram)")]
+        root = phantom("__root", "", {"dir": root_dir, "gap": 60}, top_children)
 
     # contract="bake" freezes the router's obstacle-avoiding waypoints as explicit
     # mxPoints (scaffold would drop them and let draw.io re-route from pins only).
@@ -212,14 +344,31 @@ def build_tree(spec: dict, flat: bool = False):
     # body too would duplicate it. Only title the body for standalone diagrams.
     title = spec.get("slide_title") or spec.get("diagram_title")
     if title and not flat:
-        d.title(title)
+        d.title(title, fs=18)
 
+    flows_seen: list[str] = []
     for e in spec.get("edges", []):
         s, t = e.get("from"), e.get("to")
         if s in d.R and t in d.R:
+            flow = str(e.get("flow") or "").lower()
+            fc = FLOW_COLORS.get(flow)
+            if fc and flow not in flows_seen:
+                flows_seen.append(flow)
+            dash = (str(e.get("style") or "").lower() == "dashed"
+                    or bool(fc and fc[1] == "dashed"))
             d.link(s, t, e.get("label") or "",
-                   dash=(str(e.get("style") or "").lower() == "dashed"),
-                   stroke=_flow_color(e.get("flow")))
+                   dash=dash, stroke=_flow_color(e.get("flow")))
+
+    # Standalone body legend: one row per flow colour actually used (the slide
+    # chrome draws its own legend, so flat mode skips this).
+    if not flat and len(flows_seen) >= 2:
+        entries = [(f.replace("_", " ").capitalize(), FLOW_COLORS[f][0],
+                    FLOW_COLORS[f][1] == "dashed") for f in flows_seen[:6]]
+        ly = root["y"] + root["h"] + 28
+        d.legend(entries, (root["x"], ly))
+        lr = d.R.get("__legend")
+        if lr:
+            d.page[1] = max(d.page[1], round(lr["y"] + lr["h"] + 50))
     return d, root
 
 
@@ -243,6 +392,7 @@ def build_drawio_from_spec(spec: dict, name: str = "Architecture",
         "nodes": len(spec.get("nodes", [])),
         "edges": len(spec.get("edges", [])),
         "native_icons": xml.count("resIcon=mxgraph.aws4."),
+        "image_icons": xml.count("image=data:image/"),
         "native_groups": xml.count("grIcon=mxgraph.aws4."),
         "edge_cross": getattr(d, "_cross", 0),
         "edge_overlaps": getattr(d, "_overlaps", 0),
