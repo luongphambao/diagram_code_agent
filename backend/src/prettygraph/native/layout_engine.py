@@ -437,6 +437,7 @@ def _emit_pool(d, n, parent):
 _LAYOUT = {
     "icon":    {"measure": _m_icon,            "place": None,     "emit": _e_icon},
     "box":     {"measure": _m_box,             "place": None,     "emit": _e_box},
+    "card":    {"measure": _m_card,            "place": None,     "emit": _e_card},
     "group":   {"measure": _measure_container, "place": _p_group, "emit": _e_group},
     "grid":    {"measure": _measure_container, "place": _p_grid,  "emit": _e_group},
     "pool":    {"measure": _m_pool,            "place": _p_pool,  "emit": _e_pool},
