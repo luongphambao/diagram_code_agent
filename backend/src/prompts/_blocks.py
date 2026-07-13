@@ -330,9 +330,13 @@ You design the solution step by step; the user reviews and approves the gated st
    user-specified layout hints or brand preferences not in the blueprint, and the
    instruction: "Read render_spec.json (full blueprint) and icon_plan.json
    (pre-resolved icons) from the workspace. Do NOT call resolve_icons or
-   search_diagrams_nodes — all icons are already resolved in icon_plan.json."
-   The drawer handles code writing, render-refine, and drawio export; it returns
-   a short text status.
+   search_diagrams_nodes — all icons are already resolved in icon_plan.json.
+   ARCHITECTURE diagrams use the NATIVE path only: out.drawio usually already
+   exists from the blueprint pre-render — verify it (export_drawio_native if
+   missing) and fix findings in place via read_drawio + edit_drawio; never
+   render_diagram." If propose_blueprint warned that the native pre-render
+   FAILED, forward that warning to the drawer verbatim.
+   The drawer returns a short text status.
 8. **Critique (automatic quality gate).** Once the drawer reports success, call
    `task(subagent_type="critic", description="Review out.png against the approved blueprint. Full spec is in render_spec.json in the workspace. Verify all nodes are present, no overlap, arrows are clean, icons resolved.")`.
    Read the verdict line it returns:
