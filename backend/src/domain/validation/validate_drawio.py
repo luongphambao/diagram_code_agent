@@ -936,17 +936,19 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
                                                 "detour", "long connector")),
         # 5. Typography — font-count / tiny-font findings.
         "typography": 10.0 - 3.0 * _hits(advice + polish, "font", "tiny", "text size"),
-        # 6. Spacing / alignment — overlaps, spills, excess whitespace.
-        "spacing_alignment": 10.0 - 2.0 * (_hits(warns, "overlap")
-                                           + _hits(advice, "overlap", "spill", "whitespace")),
+        # 6. Spacing / alignment — CARD COLLISIONS (V2 §18.1) dominate, plus spills.
+        "spacing_alignment": (10.0 - 3.0 * collisions
+                              - 2.0 * _hits(advice, "spill", "whitespace")),
         # 7. Editability — parses, no errors, not compressed.
         "editability": 5.0 if (ok and err_count == 0) else 0.0,
     }
     bd = {k: round(max(0.0, v), 1) for k, v in bd.items()}
     total = round(sum(bd.values()), 1)
-    passed = bool(total >= 85.0 and node_recall >= 1.0
-                  and edge_recall >= 1.0 and err_count == 0)
-    return {"total": total, "breakdown": bd, "pass": passed,
+    # A render with colliding cards can NEVER pass — the exact blind spot that let a
+    # crammed slide falsely report PASS before.
+    passed = bool(total >= 85.0 and node_recall >= 1.0 and edge_recall >= 1.0
+                  and err_count == 0 and collisions == 0)
+    return {"total": total, "breakdown": bd, "pass": passed, "collisions": collisions,
             "node_recall": round(node_recall, 4), "edge_recall": round(edge_recall, 4)}
 
 
