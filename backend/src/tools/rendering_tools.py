@@ -891,7 +891,7 @@ def edit_drawio(
         data={"applied": applied, "failed": failed},
     )
     text = (f"Applied {len(applied)} op(s) (batch {rounds}/{_DRAWIO_EDIT_CAP})."
-            + ("\nFailed: " + "; ".join(failed) if failed else "") + lint
+            + ("\nFailed: " + "; ".join(failed) if failed else "") + lint + preservation_note
             + ("" if png_ok else "\nNOTE: draw.io CLI unavailable — out.png NOT "
                                  "re-rendered; rely on the Lint line."))
     include_image = os.getenv("RENDER_INCLUDES_IMAGE", "1").lower() not in ("0", "false", "no")
