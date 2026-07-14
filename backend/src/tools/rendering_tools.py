@@ -477,9 +477,9 @@ def export_drawio_native() -> str:
             lint += f"\nDesign advice: {'; '.join(report['advice'][:5])}"
         from domain.validation.validate_drawio import production_scorecard
         sc = production_scorecard(report, stats)
-        lint += (f"\nProduction scorecard: {sc['total']}/100 "
-                 f"({'PASS' if sc['pass'] else 'BELOW GATE (need >=85, semantic & "
-                 f"relationship = 100%)'}) — "
+        verdict = ("PASS" if sc["pass"]
+                   else "BELOW GATE (need >=85, semantic & relationship = 100%)")
+        lint += (f"\nProduction scorecard: {sc['total']}/100 ({verdict}) — "
                  + ", ".join(f"{k}={v}" for k, v in sc["breakdown"].items()))
     except Exception:  # noqa: BLE001
         pass
