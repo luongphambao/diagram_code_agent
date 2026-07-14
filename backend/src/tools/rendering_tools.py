@@ -392,9 +392,42 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     # the native body. The embedded body must be FLAT (parent="1", absolute coords)
     # for the slide compositor's _transform_drawio_body.
     presentation = str(spec.get("presentation_style") or "slide").lower()
-    xml, stats = build_drawio_from_spec(spec, name, flat=(presentation == "slide"))
-    # Semantic count preservation (V2 §15.5) — measured on the native body BEFORE
-    # slide composition, which re-prefixes ids. Surfaces silently-dropped nodes/edges.
+    want_slide = presentation == "slide"
+    xml, stats = build_drawio_from_spec(spec, name, flat=want_slide)
+
+    if want_slide:
+        from prettygraph.slide import compose_native_slide, slide_fit_scale
+        from prettygraph.drawio import _page_dims
+        body_w, body_h = _page_dims(xml)
+        fit = slide_fit_scale(body_w, body_h, has_legend=bool(spec.get("legend")))
+        if fit < _DENSE_SCALE_FLOOR:
+            # Too dense for a slide: the fixed 16:9 panel would shrink the body to
+            # `fit` and collide its text. Render the STANDALONE diagram instead — the
+            # non-flat body already carries its own title + legend. Readability > chrome.
+            xml, stats = build_drawio_from_spec(spec, name, flat=False)
+            out.write_text(xml, encoding="utf-8")
+            (workspace / "out.slide.json").write_text(
+                json.dumps({"drawio": "out.drawio", "png": "out.png",
+                            "engine": "native", "style": "diagram",
+                            "dense_fallback": True, "fit_scale": round(fit, 3)}),
+                encoding="utf-8")
+            stats["slide_fallback"] = {"fit_scale": round(fit, 3),
+                                       "floor": _DENSE_SCALE_FLOOR}
+        else:
+            compose_native_slide(
+                xml, str(out), title=spec.get("slide_title") or name,
+                kicker=spec.get("slide_kicker") or None,
+                brand=spec.get("brand") or None,
+                diagram_title=spec.get("diagram_title") or None,
+                legend=spec.get("legend") or [], include_hero=True)
+            (workspace / "out.slide.json").write_text(
+                json.dumps({"drawio": "out.drawio", "png": "out.png",
+                            "engine": "native", "style": "slide"}), encoding="utf-8")
+    else:
+        out.write_text(xml, encoding="utf-8")
+
+    # Semantic count preservation (V2 §15.5) — measured on the native body (original
+    # ids; the composed slide re-prefixes them). Surfaces silently-dropped nodes/edges.
     try:
         from domain.validation.validate_drawio import check_semantic_preservation
         src_nodes = [n.get("id") for n in spec.get("nodes", [])]
@@ -402,19 +435,6 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
         _, stats["semantic"] = check_semantic_preservation(src_nodes, src_edges, xml)
     except Exception:  # noqa: BLE001 — best-effort, never block a render
         pass
-    if presentation == "slide":
-        from prettygraph.slide import compose_native_slide
-        compose_native_slide(
-            xml, str(out), title=spec.get("slide_title") or name,
-            kicker=spec.get("slide_kicker") or None,
-            brand=spec.get("brand") or None,
-            diagram_title=spec.get("diagram_title") or None,
-            legend=spec.get("legend") or [], include_hero=True)
-        (workspace / "out.slide.json").write_text(
-            json.dumps({"drawio": "out.drawio", "png": "out.png",
-                        "engine": "native", "style": "slide"}), encoding="utf-8")
-    else:
-        out.write_text(xml, encoding="utf-8")
     _render_drawio_png(out, workspace / "out.png")
     try:  # persist stats so the diagram gate / finalize can score without the spec
         (workspace / "out.native_stats.json").write_text(
