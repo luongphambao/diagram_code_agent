@@ -12,11 +12,11 @@ import json
 from langchain_core.tools import tool
 
 from backends import current_workspace
-from csm import SolutionModel
-from csm_adapter import build_solution_model, SOLUTION_MODEL_NAME, SOLUTION_MODEL_PREV_NAME
-from csm_diff import diff_solution_models
-from solution_validator import format_validation, validate_solution
-from traceability import write_trace_links
+from memory.stores.csm import SolutionModel
+from memory.stores.csm_adapter import build_solution_model, SOLUTION_MODEL_NAME, SOLUTION_MODEL_PREV_NAME
+from memory.stores.csm_diff import diff_solution_models
+from domain.validation.solution_validator import format_validation, validate_solution
+from domain.reporting.traceability import write_trace_links
 from ..stage_markers import _read_json_file
 
 
@@ -101,7 +101,7 @@ def _solution_gate_note(stage: str = "export", *, block: bool = False) -> str:
     # Persist the lifecycle and drop findings a human already waived/resolved, so the
     # gate reflects open work only. Best-effort: a store hiccup must not break the gate.
     try:
-        from finding_store import active_findings, upsert_findings
+        from memory.stores.finding_store import active_findings, upsert_findings
         upsert_findings(findings, revision=model.revision)
         findings = active_findings(findings)
     except Exception:
@@ -134,9 +134,9 @@ def _diagram_gate_note(*, block: bool = False) -> str:
     Findings go into findings_log.json so waive_finding/resolve_finding apply
     to diagram defects just like blueprint/WBS defects (docx §4.7).
     """
-    from validate_drawio import validate_file, findings_from_validation
-    from finding_store import active_findings, upsert_findings
-    from solution_validator import format_validation
+    from domain.validation.validate_drawio import validate_file, findings_from_validation
+    from memory.stores.finding_store import active_findings, upsert_findings
+    from domain.validation.solution_validator import format_validation
 
     drawio_path = current_workspace() / "out.drawio"
     if not drawio_path.exists():
@@ -146,10 +146,26 @@ def _diagram_gate_note(*, block: bool = False) -> str:
         findings = findings_from_validation(result)
     except Exception:
         return ""
+    # V2 §16 production scorecard — reuses the persisted native stats (semantic
+    # preservation + routing residuals) from the last export.
+    scorecard_note = ""
+    try:
+        import json as _json
+        from domain.validation.validate_drawio import production_scorecard
+        stats_path = current_workspace() / "out.native_stats.json"
+        stats = _json.loads(stats_path.read_text(encoding="utf-8")) if stats_path.exists() else {}
+        sc = production_scorecard(result, stats)
+        scorecard_note = (f"\n\nPRODUCTION SCORECARD: {sc['total']}/100 — "
+                          f"{'PASS' if sc['pass'] else 'BELOW GATE (need >=85, semantic '
+                          '& relationship = 100%)'} "
+                          f"(semantic {int(sc['node_recall'] * 100)}%, "
+                          f"relationship {int(sc['edge_recall'] * 100)}%).")
+    except Exception:
+        pass
     try:
         revision = "0"
         try:
-            from csm_adapter import build_solution_model
+            from memory.stores.csm_adapter import build_solution_model
             m = build_solution_model(current_workspace())
             revision = str(m.revision)
         except Exception:
