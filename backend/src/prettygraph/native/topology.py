@@ -32,6 +32,11 @@ except (ImportError, ValueError):  # pragma: no cover - import fallback
     from prettygraph.constants import PRO_ACCENTS, FLOW_COLORS  # type: ignore
 
 _NEUTRAL_STROKE = "#8593A3"
+# Card width bands per density class (V2 §5.3): (min_w, max_w).
+_SIZE_CLASSES = {"compact": (150, 210), "medium": (176, 272), "wide": (240, 420)}
+# Reserved routing lane between stacked layer bands (V2 §7.6): whitespace the
+# router uses as connector infrastructure rather than incidental spacing.
+_LAYER_LANE_GAP = 46
 _ICON_SCORE_MIN = 50  # top-hit score to accept a stencil for a node (else a plain card)
 # Vendor-pack (gcp_*/azure_*) hits score lower than they deserve: their names
 # embed the provider prefix, which the query never contains. Accept them at a
