@@ -112,13 +112,13 @@ class Diagram:
         s = _style_for_icon(self.c, name)
         if not s:
             raise ValueError(f'cornerIcon not found in catalog: "{name}".')
-        r = self._put(id, parent, xy[0], xy[1], size, size, s["style"], "")
+        r = self._put(id, parent, xy[0], xy[1], size, size, s["style"], "", z=Z_FORE)
         r["ob"] = False
         return r
 
     def box(self, id, xy, wh, label="", *, parent="1", fill="#FFFFFF",
             stroke="#5A6B7B", va="middle", bold=False, fs=11, round=False,
-            ob=True) -> dict:
+            ob=True, z=Z_NODE) -> dict:
         fill = fill or "#FFFFFF"
         stroke = stroke or "#5A6B7B"
         style = (f"rounded={1 if round else 0};whiteSpace=wrap;html=1;fillColor={fill};"
