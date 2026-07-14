@@ -98,7 +98,7 @@ def check_page(diagram: ET.Element) -> tuple[list[str], list[str]]:
     # Sibling overlap — only leaf vertices (containers legitimately wrap children).
     boxes = [(c.get("id"), c.get("parent"), _rect(c)) for c in cells
              if c.get("vertex") == "1" and c.get("id") not in parents and _rect(c)
-             and not any(v != v for v in _rect(c))]
+             and not _is_decor(c.get("id")) and not any(v != v for v in _rect(c))]
     for i in range(len(boxes)):
         for j in range(i + 1, len(boxes)):
             (ia, pa, ra), (ib, pb, rb) = boxes[i], boxes[j]
