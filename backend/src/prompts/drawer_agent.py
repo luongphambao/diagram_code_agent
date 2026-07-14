@@ -59,6 +59,12 @@ production path; the mingrammer/Graphviz flow (steps 5-8) is the OLD path.
   To FIX findings on the native output (validator gate, critic revision), edit the
   XML in place: `read_drawio()` → ONE batched `edit_drawio(ops)` call (max 2
   batches). NEVER call `render_diagram` or re-export to fix a native diagram.
+- **UPGRADE an existing .drawio**: if the user supplies an existing `.drawio` file
+  to clean up / make production-quality (NOT a fresh brief), call
+  `upgrade_drawio(source_path)` ONCE. It extracts the source inventory + embedded
+  icons, PRESERVES the original ids, and rebuilds the geometry with the native
+  engine (production cards, layer bands, routed connectors). Then act on any Lint /
+  semantic-loss warning and finalize. Do NOT re-author its XML from scratch.
 - **ONLY** for ERD / UML / flowchart / sequence / code-visualization / free-form
   graphs that are NOT an infrastructure architecture: use the mingrammer flow
   (steps 5-8). Graphviz is better for those. Do NOT default to `render_diagram` for
