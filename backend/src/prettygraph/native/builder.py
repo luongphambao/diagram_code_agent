@@ -129,17 +129,22 @@ class Diagram:
         return r
 
     def card(self, id, xy, wh, icon_name=None, title="", sub="", *, parent="1",
-             fill=None, stroke=None, accent=None) -> dict:
+             fill=None, stroke=None, accent=None, image_data_uri=None) -> dict:
         """Rounded card node: catalog icon on the LEFT, bold title + grey sub-label.
 
         Production anatomy (V2 §6.3): a controlled drop-shadow cell behind the
         card + an optional accent stripe on top carrying the layer identity.
+
+        ``image_data_uri`` (V2 §8, upgrade path): render the left icon from an
+        embedded data: URI reused from the source .drawio instead of a catalog
+        stencil — no catalog lookup, no network.
 
         The value is HTML (html=1): the inner text is escaped here, the whole
         value again by _put for the XML attribute — draw.io decodes the XML
         layer, then renders the remaining tags/entities as HTML.
         """
         ic = 30
+        has_icon = bool(icon_name or image_data_uri)
         x, y, w, h = xy[0], xy[1], wh[0], wh[1]
         # Drop-shadow: a separate offset cell rather than draw.io's shadow=1
         # (which renders heavily and inconsistently). Low opacity, no stroke,
