@@ -810,6 +810,7 @@ def validate_file(path: str, profile: str = "auto") -> dict:
         warns += w
     advice: list[str] = []
     polish: list[str] = []
+    collisions: list[str] = []
     try:
         xml = ""
         try:
@@ -822,6 +823,8 @@ def validate_file(path: str, profile: str = "auto") -> dict:
             warns += sw
             advice = audit_xml(xml, profile)
             polish = audit_production_polish(xml)
+            collisions = audit_card_collisions(xml)
+            warns += collisions  # cross-container card overlaps -> layout warnings
     except Exception:  # noqa: BLE001 — design audits are best-effort
         pass
     return {
@@ -829,10 +832,12 @@ def validate_file(path: str, profile: str = "auto") -> dict:
         "warnings": warns,
         "advice": advice,
         "polish": polish,
+        "collisions": collisions,
         "error_count": len(errors),
         "warning_count": len(warns),
         "advice_count": len(advice),
         "polish_count": len(polish),
+        "collision_count": len(collisions),
         "ok": len(errors) == 0,
     }
 
