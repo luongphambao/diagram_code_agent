@@ -499,7 +499,8 @@ def audit_edges(xml: str) -> list[str]:
     advice: list[str] = []
     cells = _parse_cells(xml)
     box_of = lambda c: c["absGeo"] or c["geo"]
-    geo_of = {c["id"]: box_of(c) for c in cells if c["edge"] != "1" and (c["absGeo"] or c["geo"]) and c["id"]}
+    geo_of = {c["id"]: box_of(c) for c in cells if c["edge"] != "1"
+              and (c["absGeo"] or c["geo"]) and c["id"] and not _is_decor(c["id"])}
     if not geo_of:
         return advice
     minx = min(g["x"] for g in geo_of.values())
