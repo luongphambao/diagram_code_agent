@@ -309,9 +309,13 @@ def build_tree(spec: dict, flat: bool = False):
         sub_frames = [build_cluster(sub, depth + 1, band_dir=band_dir)
                       for sub in children_of.get(cid, [])]
         cnodes = nodes_by_cluster.get(cid, [])
+        # Accent colour the member cards inherit (V2 §6.3): the band's identity
+        # stroke at depth 0, the sub-frame accent when nested.
+        node_accent = (_band_tint(c, band_i)[1] if depth == 0
+                       else _accent_stroke(c.get("accent")))
         items: list = []
         if cnodes:
-            items = [build_node(n) for n in cnodes]
+            items = [build_node(n, node_accent) for n in cnodes]
             wrap_at = 6 if (depth == 0 and band_dir == "row") else 3
             # sidebar column (depth-0 col band) keeps cards as direct children so
             # justify can spread them over the stretched height — never a grid.
