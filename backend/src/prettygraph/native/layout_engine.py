@@ -192,7 +192,11 @@ def _m_box(n):
 def _m_card(n):
     ic = 30 if n.get("icon") else 0
     text_w = max(len(n.get("title") or "") * 7.2, len(n.get("sub") or "") * 5.8)
-    n["w"] = n.get("w") or round(min(260, max(150, text_w + ic + 44)))
+    # Density-aware sizing (V2 §5.3): size_class supplies the width band via
+    # min_w/max_w; dense rows stay compact, sparse rows with long text go wide.
+    min_w = n.get("min_w") or 150
+    max_w = n.get("max_w") or 260
+    n["w"] = n.get("w") or round(min(max_w, max(min_w, text_w + ic + 44)))
     n["h"] = n.get("h") or 54
 
 
