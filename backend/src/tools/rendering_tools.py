@@ -516,6 +516,11 @@ def export_drawio_native() -> str:
         sem_note = (f"\nSEMANTIC LOSS: {len(mn)} node(s) and {len(me)} edge(s) from "
                     f"render_spec did NOT render "
                     f"(nodes: {', '.join(map(str, mn[:5]))}) — check their cluster/ids.")
+    fb = stats.get("slide_fallback")
+    if fb:
+        sem_note += (f"\nDENSE FALLBACK: body would shrink to {fb['fit_scale']}x in a "
+                     f"slide (< {fb['floor']} floor) — rendered as a STANDALONE diagram "
+                     "(title + legend, no hero/panel) for readability.")
     return (
         f"Wrote out.drawio ({out.stat().st_size} bytes) via native engine.{png_note} "
         f"Fidelity: {vendor_icons}/{stats['nodes']} vendor icons "
