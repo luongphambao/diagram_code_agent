@@ -296,6 +296,14 @@ def build_tree(spec: dict, flat: bool = False):
     layered = intent.startswith("layer") or len(main_roots) >= 3
 
     def build_node(n: dict, accent: str | None = None, size_class: str | None = None):
+        # Upgrade path (V2 §8): a node carrying an embedded icon reuses it directly
+        # — no catalog lookup, preserving the source diagram's exact icon.
+        img = n.get("icon_data_uri")
+        if img:
+            title, sub = _card_texts(n)
+            mn, mx = _SIZE_CLASSES.get(size_class or "medium", _SIZE_CLASSES["medium"])
+            return card(n["id"], None, title, sub, accent=accent,
+                        min_w=mn, max_w=mx, image_data_uri=img)
         name = _resolve_node_icon(cat, n, provider)
         if provider == "aws" and name and "mxgraph.aws4" in ((_get_icon(cat, name) or {}).get("style") or ""):
             # AWS convention: native resourceIcon with the label below.
