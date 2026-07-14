@@ -380,6 +380,11 @@ def _render_drawio_png(drawio_path: Path, png_path: Path, scale: int = 2) -> boo
     return _render_drawio_png_playwright(drawio_path, png_path, scale)
 
 
+# Below this slide fit-scale, a body is too dense to embed in the fixed 16:9 slide
+# panel without shrinking its text into collisions — render it standalone instead.
+_DENSE_SCALE_FLOOR = 0.72
+
+
 def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     """Build out.drawio (+ out.png + out.slide.json for slides) from a render_spec
     via the NATIVE engine. Returns fidelity/routing stats. Shared by the
