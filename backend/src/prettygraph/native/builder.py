@@ -167,17 +167,17 @@ class Diagram:
         h = pad * 2 + 24 + row_h * len(entries)
         x, y = xy
         self.box(id, [x, y], [w, h], "LEGEND", fill=THEME.base, stroke="#AEB9C4",
-                 va="top", bold=True, fs=12, round=True, ob=False)
+                 va="top", bold=True, fs=12, round=True, ob=False, z=Z_CHROME)
         for i, (label, color, dashed) in enumerate(entries):
             ry = y + pad + 24 + i * row_h
             ln = self._put(f"{id}__ln{i}", id, x + pad, ry + 8, sw, 8,
                            f"line;html=1;strokeWidth=2;strokeColor={color};fillColor=none;"
-                           + ("dashed=1;" if dashed else ""), "")
+                           + ("dashed=1;" if dashed else ""), "", z=Z_CHROME)
             ln["ob"] = False
             lb = self._put(f"{id}__lb{i}", id, x + pad + sw + 8, ry,
                            w - sw - pad * 2 - 8, row_h,
                            "text;html=1;align=left;verticalAlign=middle;fontSize=11;"
-                           f"fontColor={THEME.font_color};", label)
+                           f"fontColor={THEME.font_color};", label, z=Z_CHROME)
             lb["ob"] = False
         return self.R[id]
 
