@@ -59,6 +59,7 @@ class Diagram:
         self.flat = flat
         self.page = list(page)
         self.cells: list[str] = []
+        self._cell_z: list[int] = []  # z-bucket per cell, aligned with self.cells
         self._cell_index: dict[str, int] = {}  # id -> position in self.cells
         self.R: dict[str, dict] = {}
         self.phantoms: set[str] = set()
