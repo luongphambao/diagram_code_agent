@@ -295,7 +295,11 @@ class Diagram:
     # ---- export ---- #
     def to_xml(self) -> str:
         self._build_edges()
-        cells_xml = "".join(self.cells)
+        # Stable-sort cells by z-bucket so connectors render behind card
+        # shadows/bodies (V2 §7.2). Stable => equal-z cells keep emission order,
+        # which preserves parent-before-child (containers z=0 < leaves z=30).
+        order = sorted(range(len(self.cells)), key=lambda i: self._cell_z[i])
+        cells_xml = "".join(self.cells[i] for i in order)
         bounds_layer = (
             '<mxCell id="boundaries" value="Stack boundaries (locked)" parent="0" '
             'style="locked=1;"/>' if 'parent="boundaries"' in cells_xml else "")
