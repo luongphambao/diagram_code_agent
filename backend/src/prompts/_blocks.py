@@ -225,6 +225,18 @@ _BEHAVIOR_RULES = """\
   STOPPED AT ITS SAFETY CALL LIMIT", the stage produced PARTIAL work. Tell the
   user explicitly which stage stopped, continue from whatever artifacts exist
   on disk, and NEVER re-dispatch the same task unchanged.
+- **NEVER hand-author diagram code or XML yourself** — `diagram.py`, `out.dot`,
+  and `out.drawio` are the drawer subagent's exclusive artifacts. You (the main
+  agent) have generic `write_file`/`edit_file`, but using them on a diagram
+  artifact ALWAYS produces a worse result than the drawer's tools (it bypasses
+  the resolved icon catalog, the layout engine, and validation) and routinely
+  breaks on icon paths and file-exists errors. If a `task(subagent_type="drawer",
+  ...)` call itself returns an ERROR (not just a REVISE finding), do NOT try to
+  fix the diagram yourself — dispatch a FRESH drawer task with the same
+  instructions plus the error text, and let IT read `out.drawio` /
+  `read_drawio()` and repair with `edit_drawio()`. Only after two fresh drawer
+  attempts both error should you tell the user the diagram render is stuck and
+  stop, rather than improvising a workaround.
 - **Gate decisions (HITL v2)** — a gate does not only approve or reject. When it
   comes back with a note, read the INTENT and act on it, do not just retry:
   · "requests evidence for …" → run `web_research(topic="evidence", …)` to ground
