@@ -157,7 +157,7 @@ class Diagram:
         if sub:
             label += (f'<br><font style="font-size: 10px" color="#647687">'
                       f"{_esc(sub)}</font>")
-        pad_l = ic + 20 if icon_name else 12
+        pad_l = ic + 20 if has_icon else 12
         style = (f"rounded=1;arcSize=12;whiteSpace=wrap;html=1;"
                  f"fillColor={fill or THEME.base};strokeColor={stroke or '#AEB9C4'};"
                  f"fontColor={THEME.font_color};fontSize=12;align=left;"
@@ -172,12 +172,16 @@ class Diagram:
                            f"rounded=1;arcSize=60;html=1;fillColor={accent};"
                            "strokeColor=none;", "", z=Z_FORE)
             ac["ob"] = False
-        if icon_name:
-            s = _style_for_icon(self.c, icon_name)
-            if not s:
-                raise ValueError(f'card icon not found in catalog: "{icon_name}".')
+        if has_icon:
+            if image_data_uri:
+                icon_style = f"shape=image;html=1;imageAspect=1;aspect=fixed;image={image_data_uri};"
+            else:
+                s = _style_for_icon(self.c, icon_name)
+                if not s:
+                    raise ValueError(f'card icon not found in catalog: "{icon_name}".')
+                icon_style = s["style"]
             ir = self._put(f"{id}__ic", id, round(x + 10),
-                           round(y + (h - ic) / 2), ic, ic, s["style"], "", z=Z_FORE)
+                           round(y + (h - ic) / 2), ic, ic, icon_style, "", z=Z_FORE)
             ir["ob"] = False
         return r
 
