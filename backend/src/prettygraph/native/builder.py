@@ -243,7 +243,8 @@ class Diagram:
             f'<mxCell id="{id}" value="{_esc(label)}" style="text;html=1;align=center;'
             f'fontStyle=1;fontSize={fs};fontColor=light-dark(#232F3E,#E8E8E8);" '
             f'vertex="1" parent="{parent}"><mxGeometry x="{xy[0] - ox:.0f}" '
-            f'y="{xy[1] - oy:.0f}" width="{w:.0f}" height="30" as="geometry"/></mxCell>')
+            f'y="{xy[1] - oy:.0f}" width="{w:.0f}" height="30" as="geometry"/></mxCell>',
+            Z_CHROME)
 
     def title(self, label, *, fs=14) -> "Diagram":
         self.text("__title", [0, 24], self.page[0], label, fs=fs)
