@@ -316,7 +316,19 @@ def build_tree(spec: dict, flat: bool = False):
                        else _accent_stroke(c.get("accent")))
         items: list = []
         if cnodes:
-            items = [build_node(n, node_accent) for n in cnodes]
+            n_cards = len(cnodes)
+
+            def _size_class(node: dict) -> str:
+                # Density-aware (V2 §5.3): dense rows compact, sparse rows with a
+                # long subtitle wide, otherwise medium.
+                _, sub = _card_texts(node)
+                if n_cards > 4:
+                    return "compact"
+                if n_cards <= 3 and len(sub) > 22:
+                    return "wide"
+                return "medium"
+
+            items = [build_node(n, node_accent, _size_class(n)) for n in cnodes]
             wrap_at = 6 if (depth == 0 and band_dir == "row") else 3
             # sidebar column (depth-0 col band) keeps cards as direct children so
             # justify can spread them over the stretched height — never a grid.
