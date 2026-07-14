@@ -226,13 +226,13 @@ class Diagram:
                   f"rounded=0;{dash}fillColor=none;strokeColor={stroke};"
                   f"strokeWidth={stroke_width};verticalAlign=top;align=left;"
                   f"spacingLeft={spacing_left};spacingTop=5;fontColor={fc};"
-                  "fontStyle=1;fontSize=11;", label)
+                  "fontStyle=1;fontSize=11;", label, z=Z_CONTAINER)
         if icon:
             s = _style_for_icon(self.c, icon)
             if not s:
                 raise ValueError(f'clusterBox icon not found: "{icon}"')
             self._put(f"{id}_icon", "boundaries", x + 1, y + 1, icon_size, icon_size,
-                      s["style"], "")
+                      s["style"], "", z=Z_FORE)
         return self.R[id]
 
     def text(self, id, xy, w, label, *, fs=14, parent="1") -> None:
