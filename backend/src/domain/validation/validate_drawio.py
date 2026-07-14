@@ -486,6 +486,39 @@ def audit_geometry(xml: str) -> list[str]:
     return advice
 
 
+def audit_card_collisions(xml: str) -> list[str]:
+    """Global card-vs-card overlap detector (V2 §18.1) — the check the sibling-only
+    structural pass and the router residuals are BLIND to. Compares every leaf card
+    against every other by ABSOLUTE geometry (across containers), so a slide/compose
+    that crams cards until their titles collide is actually caught. Excludes
+    decoratives (shadow/accent/sub-icon), containers, text and edges."""
+    cells = _parse_cells(xml)
+    has_children = {c["parent"] for c in cells if c["parent"]}
+    box = lambda c: c["absGeo"] or c["geo"]
+    is_container = lambda c: (c["id"] in has_children
+                             or bool(re.search(r"container=1|shape=mxgraph\.aws4\.group|grIcon=|group;|swimlane", c["style"])))
+    is_text = lambda c: bool(re.search(r"(?:^|;)(text|line);", c["style"])) or (c["id"] or "").startswith(("__title", "__legend"))
+    cards = [c for c in cells if c["edge"] != "1" and box(c) and c["id"]
+             and not _is_decor(c["id"]) and not is_container(c) and not is_text(c)]
+    TOL = 6
+    seen: set = set()
+    out: list[str] = []
+    for i in range(len(cards)):
+        for j in range(i + 1, len(cards)):
+            a, b = box(cards[i]), box(cards[j])
+            ix = min(a["x"] + a["w"], b["x"] + b["w"]) - max(a["x"], b["x"])
+            iy = min(a["y"] + a["h"], b["y"] + b["h"]) - max(a["y"], b["y"])
+            if ix <= TOL or iy <= TOL:
+                continue
+            key = tuple(sorted([cards[i]["id"], cards[j]["id"]]))
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(f'cards {key[0]!r} and {key[1]!r} overlap by '
+                       f'{int(ix)}x{int(iy)}px — cramped layout, cards collide')
+    return out
+
+
 def _segs_intersect(p1, p2, p3, p4) -> bool:
     def o(a, b, c):
         v = (b["y"] - a["y"]) * (c["x"] - b["x"]) - (b["x"] - a["x"]) * (c["y"] - b["y"])
