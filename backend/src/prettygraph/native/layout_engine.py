@@ -396,11 +396,12 @@ def _emit_pool(d, n, parent):
     hair, band_alt, label_fill = "#D8E0E8", "#F5F8FB", "#EEF2F7"
 
     def _frame(fid, x, y, w, h, style, label):
-        return d._put(fid, n["id"], round(x), round(y), round(w), round(h), style, label)
+        return d._put(fid, n["id"], round(x), round(y), round(w), round(h), style, label,
+                      z=Z_CONTAINER)
 
     d.box(n["id"], [n["x"], n["y"]], [n["w"], n["h"]], n["label"], parent=parent,
           fill=pool_fill, stroke=pool_stroke, round=False, ob=False, va="top",
-          bold=True, fs=13)
+          bold=True, fs=13, z=Z_CONTAINER)
     for i in range(lane_n):
         if horiz:
             _frame(f"{n['id']}__band{i}", content_x, content_y + i * n["cellH"],
