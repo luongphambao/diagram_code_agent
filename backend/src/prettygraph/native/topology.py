@@ -379,7 +379,8 @@ def build_tree(spec: dict, flat: bool = False):
         band_frames = [build_cluster(cid, 0, i, band_dir="row")
                        for i, cid in enumerate(main_roots)]
         band_frames += [build_node(n) for n in loose]
-        bands_col = phantom("__bands", "", {"dir": "col", "gap": 26, "pad": 0}, band_frames)
+        bands_col = phantom("__bands", "", {"dir": "col", "gap": _LAYER_LANE_GAP, "pad": 0},
+                            band_frames)
         if cross_roots:
             side_frames = [build_cluster(cid, 0, i, band_dir="col")
                            for i, cid in enumerate(cross_roots)]
