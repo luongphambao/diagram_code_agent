@@ -102,6 +102,7 @@ from .rendering_tools import (
     plan_style_sizes,
     read_drawio,
     render_diagram,
+    upgrade_drawio,
     visualize_code_structure,
 )
 
