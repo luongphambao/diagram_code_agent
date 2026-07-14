@@ -124,7 +124,7 @@ class Diagram:
         style = (f"rounded={1 if round else 0};whiteSpace=wrap;html=1;fillColor={fill};"
                  f"strokeColor={stroke};fontColor=#1A1A1A;fontSize={fs};"
                  f"fontStyle={1 if bold else 0};verticalAlign={va};")
-        r = self._put(id, parent, xy[0], xy[1], wh[0], wh[1], style, label)
+        r = self._put(id, parent, xy[0], xy[1], wh[0], wh[1], style, label, z=z)
         r["ob"] = ob
         return r
 
