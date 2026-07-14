@@ -46,6 +46,16 @@ def _overlap(a: tuple, b: tuple) -> bool:
     return ax < bx + bw and bx < ax + aw and ay < by + bh and by < ay + ah
 
 
+# Decorative card sub-cells (drop-shadow / accent bar, native builder card()):
+# they intentionally overlap their card, so exclude them from geometry/overlap/
+# edge-intersection audits or every card would flag a false overlap.
+_DECOR_SUFFIXES = ("__sh", "__ac")
+
+
+def _is_decor(cid: str | None) -> bool:
+    return bool(cid) and cid.endswith(_DECOR_SUFFIXES)
+
+
 def check_page(diagram: ET.Element) -> tuple[list[str], list[str]]:
     """Return (errors, warnings) for one <diagram> page."""
     name = diagram.get("name", "?")
