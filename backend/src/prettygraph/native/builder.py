@@ -30,6 +30,18 @@ def _esc(s) -> str:
             .replace(">", "&gt;").replace('"', "&quot;"))
 
 
+# z-order buckets (V2 §7.2 "edge phải nằm dưới card"): lower renders first
+# (further back). Cells are stable-sorted by these in to_xml(), so connectors
+# always sit ABOVE layer backgrounds but BELOW card shadows/bodies — a stray
+# router crossing can never slice through a card title or icon.
+Z_CONTAINER = 0   # frames, tinted layer bands, groups, swimlane structure
+Z_EDGE = 10       # connectors
+Z_SHADOW = 20     # card drop-shadow cells
+Z_NODE = 30       # card / box / standalone-icon bodies
+Z_FORE = 40       # card sub-icons, accent bars, corner logos
+Z_CHROME = 50     # title, legend, free text
+
+
 class Diagram:
     """Declarative diagram builder — feed it via the layout engine's render_tree."""
 
