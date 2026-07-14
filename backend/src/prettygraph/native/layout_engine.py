@@ -356,7 +356,8 @@ def _e_group(d, n, parent):
         style = (f"rounded=0;whiteSpace=wrap;html=1;fillColor={n.get('fill') or '#FFFFFF'};"
                  f"strokeColor={n.get('stroke') or '#999999'};fontColor=#1A1A1A;fontSize=12;"
                  f"fontStyle=1;verticalAlign=top;align=left;spacingLeft={ci + 12};spacingTop=8;")
-        r = d._put(n["id"], parent, n["x"], n["y"], n["w"], n["h"], style, n["label"])
+        r = d._put(n["id"], parent, n["x"], n["y"], n["w"], n["h"], style, n["label"],
+                   z=Z_CONTAINER)
         r["ob"] = False
         d.corner_icon(f"{n['id']}__ci", n["cornerIcon"],
                       [round(n["x"] + 8), round(n["y"] + 7)], ci, n["id"])
@@ -365,7 +366,7 @@ def _e_group(d, n, parent):
         d.box(n["id"], [n["x"], n["y"]], [n["w"], n["h"]], n["label"], parent=parent,
               va="top", bold=True, fill=n.get("fill") or "#FFFFFF",
               stroke=n.get("stroke") or "#999999", fs=n.get("fs") or 11,
-              ob=(None if n.get("stroke") == "none" else False))
+              ob=(None if n.get("stroke") == "none" else False), z=Z_CONTAINER)
     for c in n["children"]:
         _emit(d, c, n["id"])
 
