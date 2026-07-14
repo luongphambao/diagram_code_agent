@@ -393,6 +393,15 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     # for the slide compositor's _transform_drawio_body.
     presentation = str(spec.get("presentation_style") or "slide").lower()
     xml, stats = build_drawio_from_spec(spec, name, flat=(presentation == "slide"))
+    # Semantic count preservation (V2 §15.5) — measured on the native body BEFORE
+    # slide composition, which re-prefixes ids. Surfaces silently-dropped nodes/edges.
+    try:
+        from domain.validation.validate_drawio import check_semantic_preservation
+        src_nodes = [n.get("id") for n in spec.get("nodes", [])]
+        src_edges = [(e.get("from"), e.get("to")) for e in spec.get("edges", [])]
+        _, stats["semantic"] = check_semantic_preservation(src_nodes, src_edges, xml)
+    except Exception:  # noqa: BLE001 — best-effort, never block a render
+        pass
     if presentation == "slide":
         from prettygraph.slide import compose_native_slide
         compose_native_slide(
