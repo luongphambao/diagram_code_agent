@@ -354,6 +354,36 @@ def _compose_slide_drawio(body_xml: str, out_path: str, *, title: str,
     return xml_out
 
 
+def _slide_panel_geometry(*, include_hero: bool, has_legend: bool):
+    """Panel/body-box geometry for a native slide — the SINGLE source of truth
+    shared by slide_fit_scale() and compose_native_slide() so they never drift."""
+    hero_h = 240
+    legend_h = 118 if has_legend else 0
+    caption_area = 74
+    panel_x = SLIDE_MARGIN
+    panel_y = (hero_h + 34) if include_hero else SLIDE_MARGIN
+    panel_w = SLIDE_SIZE - SLIDE_MARGIN * 2
+    max_w = panel_w - SLIDE_PANEL_PAD * 2
+    slide_h = round(SLIDE_SIZE / SLIDE_PAGE_RATIO)
+    avail_h = max(slide_h - panel_y - SLIDE_MARGIN - caption_area
+                  - SLIDE_PANEL_PAD - legend_h, 100)
+    panel_h = caption_area + avail_h + SLIDE_PANEL_PAD + legend_h
+    return {"hero_h": hero_h, "legend_h": legend_h, "caption_area": caption_area,
+            "panel_x": panel_x, "panel_y": panel_y, "panel_w": panel_w, "max_w": max_w,
+            "slide_h": slide_h, "avail_h": avail_h, "panel_h": panel_h}
+
+
+def slide_fit_scale(body_w: float, body_h: float, *, include_hero: bool = True,
+                    has_legend: bool = True) -> float:
+    """The scale compose_native_slide would apply to fit a body into the slide
+    panel. Below ~0.72 the body is too dense for a slide (text collides) and the
+    caller should render a standalone diagram instead."""
+    if not body_w or not body_h:
+        return 1.0
+    g = _slide_panel_geometry(include_hero=include_hero, has_legend=has_legend)
+    return min(g["max_w"] / body_w, g["avail_h"] / body_h)
+
+
 def compose_native_slide(body_xml: str, out_path: str, *, title: str,
                          kicker: str | None = None, brand: str | None = None,
                          diagram_title: str | None = None, legend=None,
