@@ -735,7 +735,11 @@ def _emit_edge(d, e, r, fr, geom) -> None:
     if raw_style:
         st += raw_style if raw_style.endswith(";") else raw_style + ";"
     d.eid += 1
-    d.cells.append(
+    # Z_EDGE tag => to_xml() sorts connectors behind card shadows/bodies (V2 §7.2).
+    from .builder import Z_EDGE
+    d._emit_cell(
+        f"ed{d.eid}",
         f'<mxCell id="ed{d.eid}" value="{_esc(label)}" style="{st}" edge="1" parent="1" '
         f'source="{e["src"]}" target="{e["tgt"]}"><mxGeometry relative="1" as="geometry">'
-        f'{wp_xml}</mxGeometry></mxCell>')
+        f'{wp_xml}</mxGeometry></mxCell>',
+        Z_EDGE)
