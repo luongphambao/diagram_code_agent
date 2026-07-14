@@ -797,15 +797,19 @@ def edit_drawio(
                             g.remove(arr)
                 applied.append(f"pin_edge {op.id}")
             elif op.op == "delete":
-                doomed = {op.id}
+                # Seed with the node + its decorative sub-cells (shadow/accent are
+                # parented to the frame, not the card, so cascade-by-parent misses them).
+                doomed = {op.id, f"{op.id}__sh", f"{op.id}__ac"}
                 for c in list(cell_root.iter("mxCell")):
                     if c.get("parent") in doomed or c.get("source") in doomed \
                             or c.get("target") in doomed:
                         doomed.add(c.get("id"))
+                doomed &= {c.get("id") for c in cell_root.iter("mxCell")}
                 for c in list(cell_root):
                     if c.get("id") in doomed:
                         cell_root.remove(c)
                 cells = {c.get("id"): c for c in cell_root.iter("mxCell") if c.get("id")}
+                deleted_ids |= doomed
                 applied.append(f"delete {op.id} (+{len(doomed) - 1} dependents)")
             elif op.op == "add_edge":
                 if not (op.source in cells and op.target in cells):
