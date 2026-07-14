@@ -271,7 +271,7 @@ ICON_RESOLVER_TOOLS = [
 # DEFAULT for architecture diagrams (spec -> native engine, no Graphviz);
 # read_drawio/edit_drawio are the targeted in-place fix loop on its output.
 DRAWER_TOOLS = [declare_poster_grid, render_diagram, export_drawio,
-                export_drawio_native, read_drawio, edit_drawio]
+                export_drawio_native, upgrade_drawio, read_drawio, edit_drawio]
 
 # Critic subagent tools: read-only review of the rendered diagram.
 CRITIC_TOOLS = [inspect_diagram, submit_critique]
