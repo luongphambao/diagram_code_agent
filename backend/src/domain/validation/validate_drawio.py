@@ -915,6 +915,7 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
     polish = report.get("polish", []) or []
     err_count = report.get("error_count", len(errs))
     ok = report.get("ok", not errs)
+    collisions = int(report.get("collision_count", 0))
 
     def _hits(items, *kw):
         return sum(1 for s in items if any(k in str(s).lower() for k in kw))
