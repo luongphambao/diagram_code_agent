@@ -858,6 +858,59 @@ def check_semantic_preservation(expected_node_ids, expected_edges, xml: str):
     return errors, stats
 
 
+def production_scorecard(report: dict, stats: dict | None = None) -> dict:
+    """V2 §16 production QA scorecard (0-100) over a validate_file() report + the
+    native engine stats (semantic preservation + routing residuals).
+
+    Categories & weights: semantic completeness 25, relationship correctness 20,
+    layer clarity 15, connector readability 15, typography 10, spacing 10,
+    editability 5. PASS iff total >= 85 AND semantic = 100% AND relationship =
+    100% AND zero XML errors.
+    """
+    stats = stats or {}
+    sem = stats.get("semantic") or {}
+    node_recall = float(sem.get("node_recall", 1.0))
+    edge_recall = float(sem.get("edge_recall", 1.0))
+    errs = report.get("errors", []) or []
+    warns = report.get("warnings", []) or []
+    advice = report.get("advice", []) or []
+    polish = report.get("polish", []) or []
+    err_count = report.get("error_count", len(errs))
+    ok = report.get("ok", not errs)
+
+    def _hits(items, *kw):
+        return sum(1 for s in items if any(k in str(s).lower() for k in kw))
+
+    edge_struct_err = _hits(errs, "edge ", "source ", "target ")
+    cross = int(stats.get("edge_cross", 0)) + int(stats.get("edge_overlaps", 0))
+
+    bd = {
+        # 1. Semantic completeness — every source node survived.
+        "semantic_completeness": 25.0 * node_recall,
+        # 2. Relationship correctness — every renderable edge survived, no dangling.
+        "relationship_correctness": 0.0 if edge_struct_err else 20.0 * edge_recall,
+        # 3. Layer clarity — tinted bands (polish flags untinted/legend gaps).
+        "layer_clarity": 15.0 - 6.0 * _hits(polish, "untinted", "band", "layer", "legend"),
+        # 4. Connector readability — router residuals + tangle/detour advice.
+        "connector_readability": (15.0 - min(10.0, 2.0 * cross)
+                                  - 3.0 * _hits(advice, "crossing", "tangled",
+                                                "detour", "long connector")),
+        # 5. Typography — font-count / tiny-font findings.
+        "typography": 10.0 - 3.0 * _hits(advice + polish, "font", "tiny", "text size"),
+        # 6. Spacing / alignment — overlaps, spills, excess whitespace.
+        "spacing_alignment": 10.0 - 2.0 * (_hits(warns, "overlap")
+                                           + _hits(advice, "overlap", "spill", "whitespace")),
+        # 7. Editability — parses, no errors, not compressed.
+        "editability": 5.0 if (ok and err_count == 0) else 0.0,
+    }
+    bd = {k: round(max(0.0, v), 1) for k, v in bd.items()}
+    total = round(sum(bd.values()), 1)
+    passed = bool(total >= 85.0 and node_recall >= 1.0
+                  and edge_recall >= 1.0 and err_count == 0)
+    return {"total": total, "breakdown": bd, "pass": passed,
+            "node_recall": round(node_recall, 4), "edge_recall": round(edge_recall, 4)}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Lint a .drawio file for structural + design issues.")
     ap.add_argument("file")
