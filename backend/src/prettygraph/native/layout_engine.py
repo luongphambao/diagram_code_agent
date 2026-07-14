@@ -348,7 +348,8 @@ def _e_box(d, n, parent):
 def _e_card(d, n, parent):
     d.card(n["id"], [n["x"], n["y"]], [n["w"], n["h"]], n.get("icon"),
            n.get("title") or "", n.get("sub") or "", parent=parent,
-           fill=n.get("fill"), stroke=n.get("stroke"), accent=n.get("accent"))
+           fill=n.get("fill"), stroke=n.get("stroke"), accent=n.get("accent"),
+           image_data_uri=n.get("image_data_uri"))
 
 
 def _e_group(d, n, parent):
