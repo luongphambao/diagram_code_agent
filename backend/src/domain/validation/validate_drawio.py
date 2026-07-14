@@ -804,6 +804,60 @@ def validate_file(path: str, profile: str = "auto") -> dict:
     }
 
 
+def check_semantic_preservation(expected_node_ids, expected_edges, xml: str):
+    """V2 §15.5 — assert semantic nodes/edges survive into the generated diagram.
+
+    ``expected_node_ids``: source node ids that must be present in the output.
+    ``expected_edges``: source (src, tgt) id pairs that must be present.
+    ``xml``: the generated .drawio XML (native body, ORIGINAL ids — call this on
+    the body before slide composition, which re-prefixes ids).
+
+    Returns ``(errors, stats)``. Decorative sub-cells (``__sh``/``__ac``/``__ic``)
+    are ignored. ``edge_recall`` is measured only over edges whose BOTH endpoints
+    survived, so a dropped node is never double-counted as a dropped edge.
+    """
+    exp_nodes = [n for n in expected_node_ids if n]
+    exp_edges = [tuple(e) for e in expected_edges if e and e[0] and e[1]]
+    present_v: set[str] = set()
+    present_e: set[tuple] = set()
+    try:
+        root = ET.fromstring(xml)
+    except ET.ParseError as exc:
+        return ([f"semantic preservation: output XML did not parse: {exc}"],
+                {"source_nodes": len(exp_nodes), "output_nodes": 0,
+                 "missing_nodes": exp_nodes, "node_recall": 0.0,
+                 "source_edges": len(exp_edges), "renderable_edges": 0,
+                 "missing_edges": exp_edges, "edge_recall": 0.0})
+    for c in root.iter("mxCell"):
+        cid = c.get("id")
+        if c.get("edge") == "1":
+            s, t = c.get("source"), c.get("target")
+            if s and t:
+                present_e.add((s, t))
+        elif c.get("vertex") == "1" and cid and not _is_decor(cid):
+            present_v.add(cid)
+    missing_nodes = [n for n in exp_nodes if n not in present_v]
+    renderable = [(s, t) for (s, t) in exp_edges if s in present_v and t in present_v]
+    missing_edges = [(s, t) for (s, t) in renderable if (s, t) not in present_e]
+    errors = [f"semantic node {n!r} from source is missing in the output"
+              for n in missing_nodes]
+    errors += [f"semantic edge {s}->{t} from source is missing in the output"
+               for s, t in missing_edges]
+    stats = {
+        "source_nodes": len(exp_nodes),
+        "output_nodes": len(present_v),
+        "missing_nodes": missing_nodes,
+        "node_recall": 1.0 if not exp_nodes
+        else (len(exp_nodes) - len(missing_nodes)) / len(exp_nodes),
+        "source_edges": len(exp_edges),
+        "renderable_edges": len(renderable),
+        "missing_edges": missing_edges,
+        "edge_recall": 1.0 if not renderable
+        else (len(renderable) - len(missing_edges)) / len(renderable),
+    }
+    return errors, stats
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Lint a .drawio file for structural + design issues.")
     ap.add_argument("file")
