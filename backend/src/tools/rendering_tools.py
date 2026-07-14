@@ -473,13 +473,20 @@ def export_drawio_native() -> str:
     except Exception:  # noqa: BLE001
         pass
     vendor_icons = stats["native_icons"] + stats.get("image_icons", 0)
+    sem = stats.get("semantic") or {}
+    sem_note = ""
+    if sem.get("missing_nodes") or sem.get("missing_edges"):
+        mn, me = sem.get("missing_nodes", []), sem.get("missing_edges", [])
+        sem_note = (f"\nSEMANTIC LOSS: {len(mn)} node(s) and {len(me)} edge(s) from "
+                    f"render_spec did NOT render "
+                    f"(nodes: {', '.join(map(str, mn[:5]))}) — check their cluster/ids.")
     return (
         f"Wrote out.drawio ({out.stat().st_size} bytes) via native engine.{png_note} "
         f"Fidelity: {vendor_icons}/{stats['nodes']} vendor icons "
         f"({stats['native_icons']} AWS stencils + {stats.get('image_icons', 0)} "
         f"image tiles), {stats['native_groups']} native group frames. "
         f"Routing: {stats['edge_cross']} edge-through-node, "
-        f"{stats['edge_overlaps']} parallel overlaps.{lint}\n"
+        f"{stats['edge_overlaps']} parallel overlaps.{sem_note}{lint}\n"
         "If Lint reports gate findings, fix them IN PLACE: read_drawio -> one "
         "batched edit_drawio call (do NOT re-export)."
     )
