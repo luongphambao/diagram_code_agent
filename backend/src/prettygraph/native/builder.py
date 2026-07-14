@@ -205,7 +205,7 @@ class Diagram:
             style += f"fillColor={fill};"
         if stroke:
             style += f"strokeColor={stroke};"
-        r = self._put(id, parent, xy[0], xy[1], wh[0], wh[1], style, label)
+        r = self._put(id, parent, xy[0], xy[1], wh[0], wh[1], style, label, z=Z_CONTAINER)
         r["ob"] = False  # container -> edges pass through
         return r
 
