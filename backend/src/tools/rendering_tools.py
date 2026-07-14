@@ -281,23 +281,80 @@ def _find_drawio_cli() -> str | None:
     return None
 
 
-def _render_drawio_png(drawio_path: Path, png_path: Path, scale: int = 2) -> bool:
-    """Render a .drawio to PNG via the draw.io CLI; False if the CLI is unavailable."""
-    import shutil
-    exe = _find_drawio_cli()
-    if not exe:
-        return False
-    cmd = [exe, "--export", "--format", "png", "--scale", str(scale), "--border", "20",
-           "--output", str(png_path), str(drawio_path), "--no-sandbox"]
-    # draw.io desktop is an Electron app; on headless Linux (containers) it needs an
-    # X server. Wrap in xvfb-run when available so export works without a display.
-    if sys.platform.startswith("linux") and shutil.which("xvfb-run"):
-        cmd = ["xvfb-run", "-a", *cmd]
+def _drawio_viewer_fragment(xml: str) -> str:
+    """Encode .drawio XML into a diagrams.net viewer URL `#R<payload>` fragment.
+
+    Ported from drawio-ai-kit/vendor/encode_drawio_url.py. The viewer's loader
+    runs decodeURIComponent on the inflated string, so the XML MUST be
+    percent-encoded BEFORE deflating — a literal `%` or non-ASCII label
+    otherwise throws "URI malformed" and the diagram never renders.
+    """
+    import base64
+    import urllib.parse
+    import zlib
+    pre = urllib.parse.quote(xml, safe="!~*'()")
+    c = zlib.compressobj(9, zlib.DEFLATED, -zlib.MAX_WBITS)
+    compressed = c.compress(pre.encode("utf-8")) + c.flush()
+    payload = base64.b64encode(compressed).decode("utf-8").replace("\n", "")
+    return "R" + urllib.parse.quote(payload, safe="")
+
+
+def _render_drawio_png_playwright(drawio_path: Path, png_path: Path,
+                                  scale: int = 2, timeout_s: int = 45) -> bool:
+    """Fallback PNG export via the diagrams.net web viewer + a headless browser.
+
+    Uses the same Playwright/Chromium already installed for PDF report export
+    (see Dockerfile: `playwright install chromium`) — needs no draw.io desktop
+    app, no xvfb, no Electron. Requires outbound HTTPS to viewer.diagrams.net;
+    the diagram XML travels only in the URL FRAGMENT (never sent over the
+    network — fragments are client-side only), so nothing is uploaded.
+    Returns False (never raises) on any failure so callers can degrade to
+    validator-lint-only, same contract as the desktop-CLI path.
+    """
     try:
-        subprocess.run(cmd, timeout=120, capture_output=True)
-    except (subprocess.SubprocessError, OSError):
+        from playwright.sync_api import sync_playwright
+    except Exception:  # noqa: BLE001 — playwright not installed
+        return False
+    try:
+        xml = drawio_path.read_text(encoding="utf-8")
+        url = ("https://viewer.diagrams.net/?tags=%7B%7D&lightbox=1&edit=_blank#"
+               + _drawio_viewer_fragment(xml))
+        with sync_playwright() as p:
+            browser = p.chromium.launch(args=["--no-sandbox"])
+            try:
+                page = browser.new_page(device_scale_factor=scale)
+                page.goto(url, wait_until="networkidle", timeout=timeout_s * 1000)
+                page.wait_for_selector("svg", timeout=timeout_s * 1000)
+                page.wait_for_timeout(400)  # let the graph finish laying out
+                svg = page.locator("svg").first
+                svg.screenshot(path=str(png_path))
+            finally:
+                browser.close()
+    except Exception:  # noqa: BLE001 — degrade gracefully, never raise
         return False
     return png_path.exists()
+
+
+def _render_drawio_png(drawio_path: Path, png_path: Path, scale: int = 2) -> bool:
+    """Render a .drawio to PNG: draw.io desktop CLI first (fast, offline), else
+    the Playwright/viewer.diagrams.net fallback (needs outbound HTTPS but no
+    desktop app). False if neither is available/works."""
+    import shutil
+    exe = _find_drawio_cli()
+    if exe:
+        cmd = [exe, "--export", "--format", "png", "--scale", str(scale), "--border", "20",
+               "--output", str(png_path), str(drawio_path), "--no-sandbox"]
+        # draw.io desktop is an Electron app; on headless Linux (containers) it
+        # needs an X server. Wrap in xvfb-run when available.
+        if sys.platform.startswith("linux") and shutil.which("xvfb-run"):
+            cmd = ["xvfb-run", "-a", *cmd]
+        try:
+            subprocess.run(cmd, timeout=120, capture_output=True)
+        except (subprocess.SubprocessError, OSError):
+            pass
+        if png_path.exists():
+            return True
+    return _render_drawio_png_playwright(drawio_path, png_path, scale)
 
 
 def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
