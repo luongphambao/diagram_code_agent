@@ -155,9 +155,9 @@ def _diagram_gate_note(*, block: bool = False) -> str:
         stats_path = current_workspace() / "out.native_stats.json"
         stats = _json.loads(stats_path.read_text(encoding="utf-8")) if stats_path.exists() else {}
         sc = production_scorecard(result, stats)
-        scorecard_note = (f"\n\nPRODUCTION SCORECARD: {sc['total']}/100 — "
-                          f"{'PASS' if sc['pass'] else 'BELOW GATE (need >=85, semantic '
-                          '& relationship = 100%)'} "
+        verdict = ("PASS" if sc["pass"]
+                   else "BELOW GATE (need >=85, semantic & relationship = 100%)")
+        scorecard_note = (f"\n\nPRODUCTION SCORECARD: {sc['total']}/100 — {verdict} "
                           f"(semantic {int(sc['node_recall'] * 100)}%, "
                           f"relationship {int(sc['edge_recall'] * 100)}%).")
     except Exception:
