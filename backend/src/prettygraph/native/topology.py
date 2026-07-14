@@ -290,18 +290,19 @@ def build_tree(spec: dict, flat: bool = False):
     main_roots = [cid for cid in roots if cid not in cross_roots]
     layered = intent.startswith("layer") or len(main_roots) >= 3
 
-    def build_node(n: dict, accent: str | None = None):
+    def build_node(n: dict, accent: str | None = None, size_class: str | None = None):
         name = _resolve_node_icon(cat, n, provider)
         if provider == "aws" and name and "mxgraph.aws4" in ((_get_icon(cat, name) or {}).get("style") or ""):
             # AWS convention: native resourceIcon with the label below.
             return icon(n["id"], name, _node_label(n))
         title, sub = _card_texts(n)
+        mn, mx = _SIZE_CLASSES.get(size_class or "medium", _SIZE_CLASSES["medium"])
         if name or sub:
-            return card(n["id"], name, title, sub, accent=accent)
+            return card(n["id"], name, title, sub, accent=accent, min_w=mn, max_w=mx)
         if name is None and provider == "aws":
             return box(n["id"], _node_label(n), fill=THEME.base,
                        stroke=_accent_stroke(None), fs=11)
-        return card(n["id"], name, title, sub, accent=accent)
+        return card(n["id"], name, title, sub, accent=accent, min_w=mn, max_w=mx)
 
     def build_cluster(cid: str, depth: int = 0, band_i: int = 0, band_dir: str = "col"):
         c = clusters[cid]
