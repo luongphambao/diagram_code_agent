@@ -175,7 +175,8 @@ def _diagram_gate_note(*, block: bool = False) -> str:
     except Exception:
         pass
     if not findings:
-        return "\n\nDIAGRAM LINT: PASS — no structural errors, warnings, or style advice."
+        return ("\n\nDIAGRAM LINT: PASS — no structural errors, warnings, or style advice."
+                + scorecard_note)
     summary = format_validation(findings, block=block)
     note = f"\n\nDIAGRAM LINT [{('blocking' if block else 'advisory')}] — {summary}"
     if block and summary.startswith("VALIDATION: BLOCK"):
@@ -184,7 +185,7 @@ def _diagram_gate_note(*, block: bool = False) -> str:
             "waive_finding(finding_id, reason) / resolve_finding(finding_id, fix_applied) "
             "to record the decision and clear the block."
         )
-    return note
+    return note + scorecard_note
 
 
 def _impact_ids(dumps: list[dict], cap: int = 8) -> str:
