@@ -326,8 +326,31 @@ def _render_drawio_png_playwright(drawio_path: Path, png_path: Path,
                 page.goto(url, wait_until="networkidle", timeout=timeout_s * 1000)
                 page.wait_for_selector("svg", timeout=timeout_s * 1000)
                 page.wait_for_timeout(400)  # let the graph finish laying out
-                svg = page.locator("svg").first
-                svg.screenshot(path=str(png_path))
+                # The viewer's <svg> fills the whole (much larger) lightbox
+                # viewport with the diagram anchored top-left — screenshotting
+                # the element itself captures mostly blank canvas. Crop to the
+                # rendered content's own tight bounding box instead.
+                box = page.evaluate("""() => {
+                    const svg = document.querySelector('svg');
+                    if (!svg) return null;
+                    const rect = svg.getBoundingClientRect();
+                    const target = svg.querySelector('g') || svg;
+                    const b = target.getBBox();
+                    const vb = svg.viewBox && svg.viewBox.baseVal;
+                    const sx = (vb && vb.width) ? rect.width / vb.width : 1;
+                    const sy = (vb && vb.height) ? rect.height / vb.height : 1;
+                    const vx = vb ? vb.x : 0, vy = vb ? vb.y : 0;
+                    return {x: rect.left + (b.x - vx) * sx, y: rect.top + (b.y - vy) * sy,
+                            width: b.width * sx, height: b.height * sy};
+                }""")
+                pad = 12
+                if box and box["width"] > 0 and box["height"] > 0:
+                    page.screenshot(path=str(png_path), clip={
+                        "x": max(0, box["x"] - pad), "y": max(0, box["y"] - pad),
+                        "width": box["width"] + pad * 2, "height": box["height"] + pad * 2,
+                    })
+                else:  # getBBox failed (unexpected DOM) — full element as a last resort
+                    page.locator("svg").first.screenshot(path=str(png_path))
             finally:
                 browser.close()
     except Exception:  # noqa: BLE001 — degrade gracefully, never raise
