@@ -129,14 +129,25 @@ class Diagram:
         return r
 
     def card(self, id, xy, wh, icon_name=None, title="", sub="", *, parent="1",
-             fill=None, stroke=None) -> dict:
+             fill=None, stroke=None, accent=None) -> dict:
         """Rounded card node: catalog icon on the LEFT, bold title + grey sub-label.
+
+        Production anatomy (V2 §6.3): a controlled drop-shadow cell behind the
+        card + an optional accent stripe on top carrying the layer identity.
 
         The value is HTML (html=1): the inner text is escaped here, the whole
         value again by _put for the XML attribute — draw.io decodes the XML
         layer, then renders the remaining tags/entities as HTML.
         """
         ic = 30
+        x, y, w, h = xy[0], xy[1], wh[0], wh[1]
+        # Drop-shadow: a separate offset cell rather than draw.io's shadow=1
+        # (which renders heavily and inconsistently). Low opacity, no stroke,
+        # behind everything (Z_SHADOW). Not a router obstacle.
+        sh = self._put(f"{id}__sh", parent, round(x + 3), round(y + 4), w, h,
+                       "rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#1F2A37;"
+                       "opacity=12;strokeColor=none;", "", z=Z_SHADOW)
+        sh["ob"] = False
         label = f"<b>{_esc(title)}</b>"
         if sub:
             label += (f'<br><font style="font-size: 10px" color="#647687">'
@@ -146,14 +157,22 @@ class Diagram:
                  f"fillColor={fill or THEME.base};strokeColor={stroke or '#AEB9C4'};"
                  f"fontColor={THEME.font_color};fontSize=12;align=left;"
                  f"spacingLeft={pad_l};spacingRight=6;verticalAlign=middle;")
-        r = self._put(id, parent, xy[0], xy[1], wh[0], wh[1], style, label)
+        r = self._put(id, parent, x, y, w, h, style, label, z=Z_NODE)
         r["ob"] = True  # leaf obstacle (router avoids)
+        if accent:
+            # Thin accent bar across the card top, inset so it clears the rounded
+            # corners; carries the layer's identity colour onto the card.
+            ac = self._put(f"{id}__ac", parent, round(x + 8), round(y + 3),
+                           max(10, w - 16), 4,
+                           f"rounded=1;arcSize=60;html=1;fillColor={accent};"
+                           "strokeColor=none;", "", z=Z_FORE)
+            ac["ob"] = False
         if icon_name:
             s = _style_for_icon(self.c, icon_name)
             if not s:
                 raise ValueError(f'card icon not found in catalog: "{icon_name}".')
-            ir = self._put(f"{id}__ic", id, round(xy[0] + 10),
-                           round(xy[1] + (wh[1] - ic) / 2), ic, ic, s["style"], "")
+            ir = self._put(f"{id}__ic", id, round(x + 10),
+                           round(y + (h - ic) / 2), ic, ic, s["style"], "", z=Z_FORE)
             ir["ob"] = False
         return r
 
