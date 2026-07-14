@@ -852,6 +852,21 @@ def edit_drawio(
     out.write_text(xml_text, encoding="utf-8")
     rounds = _bump_drawio_edit_rounds()
 
+    # Count-preservation guard: nodes/edges that disappeared without a delete op.
+    after_v = {c.get("id") for c in cell_root.iter("mxCell")
+               if c.get("vertex") == "1" and c.get("id") and not _decor(c.get("id"))}
+    after_e = {(c.get("source"), c.get("target")) for c in cell_root.iter("mxCell")
+               if c.get("edge") == "1" and c.get("source") and c.get("target")}
+    lost_v = (before_v - after_v) - deleted_ids
+    lost_e = {(s, t) for (s, t) in (before_e - after_e)
+              if s not in deleted_ids and t not in deleted_ids}
+    preservation_note = ""
+    if lost_v or lost_e:
+        preservation_note = (
+            f"\nWARNING — SEMANTIC LOSS: {len(lost_v)} node(s) and {len(lost_e)} edge(s) "
+            f"disappeared without a delete op (nodes: {', '.join(sorted(map(str, lost_v))[:5])}). "
+            "This usually means an edit corrupted the tree — undo or re-export.")
+
     lint = ""
     try:
         from domain.validation.validate_drawio import validate_file
