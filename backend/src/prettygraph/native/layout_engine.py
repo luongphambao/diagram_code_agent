@@ -190,7 +190,7 @@ def _m_box(n):
 
 
 def _m_card(n):
-    ic = 30 if n.get("icon") else 0
+    ic = 30 if (n.get("icon") or n.get("image_data_uri")) else 0
     text_w = max(len(n.get("title") or "") * 7.2, len(n.get("sub") or "") * 5.8)
     # Density-aware sizing (V2 §5.3): size_class supplies the width band via
     # min_w/max_w; dense rows stay compact, sparse rows with long text go wide.
