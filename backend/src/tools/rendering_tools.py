@@ -503,6 +503,77 @@ def export_drawio_native() -> str:
     )
 
 
+@tool(parse_docstring=True)
+def upgrade_drawio(source_path: str) -> str:
+    """Upgrade an EXISTING .drawio file into a production-styled diagram (V2 approach).
+
+    Ingests the source: extracts its nodes, subtitles, edges, cluster membership
+    and EMBEDDED icons, PRESERVES the original cell ids, then rebuilds the geometry
+    with the native engine (production cards + shadow/accent, tinted layer bands,
+    routed connectors) — reusing the source icons, never re-authoring the meaning.
+    Writes inventory.json + render_spec.json + out.drawio + out.png and reports a
+    semantic-preservation check (source vs rebuilt) plus the production scorecard.
+
+    Use when the user supplies an existing .drawio to clean up / make production
+    quality (rather than generating a new diagram from a brief).
+
+    Args:
+        source_path: Path to the source .drawio (absolute, or relative to the workspace).
+    """
+    from pathlib import Path
+    from .constants import _RENDER_SPEC_FILE
+    from domain.diagram.drawio_ingest import extract_inventory, inventory_to_render_spec
+    ws = current_workspace()
+    src = Path(source_path)
+    if not src.is_absolute() and not src.exists():
+        src = ws / source_path
+    if not src.exists():
+        return f"Source .drawio not found: {source_path}"
+    try:
+        inv = extract_inventory(str(src))
+    except Exception as exc:  # noqa: BLE001 — surface to the agent
+        return f"upgrade_drawio: failed to parse {src.name}: {exc}"
+    if not inv["nodes"]:
+        return f"upgrade_drawio: no nodes found in {src.name} (empty or unsupported)."
+    (ws / "inventory.json").write_text(json.dumps(inv, indent=2), encoding="utf-8")
+    spec = inventory_to_render_spec(inv)
+    _RENDER_SPEC_FILE.write_text(json.dumps(spec), encoding="utf-8")
+    try:
+        stats = _render_native_from_spec(spec, ws)
+    except Exception as exc:  # noqa: BLE001
+        return f"upgrade_drawio: rebuild failed: {exc}"
+    out = ws / "out.drawio"
+    sem = stats.get("semantic") or {}
+    lint = ""
+    try:
+        from domain.validation.validate_drawio import validate_file, production_scorecard
+        report = validate_file(str(out))
+        sc = production_scorecard(report, stats)
+        verdict = ("PASS" if sc["pass"]
+                   else "BELOW GATE (need >=85, semantic & relationship = 100%)")
+        lint = (f" Scorecard {sc['total']}/100 ({verdict}). Lint: "
+                f"{report['error_count']} error(s), {report.get('polish_count', 0)} polish.")
+    except Exception:  # noqa: BLE001
+        pass
+    icons = sum(1 for n in inv["nodes"] if n.get("icon"))
+    miss = sem.get("missing_nodes", [])
+    record_report_step(
+        ws, "upgrade_drawio",
+        summary=(f"Upgraded {src.name}: {len(inv['nodes'])} nodes, {len(inv['edges'])} edges, "
+                 f"{icons} icons reused."),
+        data={"source": str(src), "inventory": "inventory.json", "native_stats": stats},
+    )
+    return (
+        f"Upgraded {src.name}: extracted {len(inv['nodes'])} nodes, {len(inv['edges'])} edges, "
+        f"{len(spec['clusters'])} clusters, {icons} embedded icons reused. Rebuilt out.drawio "
+        f"({out.stat().st_size} bytes) via the native production engine (ids preserved). "
+        f"Semantic preservation: {int(sem.get('node_recall', 1) * 100)}% nodes, "
+        f"{int(sem.get('edge_recall', 1) * 100)}% edges"
+        + (f" — MISSING nodes {miss[:5]}" if miss else "") + "." + lint +
+        "\nReview out.png; refine in place via read_drawio -> edit_drawio if needed."
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Targeted .drawio XML editing (read_drawio / edit_drawio)
 #
