@@ -678,7 +678,8 @@ def audit_production_polish(xml: str) -> list[str]:
     has_children = {c["parent"] for c in cells if c["parent"]}
     is_text = lambda c: bool(re.search(r"(?:^|;)(text|line);", c["style"])) \
         or (c["id"] or "").startswith(("__title", "__legend"))
-    vertices = [c for c in cells if c["edge"] != "1" and c["geo"] and not is_text(c)]
+    vertices = [c for c in cells if c["edge"] != "1" and c["geo"]
+                and not is_text(c) and not _is_decor(c["id"])]
 
     # 1) Layer bands not tinted: 3+ container frames, every one white/none.
     frames = [c for c in vertices
