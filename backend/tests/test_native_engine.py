@@ -165,6 +165,40 @@ def test_topology_resolves_all_aws_stencils():
     assert "grIcon=mxgraph.aws4.group_vpc" in xml     # "Application VPC" -> native group
 
 
+_LONG_LABEL_SPEC = {
+    "provider": "aws", "pattern": "microservices",
+    "layout_intent": "left_to_right_pipeline", "slide_title": "AI Doc",
+    "clusters": [{"id": "ai", "label": "AI Processing", "tier": "backend",
+                  "parent": "", "accent": "violet", "number": 1}],
+    "nodes": [
+        # long label (no \n split — tech is a substring of label): must NOT use
+        # the bare-icon convention (its label would overflow past the neighbor).
+        {"id": "textract", "label": "Amazon Textract OCR and Layout Analysis Engine",
+         "tech": "Amazon Textract", "cluster": "ai", "type": "service"},
+        # short label: keeps the normal bare AWS icon convention.
+        {"id": "bucket", "label": "Amazon S3", "tech": "Amazon S3",
+         "cluster": "ai", "type": "storage"},
+    ],
+    "edges": [],
+}
+
+
+def test_long_label_falls_back_to_card_not_bare_icon():
+    """A long, unwrappable label on a 'bare AWS icon' node would overflow past its
+    reserved layout spacing and collide with the neighbor (the ZenWood sample's
+    Textract/Bedrock overlap) — it must render as a card (wraps safely) instead."""
+    from prettygraph.native.topology import build_tree
+    d, _ = build_tree(_LONG_LABEL_SPEC)
+    xml = d.mxfile("t")
+    assert 'id="textract"' in xml
+    textract_cell = re.search(r'<mxCell id="textract"[^>]*style="([^"]*)"', xml).group(1)
+    assert "whiteSpace=wrap" in textract_cell       # card style, not bare icon
+    assert "resIcon=mxgraph.aws4." not in textract_cell
+    # the short-label sibling keeps the normal bare-icon convention
+    bucket_cell = re.search(r'<mxCell id="bucket"[^>]*style="([^"]*)"', xml).group(1)
+    assert "resIcon=mxgraph.aws4." in bucket_cell
+
+
 def test_topology_nests_subcluster_and_validates(tmp_path):
     from prettygraph.native.topology import build_tree
     d, _ = build_tree(_AWS_SPEC)
