@@ -393,8 +393,22 @@ def build_tree(spec: dict, flat: bool = False):
         band_frames = [build_cluster(cid, 0, i, band_dir="row")
                        for i, cid in enumerate(main_roots)]
         band_frames += [build_node(n) for n in loose]
-        bands_col = phantom("__bands", "", {"dir": "col", "gap": _LAYER_LANE_GAP, "pad": 0},
-                            band_frames)
+        grid_bands = intent.startswith("grid") or len(main_roots) > _GRID_BAND_MIN
+        if grid_bands and len(band_frames) > 1:
+            # Many parallel domains (not a strict sequential pipeline): a 2-column
+            # grid keeps the diagram landscape-shaped instead of one long, uniform
+            # vertical scroll (the "every diagram looks the same" complaint) and
+            # reduces how hard the slide-fit scale has to shrink it. grid()'s cell
+            # model sizes every cell to the largest band, so a small band (e.g. a
+            # 2-node security layer) gets extra whitespace around it — an accepted
+            # trade-off for reusing the existing primitive instead of a bespoke
+            # masonry packer.
+            bands_col = grid("__bands", None, "",
+                             {"cols": 2, "gap": _LAYER_LANE_GAP, "pad": 0, "stroke": "none"},
+                             band_frames)
+        else:
+            bands_col = phantom("__bands", "", {"dir": "col", "gap": _LAYER_LANE_GAP, "pad": 0},
+                                band_frames)
         if cross_roots:
             side_frames = [build_cluster(cid, 0, i, band_dir="col")
                            for i, cid in enumerate(cross_roots)]
