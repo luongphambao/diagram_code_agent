@@ -385,6 +385,84 @@ def _render_drawio_png(drawio_path: Path, png_path: Path, scale: int = 2) -> boo
 _DENSE_SCALE_FLOOR = 0.72
 
 
+def _attach_icon_fallbacks(spec: dict, workspace: Path) -> None:
+    """Attach a base64 PNG `icon_data_uri` to nodes the native drawio_catalog
+    can't resolve — it only carries AWS + generic tech packs (no azure/gcp/
+    onprem vendor stencils), so a non-AWS blueprint routinely resolves zero
+    icons even though icon_plan.json (written by propose_blueprint's pre-seed,
+    later refined by the icon_resolver subagent) already found real PNGs for
+    most nodes under resources/icons/<provider>/... AWS nodes are left alone:
+    their native vector stencils are ground-truth and preferred over a raster
+    fallback.
+    """
+    provider = str(spec.get("provider") or "aws").lower()
+    if provider == "aws":
+        return
+    icon_plan_path = workspace / "icon_plan.json"
+    if not icon_plan_path.exists():
+        return
+    try:
+        raw_plan = json.loads(icon_plan_path.read_text(encoding="utf-8"))
+    except Exception:
+        return
+
+    # icon_plan.json is either {node_id: [rel_paths]} (blueprint.py pre-seed)
+    # or a list of {label, id, path, status, ...} dicts (icon_resolver
+    # subagent's fuller resolution) — normalize both into {key: path}.
+    by_key: dict[str, str] = {}
+    if isinstance(raw_plan, dict):
+        for k, v in raw_plan.items():
+            if isinstance(v, list) and v:
+                by_key[k] = v[0]
+            elif isinstance(v, str):
+                by_key[k] = v
+    elif isinstance(raw_plan, list):
+        for entry in raw_plan:
+            if not isinstance(entry, dict) or entry.get("status") == "NOT_FOUND":
+                continue
+            # prefer the portable `icon` field (relative to LOCAL_ICONS) over
+            # `path`, which icon_resolver writes as a container-absolute path
+            # (/app/resources/...) that only resolves inside that container.
+            path = entry.get("icon") or entry.get("path")
+            if not path:
+                continue
+            for key in (entry.get("id"), entry.get("label")):
+                if key:
+                    by_key[key] = path
+    if not by_key:
+        return
+
+    try:
+        from prettygraph.native.topology import _load_catalog, _resolve_node_icon
+        cat = _load_catalog() if _load_catalog else None
+    except Exception:
+        cat = None
+
+    from backends import LOCAL_ICONS
+    root = Path(LOCAL_ICONS)
+    for node in spec.get("nodes", []):
+        if node.get("icon_data_uri"):
+            continue
+        if cat is not None:
+            try:
+                if _resolve_node_icon(cat, node, provider):
+                    continue  # native catalog already has a real stencil
+            except Exception:
+                pass
+        rel = by_key.get(node.get("id")) or by_key.get(node.get("label"))
+        if not rel:
+            continue
+        icon_path = Path(rel)
+        if not icon_path.is_absolute():
+            icon_path = root / rel
+        try:
+            data = icon_path.read_bytes()
+        except OSError:
+            continue
+        import base64
+        node["icon_data_uri"] = "data:image/png;base64," + base64.standard_b64encode(data).decode("ascii")
+
+
 def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     """Build out.drawio (+ out.png + out.slide.json for slides) from a render_spec
     via the NATIVE engine. Returns fidelity/routing stats. Shared by the
@@ -393,6 +471,7 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     from prettygraph.native.topology import build_drawio_from_spec
     out = workspace / "out.drawio"
     name = spec.get("slide_title") or spec.get("diagram_title") or "Architecture"
+    _attach_icon_fallbacks(spec, workspace)
     # Slide presentations (the default) get the hero-band + legend chrome by wrapping
     # the native body. The embedded body must be FLAT (parent="1", absolute coords)
     # for the slide compositor's _transform_drawio_body.

@@ -174,7 +174,19 @@ class Diagram:
             ac["ob"] = False
         if has_icon:
             if image_data_uri:
-                icon_style = f"shape=image;html=1;imageAspect=1;aspect=fixed;image={image_data_uri};"
+                # mxCell style strings split on ";" for key=value pairs, so a
+                # standard "data:image/png;base64,..." URI truncates at the
+                # first ";" (image ends up as bare "data:image/png", the
+                # actual payload dangling as an unparsed fragment) and the
+                # icon silently renders as a broken-image glyph. draw.io's
+                # own image-embed convention sidesteps this by dropping the
+                # ";base64" marker entirely — "data:image/png,<data>" with a
+                # bare comma — which mxGraph's image loader still decodes as
+                # base64. Normalize here so every caller (icon_data_uri from
+                # upgrade_drawio ingestion, or a fresh base64 encode) is safe
+                # regardless of which form it was built with.
+                safe_uri = image_data_uri.replace(";base64,", ",", 1)
+                icon_style = f"shape=image;html=1;imageAspect=1;aspect=fixed;image={safe_uri};"
             else:
                 s = _style_for_icon(self.c, icon_name)
                 if not s:
