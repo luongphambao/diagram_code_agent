@@ -8,7 +8,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-import validate_drawio as vd
+import domain.validation.validate_drawio as vd
 from prettygraph.native import Diagram, group, frame, grid, icon, box, render_tree
 from prettygraph.native.layout_engine import subnet
 
