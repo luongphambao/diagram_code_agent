@@ -269,6 +269,18 @@ def _transform_drawio_body(xml: str, *, x: float, y: float, scale: float,
         return f'<mxPoint x="{px:.0f}" y="{py:.0f}"'
 
     inner = re.sub(r'<mxPoint x="(-?[\d.]+)" y="(-?[\d.]+)"(?!\s+as=)', _pt, inner)
+
+    # Cards/boxes are measured to fit their label at the ORIGINAL fontSize (see
+    # layout_engine._m_card); shrinking geometry without shrinking the baked
+    # `fontSize=` in each cell's style string leaves text at full size inside a
+    # smaller box, so it overflows and collides with neighboring cells once
+    # scale drops much below 1 (dense diagrams). Scale it in lockstep with the
+    # geometry, floored so text never becomes illegibly tiny.
+    def _font_size(mt: "re.Match[str]") -> str:
+        orig = float(mt.group(1))
+        return f"fontSize={max(7, round(orig * scale))}"
+
+    inner = re.sub(r"fontSize=(\d+(?:\.\d+)?)", _font_size, inner)
     return inner
 
 
