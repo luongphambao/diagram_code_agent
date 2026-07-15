@@ -268,6 +268,50 @@ def test_concept_icons_resolve():
         assert _resolve_node_icon(cat, {"tech": tech, "label": tech}) == tech
 
 
+def _bands_spec(n: int, *, layout_intent: str = "") -> dict:
+    """A synthetic spec with ``n`` independent top-level clusters (no cross-cut
+    labels), one node each — enough to exercise the layer-band placement."""
+    return {
+        "provider": "aws", "pattern": "microservices", "layout_intent": layout_intent,
+        "clusters": [{"id": f"c{i}", "label": f"Domain {i}", "tier": "app",
+                      "parent": "", "accent": None, "number": i + 1} for i in range(n)],
+        "nodes": [{"id": f"n{i}", "label": f"Node {i}", "tech": "AWS Lambda",
+                   "cluster": f"c{i}", "type": "service"} for i in range(n)],
+        "edges": [],
+    }
+
+
+def test_topology_stacks_single_column_below_grid_threshold():
+    """Default (few bands, no explicit grid intent): one vertical column, unchanged."""
+    from prettygraph.native.topology import build_tree
+    d, _ = build_tree(_bands_spec(3))
+    ys = [d.R[f"c{i}"]["y"] for i in range(3)]
+    xs = [d.R[f"c{i}"]["x"] for i in range(3)]
+    assert ys[0] < ys[1] < ys[2]                 # stacked top-to-bottom
+    assert max(xs) - min(xs) < 2                 # all in the same column
+
+
+def test_topology_auto_grids_many_parallel_bands():
+    """6 parallel top-level domains (> _GRID_BAND_MIN) auto-switch to a 2-column grid."""
+    from prettygraph.native.topology import build_tree
+    d, _ = build_tree(_bands_spec(6))
+    # row 0: c0, c1 side by side (same y, different x)
+    assert abs(d.R["c0"]["y"] - d.R["c1"]["y"]) < 2
+    assert d.R["c1"]["x"] > d.R["c0"]["x"]
+    # row 1 (c2, c3) sits below row 0
+    assert d.R["c2"]["y"] > d.R["c0"]["y"]
+    assert abs(d.R["c0"]["x"] - d.R["c2"]["x"]) < 2   # same column as c0
+
+
+def test_topology_explicit_grid_intent_overrides_low_band_count():
+    """layout_intent='grid' grids even a small band count (below the auto threshold)."""
+    from prettygraph.native.topology import build_tree
+    d, _ = build_tree(_bands_spec(3, layout_intent="grid"))
+    assert abs(d.R["c0"]["y"] - d.R["c1"]["y"]) < 2
+    assert d.R["c1"]["x"] > d.R["c0"]["x"]
+    assert d.R["c2"]["y"] > d.R["c0"]["y"]
+
+
 def test_topology_non_aws_falls_back_without_aws_group_leak():
     from prettygraph.native.topology import build_tree
     spec = {
