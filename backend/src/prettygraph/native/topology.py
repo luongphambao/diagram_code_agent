@@ -318,9 +318,15 @@ def build_tree(spec: dict, flat: bool = False):
             return card(n["id"], None, title, sub, accent=accent,
                         min_w=mn, max_w=mx, image_data_uri=img)
         name = _resolve_node_icon(cat, n, provider)
-        if provider == "aws" and name and "mxgraph.aws4" in ((_get_icon(cat, name) or {}).get("style") or ""):
-            # AWS convention: native resourceIcon with the label below.
-            return icon(n["id"], name, _node_label(n))
+        label = _node_label(n)
+        longest_line = max((len(ln) for ln in label.split("\n")), default=0)
+        if (provider == "aws" and name
+                and "mxgraph.aws4" in ((_get_icon(cat, name) or {}).get("style") or "")
+                and longest_line <= _ICON_LABEL_MAX):
+            # AWS convention: native resourceIcon with the label below (short
+            # labels only — see _ICON_LABEL_MAX; a longer label falls through
+            # to the card() branch below, which wraps safely).
+            return icon(n["id"], name, label)
         title, sub = _card_texts(n)
         mn, mx = _SIZE_CLASSES.get(size_class or "medium", _SIZE_CLASSES["medium"])
         if name or sub:
