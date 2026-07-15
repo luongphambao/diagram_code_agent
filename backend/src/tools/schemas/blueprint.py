@@ -73,7 +73,15 @@ class Blueprint(CoercingModel):
     """A structured architecture blueprint."""
     audience: str = Field("client", description="client|engineer; default client for customer-facing diagrams")
     detail_level: str = Field("architecture", description="architecture|engineering|code")
-    layout_intent: str = Field("left_to_right_pipeline", description="e.g. left_to_right_pipeline or top_down_stack")
+    layout_intent: str = Field(
+        "left_to_right_pipeline",
+        description=(
+            "e.g. left_to_right_pipeline or top_down_stack. Use 'grid' when the "
+            "architecture has many (5+) parallel top-level domains with no single "
+            "sequential flow — arranges layer bands into a 2-column grid instead of "
+            "one long vertical stack (auto-applied above ~5 bands even without this)."
+        ),
+    )
     presentation_style: Literal["slide", "diagram"] = Field(
         "slide",
         description="slide (default): title band + legend; diagram: body-only, use ONLY when user asks for plain/raw diagram",
