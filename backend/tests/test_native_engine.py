@@ -245,6 +245,25 @@ def test_native_slide_framing(tmp_path):
     assert vd.validate_file(str(out))["error_count"] == 0, vd.validate_file(str(out))["errors"]
 
 
+def test_transform_drawio_body_scales_font_size_with_geometry():
+    """A dense diagram gets scaled down to fit the slide panel (compose_native_slide);
+    fontSize must shrink in lockstep with geometry or text overflows its (now smaller)
+    box and collides with neighboring cells — the bug behind the CIMB sample's
+    illegible overlapping text."""
+    from prettygraph.slide import _transform_drawio_body
+    xml = (
+        '<mxfile><diagram><mxGraphModel><root>'
+        '<mxCell id="0"/><mxCell id="1" parent="0"/>'
+        '<mxCell id="a" value="Node" style="fontSize=13;fontStyle=1;" vertex="1" parent="1">'
+        '<mxGeometry x="10" y="10" width="200" height="50"/></mxCell>'
+        '</root></mxGraphModel></diagram></mxfile>'
+    )
+    out = _transform_drawio_body(xml, x=0, y=0, scale=0.5)
+    assert "fontSize=13" not in out
+    assert "fontSize=7" in out   # round(13 * 0.5) == 6.5 -> 7, floored at 7 anyway
+    assert 'width="100"' in out  # geometry still scales as before
+
+
 def test_native_cornericon_logo_for_nonaws():
     """A non-AWS container gets a swappable corner logo (not an AWS group stencil)."""
     from prettygraph.native.topology import build_drawio_from_spec
