@@ -5,6 +5,7 @@ Pure geometry + catalog stencils — no Graphviz needed, fully deterministic.
 
 from __future__ import annotations
 
+import re
 import tempfile
 from pathlib import Path
 
