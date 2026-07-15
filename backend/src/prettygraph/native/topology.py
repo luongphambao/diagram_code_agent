@@ -44,6 +44,13 @@ _LAYER_LANE_GAP = 46
 # layout_intent="grid" for a diagram whose domains are parallel, not sequential.
 _GRID_BAND_MIN = 5
 _ICON_SCORE_MIN = 50  # top-hit score to accept a stencil for a node (else a plain card)
+# The bare "AWS icon + label below" convention doesn't wrap its label (no
+# whiteSpace=wrap in the catalog style, see drawio_catalog.style_for_icon) and
+# layout_engine._m_icon only reserves up to 200px of spacing for it — a longer
+# single line renders past that reserved gap and overlaps the neighboring node.
+# Past this length (per line, after any \n split), fall back to card() instead,
+# whose wrapping/sizing is already correct.
+_ICON_LABEL_MAX = 24
 # Vendor-pack (gcp_*/azure_*) hits score lower than they deserve: their names
 # embed the provider prefix, which the query never contains. Accept them at a
 # lower score — but only when every significant query token appears in the name.
