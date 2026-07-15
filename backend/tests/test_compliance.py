@@ -16,7 +16,7 @@ from compliance import (
     project_into_csm,
     set_active_pack,
 )
-from csm import Component, Evidence, Risk, SolutionModel, WorkItem
+from memory.stores.csm import Component, Evidence, Risk, SolutionModel, WorkItem
 
 
 def _model_with_auth_work() -> SolutionModel:

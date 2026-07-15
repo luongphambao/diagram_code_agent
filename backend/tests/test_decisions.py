@@ -7,8 +7,8 @@ confirmed assumptions, evidence request) with resolvable `accepts` trace links.
 
 import json
 
-from csm import Assumption, SolutionModel
-from decisions import (
+from memory.stores.csm import Assumption, SolutionModel
+from memory.stores.decisions import (
     DecisionRecord,
     append_decision,
     new_decision_record,
@@ -115,7 +115,7 @@ def test_build_solution_model_projects_decision_log(tmp_path):
     """End-to-end: a persisted decision shows up in the rebuilt CSM (+ bumps revision)."""
     import json as _json
 
-    from csm_adapter import build_solution_model
+    from memory.stores.csm_adapter import build_solution_model
 
     # Minimal artifacts so from_artifacts has something to project.
     (tmp_path / "diagram_brief.json").write_text(

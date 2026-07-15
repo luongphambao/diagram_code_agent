@@ -58,7 +58,7 @@
     "scores": {
       "finding_recall": 1.0,
       "repair_contract_ok": 1.0,
-      "n_findings": 2,
+      "n_findings": 4,
       "dimensions": [
         "diagram_style"
       ]

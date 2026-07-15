@@ -17,7 +17,7 @@ sys.path.insert(0, str(_BACKEND / "src"))
 sys.path.insert(0, str(_BACKEND))
 
 from compliance import apply_pack, compliance_findings  # noqa: E402
-from csm import Component, Evidence, Risk, SolutionModel, WorkItem  # noqa: E402
+from memory.stores.csm import Component, Evidence, Risk, SolutionModel, WorkItem  # noqa: E402
 from evals._core import (  # noqa: E402
     compare_to_baseline,
     load_cases,

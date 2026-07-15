@@ -4,8 +4,8 @@ Covers diff_entities (add/remove/change keyed by id), diff_trace_links (by tripl
 and diff_solution_models summary counts incl. the no-change (idempotent) case.
 """
 
-from csm import Requirement, SolutionModel, TraceLink, WorkItem
-from csm_diff import diff_entities, diff_solution_models, diff_trace_links
+from memory.stores.csm import Requirement, SolutionModel, TraceLink, WorkItem
+from memory.stores.csm_diff import diff_entities, diff_solution_models, diff_trace_links
 
 
 def _req(i, statement, status="pending"):

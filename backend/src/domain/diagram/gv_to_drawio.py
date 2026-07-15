@@ -19,7 +19,7 @@ import json
 import sys
 from pathlib import Path
 
-from subprocess_utils import run_graphviz
+from runtime.subprocess_utils import run_graphviz
 
 
 def _b64_image(path: str) -> str | None:

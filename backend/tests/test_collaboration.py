@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from adr_export import render_adr_pack, write_adr_pack
-from comments import (
+from domain.reporting.adr_export import render_adr_pack, write_adr_pack
+from memory.stores.comments import (
     append_comment,
     comments_for,
     new_comment_record,
@@ -13,8 +13,8 @@ from comments import (
     read_comments,
     resolve_comment,
 )
-from csm import Decision, DecisionOption, SolutionModel
-from decisions import DecisionRecord
+from memory.stores.csm import Decision, DecisionOption, SolutionModel
+from memory.stores.decisions import DecisionRecord
 from tools import can_approve
 
 
@@ -87,7 +87,7 @@ def test_adr_pack_renders_decisions(tmp_path: Path):
 
 def test_adr_pack_includes_approval_timeline(tmp_path: Path):
     _seed_model(tmp_path)
-    from decisions import append_decision, new_decision_record
+    from memory.stores.decisions import append_decision, new_decision_record
     rec = new_decision_record("propose_blueprint", "accept_risk", seq=1, approver="a@b.com",
                               approver_role="architect", timestamp="2026-06-30T10:00:00Z",
                               revision=2, comment="accepted single-region risk")

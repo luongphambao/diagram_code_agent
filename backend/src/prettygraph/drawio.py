@@ -8,7 +8,7 @@ import json
 import re
 from pathlib import Path
 
-from subprocess_utils import run_graphviz
+from runtime.subprocess_utils import run_graphviz
 
 from .constants import EDGE_COLOR, EDGE_FONTCOLOR
 
@@ -20,7 +20,7 @@ try:
     )
 except (ImportError, ValueError):
     try:
-        from drawio_catalog import (  # type: ignore[no-redef]
+        from domain.diagram.drawio_catalog import (  # type: ignore[no-redef]
             load_catalog as _load_catalog,
             style_for_icon as _style_for_icon,
             style_for_group as _style_for_group,

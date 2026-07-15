@@ -6,7 +6,7 @@ import contextvars
 import json
 
 import backends
-from wbs_tools import (
+from domain.wbs.wbs_tools import (
     WBS_PLANNER_TOOLS,
     add_wbs_items,
     draft_wbs_skeleton,

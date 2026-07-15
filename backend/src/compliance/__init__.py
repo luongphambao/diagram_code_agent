@@ -22,7 +22,7 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
-from csm import Control, SolutionModel, TraceLink, mint_id
+from memory.stores.csm import Control, SolutionModel, TraceLink, mint_id
 
 PACKS_DIR = Path(__file__).parent / "packs"
 COMPLIANCE_PACK_MARKER = "compliance_pack.json"
@@ -39,7 +39,7 @@ def list_packs() -> list[str]:
 
 def load_pack(name: str) -> Optional[dict[str, Any]]:
     """Read a pack definition by name; None if it does not exist or is malformed."""
-    from safe_path import safe_filename
+    from runtime.safe_path import safe_filename
     path = PACKS_DIR / f"{safe_filename(name)}.json"
     if not path.suffix == ".json":
         return None
@@ -200,7 +200,7 @@ def compliance_findings(model: SolutionModel) -> list:
     * No implementation AND no evidence → high / human_decision (missing control).
     * Implemented but no evidence       → medium / request_evidence (unproven control).
     """
-    from solution_validator import SolutionFinding
+    from domain.validation.solution_validator import SolutionFinding
 
     findings: list = []
     for c in model.controls:

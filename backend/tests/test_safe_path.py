@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from safe_path import safe_filename, safe_workspace_path
+from runtime.safe_path import safe_filename, safe_workspace_path
 
 
 # ---------------------------------------------------------------------------

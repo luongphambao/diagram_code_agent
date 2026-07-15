@@ -18,7 +18,7 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
-from solution_validator import _as_list, _read_json, _soft_match
+from domain.validation.solution_validator import _as_list, _read_json, _soft_match
 
 
 def _requirements(brief: dict[str, Any]) -> list[dict[str, str]]:
@@ -125,7 +125,7 @@ def write_trace_links(workspace: Optional[Path] = None) -> dict[str, Any]:
     workspace = Path(workspace)
 
     try:
-        from csm_adapter import build_solution_model
+        from memory.stores.csm_adapter import build_solution_model
         graph = _graph_from_model(build_solution_model(workspace))
     except Exception:
         graph = build_trace_links(

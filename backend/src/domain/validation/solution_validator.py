@@ -548,7 +548,7 @@ def validate_solution(
     # Build the CSM so semantic findings carry stable ids. Function-local import keeps
     # this module importable standalone and avoids the cycle (csm_adapter imports us).
     try:
-        from csm_adapter import build_solution_model
+        from memory.stores.csm_adapter import build_solution_model
         model = build_solution_model(workspace)
     except Exception:
         model = None

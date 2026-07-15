@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from csm import SolutionModel, WorkItem
-from delivery_export import (
+from memory.stores.csm import SolutionModel, WorkItem
+from domain.reporting.delivery_export import (
     DELIVERY_PREVIEW_NAME,
     build_payload,
     plan_sync,

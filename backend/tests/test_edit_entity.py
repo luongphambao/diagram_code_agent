@@ -9,8 +9,8 @@ import contextvars
 import json
 
 import backends
-from csm import Decision, Requirement, SolutionModel
-from csm_adapter import SOLUTION_MODEL_NAME, SOLUTION_MODEL_PREV_NAME
+from memory.stores.csm import Decision, Requirement, SolutionModel
+from memory.stores.csm_adapter import SOLUTION_MODEL_NAME, SOLUTION_MODEL_PREV_NAME
 from tools import edit_entity
 
 

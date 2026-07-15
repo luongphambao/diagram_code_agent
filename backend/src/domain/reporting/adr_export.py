@@ -16,7 +16,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from csm import Decision, SolutionModel
+from memory.stores.csm import Decision, SolutionModel
 
 ADR_PACK_NAME = "adr_pack.md"
 
@@ -57,7 +57,7 @@ def _render_decision(d: Decision, model: SolutionModel) -> list[str]:
 
 def render_adr_pack(workspace: Path) -> tuple[str, int]:
     """Render the ADR pack Markdown; returns (markdown, n_decisions_rendered)."""
-    from decisions import read_decisions
+    from memory.stores.decisions import read_decisions
 
     model = _read_model(workspace)
     decisions = model.decisions if model else []

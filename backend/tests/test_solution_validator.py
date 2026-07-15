@@ -2,14 +2,14 @@
 
 import json
 
-from solution_validator import (
+from domain.validation.solution_validator import (
     evaluate_solution,
     validate_solution,
     format_validation,
     coverage_ratio,
     is_blocking,
 )
-from traceability import build_trace_links, write_trace_links
+from domain.reporting.traceability import build_trace_links, write_trace_links
 
 
 # --- representative broken workspace ----------------------------------------
@@ -132,7 +132,7 @@ def test_write_trace_links_projects_csm(tmp_path):
 
 def test_write_trace_links_fallback(tmp_path, monkeypatch):
     """If the CSM can't be built, the legacy artifact path still emits the file."""
-    import csm_adapter
+    import memory.stores.csm_adapter as csm_adapter
 
     def _boom(*_a, **_k):
         raise RuntimeError("CSM unavailable")

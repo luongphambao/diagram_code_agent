@@ -7,7 +7,7 @@ import math
 import re
 from pathlib import Path
 
-from subprocess_utils import run_graphviz
+from runtime.subprocess_utils import run_graphviz
 
 from .graph_builder import _est_text_w
 

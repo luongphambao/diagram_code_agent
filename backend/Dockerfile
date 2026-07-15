@@ -23,6 +23,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libjpeg62-turbo zlib1g \
     && rm -rf /var/lib/apt/lists/*
 
+# draw.io desktop CLI — renders the NATIVE layout engine's .drawio → PNG so the
+# visual critic can review native diagrams (the Graphviz path already emits PNG).
+# Headless Electron needs xvfb + X/GTK libs; _render_drawio_png wraps it in
+# `xvfb-run`. OPTIONAL: the download is non-fatal — if it fails (e.g. GitHub
+# release blocked at build time), _render_drawio_png automatically falls back to
+# a Playwright/Chromium-based renderer (viewer.diagrams.net, already installed
+# below for PDF export) — only if BOTH are unavailable does the native path
+# degrade to `.drawio` + validator lint with no PNG.
+ARG DRAWIO_VERSION=30.2.6
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        xvfb wget libnotify4 libnss3 libxss1 libasound2 libgbm1 libgtk-3-0 xdg-utils \
+    && ( wget -q -O /tmp/drawio.deb \
+           "https://github.com/jgraph/drawio-desktop/releases/download/v${DRAWIO_VERSION}/drawio-amd64-${DRAWIO_VERSION}.deb" \
+         && apt-get install -y --no-install-recommends /tmp/drawio.deb \
+         || echo "WARN: draw.io desktop ${DRAWIO_VERSION} install failed — native diagrams export .drawio + validator lint only (no PNG preview)." ) \
+    && rm -f /tmp/drawio.deb && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy the backend package and the icon pack, then install editable so the

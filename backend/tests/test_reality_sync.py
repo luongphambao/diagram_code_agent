@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from csm import Component, SolutionModel
-from reality_sync import (
+from memory.stores.csm import Component, SolutionModel
+from domain.reporting.reality_sync import (
     build_current_state_model,
     drift,
     ingest_openapi,

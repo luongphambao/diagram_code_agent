@@ -9,8 +9,8 @@ from typing import Optional
 from langchain_core.tools import tool
 
 from backends import current_workspace
-from csm_adapter import build_solution_model
-from quality_dashboard import (
+from memory.stores.csm_adapter import build_solution_model
+from domain.reporting.quality_dashboard import (
     SNAPSHOT_NAME as QUALITY_SNAPSHOT_NAME,
     build_quality_snapshot,
     format_snapshot,
@@ -56,7 +56,7 @@ def record_evidence(
         supersedes_evidence_id: An older EVD-### this record refreshes/replaces.
     """
     from datetime import datetime, timezone
-    from evidence import append_evidence, new_evidence_record, next_seq
+    from memory.stores.evidence import append_evidence, new_evidence_record, next_seq
 
     valid_types = {"web", "documentation", "vendor", "benchmark", "standard", "other"}
     stype = (source_type or "web").strip().lower()
@@ -93,8 +93,8 @@ def _settle_finding(finding_id: str, status: str, note: str, *, action: str) -> 
     """Set a finding's terminal status + record the human DecisionRecord (docx §4.3)."""
     from datetime import datetime, timezone
 
-    from decisions import append_decision, new_decision_record, next_seq
-    from finding_store import set_status
+    from memory.stores.decisions import append_decision, new_decision_record, next_seq
+    from memory.stores.finding_store import set_status
 
     fid = (finding_id or "").strip()
     if not fid:
@@ -208,7 +208,7 @@ def add_comment(body: str, anchor_entity_id: str = "", role: str = "reviewer") -
         role: The commenter's role (architect / pm / reviewer / client).
     """
     from datetime import datetime, timezone
-    from comments import append_comment, new_comment_record, next_seq
+    from memory.stores.comments import append_comment, new_comment_record, next_seq
 
     rec = new_comment_record(
         body=body,
@@ -232,7 +232,7 @@ def resolve_comment(comment_id: str) -> str:
         comment_id: The CMT-xxx id of the comment to close.
     """
     from datetime import datetime, timezone
-    from comments import resolve_comment as _resolve
+    from memory.stores.comments import resolve_comment as _resolve
 
     rec = _resolve(comment_id, resolved_by="agent",
                    resolved_at=datetime.now(timezone.utc).isoformat(), workspace=current_workspace())
@@ -266,7 +266,7 @@ def export_to_delivery(system: str, dry_run: bool = True) -> str:
         return f"Could not build solution model: {exc}"
     if not model.work_items:
         return "No WBS work items to export — run the WBS pipeline first."
-    from delivery_export import sync_work_items
+    from domain.reporting.delivery_export import sync_work_items
     res = sync_work_items(model, sys_l, dry_run=dry_run, workspace=current_workspace())  # type: ignore[arg-type]
     _bump_tool_summary("export_to_delivery")
     c = res["counts"]
@@ -297,7 +297,7 @@ def reality_sync(source_path: str) -> str:
         source_path: Path to the repo/infra folder to ingest.
     """
     from pathlib import Path as _Path
-    from reality_sync import format_drift, run_reality_sync
+    from domain.reporting.reality_sync import format_drift, run_reality_sync
 
     src = _Path(source_path)
     if not src.exists():
@@ -319,7 +319,7 @@ def export_adr_pack() -> str:
     auditable Architecture Decision Record set. Call near finalization.
     """
     try:
-        from adr_export import write_adr_pack
+        from domain.reporting.adr_export import write_adr_pack
         path, n = write_adr_pack(current_workspace())
     except Exception as exc:  # noqa: BLE001
         return f"ADR export failed: {exc}"
@@ -363,8 +363,8 @@ def edit_entity(entity_id: str, field: str, new_value: str) -> str:
         new_value: New string value for the field.
     """
     import json as _json
-    from csm import SolutionModel
-    from csm_adapter import SOLUTION_MODEL_NAME, SOLUTION_MODEL_PREV_NAME
+    from memory.stores.csm import SolutionModel
+    from memory.stores.csm_adapter import SOLUTION_MODEL_NAME, SOLUTION_MODEL_PREV_NAME
 
     if field not in _PATCHABLE_FIELDS:
         return (

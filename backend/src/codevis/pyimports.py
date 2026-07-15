@@ -18,7 +18,7 @@ import json
 import os
 import re
 
-from subprocess_utils import run_tred
+from runtime.subprocess_utils import run_tred
 import sys
 
 

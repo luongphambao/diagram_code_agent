@@ -8,7 +8,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-import validate_drawio as vd
+import domain.validation.validate_drawio as vd
 from prettygraph.native import Diagram, group, frame, grid, icon, box, render_tree
 from prettygraph.native.layout_engine import subnet
 
@@ -282,3 +282,101 @@ def test_topology_non_aws_falls_back_without_aws_group_leak():
     xml = d.mxfile("t")
     # provider != aws -> the "VPC Network" label must NOT become an aws4 group
     assert "grIcon=mxgraph.aws4." not in xml
+
+
+# --------------------------------------------------------------------------- #
+# GCP production look (layered bands + card nodes + gcp.json image icons)
+# --------------------------------------------------------------------------- #
+
+_GCP_SPEC = {
+    "provider": "gcp", "pattern": "architecture", "layout_intent": "layered",
+    "diagram_title": "IoT Platform",
+    "clusters": [
+        {"id": "mgmt", "label": "Management & Security", "tier": "management"},
+        {"id": "app", "label": "Dashboard & Application", "tier": "application", "number": 1},
+        {"id": "data", "label": "Data & Storage", "tier": "data", "number": 2},
+        {"id": "msg", "label": "Message Brokering", "tier": "messaging", "number": 3},
+    ],
+    "nodes": [
+        {"id": "sm", "label": "Secret Manager", "tech": "Secret Manager", "cluster": "mgmt"},
+        {"id": "cb", "label": "Cloud Build", "tech": "Cloud Build", "cluster": "mgmt"},
+        {"id": "api", "label": "API", "tech": "Cloud Run", "cluster": "app"},
+        {"id": "fs", "label": "State", "tech": "Cloud Firestore", "cluster": "data"},
+        {"id": "bq", "label": "Warehouse", "tech": "BigQuery", "cluster": "data"},
+        {"id": "ps", "label": "Telemetry", "tech": "Pub/Sub", "cluster": "msg"},
+        {"id": "tasks", "label": "Dispatch", "tech": "Cloud Tasks", "cluster": "msg"},
+    ],
+    "edges": [
+        {"from": "ps", "to": "fs", "flow": "data"},
+        {"from": "api", "to": "fs", "flow": "serving"},
+        {"from": "api", "to": "tasks", "flow": "control"},
+        {"from": "sm", "to": "api", "flow": "security", "style": "dashed"},
+    ],
+}
+
+
+def test_topology_gcp_layered_production_look():
+    """GCP spec -> tinted layer bands, gcp.json image icons, card nodes, legend."""
+    from prettygraph.native.topology import build_tree
+    d, _ = build_tree(_GCP_SPEC)
+    xml = d.mxfile("t")
+    assert xml.count("image=data:image/") >= 6        # gcp_* image tiles resolved
+    assert "resIcon=mxgraph.aws4." not in xml         # no AWS-branded icon leak
+    # top-level layer bands carry a pale tint (never all-white frames)
+    assert "light-dark(#eaf3ec" in xml or "light-dark(#fff3e9" in xml
+    # cross-cutting sidebar gets the neutral grey band tint
+    assert "light-dark(#eef1f5,#1b2430)" in xml
+    # bold title + grey sub-label card composition (HTML label)
+    assert "&lt;b&gt;" in xml
+    # 4 distinct flow colours -> a legend block in the body
+    assert 'value="LEGEND"' in xml
+
+
+def test_topology_gcp_prefers_vendor_pack_over_generic():
+    from prettygraph.native.topology import _resolve_node_icon, _load_catalog
+    cat = _load_catalog()
+    for tech, expected in (
+        ("Cloud Run", "gcp_cloud_run"),
+        ("BigQuery", "gcp_bigquery"),
+        ("Cloud Firestore", "gcp_firestore"),
+        ("Cloud Tasks", "gcp_cloud_tasks"),
+    ):
+        got = _resolve_node_icon(cat, {"tech": tech, "label": tech}, provider="gcp")
+        assert got == expected, f"{tech}: expected {expected}, got {got}"
+
+
+def test_topology_gcp_polish_gate_clean(tmp_path):
+    """The native GCP output must pass its own production-polish gate."""
+    from prettygraph.native.topology import build_drawio_from_spec
+    from domain.validation import validate_drawio as vd
+    xml, stats = build_drawio_from_spec(_GCP_SPEC, "t")
+    p = tmp_path / "gcp.drawio"
+    p.write_text(xml, encoding="utf-8")
+    report = vd.validate_file(str(p))
+    assert report["errors"] == []
+    assert report.get("polish") == [], f"polish gate fired: {report.get('polish')}"
+    assert stats["image_icons"] >= 6
+
+
+def test_polish_audit_fires_on_untinted_frames_and_missing_legend():
+    from domain.validation.validate_drawio import audit_production_polish
+    frames = "".join(
+        f'<mxCell id="f{i}" value="Layer {i}" vertex="1" parent="1" '
+        f'style="rounded=0;fillColor=#FFFFFF;strokeColor=#999999;">'
+        f'<mxGeometry x="{40 + i * 10}" y="{100 * i}" width="600" height="90" as="geometry"/></mxCell>'
+        f'<mxCell id="n{i}" value="X" vertex="1" parent="f{i}" '
+        f'style="rounded=0;fillColor=#FFFFFF;strokeColor=#999999;fontSize=11;">'
+        f'<mxGeometry x="10" y="20" width="120" height="50" as="geometry"/></mxCell>'
+        for i in range(3))
+    edges = (
+        '<mxCell id="e1" edge="1" parent="1" source="n0" target="n1" '
+        'style="strokeColor=#2563EB;"><mxGeometry relative="1" as="geometry"/></mxCell>'
+        '<mxCell id="e2" edge="1" parent="1" source="n1" target="n2" '
+        'style="strokeColor=#E11D48;dashed=1;"><mxGeometry relative="1" as="geometry"/></mxCell>')
+    xml = ('<mxGraphModel pageWidth="700" pageHeight="420"><root>'
+           '<mxCell id="0"/><mxCell id="1" parent="0"/>'
+           + frames + edges + "</root></mxGraphModel>")
+    findings = audit_production_polish(xml)
+    joined = " ".join(findings)
+    assert "untinted" in joined
+    assert "NO legend" in joined

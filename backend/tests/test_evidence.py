@@ -9,8 +9,8 @@ build_solution_model.
 
 import json
 
-from csm import Component, Decision, SolutionModel
-from evidence import (
+from memory.stores.csm import Component, Decision, SolutionModel
+from memory.stores.evidence import (
     EvidenceRecord,
     append_evidence,
     new_evidence_record,
@@ -105,7 +105,7 @@ def test_supersedes_is_preserved_without_deleting_old(tmp_path):
 
 def test_build_solution_model_projects_evidence_log(tmp_path):
     """End-to-end: a persisted evidence record shows up in the rebuilt CSM (+ bumps revision)."""
-    from csm_adapter import build_solution_model
+    from memory.stores.csm_adapter import build_solution_model
 
     (tmp_path / "diagram_brief.json").write_text(
         json.dumps({"functional_requirements": ["API Gateway routes requests"]}), encoding="utf-8")

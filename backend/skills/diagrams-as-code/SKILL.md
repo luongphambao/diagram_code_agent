@@ -43,14 +43,20 @@ with Diagram("Title", filename="/workspace/out", outformat=["png", "dot"],
   `reference/nodes.md` ONLY. A component shown as a bare logo-less box is a bug.
 - Instantiate with a label, store in a variable: `web = ECS("web1")`.
 - For a product with NO built-in node (e.g. Label Studio, Weights & Biases,
-  Jetson), call the `fetch_logo("<Product Name>")` tool — it searches the icon
-  pack first, then validates a brand logo, and returns the exact file path.
-  Use that path in `Custom("<Product>", "<PATH>")`. On `NOT_FOUND`, fall back
-  to a generic built-in node.
-- **Non-AWS cloud service with no built-in class** (common on GCP/OCI/IBM): call
-  `search_icons("<service>", provider="<provider>")` to get the exact icon path,
-  then use `Custom("Service Name", "<PATH>")`. Never fall back to an AWS node or
-  a generic box for a named cloud service.
+  Jetson), include it in the icon plan first. Call `fetch_logo("<Product Name>")`
+  only if `resolve_icons` returns `NOT_FOUND` for that planned product and
+  fallback `search_icons` also returns no icon; it validates a brand logo and
+  returns the exact file path. Use that path in `Custom("<Product>", "<PATH>")`.
+  On `NOT_FOUND`, fall back to a generic built-in node.
+- **Non-AWS cloud services with no built-in class** (common on GCP/OCI/IBM): make
+  an exact icon plan with a short `icon_keyword` in the icon-pack filename style
+  (`Cloud Run` -> `run`, `Cloud SQL` -> `sql`, `Cloud Pub/Sub` -> `pubsub`,
+  `Azure Container Apps` -> `container apps`). Then call
+  `resolve_icons(icons=[...])` once to lock and resolve all planned missing
+  services. Use `search_icons(icon_keyword, provider="<provider>")` only
+  for misses. Never search the same icon/query/provider more than 3 times; total
+  fallback search budget is `unique planned icons * 3`. Never fall back to an AWS
+  node or a generic box for a named cloud service.
 - MLflow → built-in `from diagrams.onprem.mlops import Mlflow` (do NOT fetch it).
 - NEVER guess paths like `/icons/generic/file.png` — they usually do NOT exist
   and render a blank box. For generic concepts (dataset, file, user, database,

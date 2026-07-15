@@ -25,7 +25,7 @@ from typing import Iterable, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from csm import SolutionModel, WorkItem
+from memory.stores.csm import SolutionModel, WorkItem
 
 DELIVERY_SYNC_LOG_NAME = "delivery_sync_log.json"
 DELIVERY_PREVIEW_NAME = "delivery_export_preview.json"

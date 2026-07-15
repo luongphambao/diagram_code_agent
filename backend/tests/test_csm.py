@@ -7,8 +7,8 @@ bumping.
 
 import json
 
-import csm
-from csm_adapter import build_solution_model, from_artifacts
+import memory.stores.csm as csm
+from memory.stores.csm_adapter import build_solution_model, from_artifacts
 
 # --- representative approved artifacts ---------------------------------------
 

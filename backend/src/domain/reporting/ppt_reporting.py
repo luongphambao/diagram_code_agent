@@ -1116,7 +1116,7 @@ def _load_current_csm(workspace: Path):
     entity count rather than blindly taking .json. None if neither loads.
     """
     try:
-        from csm import SolutionModel
+        from memory.stores.csm import SolutionModel
     except ImportError:
         return None
     best, best_n = None, -1

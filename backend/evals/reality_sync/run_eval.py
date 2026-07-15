@@ -16,8 +16,8 @@ _BACKEND = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_BACKEND / "src"))
 sys.path.insert(0, str(_BACKEND))
 
-from csm import Component, SolutionModel, mint_id  # noqa: E402
-from reality_sync import drift  # noqa: E402
+from memory.stores.csm import Component, SolutionModel, mint_id  # noqa: E402
+from domain.reporting.reality_sync import drift  # noqa: E402
 from evals._core import (  # noqa: E402
     compare_to_baseline,
     load_cases,

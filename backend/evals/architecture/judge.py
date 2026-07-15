@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from solution_validator import (
+from domain.validation.solution_validator import (
     AUTO_REPAIR_STRATEGIES,
     is_blocking,
     requires_human,

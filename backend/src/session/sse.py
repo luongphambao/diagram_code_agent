@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from reporting import DEFAULT_REPORT_SECTIONS
+from domain.reporting.reporting import DEFAULT_REPORT_SECTIONS
 
 from .labels import _display_subagent
 

@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from xml.sax.saxutils import escape as xml_escape
 
-from subprocess_utils import run_graphviz
+from runtime.subprocess_utils import run_graphviz
 
 from .constants import (
     CLUSTER_KINDS, EDGE_COLOR, EDGE_FONTCOLOR, FLOW_COLORS, FLOW_GRID_MIN,
@@ -25,7 +25,7 @@ try:
     )
 except (ImportError, ValueError):
     try:
-        from drawio_catalog import (  # type: ignore[no-redef]
+        from domain.diagram.drawio_catalog import (  # type: ignore[no-redef]
             load_catalog as _load_catalog,
             get_icon as _catalog_get_icon,
             search_icon as _catalog_search,

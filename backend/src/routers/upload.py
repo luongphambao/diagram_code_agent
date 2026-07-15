@@ -9,7 +9,7 @@ from fastapi import APIRouter, File, UploadFile
 
 from backends import AGENT_SPACE
 from document_parsers import parse_file
-from safe_path import safe_filename
+from runtime.safe_path import safe_filename
 
 router = APIRouter(tags=["upload"])
 

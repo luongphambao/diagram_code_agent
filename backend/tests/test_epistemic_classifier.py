@@ -2,8 +2,8 @@
 
 import pytest
 
-from csm import Assumption, SolutionModel
-from csm_adapter import _classify_assumption_tier, from_artifacts
+from memory.stores.csm import Assumption, SolutionModel
+from memory.stores.csm_adapter import _classify_assumption_tier, from_artifacts
 
 
 # --- unit tests for the classifier -------------------------------------------

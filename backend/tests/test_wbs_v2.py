@@ -6,8 +6,8 @@ assign_sprints, CPM with lag (FS), SS/FF relationship types, DoD fields on LeafI
 DependencyEdge defaults.
 """
 
-from wbs_effort import critical_path, pert_percentile, assign_sprints
-from wbs_tools import LeafIn
+from domain.wbs.wbs_effort import critical_path, pert_percentile, assign_sprints
+from domain.wbs.wbs_tools import LeafIn
 
 
 def _item(ref, dur, preds=None, pert=0.0):
@@ -211,7 +211,7 @@ def test_leaf_in_has_no_rich_dependency_field():
 
 # ─── level_resources (§4.6 Resource leveling) ────────────────────────────────
 
-from wbs_effort import level_resources, MANDAYS_PER_WEEK  # noqa: E402
+from domain.wbs.wbs_effort import level_resources, MANDAYS_PER_WEEK  # noqa: E402
 
 
 def _sprint_item(sprint, be=0, fe_mobile=0, ba=0, qc=0, pm=0):

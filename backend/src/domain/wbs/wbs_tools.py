@@ -28,8 +28,8 @@ from langchain_core.tools import tool
 from pydantic import BaseModel, Field, model_validator
 
 from backends import WORKSPACE, WorkspaceFile, current_workspace
-import wbs_excel
-from wbs_effort import (
+import domain.wbs.wbs_excel as wbs_excel
+from domain.wbs.wbs_effort import (
     RATIOS, Ratios, derive_leaf_effort, rollup, make_ref_code, delivery_grid,
     critical_path, MANDAYS_PER_MONTH, pert_percentile, assign_sprints, MANDAYS_PER_WEEK,
     level_resources,
@@ -849,7 +849,7 @@ def propose_wbs(
         et["total_mandays"], tl.get("months", 0)))
     summary = lines[1]
     try:
-        from reporting import record_report_step
+        from domain.reporting.reporting import record_report_step
         record_report_step(current_workspace(), "propose_wbs", summary=summary, data=et)
     except Exception:
         pass
@@ -892,14 +892,14 @@ def export_wbs_excel(
     # Persists findings to findings_log.json (stable id + waive/resolve lifecycle) and
     # drops settled ones, mirroring analysis_tools._solution_gate_note (docx §4.3, §7.1).
     try:
-        from csm_adapter import build_solution_model
-        from solution_validator import format_validation, validate_solution
-        from traceability import write_trace_links
+        from memory.stores.csm_adapter import build_solution_model
+        from domain.validation.solution_validator import format_validation, validate_solution
+        from domain.reporting.traceability import write_trace_links
         model = build_solution_model(current_workspace())   # the WBS is now in scope — refresh the CSM
         write_trace_links(current_workspace())
         findings, _ = validate_solution(current_workspace(), block=False)
         try:
-            from finding_store import active_findings, upsert_findings
+            from memory.stores.finding_store import active_findings, upsert_findings
             upsert_findings(findings, revision=model.revision)
             findings = active_findings(findings)
         except Exception:

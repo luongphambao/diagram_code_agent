@@ -21,7 +21,7 @@ import re
 from pathlib import Path
 from typing import Optional
 
-from csm import Component, SolutionModel, SourceRef, mint_id, slug
+from memory.stores.csm import Component, SolutionModel, SourceRef, mint_id, slug
 
 CURRENT_STATE_MODEL_NAME = "current_state_model.json"
 DRIFT_REPORT_NAME = "drift_report.json"

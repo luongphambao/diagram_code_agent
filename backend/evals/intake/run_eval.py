@@ -12,12 +12,12 @@ import argparse
 import sys
 from pathlib import Path
 
-# Allow `from csm_adapter import ...` (src) and `from evals... import ...` (backend root).
+# Allow `from memory.stores.csm_adapter import ...` (src) and `from evals... import ...` (backend root).
 _BACKEND = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_BACKEND / "src"))
 sys.path.insert(0, str(_BACKEND))
 
-from csm_adapter import from_artifacts  # noqa: E402
+from memory.stores.csm_adapter import from_artifacts  # noqa: E402
 from evals._core import (  # noqa: E402
     compare_to_baseline,
     load_cases,

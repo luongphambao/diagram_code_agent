@@ -23,7 +23,7 @@ import sys; sys.path.insert(0, "<workdir>")   # so `import prettygraph` works
 from prettygraph import Pretty
 
 g = Pretty("Title", subtitle="one-line context", direction="LR",
-           icons_root="<icons_root>")          # e.g. /icons
+           icons_root="<icons_root>")          # use the real path from your system prompt env note — do NOT guess "/icons"
 
 # clusters (tinted boxes). kind picks the tint — see palette below. Nest with parent=.
 g.cluster("ecs", "AWS ECS Cluster", kind="Compute")
@@ -54,7 +54,12 @@ g.grid_cluster("ecs", cols=3)      # poster planes: pack a cluster's boxes into 
 g.render("<workdir>/out")          # -> out.png  (LOOK at this)
 ```
 `Pretty.render("<workdir>/out")` writes `out.png`, `out.dot`, `out.nodes.json`.
-A bad ImportError/IMG path raises — read the traceback and fix it.
+A bad ImportError raises — read the traceback and fix it. A bad/wrong `icon=` or
+`icons_root=` path does NOT raise: `_icon_path()` silently drops any icon whose
+resolved path doesn't exist on disk, rendering a plain box with no error. Always
+use the real `icons_root` given in your system prompt's env note — never guess a
+value like `/icons` — and if a rendered node is missing its icon unexpectedly,
+suspect a wrong `icons_root` before assuming the icon wasn't found.
 
 ## Slide-style production output (the DEFAULT — flow-driven)
 Default output: single-page 16:9 landscape, white background, **no blue hero band**
@@ -71,7 +76,7 @@ g = Pretty("Document Understanding System Architecture",
            subtitle="end-to-end architecture",
            direction="LR",       # landscape — clusters arrange left to right
            flow_layout=True,     # real edges pull the layout (default)
-           icons_root=ICONS, theme="pro",
+           icons_root="<icons_root>", theme="pro",   # use the real path from your system prompt env note
            node_width=300, node_height=60, icon_size=44, title_size=16,
            sublabel_size=13, edge_label_size=13, cluster_label_size=18)
 
@@ -140,6 +145,13 @@ Slide-mode hard rules:
 - Sizes are pre-computed in `style_plan.json` — pass its `pretty_kwargs` verbatim.
 - Label fits are pre-computed in `label_fits.json` — apply every suggestion before rendering.
 - Every top-level cluster has `number=1`, `number=2`, ... and a clear label.
+- Take each zone's `number`, `accent`, and `parent` from the matching cluster in
+  `render_spec.json` when present — `accent` pins the zone color, `parent` nests
+  a sub-group inside another zone.
+- Order regions along the flow and place connected regions ADJACENT so every
+  cross-region edge stays short — a label-bearing edge that spans the canvas
+  strands its label in blank space. The layout audit reports `LOW FILL` /
+  `STRAND RISK`; treat either as a must-fix before finalizing.
 - Include `legend` whenever >2 edge colors/styles appear.
 - Still call `export_drawio()` after `render_diagram`.
 
@@ -147,9 +159,14 @@ Slide-mode hard rules:
 A dense wall-grid layout with 25-40 nodes. **Set `flow_layout=False`.**
 Read the pre-computed sizes from `style_plan.json` (poster mode).
 
-Group nodes into 4-8 numbered region planes. Pick direction by plane count:
-**5+ planes → `direction="LR"`** (tall portrait poster); **≤4 planes →
-`direction="TB"`** (planes side by side). Pack each plane into a compact grid:
+Group nodes into 4-8 numbered region planes. BEFORE writing code, call
+`declare_poster_grid(row1=[...], row2=[...])` with the planned planes (each
+`{id, label, anchor_node_id, cols}`) — it validates them and returns the exact
+`g.grid_cluster(region_id, cols=N)` call to paste per plane after your boxes.
+Do NOT call `g.poster_grid` and do NOT hand-wire spine/same_rank yourself.
+Pick direction by plane count: **5+ planes → `direction="LR"`** (tall portrait
+poster); **≤4 planes → `direction="TB"`** (planes side by side). Pack each
+plane into a compact grid:
 
 ```python
 g = Pretty(title=..., subtitle=..., direction="LR",
@@ -386,7 +403,8 @@ in each stage header, clean accent-bordered cards on lightly-tinted sections,
 crisp high-DPI raster (160), generous spacing, refined slate edges, and soft
 shadows in the editable .drawio. `theme="default"` keeps the legacy look.
 ```python
-g = Pretty(title, subtitle="one-line context", direction="LR", icons_root=ICONS,
+g = Pretty(title, subtitle="one-line context", direction="LR",
+           icons_root="<icons_root>",   # use the real path from your system prompt env note
            node_width=270, node_height=46, theme="pro")
 # number => the badge; accent => pin a color (else auto-assigned in declared order)
 g.cluster("s1", "Approved Product Sources", number=1, accent="blue")

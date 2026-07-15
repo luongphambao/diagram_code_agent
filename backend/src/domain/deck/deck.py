@@ -39,7 +39,7 @@ from typing import Any, Iterable, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from csm import Deliverable, SolutionModel, SourceRef, TraceLink, mint_id
+from memory.stores.csm import Deliverable, SolutionModel, SourceRef, TraceLink, mint_id
 
 DECK_PLAN_NAME = "deck_plan.json"
 DECK_QA_NAME = "deck_qa_result.json"

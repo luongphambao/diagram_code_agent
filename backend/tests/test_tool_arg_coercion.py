@@ -201,7 +201,7 @@ async def test_middleware_async_path():
 # ── critic lenient enum coercion (findings.py) ──────────────────────────────
 
 def test_diagram_finding_lenient_enums():
-    from findings import DiagramFinding
+    from domain.diagram.findings import DiagramFinding
     f = DiagramFinding.model_validate({
         "severity": "major",          # off-enum → medium
         "confidence": "certain",      # off-enum → medium

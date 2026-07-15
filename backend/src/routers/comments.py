@@ -16,7 +16,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from backends import resolve_workspace
-from comments import (
+from memory.stores.comments import (
     append_comment,
     new_comment_record,
     next_seq,

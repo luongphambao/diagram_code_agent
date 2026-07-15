@@ -8,8 +8,8 @@ imports from below.
 
 from __future__ import annotations
 
-from ppt_reporting import DEFAULT_PPT_SECTIONS
-from reporting import DEFAULT_REPORT_SECTIONS
+from domain.reporting.ppt_reporting import DEFAULT_PPT_SECTIONS
+from domain.reporting.reporting import DEFAULT_REPORT_SECTIONS
 
 from .normalize import _coerce_assumptions, _coerce_list, _normalize_blueprint, _normalize_tech_stack
 
@@ -299,7 +299,7 @@ def decision_record_from_payload(
     action = payload.get("action")
     if action not in HITL_V2_ACTIONS:
         return None
-    from decisions import new_decision_record
+    from memory.stores.decisions import new_decision_record
     # Carry the action-specific fields through verbatim (minus routing keys).
     body = {k: v for k, v in payload.items()
             if k not in ("action", "approved", "satisfied", "modifications", "feedback")}

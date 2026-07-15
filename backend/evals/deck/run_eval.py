@@ -16,9 +16,9 @@ _BACKEND = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_BACKEND / "src"))
 sys.path.insert(0, str(_BACKEND))
 
-from csm import Evidence  # noqa: E402
-from csm_adapter import from_artifacts  # noqa: E402
-from deck import DeckPlan, build_deck_plan, score_deck_structure, validate_deck  # noqa: E402
+from memory.stores.csm import Evidence  # noqa: E402
+from memory.stores.csm_adapter import from_artifacts  # noqa: E402
+from domain.deck.deck import DeckPlan, build_deck_plan, score_deck_structure, validate_deck  # noqa: E402
 from evals._core import (  # noqa: E402
     compare_to_baseline,
     load_cases,
@@ -27,7 +27,7 @@ from evals._core import (  # noqa: E402
     write_baseline,
     write_results,
 )
-from deck_visual_qa import audit_pptx_deterministic  # noqa: E402
+from domain.deck.deck_visual_qa import audit_pptx_deterministic  # noqa: E402
 from evals.deck.judge import (  # noqa: E402
     METRIC_KEYS,
     STRUCTURE_METRIC_KEYS,

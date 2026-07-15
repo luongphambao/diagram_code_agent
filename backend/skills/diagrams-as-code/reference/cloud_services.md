@@ -10,8 +10,9 @@ only if it is not listed. Wrong imports crash the render.
   node (or icon) into an Azure/GCP/OCI/IBM diagram.
 - **No built-in class for a service?** Use the bundled icon pack for the SAME
   provider via `Custom`: `Custom("Service", "/icons/<provider>/<category>/<name>.png")`
-  (call `search_icons("<service>", provider="<provider>")` first; never guess a
-  path). Only if the pack has nothing either, use a generic node
+  (call `resolve_icons(icons=[...])` once to lock and resolve the icon plan; use
+  `search_icons` only for misses; never guess a path).
+  Only if the pack has nothing either, use a generic node
   (`diagrams.generic.*`) or an `onprem`/`saas` logo.
 - **OCI** classes come in a colored and a `*White` variant (`VM` vs `VMWhite`).
   Use the plain (colored) name for normal light-background diagrams.
@@ -157,5 +158,7 @@ a cloud node:
 - `from diagrams.onprem.queue import Kafka`
 - `from diagrams.programming.language import Python, Go, Java` /
   `from diagrams.programming.framework import React, Django`
-- Brand logo with no built-in node → call `fetch_logo("<Product>")` tool,
-  use the returned path in `Custom("<Product>", "<PATH>")`.
+- Brand logo with no built-in node → include it in `resolve_icons`, then
+  `search_icons` for that missing item if needed. Call
+  `fetch_logo("<Product>")` only if local fallback search returns no icon; use the
+  returned path in `Custom("<Product>", "<PATH>")`.

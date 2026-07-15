@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from solution_validator import AUTO_REPAIR_STRATEGIES, requires_human
+from domain.validation.solution_validator import AUTO_REPAIR_STRATEGIES, requires_human
 
 _VALID_REPAIR = AUTO_REPAIR_STRATEGIES | {"request_evidence", "human_decision", "none"}
 

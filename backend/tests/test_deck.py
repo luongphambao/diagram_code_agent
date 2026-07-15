@@ -10,7 +10,7 @@ Plus the end-to-end fold through build_solution_model.
 
 import json
 
-from csm import (
+from memory.stores.csm import (
     Component,
     Decision,
     Evidence,
@@ -19,7 +19,7 @@ from csm import (
     SolutionModel,
     WorkItem,
 )
-from deck import (
+from domain.deck.deck import (
     DeckPlan,
     SlideSpec,
     build_deck_plan,
@@ -153,7 +153,7 @@ def test_load_missing_plan_is_none(tmp_path):
 
 def test_build_solution_model_folds_deck_plan(tmp_path):
     """End-to-end: a stored deck_plan.json shows up in the rebuilt CSM as deliverables."""
-    from csm_adapter import build_solution_model
+    from memory.stores.csm_adapter import build_solution_model
 
     (tmp_path / "diagram_brief.json").write_text(
         json.dumps({"functional_requirements": ["API Gateway routes requests"]}),
