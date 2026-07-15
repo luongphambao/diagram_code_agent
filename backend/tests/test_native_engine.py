@@ -260,7 +260,7 @@ def test_transform_drawio_body_scales_font_size_with_geometry():
     )
     out = _transform_drawio_body(xml, x=0, y=0, scale=0.5)
     assert "fontSize=13" not in out
-    assert "fontSize=7" in out   # round(13 * 0.5) == 6.5 -> 7, floored at 7 anyway
+    assert "fontSize=7" in out   # round(13 * 0.5) == 6 -> floored up to the 7 minimum
     assert 'width="100"' in out  # geometry still scales as before
 
 
