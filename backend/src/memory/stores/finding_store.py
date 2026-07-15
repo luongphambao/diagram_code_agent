@@ -27,7 +27,7 @@ from typing import Iterable, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from solution_validator import SolutionFinding
+from domain.validation.solution_validator import SolutionFinding
 
 FINDINGS_LOG_NAME = "findings_log.json"
 

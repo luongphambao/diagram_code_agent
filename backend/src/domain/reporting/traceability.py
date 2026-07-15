@@ -18,7 +18,7 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
-from solution_validator import _as_list, _read_json, _soft_match
+from domain.validation.solution_validator import _as_list, _read_json, _soft_match
 
 
 def _requirements(brief: dict[str, Any]) -> list[dict[str, str]]:

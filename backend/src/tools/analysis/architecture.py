@@ -6,9 +6,9 @@ import json
 
 from langchain_core.tools import tool
 
-from architecture_advisor import analyze_requirements
+from domain.diagram.architecture_advisor import analyze_requirements
 from backends import current_workspace
-from reporting import record_report_step
+from domain.reporting.reporting import record_report_step
 from ..constants import _ARCH_ANALYSIS_FILE
 
 

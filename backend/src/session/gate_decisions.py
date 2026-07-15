@@ -8,8 +8,8 @@ imports from below.
 
 from __future__ import annotations
 
-from ppt_reporting import DEFAULT_PPT_SECTIONS
-from reporting import DEFAULT_REPORT_SECTIONS
+from domain.reporting.ppt_reporting import DEFAULT_PPT_SECTIONS
+from domain.reporting.reporting import DEFAULT_REPORT_SECTIONS
 
 from .normalize import _coerce_assumptions, _coerce_list, _normalize_blueprint, _normalize_tech_stack
 

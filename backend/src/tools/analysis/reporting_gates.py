@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from backends import current_workspace
 from csm_adapter import build_solution_model
-from deck import (
+from domain.deck.deck import (
     DECK_QA_NAME,
     build_deck_plan,
     load_deck_plan,
@@ -16,7 +16,7 @@ from deck import (
     validate_deck,
     write_deck_plan,
 )
-from deck_visual_qa import (
+from domain.deck.deck_visual_qa import (
     VISUAL_AUDIT_NAME,
     audit_pptx_deterministic,
     format_visual_audit,
@@ -24,13 +24,13 @@ from deck_visual_qa import (
     write_visual_audit,
 )
 from langchain_core.tools import tool
-from ppt_reporting import DEFAULT_PPT_SECTIONS, PPTProposalError, generate_ppt_proposal_file
-from proposal_package import (
+from domain.reporting.ppt_reporting import DEFAULT_PPT_SECTIONS, PPTProposalError, generate_ppt_proposal_file
+from domain.reporting.proposal_package import (
     build_manifest,
     export_proposal_package as _export_proposal_package,
     format_manifest,
 )
-from reporting import (
+from domain.reporting.reporting import (
     DEFAULT_REPORT_SECTIONS,
     ReportRenderError,
     generate_report,

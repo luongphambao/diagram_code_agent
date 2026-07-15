@@ -28,8 +28,8 @@ from langchain_core.tools import tool
 from pydantic import BaseModel, Field, model_validator
 
 from backends import WORKSPACE, WorkspaceFile, current_workspace
-import wbs_excel
-from wbs_effort import (
+import domain.wbs.wbs_excel as wbs_excel
+from domain.wbs.wbs_effort import (
     RATIOS, Ratios, derive_leaf_effort, rollup, make_ref_code, delivery_grid,
     critical_path, MANDAYS_PER_MONTH, pert_percentile, assign_sprints, MANDAYS_PER_WEEK,
     level_resources,

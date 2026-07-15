@@ -10,7 +10,7 @@ from langchain_core.tools import tool
 
 from backends import current_workspace
 from csm_adapter import build_solution_model
-from quality_dashboard import (
+from domain.reporting.quality_dashboard import (
     SNAPSHOT_NAME as QUALITY_SNAPSHOT_NAME,
     build_quality_snapshot,
     format_snapshot,

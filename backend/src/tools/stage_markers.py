@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 
 from backends import OUTPUTS_DIR, current_workspace
-from reporting import REPORT_EVIDENCE_NAME
+from domain.reporting.reporting import REPORT_EVIDENCE_NAME
 from .constants import (
     _ARCH_ANALYSIS_FILE,
     _BRIEF_FILE,

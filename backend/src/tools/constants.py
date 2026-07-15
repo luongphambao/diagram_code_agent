@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from backends import WORKSPACE, WorkspaceFile
-from reporting import REPORT_EVIDENCE_NAME
+from domain.reporting.reporting import REPORT_EVIDENCE_NAME
 
 # Stage markers written under the current-thread workspace so the staged tools can
 # enforce order. Resolved lazily per request via WorkspaceFile (per-thread isolation,

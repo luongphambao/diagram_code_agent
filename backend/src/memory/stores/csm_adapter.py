@@ -36,7 +36,7 @@ from .csm import (
     mint_id,
     slug,
 )
-from solution_validator import _as_list, _read_json, _soft_match
+from domain.validation.solution_validator import _as_list, _read_json, _soft_match
 
 SOLUTION_MODEL_NAME = "solution_model.json"
 SOLUTION_MODEL_PREV_NAME = "solution_model.prev.json"
