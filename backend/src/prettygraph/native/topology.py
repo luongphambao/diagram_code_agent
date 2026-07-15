@@ -37,6 +37,12 @@ _SIZE_CLASSES = {"compact": (150, 210), "medium": (176, 272), "wide": (240, 420)
 # Reserved routing lane between stacked layer bands (V2 §7.6): whitespace the
 # router uses as connector infrastructure rather than incidental spacing.
 _LAYER_LANE_GAP = 46
+# Beyond this many parallel top-level bands, a single tall column reads as a
+# narrow, repetitive scroll (and forces the slide-fit scale down hard enough to
+# risk text collisions). Switch to a 2-column grid of bands instead so the
+# diagram stays roughly landscape-shaped. Also triggered explicitly via
+# layout_intent="grid" for a diagram whose domains are parallel, not sequential.
+_GRID_BAND_MIN = 5
 _ICON_SCORE_MIN = 50  # top-hit score to accept a stencil for a node (else a plain card)
 # Vendor-pack (gcp_*/azure_*) hits score lower than they deserve: their names
 # embed the provider prefix, which the query never contains. Accept them at a
