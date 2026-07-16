@@ -125,6 +125,9 @@ drawer to render without guessing:
   grid). Avoid thin 1-2 node regions — fold them into the adjacent tier they serve.
   Real cross-cluster edges connect every zone (MANDATORY — these are what make the
   diagram readable) and connected regions should be adjacent so edges stay short.
+  For cloud-architecture requests, set each containment cluster's `zone`
+  (cloud|vpc|subnet_public|subnet_private|az|onprem) and chain them via `parent`
+  (cloud>vpc>subnet>az) so the engine renders real concentric boundaries.
   Every compute/data/network node carries a `tech` field and a REAL technology logo.
   Choose node count based on actual architecture complexity, but prefer richer over
   sparser; do NOT cut nodes to fit the page — the engine scales to one 16:9 page.
