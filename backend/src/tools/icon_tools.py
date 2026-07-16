@@ -27,6 +27,27 @@ from .stage_markers import (
 )
 
 
+def _refresh_render_from_icon_plan(workspace: Path) -> None:
+    """Re-bake a just-updated icon_plan.json into an existing native render.
+
+    propose_blueprint's deterministic pre-render runs BEFORE the icon_resolver
+    subagent, using whatever the crude preseed search already found. If nothing
+    re-exports afterward, icon_resolver's much better resolutions are silently
+    discarded — out.drawio never reflects them, and most nodes render icon-less
+    even though icon_plan.json says FOUND. Best-effort and non-fatal: icon
+    resolution must never fail because a render happened to error.
+    """
+    spec_path = workspace / "render_spec.json"
+    if not spec_path.exists():
+        return
+    try:
+        spec = json.loads(spec_path.read_text(encoding="utf-8"))
+        from .rendering_tools import _render_native_from_spec
+        _render_native_from_spec(spec, workspace)
+    except Exception:  # noqa: BLE001 — best-effort refresh, never block the tool
+        pass
+
+
 def _icon_search_total_cap(state: dict) -> int:
     planned = state.get("planned_icons")
     if isinstance(planned, int) and planned > 0:
