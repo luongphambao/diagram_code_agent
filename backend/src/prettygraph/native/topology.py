@@ -409,7 +409,7 @@ def build_tree(spec: dict, flat: bool = False):
         band_frames = [build_cluster(cid, 0, i, band_dir="row")
                        for i, cid in enumerate(main_roots)]
         band_frames += [build_node(n) for n in loose]
-        grid_bands = intent.startswith("grid") or len(main_roots) > _GRID_BAND_MIN
+        grid_bands = intent.startswith("grid")
         if grid_bands and len(band_frames) > 1:
             # Many parallel domains (not a strict sequential pipeline): a 2-column
             # grid keeps the diagram landscape-shaped instead of one long, uniform
