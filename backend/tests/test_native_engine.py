@@ -158,6 +158,29 @@ _AWS_SPEC = {
 }
 
 
+_GCP_SPEC = {
+    "provider": "gcp", "pattern": "microservices",
+    "layout_intent": "left_to_right_pipeline", "slide_title": "GCP Shop",
+    "clusters": [
+        {"id": "ops", "label": "Operations", "tier": "infra", "parent": "", "accent": "slate", "number": 1},
+        {"id": "app", "label": "Application", "tier": "backend", "parent": "", "accent": "blue", "number": 2},
+        {"id": "data", "label": "Data", "tier": "data", "parent": "", "accent": "green", "number": 3},
+    ],
+    "nodes": [
+        {"id": "mgmt", "label": "Cloud Monitoring", "tech": "Cloud Monitoring", "cluster": "ops", "type": "service"},
+        {"id": "cb", "label": "Cloud Build", "tech": "Cloud Build", "cluster": "ops", "type": "service"},
+        {"id": "api", "label": "API Gateway", "tech": "API Gateway", "cluster": "app", "type": "gateway"},
+        {"id": "run", "label": "Cloud Run", "tech": "Cloud Run", "cluster": "app", "type": "service"},
+        {"id": "db", "label": "Firestore", "tech": "Firestore", "cluster": "data", "type": "database"},
+    ],
+    "edges": [
+        {"from": "api", "to": "run", "flow": "data"},
+        {"from": "run", "to": "db", "flow": "data"},
+        {"from": "cb", "to": "run", "flow": "control", "style": "dashed"},
+    ],
+}
+
+
 def test_topology_resolves_all_aws_stencils():
     from prettygraph.native.topology import build_tree
     d, _ = build_tree(_AWS_SPEC)
