@@ -301,6 +301,30 @@ def build_tree(spec: dict, flat: bool = False):
         else:
             roots.append(cid)
 
+    # Drop entirely-empty root subtrees: a cluster tree with NO node anywhere in
+    # its descendants is purely decorative (e.g. the model declares an aspirational
+    # cloud>vpc>subnet topology skeleton but assigns every real service to a
+    # separate, unrelated set of flat tier clusters). Rendering it produces a giant
+    # blank box, and — worse — if it's a genuinely NESTED zone it flips
+    # has_nested_zones below and disables layered banding for the OTHER, real
+    # content roots too, scattering them into one wide row beside the empty box.
+    def _subtree_ids(cid: str) -> set[str]:
+        ids = {cid}
+        for ch in children_of.get(cid, []):
+            ids |= _subtree_ids(ch)
+        return ids
+
+    def _subtree_has_nodes(cid: str) -> bool:
+        return any(nodes_by_cluster.get(x) for x in _subtree_ids(cid))
+
+    empty_roots = {cid for cid in roots if not _subtree_has_nodes(cid)}
+    if empty_roots:
+        drop = set().union(*(_subtree_ids(cid) for cid in empty_roots))
+        roots = [cid for cid in roots if cid not in drop]
+        clusters = {cid: c for cid, c in clusters.items() if cid not in drop}
+        children_of = {cid: [ch for ch in kids if ch not in drop]
+                       for cid, kids in children_of.items() if cid not in drop}
+
     intent = str(spec.get("layout_intent", "")).lower()
     horiz = not intent.startswith("top")
     # LAYERED mode (the production architecture look): stacked full-width tinted
