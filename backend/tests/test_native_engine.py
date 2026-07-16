@@ -466,6 +466,45 @@ def test_card_height_scales_with_wrapped_subtitle():
     assert long_["h"] > 54, "long-subtitle compact card did not grow taller than the default"
 
 
+# A cross-cutting sidebar cluster with 6 cards (matches the CIMB "Observability &
+# DevOps" case that dominated the page height when forced to stack single-column).
+_SIDEBAR_HEAVY_SPEC = {
+    "provider": "gcp", "pattern": "microservices",
+    "layout_intent": "left_to_right_pipeline", "slide_title": "Sidebar Heavy",
+    "clusters": [
+        {"id": "sec", "label": "Security & Governance", "tier": "infra", "parent": "", "number": 1},
+        {"id": "app", "label": "App Tier", "tier": "backend", "parent": "", "number": 2},
+        {"id": "data", "label": "Data Tier", "tier": "data", "parent": "", "number": 3},
+    ],
+    "nodes": [
+        {"id": f"s{i}", "label": f"Security Svc {i}", "tech": "GCP", "cluster": "sec", "type": "service"}
+        for i in range(6)
+    ] + [
+        {"id": "a1", "label": "API", "tech": "Cloud Run", "cluster": "app", "type": "service"},
+        {"id": "d1", "label": "DB", "tech": "Cloud SQL", "cluster": "data", "type": "database"},
+    ],
+    "edges": [{"from": "a1", "to": "d1", "flow": "data"}]
+              + [{"from": f"s{i}", "to": f"s{i+1}", "flow": "control"} for i in range(5)],
+}
+
+
+def test_sidebar_wraps_into_grid_past_threshold(tmp_path):
+    """A cross-cutting sidebar with >4 cards must wrap into a 2-col grid instead
+    of stacking single-column — else it dominates the whole page height. The grid
+    gap must still be wide enough that edge labels don't collide with cards."""
+    from prettygraph.native.topology import build_tree, build_drawio_from_spec
+    d, _ = build_tree(_SIDEBAR_HEAVY_SPEC)
+    # gridded: at least 2 distinct x-columns among the 6 sidebar cards
+    xs = sorted({round(d.R[f"s{i}"]["x"]) for i in range(6)})
+    assert len(xs) >= 2, "sidebar cards stacked in a single column instead of gridding"
+    xml, _ = build_drawio_from_spec(_SIDEBAR_HEAVY_SPEC, "Sidebar Heavy")
+    p = tmp_path / "sidebar.drawio"
+    p.write_text(xml, encoding="utf-8")
+    rep = vd.validate_file(str(p))
+    assert rep["error_count"] == 0
+    assert rep.get("collision_count", 0) == 0, "sidebar grid gap too tight, cards collide"
+
+
 def test_native_slide_framing(tmp_path):
     """Slide mode wraps the flat native body in hero + legend chrome and validates clean."""
     from prettygraph.native.topology import build_drawio_from_spec
