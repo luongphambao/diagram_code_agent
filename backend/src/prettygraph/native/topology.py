@@ -492,7 +492,7 @@ def build_tree(spec: dict, flat: bool = False):
                            for i, cid in enumerate(cross_roots)]
             sidebar = (side_frames[0] if len(side_frames) == 1 else
                        phantom("__side", "", {"dir": "col", "gap": 26, "pad": 0}, side_frames))
-            root = phantom("__root", "", {"dir": "row", "gap": 44, "pad": 0},
+            root = phantom("__root", "", {"dir": "row", "gap": 90, "pad": 0},
                            [sidebar, bands_col])
         else:
             root = bands_col
