@@ -503,6 +503,7 @@ try:
             })
         current_workspace().mkdir(parents=True, exist_ok=True)
         _ICON_PLAN_FILE.write_text(json.dumps(resolved, indent=2), encoding="utf-8")
+        _refresh_render_from_icon_plan(current_workspace())
         state.update({
             "resolved_this_round": True,
             "planned_icons": len({(i.provider.lower(), i.icon_keyword.lower()) for i in icons}),
