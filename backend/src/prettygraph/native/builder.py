@@ -166,7 +166,7 @@ class Diagram:
         # 12px inset lets the arrowhead visually clip the first few characters of
         # the subtitle line. 20px gives real clearance without an icon to reserve
         # the space instead.
-        pad_l = ic + 20 if has_icon else 20
+        pad_l = ic + 20 if has_icon else 28
         style = (f"rounded=1;arcSize=12;whiteSpace=wrap;html=1;"
                  f"fillColor={fill or THEME.base};strokeColor={stroke or '#AEB9C4'};"
                  f"fontColor={THEME.font_color};fontSize=12;align=left;"
