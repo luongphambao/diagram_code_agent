@@ -38,6 +38,12 @@ class _Theme:
     note_stroke = "#D79B00"
     onprem = "light-dark(#eef1f5,#181f29)"
     onprem_stroke = "#666666"
+    # topology boundary strokes (Workstream 1 — real Cloud/VPC/Subnet/AZ nesting).
+    # VPC is GREEN per the production reference, distinct from the violet vpc_stroke
+    # used by AWS group stencils; AZ frames render dashed teal.
+    zone_cloud_stroke = "#232F3E"
+    zone_vpc_stroke = "#1BA641"
+    zone_az_stroke = "#00A4A6"
     font_color = "light-dark(#1B2733,#CFE0F0)"
     # edge tokens
     edge_stroke = "light-dark(#2D6A9F,#5B9BD5)"
