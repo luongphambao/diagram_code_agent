@@ -382,6 +382,27 @@ def _e_group(d, n, parent):
     if n.get("gname"):
         d.group(n["id"], n["gname"], [n["x"], n["y"]], [n["w"], n["h"]], n["label"],
                 parent=parent, fill=n.get("fill"), stroke=n.get("stroke"))
+    elif n.get("zone"):
+        # Non-AWS topology boundary: tinted/transparent frame (dashed for AZ) with a
+        # top-left label pill. Frame is a container (ob=False) so edges route through
+        # it; the pill is Z_FORE chrome and never an obstacle.
+        dash = "dashed=1;dashPattern=6 4;" if n.get("dashed") else ""
+        fill = n.get("fill") or "none"
+        stroke = n.get("stroke") or "#999999"
+        style = (f"rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor={fill};"
+                 f"strokeColor={stroke};{dash}verticalAlign=top;align=left;"
+                 f"spacingLeft=14;spacingTop=8;fontColor={stroke};fontStyle=1;fontSize=12;")
+        r = d._put(n["id"], parent, n["x"], n["y"], n["w"], n["h"], style, "", z=Z_CONTAINER)
+        r["ob"] = False
+        pill = n.get("pill")
+        if pill:
+            pw = max(40, len(str(pill)) * 7 + 22)
+            pr = d._put(f"{n['id']}__pill", n["id"], round(n["x"] + 10), round(n["y"] + 8),
+                        pw, 20,
+                        f"rounded=1;arcSize=40;whiteSpace=wrap;html=1;fillColor={stroke};"
+                        "strokeColor=none;fontColor=#FFFFFF;fontSize=11;fontStyle=1;"
+                        "align=center;verticalAlign=middle;", str(pill), z=Z_FORE)
+            pr["ob"] = False
     elif n.get("cornerIcon"):
         ci = 22
         style = (f"rounded=0;whiteSpace=wrap;html=1;fillColor={n.get('fill') or '#FFFFFF'};"
