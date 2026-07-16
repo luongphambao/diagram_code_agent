@@ -126,8 +126,9 @@ drawer to render without guessing:
   Real cross-cluster edges connect every zone (MANDATORY — these are what make the
   diagram readable) and connected regions should be adjacent so edges stay short.
   For cloud-architecture requests, set each containment cluster's `zone`
-  (cloud|vpc|subnet_public|subnet_private|az|onprem) and chain them via `parent`
-  (cloud>vpc>subnet>az) so the engine renders real concentric boundaries.
+  (cloud|vpc|subnet_public|subnet_private|az|onprem) AND chain them via `parent`
+  (cloud>vpc>subnet>az, compute/data clusters parented into the subnet) so the engine
+  renders real concentric boundaries. A `zone` without a parent chain is ignored.
   Every compute/data/network node carries a `tech` field and a REAL technology logo.
   Choose node count based on actual architecture complexity, but prefer richer over
   sparser; do NOT cut nodes to fit the page — the engine scales to one 16:9 page.
