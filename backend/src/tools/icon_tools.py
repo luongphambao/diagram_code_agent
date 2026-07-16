@@ -47,6 +47,32 @@ def _icon_key(query: str, provider: Optional[str]) -> str:
     return f"{prov}:{q}"
 
 
+def _score_icon_name(name_l: str, cat_l: str, terms: list[str], q_squished: str) -> int:
+    """Relevance score for one candidate icon against the query terms.
+
+    A hit that only matches via the PROVIDER (already filtered separately) or the
+    CATEGORY folder — never the icon's own name — is usually wrong (e.g. a bare
+    "database" query matching every icon simply filed under a "database" category,
+    regardless of what that specific icon depicts). Score name matches far higher
+    than category matches so `_search_icon_hits`' caller-side `hits[0]` usage picks
+    the actually-relevant icon, and so a purely-coincidental category match can be
+    thresholded out entirely by the caller.
+    """
+    name_squished = re.sub(r"[^a-z0-9]", "", name_l)
+    name_words = re.split(r"[-_]", name_l)
+    score = 0
+    if name_squished == q_squished:
+        score += 100
+    for t in terms:
+        if t in name_words:
+            score += 30
+        elif t in name_l:
+            score += 12
+        elif t in cat_l:
+            score += 3
+    return score
+
+
 def _search_icon_hits(query: str, provider: Optional[str] = None, *, limit: int = 30) -> list[str]:
     try:
         manifest = json.loads(Path(LOCAL_MANIFEST).read_text(encoding="utf-8"))
@@ -54,20 +80,37 @@ def _search_icon_hits(query: str, provider: Optional[str] = None, *, limit: int 
         return []
 
     terms = [t for t in query.lower().replace("-", " ").replace("_", " ").split() if t]
+    if not terms:
+        return []
+    q_squished = re.sub(r"[^a-z0-9]", "", "".join(terms))
     root = Path(LOCAL_ICONS)
-    hits: list[str] = []
+    # Ranked, not raw-iteration-order: candidates are scored and sorted so the
+    # caller's blind `hits[0]` (resolve_icons/resolve_missing_icons) gets the best
+    # match, not whatever the manifest happened to enumerate first.
+    scored: list[tuple[int, str]] = []
     for prov, cats in manifest.get("providers", {}).items():
         if provider and prov.lower() != provider.lower():
             continue
         for cat, names in cats.items():
+            cat_l = cat.lower()
             for name in names:
-                hay = f"{prov} {cat} {name}".lower()
-                if all(t in hay for t in terms):
-                    sub = name if cat == "_root" else f"{cat}/{name}"
-                    hits.append(str(root / prov / f"{sub}.png"))
-                    if len(hits) >= limit:
-                        return hits
-    return hits
+                name_l = name.lower()
+                # match against category+name only — NOT provider, which is
+                # already constrained by the `provider` filter above and, as free
+                # text, would let a bare "azure"/"aws" query match every single
+                # icon in that whole provider tree.
+                if not all(t in f"{cat_l} {name_l}" for t in terms):
+                    continue
+                score = _score_icon_name(name_l, cat_l, terms, q_squished)
+                # A hit whose score comes ONLY from the category folder (no term
+                # ever touched the icon's actual name) is a coincidental match —
+                # reject it rather than return a confidently-wrong icon.
+                if score < 12:
+                    continue
+                sub = name if cat == "_root" else f"{cat}/{name}"
+                scored.append((score, str(root / prov / f"{sub}.png")))
+    scored.sort(key=lambda x: (-x[0], x[1]))
+    return [p for _, p in scored[:limit]]
 
 
 def _tokens(text: str) -> list[str]:
