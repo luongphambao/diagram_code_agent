@@ -76,10 +76,12 @@ class Blueprint(CoercingModel):
     layout_intent: str = Field(
         "left_to_right_pipeline",
         description=(
-            "e.g. left_to_right_pipeline or top_down_stack. Use 'grid' when the "
-            "architecture has many (5+) parallel top-level domains with no single "
-            "sequential flow — arranges layer bands into a 2-column grid instead of "
-            "one long vertical stack (auto-applied above ~5 bands even without this)."
+            "e.g. left_to_right_pipeline or top_down_stack — stick to these two for "
+            "almost every diagram; they keep edges routing in one clean top-to-bottom "
+            "channel. 'grid' (2-column layer bands) exists but is EXPERIMENTAL and "
+            "opt-in only — it visibly tangles cross-band edges and wastes space "
+            "stretching small bands to match the largest one, so avoid it unless "
+            "explicitly asked for a denser/more compact arrangement."
         ),
     )
     presentation_style: Literal["slide", "diagram"] = Field(
