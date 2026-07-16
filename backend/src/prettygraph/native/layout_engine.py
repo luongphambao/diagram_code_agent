@@ -75,6 +75,11 @@ def group(id, gname, label="", opts=None, children=None):
         "cornerIcon": opts.get("cornerIcon"),
         # min gap enforced between children when routing lanes pass between them.
         "routeGap": opts.get("routeGap", 0),
+        # topology zone metadata (Workstream 1): boundary type, dashed border, and
+        # a top-left label pill for non-AWS zones. Harmless defaults for plain groups.
+        "zone": opts.get("zone"),
+        "dashed": opts.get("dashed", False),
+        "pill": opts.get("pill"),
     }
 
 
