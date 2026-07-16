@@ -929,7 +929,7 @@ def edit_drawio(
     # Semantic count-preservation snapshot (V2 §15.5): flag cells that vanish
     # without an explicit delete. Decorative sub-cells cancel out (present before
     # and after). deleted_ids collects intended removals (incl. cascades).
-    _decor = lambda i: bool(i) and i.endswith(("__sh", "__ac", "__ic"))
+    _decor = lambda i: bool(i) and i.endswith(("__sh", "__ac", "__ic", "__pill"))
     before_v = {c.get("id") for c in cell_root.iter("mxCell")
                 if c.get("vertex") == "1" and c.get("id") and not _decor(c.get("id"))}
     before_e = {(c.get("source"), c.get("target")) for c in cell_root.iter("mxCell")
