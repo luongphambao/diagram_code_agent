@@ -446,7 +446,10 @@ and nodes float unaligned. Enforce ALL of the following:
    data/query = `#7A7A7A` (gray), result/output = `#1F3A93` (navy),
    side-channel (auth/secrets/monitoring) = gray **dashed**. Keep labels ≤4 words.
 5. **Clusters**: group by tier (Client, Edge/Hosting, Application, Data, AI).
-   Nest only when there's real containment.
+   Nest only when there's real containment. For cloud-architecture diagrams, set a
+   cluster's `zone` (cloud|vpc|subnet_public|subnet_private|az|onprem) and chain
+   `parent` (cloud>vpc>subnet>az) so the engine draws concentric Cloud/VPC/Subnet/AZ
+   boundaries instead of flat bands.
 6. **Alignment**: declare nodes in flow order; collapse replicas to one
    `Node("name (xN)")`; avoid a single giant node dominating the canvas.
 - **Do not over-position edges.** `Edge(xlabel=...)`, manual `pos`/x/y hints, and
