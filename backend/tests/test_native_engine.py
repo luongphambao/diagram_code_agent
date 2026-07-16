@@ -401,6 +401,71 @@ def test_flat_zone_tags_do_not_collapse_layout():
     assert "__pill" not in xml_flat            # no boundary drawn for flat tags
 
 
+# A genuinely-nested but entirely EMPTY topology skeleton (cloud>vpc>4 subnets, zero
+# nodes anywhere in it) sitting beside unrelated flat tier clusters that hold every
+# real node — reproduces the CIMB/GCP bug: a giant blank box + the real tiers forced
+# into one wide row because the empty-but-nested zone still flipped has_nested_zones.
+_EMPTY_ZONE_SKELETON_SPEC = {
+    "provider": "gcp", "pattern": "data_pipeline",
+    "layout_intent": "left_to_right_pipeline", "slide_title": "Ghost Topology",
+    "clusters": [
+        {"id": "gcp_cloud", "label": "Google Cloud Platform", "tier": "infra",
+         "parent": "", "zone": "cloud"},
+        {"id": "vpc_network", "label": "VPC Network", "tier": "infra",
+         "parent": "gcp_cloud", "zone": "vpc"},
+        {"id": "subnet_a", "label": "Public Subnet", "tier": "infra",
+         "parent": "vpc_network", "zone": "subnet_public"},
+        {"id": "subnet_b", "label": "Private Subnet", "tier": "infra",
+         "parent": "vpc_network", "zone": "subnet_private"},
+        {"id": "t1", "label": "Client", "tier": "external", "parent": "", "number": None},
+        {"id": "t2", "label": "Edge", "tier": "backend", "parent": "", "number": 1},
+        {"id": "t3", "label": "Compute", "tier": "backend", "parent": "", "number": 2},
+        {"id": "t4", "label": "Data", "tier": "data", "parent": "", "number": 3},
+    ],
+    "nodes": [
+        {"id": "u1", "label": "User", "tech": "", "cluster": "t1", "type": "external"},
+        {"id": "e1", "label": "LB", "tech": "Cloud LB", "cluster": "t2", "type": "lb"},
+        {"id": "c1", "label": "API", "tech": "Cloud Run", "cluster": "t3", "type": "service"},
+        {"id": "d1", "label": "DB", "tech": "Cloud SQL", "cluster": "t4", "type": "database"},
+    ],
+    "edges": [{"from": "u1", "to": "e1", "flow": "data"},
+              {"from": "e1", "to": "c1", "flow": "data"},
+              {"from": "c1", "to": "d1", "flow": "data"}],
+}
+
+
+def test_empty_zone_skeleton_is_dropped_not_rendered():
+    """A nested zone tree with ZERO nodes anywhere in it (a decorative-only
+    topology skeleton) must be dropped entirely — not rendered as a giant blank
+    box, and must not disable layered banding for the OTHER real content roots."""
+    import re
+    from prettygraph.native.topology import build_drawio_from_spec
+    xml, _ = build_drawio_from_spec(_EMPTY_ZONE_SKELETON_SPEC, "Ghost")
+    for ghost_id in ("gcp_cloud", "vpc_network", "subnet_a", "subnet_b"):
+        assert f'id="{ghost_id}"' not in xml, f"empty zone skeleton cell {ghost_id!r} was rendered"
+    m = re.search(r'pageWidth="(\d+)"\s+pageHeight="(\d+)"', xml)
+    ratio = int(m.group(1)) / int(m.group(2))
+    assert ratio < 2.0, f"empty zone skeleton still collapsed the real tiers (ratio={ratio:.2f})"
+    # the 4 real nodes must still be present — dropping the skeleton must not touch content
+    for real_id in ("u1", "e1", "c1", "d1"):
+        assert f'id="{real_id}"' in xml
+
+
+def test_card_height_scales_with_wrapped_subtitle():
+    """A compact card (>4 siblings, so a narrow width band) with a long sub-label
+    must grow taller than the single-line default — else the wrapped text
+    overflows the box and collides with whatever sits below it."""
+    from prettygraph.native.layout_engine import card, _m_card
+    short = card("n1", "gcp_service", "Short", "One line", min_w=150, max_w=210)
+    long_ = card("n2", "gcp_service", "Cloud Logging",
+                 "Centralized log aggregation — audit logs, application logs, access logs",
+                 min_w=150, max_w=210)
+    _m_card(short)
+    _m_card(long_)
+    assert short["h"] == 54
+    assert long_["h"] > 54, "long-subtitle compact card did not grow taller than the default"
+
+
 def test_native_slide_framing(tmp_path):
     """Slide mode wraps the flat native body in hero + legend chrome and validates clean."""
     from prettygraph.native.topology import build_drawio_from_spec
