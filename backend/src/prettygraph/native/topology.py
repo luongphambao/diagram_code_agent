@@ -382,6 +382,16 @@ def build_tree(spec: dict, flat: bool = False):
         # first, sub-frames after; nested frames keep the frame-first order.
         kids = (items + sub_frames) if (depth == 0 and band_dir == "row") \
             else (sub_frames + items)
+        # Topology boundary (Workstream 1): a cluster that declares a `zone` renders
+        # as a concentric nested frame styled by boundary TYPE at EVERY depth — this
+        # wins over both the depth-0 band branch and the nested white-frame branch,
+        # so cloud>vpc>subnet>az come out as real containment. Inner flow direction
+        # follows layout_intent (LR pipeline vs TB stack).
+        zone = c.get("zone")
+        if zone:
+            zdir = "row" if horiz else "col"
+            return zone_frame(cid, label, zone, provider, kids,
+                              opts={"dir": zdir, "gap": 24, "pad": 18})
         gname = _aws_group_for_label(label) if provider == "aws" else None
         if gname:
             return group(cid, gname, label, {"dir": "col", "gap": 20}, kids)
