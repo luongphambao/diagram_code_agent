@@ -19,6 +19,8 @@ Nodes are plain dicts (mirroring the kit's mutable JS objects); the engine sets
 
 from __future__ import annotations
 
+import math
+
 from .builder import Z_CONTAINER, Z_FORE
 from .theme import THEME, stage_stroke, zone_style
 
