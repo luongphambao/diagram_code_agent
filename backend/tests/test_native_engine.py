@@ -361,6 +361,46 @@ def test_empty_zone_is_backward_compatible():
     assert a == b
 
 
+# 8 flat top-level sections (like the Azure "AI Video Inference" spec that broke):
+# several carry a `zone` tag but NONE is nested (all parent="").
+_FLAT_ZONE_SPEC = {
+    "provider": "azure", "pattern": "data_pipeline",
+    "layout_intent": "left_to_right_pipeline", "slide_title": "Flat",
+    "clusters": [
+        {"id": f"c{i}", "label": f"Section {i}", "tier": "backend", "parent": "",
+         "number": i, "zone": ("vpc" if i == 2 else "subnet_private" if i in (3, 4, 5) else "")}
+        for i in range(1, 9)
+    ],
+    "nodes": [
+        {"id": f"n{i}_{j}", "label": f"Svc {i}.{j}", "tech": "", "cluster": f"c{i}", "type": "service"}
+        for i in range(1, 9) for j in range(3)
+    ],
+    "edges": [{"from": f"n{i}_0", "to": f"n{i+1}_0", "flow": "data"} for i in range(1, 8)],
+}
+
+
+def test_flat_zone_tags_do_not_collapse_layout():
+    """A `zone` with no parent chain (flat sibling) is a NO-OP: it must NOT disable
+    layered banding and drop every section into one ultra-wide row (the Azure bug)."""
+    import re, copy
+    from prettygraph.native.topology import build_drawio_from_spec
+
+    def _ratio(sp):
+        xml, _ = build_drawio_from_spec(sp, "Flat")
+        m = re.search(r'pageWidth="(\d+)"\s+pageHeight="(\d+)"', xml)
+        return int(m.group(1)) / int(m.group(2)), xml
+
+    ratio, xml_flat = _ratio(_FLAT_ZONE_SPEC)
+    assert ratio < 2.0, f"flat zones collapsed the layout into a wide strip (ratio={ratio:.2f})"
+    # and flat zones are a pure no-op: identical to the same spec with zones stripped
+    stripped = copy.deepcopy(_FLAT_ZONE_SPEC)
+    for c in stripped["clusters"]:
+        c["zone"] = ""
+    _, xml_stripped = _ratio(stripped)
+    assert xml_flat == xml_stripped
+    assert "__pill" not in xml_flat            # no boundary drawn for flat tags
+
+
 def test_native_slide_framing(tmp_path):
     """Slide mode wraps the flat native body in hero + legend chrome and validates clean."""
     from prettygraph.native.topology import build_drawio_from_spec
