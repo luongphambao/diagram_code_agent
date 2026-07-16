@@ -415,10 +415,13 @@ def _e_group(d, n, parent):
                       [round(n["x"] + 8), round(n["y"] + 7)], ci, n["id"])
     else:
         # stroke "none" = layout-only wrapper (no border) -> ob None so router ignores it.
+        # Frame/band titles read top-LEFT (reference production look) so a centred
+        # card in a middle column never collides with the section header.
         d.box(n["id"], [n["x"], n["y"]], [n["w"], n["h"]], n["label"], parent=parent,
               va="top", bold=True, fill=n.get("fill") or "#FFFFFF",
               stroke=n.get("stroke") or "#999999", fs=n.get("fs") or 11,
-              ob=(None if n.get("stroke") == "none" else False), z=Z_CONTAINER)
+              ob=(None if n.get("stroke") == "none" else False), z=Z_CONTAINER,
+              align="left" if n.get("label") else None)
     for c in n["children"]:
         _emit(d, c, n["id"])
 
