@@ -401,12 +401,20 @@ def build_tree(spec: dict, flat: bool = False):
                 return "medium"
 
             items = [build_node(n, node_accent, _size_class(n)) for n in cnodes]
-            wrap_at = 6 if (depth == 0 and band_dir == "row") else 3
-            # sidebar column (depth-0 col band) keeps cards as direct children so
-            # justify can spread them over the stretched height — never a grid.
-            if (len(items) > wrap_at and not children_of.get(cid)
-                    and not (depth == 0 and band_dir == "col")):
-                cols = 2 if len(items) <= 6 else 3
+            # The grey cross-cutting SIDEBAR (depth-0 col band) used to always stack
+            # cards in a single column, however many — with several cross-cut
+            # sections (e.g. Edge&Security + Observability&DevOps) sharing one
+            # sidebar, that single column can hold 10+ cards and dominate the whole
+            # page height (the row-direction sidebar/main-column join equal-height
+            # stretches, so an overly tall sidebar inflates EVERY band). Wrap it into
+            # a 2-column grid past a lower threshold than a normal band, same as the
+            # row-band/nested-frame wrapping below — this only reshapes cards INSIDE
+            # one already-isolated frame, so it carries none of the cross-BAND
+            # routing risk that disabled the (still opt-in) grid-of-bands layout.
+            wrap_at = (6 if (depth == 0 and band_dir == "row") else
+                       4 if (depth == 0 and band_dir == "col") else 3)
+            if len(items) > wrap_at and not children_of.get(cid):
+                cols = 2 if len(items) <= 8 else 3
                 items = [grid(f"{cid}__grid", None, "",
                               {"cols": cols, "gap": 22, "stroke": "none"}, items)]
         # In a horizontal layer band the flow reads left→right: direct nodes
