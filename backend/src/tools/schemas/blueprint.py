@@ -47,6 +47,16 @@ class BPCluster(BaseModel):
     parent: str = Field("", description="id of parent cluster for nesting; empty for top-level zones")
     accent: str = Field("", description="zone color: blue|cyan|teal|violet|indigo|green|amber|rose|slate; empty=auto")
     number: Optional[int] = Field(None, description="step badge number (1,2,3…); null to skip")
+    zone: str = Field(
+        "",
+        description=(
+            "topology boundary TYPE for real containment nesting: "
+            "cloud|vpc|subnet_public|subnet_private|az|onprem; "
+            "empty = logical tier (renders as today's tinted section band). "
+            "Chain via `parent` to nest: cloud>vpc>(subnet_public|subnet_private)>az. "
+            "Use for cloud-architecture diagrams to draw concentric Cloud/VPC/Subnet/AZ boundaries."
+        ),
+    )
 
 
 class BPEdge(BaseModel):
