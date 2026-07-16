@@ -118,12 +118,16 @@ class Diagram:
 
     def box(self, id, xy, wh, label="", *, parent="1", fill="#FFFFFF",
             stroke="#5A6B7B", va="middle", bold=False, fs=11, round=False,
-            ob=True, z=Z_NODE) -> dict:
+            ob=True, z=Z_NODE, align=None) -> dict:
         fill = fill or "#FFFFFF"
         stroke = stroke or "#5A6B7B"
         style = (f"rounded={1 if round else 0};whiteSpace=wrap;html=1;fillColor={fill};"
                  f"strokeColor={stroke};fontColor=#1A1A1A;fontSize={fs};"
                  f"fontStyle={1 if bold else 0};verticalAlign={va};")
+        # Optional horizontal alignment (band/frame titles read top-LEFT like the
+        # production reference, away from centred cards). None = draw.io default (centre).
+        if align:
+            style += f"align={align};" + ("spacingLeft=12;" if align == "left" else "")
         r = self._put(id, parent, xy[0], xy[1], wh[0], wh[1], style, label, z=z)
         r["ob"] = ob
         return r
