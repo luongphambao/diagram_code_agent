@@ -16,7 +16,8 @@ from __future__ import annotations
 
 import re
 
-from .layout_engine import group, frame, grid, icon, box, card, phantom, render_tree
+from .layout_engine import (group, frame, grid, icon, box, card, phantom,
+                            zone_frame, render_tree)
 from .builder import Diagram
 from .theme import THEME, stage_fill, stage_stroke
 
