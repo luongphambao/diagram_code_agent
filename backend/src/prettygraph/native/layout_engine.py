@@ -182,6 +182,27 @@ def onprem_frame(id, label, children=None, opts=None):
     return group(id, "group_corporate_data_center", label, o, children or [])
 
 
+def zone_frame(id, label, zone, provider, children=None, opts=None):
+    """Topology boundary frame (Workstream 1): real Cloud/VPC/Subnet/AZ nesting.
+
+    AWS providers reuse the native group stencil (which renders its own label
+    badge + dashed AZ border); every other provider gets a tinted/transparent
+    frame with the zone stroke plus a top-left label pill.
+    """
+    zs = zone_style(zone)
+    if zs is None:
+        return frame(id, label, opts, children or [])
+    fill, stroke, dashed, gname = zs
+    aws = (provider or "").lower() in ("aws", "amazon")
+    o = {"dir": "col", "gap": THEME.gap_item, "fill": fill, "stroke": stroke}
+    o.update(opts or {})
+    o["zone"] = zone
+    o["dashed"] = dashed
+    # AWS stencil carries its own label badge; non-AWS frames draw a pill instead.
+    o["pill"] = None if aws else label
+    return group(id, gname if aws else None, label, o, children or [])
+
+
 # --------------------------------------------------------------------------- #
 # measure: assign w,h (bottom-up)
 # --------------------------------------------------------------------------- #
