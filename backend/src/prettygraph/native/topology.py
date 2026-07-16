@@ -310,7 +310,12 @@ def build_tree(spec: dict, flat: bool = False):
                    if _CROSS_CUT.search(f"{clusters[cid].get('label') or ''} "
                                         f"{clusters[cid].get('tier') or ''}")]
     main_roots = [cid for cid in roots if cid not in cross_roots]
-    layered = intent.startswith("layer") or len(main_roots) >= 3
+    # Topology mode (Workstream 1): when any cluster declares a boundary `zone`,
+    # honour real containment nesting (cloud>vpc>subnet>az) rather than flattening
+    # every root into a full-width tinted band — layered banding would defeat the
+    # concentric-boundary look the reference architecture needs.
+    has_zones = any(clusters[c].get("zone") for c in clusters)
+    layered = (intent.startswith("layer") or len(main_roots) >= 3) and not has_zones
 
     def build_node(n: dict, accent: str | None = None, size_class: str | None = None):
         # Upgrade path (V2 §8): a node carrying an embedded icon reuses it directly
