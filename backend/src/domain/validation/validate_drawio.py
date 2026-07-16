@@ -49,7 +49,7 @@ def _overlap(a: tuple, b: tuple) -> bool:
 # Decorative card sub-cells (drop-shadow / accent bar, native builder card()):
 # they intentionally overlap their card, so exclude them from geometry/overlap/
 # edge-intersection audits or every card would flag a false overlap.
-_DECOR_SUFFIXES = ("__sh", "__ac")
+_DECOR_SUFFIXES = ("__sh", "__ac", "__pill")
 
 
 def _is_decor(cid: str | None) -> bool:
