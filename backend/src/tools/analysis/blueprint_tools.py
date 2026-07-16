@@ -315,7 +315,8 @@ def _build_render_spec(blueprint: Blueprint, provider: str) -> dict:
         ],
         "clusters": [
             {"id": c.id, "label": c.label, "tier": c.tier,
-             "parent": c.parent, "accent": c.accent, "number": c.number}
+             "parent": c.parent, "accent": c.accent, "number": c.number,
+             "zone": c.zone}
             for c in blueprint.clusters
         ],
         "edges": [
