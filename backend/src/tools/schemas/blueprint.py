@@ -52,9 +52,11 @@ class BPCluster(BaseModel):
         description=(
             "topology boundary TYPE for real containment nesting: "
             "cloud|vpc|subnet_public|subnet_private|az|onprem; "
-            "empty = logical tier (renders as today's tinted section band). "
-            "Chain via `parent` to nest: cloud>vpc>(subnet_public|subnet_private)>az. "
-            "Use for cloud-architecture diagrams to draw concentric Cloud/VPC/Subnet/AZ boundaries."
+            "empty = logical tier (renders as a tinted section band). "
+            "REQUIRES `parent` chaining to take effect: cloud>vpc>(subnet_public|"
+            "subnet_private)>az, with compute/data nodes' clusters parented into the "
+            "subnet. A `zone` WITHOUT a parent chain (flat sibling) is IGNORED — it "
+            "draws no boundary. Only use it when you actually nest the clusters."
         ),
     )
 
