@@ -416,9 +416,10 @@ def build_tree(spec: dict, flat: bool = False):
             if len(items) > wrap_at and not children_of.get(cid):
                 cols = 2 if len(items) <= 8 else 3
                 # Sidebar cards are often chained by real sequential edges (e.g.
-                # WAF -> LB -> CDN -> NAT) — those labels need more than the row-
-                # band grid's tight 22px gap or they collide with the neighbour card.
-                grid_gap = 36 if is_sidebar else 22
+                # WAF -> LB -> CDN -> NAT) whose labels need real breathing room —
+                # the row-band grid's tight 22px gap has an edge label spill onto
+                # the neighbour card every time (a ~15-char label needs ~100px+).
+                grid_gap = 64 if is_sidebar else 22
                 items = [grid(f"{cid}__grid", None, "",
                               {"cols": cols, "gap": grid_gap, "stroke": "none"}, items)]
         # In a horizontal layer band the flow reads left→right: direct nodes
