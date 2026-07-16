@@ -264,6 +264,80 @@ def test_export_drawio_native_tool_registered():
     assert any(getattr(t, "name", "") == "export_drawio_native" for t in tools.DIAGRAM_TOOLS)
 
 
+# --------------------------------------------------------------------------- #
+# topology zones (Workstream 1): real Cloud/VPC/Subnet/AZ nesting
+# --------------------------------------------------------------------------- #
+
+_ZONE_SPEC = {
+    "provider": "aws", "pattern": "microservices",
+    "layout_intent": "left_to_right_pipeline", "slide_title": "DeepStream",
+    "clusters": [
+        {"id": "cloud", "label": "AWS Cloud", "tier": "infra", "parent": "", "zone": "cloud"},
+        {"id": "vpc", "label": "VPC", "tier": "infra", "parent": "cloud", "zone": "vpc"},
+        {"id": "az1", "label": "us-east-1a", "tier": "infra", "parent": "vpc", "zone": "az"},
+        {"id": "pub", "label": "Public subnet", "tier": "infra", "parent": "az1", "zone": "subnet_public"},
+        {"id": "prv", "label": "Private subnet", "tier": "infra", "parent": "az1", "zone": "subnet_private"},
+    ],
+    "nodes": [
+        {"id": "alb", "label": "ALB", "tech": "Elastic Load Balancing", "cluster": "pub", "type": "lb"},
+        {"id": "ec2", "label": "DeepStream", "tech": "Amazon EC2", "cluster": "prv", "type": "service"},
+        {"id": "rds", "label": "State", "tech": "Amazon RDS", "cluster": "prv", "type": "database"},
+    ],
+    "edges": [{"from": "alb", "to": "ec2", "flow": "data"},
+              {"from": "ec2", "to": "rds", "flow": "data"}],
+}
+
+
+def test_aws_zones_use_group_stencils_and_nest(tmp_path):
+    from prettygraph.native.topology import build_drawio_from_spec
+    xml, stats = build_drawio_from_spec(_ZONE_SPEC, "DeepStream")
+    # AWS zones render as real group stencils, incl. the (catalog-dashed) AZ frame.
+    assert "grIcon=mxgraph.aws4.group_vpc" in xml
+    assert "grIcon=mxgraph.aws4.group_availability_zone" in xml
+    assert "grIcon=mxgraph.aws4.group_subnet" in xml
+    assert "dashed=1" in xml                      # AZ boundary is dashed
+    assert stats["edge_cross"] == 0 and stats["edge_overlaps"] == 0
+    p = tmp_path / "zones.drawio"
+    p.write_text(xml, encoding="utf-8")
+    assert vd.validate_file(str(p))["error_count"] == 0
+
+
+def test_non_aws_zone_draws_label_pill(tmp_path):
+    from prettygraph.native.topology import build_drawio_from_spec
+    spec = {**_ZONE_SPEC, "provider": "gcp"}
+    xml, _ = build_drawio_from_spec(spec, "DeepStream")
+    # Non-AWS zones have no group stencils -> tinted frame + top-left label pill.
+    assert 'id="vpc__pill"' in xml
+    assert 'id="az1__pill"' in xml
+    assert "grIcon=mxgraph.aws4.group_vpc" not in xml   # no AWS stencils leak
+    assert "dashed=1" in xml                             # AZ frame still dashed
+    p = tmp_path / "gcp_zones.drawio"
+    p.write_text(xml, encoding="utf-8")
+    assert vd.validate_file(str(p))["error_count"] == 0
+
+
+def test_zone_containment_is_concentric():
+    from prettygraph.native.topology import build_tree
+    d, _ = build_tree(_ZONE_SPEC)
+    # cloud > vpc > az1 > (pub|prv) > nodes — real concentric nesting.
+    assert _contains(d.R["cloud"], d.R["vpc"])
+    assert _contains(d.R["vpc"], d.R["az1"])
+    assert _contains(d.R["az1"], d.R["prv"])
+    assert _contains(d.R["prv"], d.R["ec2"])
+
+
+def test_empty_zone_is_backward_compatible():
+    """zone == '' must be a pure no-op: identical output to a spec with no zone key."""
+    import copy
+    from prettygraph.native.topology import build_drawio_from_spec
+    with_empty = copy.deepcopy(_AWS_SPEC)
+    for c in with_empty["clusters"]:
+        c["zone"] = ""
+    a, _ = build_drawio_from_spec(_AWS_SPEC, "Shop")
+    b, _ = build_drawio_from_spec(with_empty, "Shop")
+    assert a == b
+
+
 def test_native_slide_framing(tmp_path):
     """Slide mode wraps the flat native body in hero + legend chrome and validates clean."""
     from prettygraph.native.topology import build_drawio_from_spec
