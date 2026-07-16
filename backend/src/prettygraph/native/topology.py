@@ -310,12 +310,19 @@ def build_tree(spec: dict, flat: bool = False):
                    if _CROSS_CUT.search(f"{clusters[cid].get('label') or ''} "
                                         f"{clusters[cid].get('tier') or ''}")]
     main_roots = [cid for cid in roots if cid not in cross_roots]
-    # Topology mode (Workstream 1): when any cluster declares a boundary `zone`,
-    # honour real containment nesting (cloud>vpc>subnet>az) rather than flattening
-    # every root into a full-width tinted band — layered banding would defeat the
-    # concentric-boundary look the reference architecture needs.
-    has_zones = any(clusters[c].get("zone") for c in clusters)
-    layered = (intent.startswith("layer") or len(main_roots) >= 3) and not has_zones
+    # Topology mode (Workstream 1): honour real containment nesting
+    # (cloud>vpc>subnet>az) as concentric boundaries instead of flat bands — BUT
+    # ONLY when a zone actually participates in a containment tree (has a zoned
+    # parent, or has child clusters). A lone flat `zone` tag with parent="" is NOT
+    # topology; disabling layered banding for it would drop every top-level section
+    # into a single ultra-wide row (the Azure-diagram regression). Such flat tags
+    # are treated as a no-op and render as today's tinted section bands.
+    def _is_topology_node(cid: str) -> bool:
+        c = clusters[cid]
+        return bool(c.get("zone")) and (
+            c.get("parent") in clusters or bool(children_of.get(cid)))
+    has_nested_zones = any(_is_topology_node(cid) for cid in clusters)
+    layered = (intent.startswith("layer") or len(main_roots) >= 3) and not has_nested_zones
 
     def build_node(n: dict, accent: str | None = None, size_class: str | None = None):
         # Upgrade path (V2 §8): a node carrying an embedded icon reuses it directly
