@@ -66,7 +66,10 @@ def _score_icon_name(name_l: str, cat_l: str, terms: list[str], q_squished: str)
     for t in terms:
         if t in name_words:
             score += 30
-        elif t in name_l:
+        # a bare substring match on a very short term (e.g. "ai") is essentially
+        # noise — "ai" is a substring of "rails" — so require length >= 3, same
+        # guard aiicons.py's brand search already uses for its weakest rule.
+        elif len(t) >= 3 and t in name_l:
             score += 12
         elif t in cat_l:
             score += 3
