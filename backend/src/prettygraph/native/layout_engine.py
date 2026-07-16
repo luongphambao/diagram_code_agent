@@ -219,13 +219,23 @@ def _m_box(n):
 
 def _m_card(n):
     ic = 30 if (n.get("icon") or n.get("image_data_uri")) else 0
-    text_w = max(len(n.get("title") or "") * 7.2, len(n.get("sub") or "") * 5.8)
+    title, sub = n.get("title") or "", n.get("sub") or ""
+    text_w = max(len(title) * 7.2, len(sub) * 5.8)
     # Density-aware sizing (V2 §5.3): size_class supplies the width band via
     # min_w/max_w; dense rows stay compact, sparse rows with long text go wide.
     min_w = n.get("min_w") or 150
     max_w = n.get("max_w") or 260
-    n["w"] = n.get("w") or round(min(max_w, max(min_w, text_w + ic + 44)))
-    n["h"] = n.get("h") or 54
+    w = n.get("w") or round(min(max_w, max(min_w, text_w + ic + 44)))
+    n["w"] = w
+    # Height must scale with the WRAPPED line count, not assume a single line: a
+    # narrow "compact" card (>4 siblings) combined with a long sub-label wraps to
+    # 2-3 lines and overflows a fixed box, visually colliding with whatever sits
+    # below it (an edge label, the next card). Char-width heuristic mirrors
+    # _auto_box's approach for plain boxes.
+    avail = max(40, w - ic - 20)
+    title_lines = max(1, math.ceil(len(title) * 7.2 / avail)) if title else 0
+    sub_lines = max(1, math.ceil(len(sub) * 5.8 / avail)) if sub else 0
+    n["h"] = n.get("h") or max(54, 20 + title_lines * 16 + sub_lines * 14)
 
 
 def _m_pool(n):
