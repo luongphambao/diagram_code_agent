@@ -79,8 +79,23 @@ def _squish(s: str) -> str:
     return re.sub(r"[^a-z0-9]", "", s.lower())
 
 
+_MIN_BRAND_SCORE = 40  # below this, a match is a coincidental substring, not a real brand hit
+
+
 def search(fam: dict, query: str, limit: int = 8) -> list[str]:
-    """Rank brand bases against the query (squished + per-token matching)."""
+    """Rank brand bases against the query (squished + per-token matching).
+
+    Architecture-diagram node labels are frequently generic descriptive phrases
+    ("OCR Engine", "Recommendation Engine"), not real brand names — callers
+    upstream may still hand the WHOLE label to this search as a last-resort
+    fallback. A bare per-token substring check with no floor readily "matches" an
+    unrelated brand purely by coincidence (e.g. "engine" is a literal substring
+    of "volcengine", so "OCR Engine"/"GNN Engine"/"Recommendation Engine" all
+    "matched" the Volcano Engine logo). `_MIN_BRAND_SCORE` drops that weakest
+    per-token substring rule (30) from ever qualifying alone — a real brand
+    reference should hit the exact/prefix rules (100/90/60/50) or the whole-query
+    containment rule (40), not just a coincidental fragment.
+    """
     q = _squish(query)
     tokens = [t for t in re.findall(r"[a-z0-9]+", query.lower()) if t]
     scored: dict[str, int] = {}
@@ -100,7 +115,7 @@ def search(fam: dict, query: str, limit: int = 8) -> list[str]:
                 s = max(s, 50)
             elif len(t) >= 3 and t in b:
                 s = max(s, 30)
-        if s:
+        if s >= _MIN_BRAND_SCORE:
             scored[base] = s
     return sorted(scored, key=lambda base: (-scored[base], base))[:limit]
 
