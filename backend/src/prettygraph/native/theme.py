@@ -61,6 +61,26 @@ class _Theme:
 THEME = _Theme()
 
 
+# Topology zone registry: zone type -> (fill, stroke, dashed, aws_group_stencil).
+# fill=None => transparent boundary (the enclosed cards carry the colour). The AWS
+# group stencils are confirmed present in resources/drawio_catalog/aws.json, and
+# group_availability_zone/group_region already carry dashed=1 in the catalog, so the
+# dashed AZ look comes for free on the AWS path.
+_ZONES: dict[str, tuple[str | None, str, bool, str]] = {
+    "cloud": (None, _Theme.zone_cloud_stroke, False, "group_aws_cloud"),
+    "vpc": (None, _Theme.zone_vpc_stroke, False, "group_vpc"),
+    "subnet_public": (_Theme.subnet_public, _Theme.subnet_public_stroke, False, "group_subnet"),
+    "subnet_private": (_Theme.subnet_private, _Theme.subnet_private_stroke, False, "group_subnet"),
+    "az": (None, _Theme.zone_az_stroke, True, "group_availability_zone"),
+    "onprem": (_Theme.onprem, _Theme.onprem_stroke, False, "group_corporate_data_center"),
+}
+
+
+def zone_style(zone: str | None) -> tuple[str | None, str, bool, str] | None:
+    """Return (fill, stroke, dashed, aws_group) for a topology zone, or None."""
+    return _ZONES.get(zone or "")
+
+
 def stage_fill(i: int) -> str:
     return _STAGES[i % len(_STAGES)]
 
