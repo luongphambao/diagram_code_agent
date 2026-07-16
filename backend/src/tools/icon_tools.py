@@ -643,6 +643,7 @@ try:
 
         current_workspace().mkdir(parents=True, exist_ok=True)
         _ICON_PLAN_FILE.write_text(json.dumps(entries, indent=2), encoding="utf-8")
+        _refresh_render_from_icon_plan(current_workspace())
         _bump_tool_summary("resolve_missing_icons", missing_icons_retried=len(retries))
         return json.dumps({
             "status": "OK", "updated": updated, "still_not_found": still_not_found,
