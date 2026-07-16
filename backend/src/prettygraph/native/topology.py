@@ -37,12 +37,15 @@ _SIZE_CLASSES = {"compact": (150, 210), "medium": (176, 272), "wide": (240, 420)
 # Reserved routing lane between stacked layer bands (V2 §7.6): whitespace the
 # router uses as connector infrastructure rather than incidental spacing.
 _LAYER_LANE_GAP = 46
-# Beyond this many parallel top-level bands, a single tall column reads as a
-# narrow, repetitive scroll (and forces the slide-fit scale down hard enough to
-# risk text collisions). Switch to a 2-column grid of bands instead so the
-# diagram stays roughly landscape-shaped. Also triggered explicitly via
-# layout_intent="grid" for a diagram whose domains are parallel, not sequential.
-_GRID_BAND_MIN = 5
+# A 2-column grid of bands is available ONLY via explicit layout_intent="grid" —
+# NOT auto-applied by band count. Tried auto-triggering above a band-count
+# threshold; the router (built for a single top-to-bottom channel) routes
+# cross-band edges far messier once bands sit in a 2-D grid instead of one
+# column (real regression seen on a 7-band spec: long diagonal edges crossing
+# unrelated bands). Auto mode also stretches every band to the tallest cell in
+# its row/column (grid()'s uniform-cell model), wasting space on small bands.
+# Until the router is grid-aware, only an explicit, deliberate request should
+# opt into this.
 _ICON_SCORE_MIN = 50  # top-hit score to accept a stencil for a node (else a plain card)
 # The bare "AWS icon + label below" convention doesn't wrap its label (no
 # whiteSpace=wrap in the catalog style, see drawio_catalog.style_for_icon) and
