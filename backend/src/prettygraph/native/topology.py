@@ -411,12 +411,16 @@ def build_tree(spec: dict, flat: bool = False):
             # row-band/nested-frame wrapping below — this only reshapes cards INSIDE
             # one already-isolated frame, so it carries none of the cross-BAND
             # routing risk that disabled the (still opt-in) grid-of-bands layout.
-            wrap_at = (6 if (depth == 0 and band_dir == "row") else
-                       4 if (depth == 0 and band_dir == "col") else 3)
+            is_sidebar = depth == 0 and band_dir == "col"
+            wrap_at = 6 if (depth == 0 and band_dir == "row") else (4 if is_sidebar else 3)
             if len(items) > wrap_at and not children_of.get(cid):
                 cols = 2 if len(items) <= 8 else 3
+                # Sidebar cards are often chained by real sequential edges (e.g.
+                # WAF -> LB -> CDN -> NAT) — those labels need more than the row-
+                # band grid's tight 22px gap or they collide with the neighbour card.
+                grid_gap = 36 if is_sidebar else 22
                 items = [grid(f"{cid}__grid", None, "",
-                              {"cols": cols, "gap": 22, "stroke": "none"}, items)]
+                              {"cols": cols, "gap": grid_gap, "stroke": "none"}, items)]
         # In a horizontal layer band the flow reads left→right: direct nodes
         # first, sub-frames after; nested frames keep the frame-first order.
         kids = (items + sub_frames) if (depth == 0 and band_dir == "row") \
