@@ -335,30 +335,25 @@ def _bands_spec(n: int, *, layout_intent: str = "") -> dict:
     }
 
 
-def test_topology_stacks_single_column_below_grid_threshold():
-    """Default (few bands, no explicit grid intent): one vertical column, unchanged."""
+def test_topology_stacks_single_column_regardless_of_band_count():
+    """No explicit grid intent: always one vertical column, even with many bands.
+
+    Grid-of-bands used to auto-trigger above a band-count threshold, but that
+    regressed real diagrams — the router (built for one top-to-bottom channel)
+    routes cross-band edges far messier once bands sit in a 2-D grid, and small
+    bands get stretched to match the largest one in their row/column. Grid is
+    now opt-in only (layout_intent="grid"), so any band count must stack."""
     from prettygraph.native.topology import build_tree
-    d, _ = build_tree(_bands_spec(3))
-    ys = [d.R[f"c{i}"]["y"] for i in range(3)]
-    xs = [d.R[f"c{i}"]["x"] for i in range(3)]
-    assert ys[0] < ys[1] < ys[2]                 # stacked top-to-bottom
-    assert max(xs) - min(xs) < 2                 # all in the same column
+    for n in (3, 7):
+        d, _ = build_tree(_bands_spec(n))
+        ys = [d.R[f"c{i}"]["y"] for i in range(n)]
+        xs = [d.R[f"c{i}"]["x"] for i in range(n)]
+        assert ys == sorted(ys) and len(set(ys)) == n   # strictly stacked top-to-bottom
+        assert max(xs) - min(xs) < 2                    # all in the same column
 
 
-def test_topology_auto_grids_many_parallel_bands():
-    """6 parallel top-level domains (> _GRID_BAND_MIN) auto-switch to a 2-column grid."""
-    from prettygraph.native.topology import build_tree
-    d, _ = build_tree(_bands_spec(6))
-    # row 0: c0, c1 side by side (same y, different x)
-    assert abs(d.R["c0"]["y"] - d.R["c1"]["y"]) < 2
-    assert d.R["c1"]["x"] > d.R["c0"]["x"]
-    # row 1 (c2, c3) sits below row 0
-    assert d.R["c2"]["y"] > d.R["c0"]["y"]
-    assert abs(d.R["c0"]["x"] - d.R["c2"]["x"]) < 2   # same column as c0
-
-
-def test_topology_explicit_grid_intent_overrides_low_band_count():
-    """layout_intent='grid' grids even a small band count (below the auto threshold)."""
+def test_topology_explicit_grid_intent_still_available():
+    """layout_intent='grid' is still available as an explicit, deliberate opt-in."""
     from prettygraph.native.topology import build_tree
     d, _ = build_tree(_bands_spec(3, layout_intent="grid"))
     assert abs(d.R["c0"]["y"] - d.R["c1"]["y"]) < 2
