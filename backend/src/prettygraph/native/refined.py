@@ -31,6 +31,11 @@ _ENTRY_RX = re.compile(r"network|ingress|\bedge\b|gateway", re.I)
 _OUTCOME_RX = re.compile(r"outcome|consum|downstream|client|dashboard|notification",
                          re.I)
 _FUTURE_RX = re.compile(r"future|phase\s*2|deferred|roadmap|planned", re.I)
+# External dependency tiers (identity providers, partner SaaS, third-party APIs)
+# belong in a sidebar next to what they connect to — NOT the ops/governance band,
+# even though "identity"/"access" also hit the ops regex.
+_EXTERNAL_RX = re.compile(r"external|third.?party|partner|\bsaas\b|vendor|"
+                          r"upstream provider", re.I)
 
 # Boundary zone kinds recognised from the existing `zone` cluster field.
 _BOUNDARY_KINDS = {"cloud": "cloud", "region": "cloud", "account": "cloud",
