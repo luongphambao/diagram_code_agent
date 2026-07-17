@@ -136,13 +136,20 @@ def _label_offset(src_r: dict, tgt_r: dict, top_bound: float | None) -> tuple[fl
     tcy = tgt_r["y"] + tgt_r["h"] / 2
     if abs(tcx - scx) < abs(tcy - scy):
         return None  # vertical-dominant: unnudged
+    if abs(tcy - scy) > 80:
+        # Not really "same row" — a long cross-band edge routes via detour
+        # waypoints the router chooses, so the node-center midpoint this
+        # function assumes no longer approximates where the label actually
+        # renders; nudging against that assumption can fling the label way
+        # off (e.g. up past the title). Leave the router's own placement.
+        return None
     mid_y = (scy + tcy) / 2
     top = min(src_r["y"], tgt_r["y"])
     bottom = max(src_r["y"] + src_r["h"], tgt_r["y"] + tgt_r["h"])
     want_y = top - 20
     if top_bound is not None and want_y - 8 < top_bound:
         want_y = bottom + 18  # no room above (top of zone) -> drop below instead
-    dy = want_y - mid_y
+    dy = max(-70.0, min(70.0, want_y - mid_y))  # bounded nudge, never a runaway offset
     return (0.0, dy) if abs(dy) > 1 else None
 
 
