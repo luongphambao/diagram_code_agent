@@ -129,15 +129,25 @@ def extract_inventory(path: str) -> dict:
             guard += 1
         return {"x": x, "y": y}
 
+    # Engine-generated decorative/chrome cells must never re-ingest as content:
+    # shadows/accents/zone pills/sub-icons ("__sh"/"__ac"/"__pill"/"__ic"
+    # suffixes) and grid/legend/title scaffolding ("__grid"/"__legend"/"__title").
+    _DECOR = ("__sh", "__ac", "__pill", "__ic", "__grid", "__legend", "__title")
+
+    def _is_decor(cid: str | None) -> bool:
+        return bool(cid) and (cid.endswith(_DECOR) or cid.startswith(("__legend", "__title")))
+
     # Clusters = container vertices; nodes = leaf vertices with a label or icon.
     clusters, nodes, edges = [], [], []
     for c in cells:
+        if _is_decor(c["id"]):
+            continue
         if c["vertex"] and _is_container(c):
             label, _ = _split_label(c["value"])
             clusters.append({"id": c["id"], "label": label or c["id"]})
     cluster_ids = {cl["id"] for cl in clusters}
     for c in cells:
-        if not c["vertex"] or _is_container(c):
+        if not c["vertex"] or _is_container(c) or _is_decor(c["id"]):
             continue
         icon = extract_image_uri(c["style"])
         title, sub = _split_label(c["value"])
