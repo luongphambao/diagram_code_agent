@@ -710,6 +710,14 @@ def build_refined(spec: dict, plan: dict | None = None):
         if cls in RT.EDGE_LEGEND_LABELS and cls not in legend_flows:
             legend_flows.append(cls)
         label = e.get("label") or ""
+        # Playbook §13.7: only label when the relationship isn't obvious from
+        # source→target. Two cards in the SAME zone are adjacent and self-evident,
+        # so drop the label — this is what declutters a dense diagram's centre
+        # (the colour already carries the flow type). Cross-zone flows keep labels.
+        s_cl = node_by_id.get(s, {}).get("cluster")
+        t_cl = node_by_id.get(t_, {}).get("cluster")
+        if label and s_cl is not None and s_cl == t_cl:
+            label = ""
         if key in rep_keys and "(all layers)" not in label:
             label = (label + " (all layers)").strip()
         if cls == "future" and "future" not in label.lower():
