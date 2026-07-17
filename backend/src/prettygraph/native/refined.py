@@ -491,7 +491,7 @@ def build_refined(spec: dict, plan: dict | None = None):
                    if _role_of(clusters[z], clusters) == "main" and z in zone_rects]
         if not members:
             continue
-        pad = 18 + (max_anc - _b_anc(bid)) * 16
+        pad = 18 + (max_anc - _b_anc(bid)) * 22
         bx = min(r["x"] for r in members) - pad
         by = min(r["y"] for r in members) - pad - RT.GEO["tab_overlap"]
         bw = max(r["x"] + r["w"] for r in members) + pad - bx
