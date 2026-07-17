@@ -374,7 +374,7 @@ def build_refined(spec: dict, plan: dict | None = None):
                   scope_note=scope_note, metadata=meta_html)
 
     # ---- background + page ---- #
-    page_h = max(RT.GEO["page_h"], fy + 145 + 35)
+    page_h = max(900, fy + 145 + 35)
     d.page = [page_w, page_h]
     bg = d._put("__bg", "1", 0, 0, page_w, page_h,
                 f"html=1;fillColor={RT.CHROME['bg']};strokeColor=none;", "",
