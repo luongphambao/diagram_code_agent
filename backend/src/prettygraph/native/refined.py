@@ -176,6 +176,87 @@ def _edge_class(e: dict, ctx: dict | None = None) -> str:
     return "data"
 
 
+# --- refined zone content model: header/footer spanning "distributor" cards,
+# subzone column frames (AZ/subnet boxes nested inside a zone), per-card
+# sub-tint. This is what lifts the output from "boxes in bands" to the authored
+# reference look (playbook §8.5 main-flow-plus-support, §10.3 sub-grouping). --- #
+_SUBZONE_W = 176      # dashed AZ/subnet sub-frame outer width inside a zone
+_SUBZONE_PAD = 10     # inner pad between sub-frame border and its cards
+_SUBZONE_TOP = 26     # room at the sub-frame top for its label pill
+
+
+def _card_fill_stroke(n: dict, zone_hue: str):
+    """(fill, stroke) for a card: a per-card ``hue`` sub-tints it (playbook
+    §10.3 — colour-sub-group a component inside a differently-hued zone, e.g.
+    an orange EBS card in a teal compute zone); otherwise white on the zone's
+    card stroke. fill=None => rich_card's white default."""
+    h = str(n.get("hue") or "").lower()
+    if h in RT.ZONE_HUES:
+        return RT.ZONE_HUES[h][2], RT.CARD_STROKES.get(h, RT.ZONE_HUES[h][1])
+    return None, RT.CARD_STROKES.get(zone_hue, "#D0D5DD")
+
+
+def _zone_content(members: list[dict]) -> dict:
+    """Partition a zone's cards into header spans, subzone/auto columns and
+    footer spans. ``span``: "header"|"footer" => a full-zone-width distributor
+    card. ``subzone``: str | {id,label,kind} => cards sharing it stack inside
+    one dashed sub-frame column (AZ/subnet nesting)."""
+    headers, footers, body = [], [], []
+    for n in members:
+        sp = str(n.get("span") or "").lower()
+        (headers if sp == "header" else footers if sp == "footer"
+         else body).append(n)
+    columns: list[dict] = []
+    sub_ix: dict[str, int] = {}
+    plain: list[dict] = []
+    for n in body:
+        sz = n.get("subzone")
+        if sz:
+            szid = sz if isinstance(sz, str) else str(sz.get("id") or sz.get("label"))
+            if szid not in sub_ix:
+                sub_ix[szid] = len(columns)
+                label = szid if isinstance(sz, str) else str(sz.get("label") or szid)
+                kind = "az" if isinstance(sz, str) else str(sz.get("kind") or "az")
+                columns.append({"sub": {"id": szid, "label": label, "kind": kind},
+                                "cards": []})
+            columns[sub_ix[szid]]["cards"].append(n)
+        else:
+            plain.append(n)
+    if plain:
+        pcols = max(1, (len(plain) + _MAX_ROWS - 1) // _MAX_ROWS)
+        per = (len(plain) + pcols - 1) // pcols or 1
+        for ci in range(pcols):
+            chunk = plain[ci * per:(ci + 1) * per]
+            if chunk:
+                columns.append({"sub": None, "cards": chunk})
+    return {"headers": headers, "footers": footers, "columns": columns}
+
+
+def _col_card_w(col: dict) -> int:
+    return (_SUBZONE_W - 2 * _SUBZONE_PAD) if col["sub"] else _CARD_W
+
+
+def _measure_content(content: dict) -> tuple[int, int]:
+    """Zone (w, h) from its content model — kept in lockstep with _emit_content."""
+    gap = RT.GEO["card_gap"]
+    pad = RT.GEO["zone_pad"]
+    col_ws, col_hs = [], []
+    for col in content["columns"]:
+        col_ws.append(_col_card_w(col) + (2 * _SUBZONE_PAD if col["sub"] else 0))
+        ch = (_SUBZONE_TOP if col["sub"] else 0)
+        ch += sum(_card_h(_body_lines(n)) + gap for n in col["cards"]) - gap
+        if col["sub"]:
+            ch += _SUBZONE_PAD
+        col_hs.append(max(0, ch))
+    cols_w = (sum(col_ws) + gap * (len(col_ws) - 1)) if col_ws else 0
+    cols_h = max(col_hs) if col_hs else 0
+    hh = sum(_card_h(_body_lines(n)) + gap for n in content["headers"])
+    fh = sum(_card_h(_body_lines(n)) + gap for n in content["footers"])
+    w = max(cols_w, _CARD_W) + 2 * pad
+    h = 46 + hh + cols_h + fh + 8
+    return max(w, 170), max(h, 120)
+
+
 def build_refined(spec: dict, plan: dict | None = None):
     """Compose the refined page. Returns (Diagram, pseudo_root_rect) — the same
     contract as topology.build_tree so build_drawio_from_spec needs no change."""
