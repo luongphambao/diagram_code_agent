@@ -460,7 +460,11 @@ def _attach_icon_fallbacks(spec: dict, workspace: Path) -> None:
         except OSError:
             continue
         import base64
-        node["icon_data_uri"] = "data:image/png;base64," + base64.standard_b64encode(data).decode("ascii")
+        # aiicons.lookup_ai_logo falls back to a raw cached .svg when cairosvg
+        # (native libcairo) isn't installed — labeling that as image/png would
+        # silently render as a broken image, no error surfaced anywhere.
+        mime = "image/svg+xml" if icon_path.suffix.lower() == ".svg" else "image/png"
+        node["icon_data_uri"] = f"data:{mime};base64," + base64.standard_b64encode(data).decode("ascii")
 
 
 def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
