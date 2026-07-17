@@ -52,3 +52,31 @@ def test_ai_brand_search_still_finds_real_brands():
         results = search_ai_brands(q, limit=3)
         assert results, f"expected a match for real brand {q!r}"
         assert results[0]["brand"] == q
+
+
+def test_azure_and_gcp_packs_resolve_native_icons():
+    """azure.json/gcp.json must be on the catalog load path (WS0 regression:
+    they lived only in drawio-ai-kit/catalog/, so every non-AWS diagram
+    rendered 0 native icons). Resolution must stay vendor-honest — an azure
+    node gets an azure_* stencil, a gcp node a gcp_* stencil."""
+    load_catalog.cache_clear()
+    cat = load_catalog()
+    try:
+        assert any(n.startswith("azure_") for n in cat.valid_names), "azure pack missing"
+        assert any(n.startswith("gcp_") for n in cat.valid_names), "gcp pack missing"
+        azure_cases = [
+            {"id": "a", "label": "Azure Key Vault", "tech": "Azure Key Vault"},
+            {"id": "b", "label": "Azure Cosmos DB", "tech": "Azure Cosmos DB"},
+        ]
+        for node in azure_cases:
+            hit = _resolve_node_icon(cat, node, provider="azure")
+            assert hit and hit.startswith("azure_"), (node["label"], hit)
+        gcp_cases = [
+            {"id": "c", "label": "Pub/Sub Commands", "tech": "Cloud Pub/Sub"},
+            {"id": "d", "label": "BigQuery", "tech": "BigQuery"},
+        ]
+        for node in gcp_cases:
+            hit = _resolve_node_icon(cat, node, provider="gcp")
+            assert hit and hit.startswith("gcp_"), (node["label"], hit)
+    finally:
+        load_catalog.cache_clear()
