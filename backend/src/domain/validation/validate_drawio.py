@@ -935,14 +935,18 @@ def audit_xml(xml: str, profile: str = "auto") -> list[str]:
     return advice
 
 
-def validate_file(path: str, profile: str = "auto") -> dict:
-    """Lint a .drawio file. Returns a report dict with errors, warnings, advice, ok."""
+def validate_xml(xml: str, profile: str = "auto", stats: dict | None = None) -> dict:
+    """Lint drawio XML given as a string (no file, no PNG — cheap enough for the
+    auto-repair candidate search to call in a loop). Same report shape as
+    validate_file(), plus ``layout_metrics``."""
     try:
-        tree = ET.parse(path)
-    except (ET.ParseError, OSError) as exc:
+        root = ET.fromstring(xml)
+    except ET.ParseError as exc:
         return {"errors": [f"cannot parse file: {exc}"], "warnings": [], "advice": [],
-                "error_count": 1, "warning_count": 0, "advice_count": 0, "ok": False}
-    pages = tree.getroot().findall("diagram") or [tree.getroot()]
+                "polish": [], "collisions": [], "layout_metrics": {},
+                "error_count": 1, "warning_count": 0, "advice_count": 0,
+                "polish_count": 0, "collision_count": 0, "ok": False}
+    pages = root.findall("diagram") or [root]
     errors, warns = [], []
     for page in pages:
         e, w = check_page(page)
@@ -951,13 +955,9 @@ def validate_file(path: str, profile: str = "auto") -> dict:
     advice: list[str] = []
     polish: list[str] = []
     collisions: list[str] = []
+    metrics: dict = {}
     try:
-        xml = ""
-        try:
-            xml = open(path, encoding="utf-8").read()
-        except OSError:
-            xml = ""
-        if xml and "</mxGraphModel>" in xml:  # skip compressed/empty pages
+        if "</mxGraphModel>" in xml:  # skip compressed/empty pages
             se, sw = check_stencils(xml)
             errors += se
             warns += sw
@@ -965,6 +965,7 @@ def validate_file(path: str, profile: str = "auto") -> dict:
             polish = audit_production_polish(xml)
             collisions = audit_card_collisions(xml)
             warns += collisions  # cross-container card overlaps -> layout warnings
+            metrics = audit_layout_metrics(xml, stats)
     except Exception:  # noqa: BLE001 — design audits are best-effort
         pass
     return {
@@ -973,6 +974,7 @@ def validate_file(path: str, profile: str = "auto") -> dict:
         "advice": advice,
         "polish": polish,
         "collisions": collisions,
+        "layout_metrics": metrics,
         "error_count": len(errors),
         "warning_count": len(warns),
         "advice_count": len(advice),
@@ -980,6 +982,18 @@ def validate_file(path: str, profile: str = "auto") -> dict:
         "collision_count": len(collisions),
         "ok": len(errors) == 0,
     }
+
+
+def validate_file(path: str, profile: str = "auto", stats: dict | None = None) -> dict:
+    """Lint a .drawio file. Returns a report dict with errors, warnings, advice, ok."""
+    try:
+        xml = open(path, encoding="utf-8").read()
+    except OSError as exc:
+        return {"errors": [f"cannot parse file: {exc}"], "warnings": [], "advice": [],
+                "polish": [], "collisions": [], "layout_metrics": {},
+                "error_count": 1, "warning_count": 0, "advice_count": 0,
+                "polish_count": 0, "collision_count": 0, "ok": False}
+    return validate_xml(xml, profile, stats=stats)
 
 
 def check_semantic_preservation(expected_node_ids, expected_edges, xml: str):
