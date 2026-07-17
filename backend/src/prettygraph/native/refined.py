@@ -462,9 +462,9 @@ def build_refined(spec: dict, plan: dict | None = None):
     for z in ops:
         g = _zone_geom(z, horizontal=True)
         w = min(g["w"], avail)
-        if ox > margin and ox + w > margin + avail:  # wrap band row
+        if ox > band_left and ox + w > band_left + avail:  # wrap band row
             oy += row_h_ops + RT.GEO["zone_gap"] + RT.GEO["tab_overlap"]
-            ox, row_h_ops = margin, 0
+            ox, row_h_ops = band_left, 0
         ops_rects[z] = {"x": ox, "y": oy, "w": w, "h": g["h"], "cards": g["cards"]}
         zone_rects[z] = ops_rects[z]
         ox += w + RT.GEO["zone_gap"]
