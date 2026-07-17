@@ -1203,10 +1203,17 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
     label_ratio = (metrics.get("edge_label_overlaps") or 0) / n_edges
     label_pen = min(4.0, 12.0 * max(0.0, label_ratio - 0.15))
 
-    # Composition: ratio inside PRODUCTION_TARGET band = full marks, linear
+    # Preset branch: the refined typographic preset trades icon coverage for
+    # structure quality (backbone / numbered zones / glue / legend coverage)
+    # and reads its ratio band from REFINED_TARGET.
+    refined = (str(stats.get("style_preset") or "").lower() == "refined"
+               or bool(metrics.get("refined")))
+    target = REFINED_TARGET if refined else PRODUCTION_TARGET
+
+    # Composition: ratio inside the target band = full marks, linear
     # falloff outside (0 at ratio 1.0 / 2.6); dense fallback is a real miss.
     ratio = metrics.get("ratio")
-    lo, hi = PRODUCTION_TARGET["ratio"]
+    lo, hi = target["ratio"]
     if ratio is None:
         composition = 10.0
     elif lo <= ratio <= hi:
