@@ -527,17 +527,28 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
     if title and not flat:
         d.title(title)
 
+    # Hub edge bundling (layout plan): suppressed members are skipped, the
+    # bundle's representative edge gets an "(all layers)" label so the reader
+    # knows one arrow stands for the whole fan-out.
+    suppressed = {tuple(x) for x in plan.get("suppressed_edges", [])}
+    rep_keys = {tuple(b.get("rep") or []) for b in plan.get("edge_bundles", [])}
     flows_seen: list[str] = []
     for e in spec.get("edges", []):
         s, t = e.get("from"), e.get("to")
         if s in d.R and t in d.R:
+            label = e.get("label") or ""
+            key = (s, t, label)
+            if key in suppressed:
+                continue
+            if key in rep_keys and "(all layers)" not in label:
+                label = (label + " (all layers)").strip()
             flow = str(e.get("flow") or "").lower()
             fc = FLOW_COLORS.get(flow)
             if fc and flow not in flows_seen:
                 flows_seen.append(flow)
             dash = (str(e.get("style") or "").lower() == "dashed"
                     or bool(fc and fc[1] == "dashed"))
-            d.link(s, t, e.get("label") or "",
+            d.link(s, t, label,
                    dash=dash, stroke=_flow_color(e.get("flow")))
 
     # Standalone body legend: one row per flow colour actually used (the slide
