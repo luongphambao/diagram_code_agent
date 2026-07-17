@@ -32,9 +32,9 @@ def test_rich_card_style_and_body():
     assert "fontFamily=Helvetica" in xml
     assert "fontSize=10.5" in xml
     assert "align=left" in xml and "verticalAlign=top" in xml
-    # bold heading + blank line + body lines, escaped once here + once by _put
-    assert "&amp;lt;b&amp;gt;ElastiCache for Redis&amp;lt;/b&amp;gt;" in xml
-    assert "&amp;lt;br&amp;gt;&amp;lt;br&amp;gt;cache.r6g.large" in xml
+    # bold heading + blank line + body lines (HTML escaped once by _put)
+    assert "&lt;b&gt;ElastiCache for Redis&lt;/b&gt;" in xml
+    assert "&lt;br&gt;&lt;br&gt;cache.r6g.large" in xml
     # no shadow companion cell, no accent stripe (flat anatomy)
     assert "redis__sh" not in d._cell_index
     assert "redis__ac" not in d._cell_index
