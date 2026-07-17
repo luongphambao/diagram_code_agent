@@ -135,9 +135,11 @@ def build_refined(spec: dict, plan: dict | None = None):
             out += ([ch] if ch in zone_ids else []) + _descendant_zones(ch)
         return out
 
+    # A zone-tagged wrapper WITH direct nodes stays a zone (a boundary would
+    # orphan its nodes); only childful, node-free wrappers become boundaries.
     boundary_ids = [cid for cid, c in clusters.items()
                     if _BOUNDARY_KINDS.get(str(c.get("zone") or "").lower())
-                    and children_of.get(cid)]
+                    and children_of.get(cid) and not nodes_by_cluster.get(cid)]
     zone_ids = [cid for cid in clusters
                 if cid not in boundary_ids and nodes_by_cluster.get(cid)]
 
