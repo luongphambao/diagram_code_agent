@@ -527,7 +527,7 @@ def test_refined_card_logo_badge():
     xml, _ = build_drawio_from_spec(spec, "T")
     cells = {c.get("id"): c for c in ET.fromstring(xml).iter("mxCell")}
     assert "dns__ic" in cells and "shape=image" in cells["dns__ic"].get("style")
-    assert "spacingRight=30" in cells["dns"].get("style")  # text clears the badge
+    assert "spacingLeft=42" in cells["dns"].get("style")  # text clears the left logo
     # the logo badge must not register as a colliding card
     rep = vd.validate_xml(xml)
     assert rep["collision_count"] == 0
