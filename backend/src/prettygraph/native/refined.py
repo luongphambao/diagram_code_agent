@@ -483,39 +483,63 @@ def build_refined(spec: dict, plan: dict | None = None):
                    [pw, 22], scope.replace("_", " "), fill="#FFFFFF",
                    stroke=RT.ZONE_HUES[hue][1],
                    font_color=RT.ZONE_HUES[hue][0], fs=9)
-        stroke = RT.CARD_STROKES.get(hue, "#D0D5DD")
-        cards = (ops_rects[z]["cards"] if z in ops_rects
-                 else geo_main.get(z, geo_side.get(z, {})).get("cards", []))
+        def _render(n, xy, wh, span=False, zone_hue=hue):
+            fill, cstroke = _card_fill_stroke(n, zone_hue)
+            if str(n.get("kind") or "") == "note":
+                d.note_card(n["id"], xy, wh, n.get("label") or n["id"],
+                            _body_lines(n), fill=fill, stroke=cstroke or "#D0D5DD")
+            else:
+                d.rich_card(n["id"], xy, wh, n.get("label") or n["id"],
+                            _body_lines(n), fill=fill, stroke=cstroke,
+                            align="center" if span else "left",
+                            dashed=str(n.get("scope") or "") == "future")
+
         if z in ops_rects:  # horizontal band
+            cards = ops_rects[z]["cards"]
             cx = rect["x"] + RT.GEO["zone_pad"] + 6
             n_cards = max(1, len(cards))
             cw = min(320, max(170, (rect["w"] - 40 - 14 * n_cards) // n_cards))
             for n, lines in cards:
-                h = _card_h(lines)
-                if str(n.get("kind") or "") == "note":
-                    d.note_card(n["id"], [cx, rect["y"] + 40], [cw, h],
-                                n.get("label") or n["id"], lines, stroke=stroke)
-                else:
-                    d.rich_card(n["id"], [cx, rect["y"] + 40], [cw, h],
-                                n.get("label") or n["id"], lines, stroke=stroke,
-                                dashed=str(n.get("scope") or "") == "future")
+                _render(n, [cx, rect["y"] + 40], [cw, _card_h(lines)])
                 cx += cw + 14
-        else:  # vertical column(s)
-            cols = max(1, (len(cards) + _MAX_ROWS - 1) // _MAX_ROWS)
-            per_col = (len(cards) + cols - 1) // cols or 1
-            for ci in range(cols):
-                cy = rect["y"] + 46
-                cx = rect["x"] + RT.GEO["zone_pad"] + ci * (_CARD_W + RT.GEO["zone_pad"])
-                for n, lines in cards[ci * per_col:(ci + 1) * per_col]:
-                    h = _card_h(lines)
-                    if str(n.get("kind") or "") == "note":
-                        d.note_card(n["id"], [cx, cy], [_CARD_W, h],
-                                    n.get("label") or n["id"], lines, stroke=stroke)
-                    else:
-                        d.rich_card(n["id"], [cx, cy], [_CARD_W, h],
-                                    n.get("label") or n["id"], lines, stroke=stroke,
-                                    dashed=str(n.get("scope") or "") == "future")
-                    cy += h + RT.GEO["card_gap"]
+        else:  # vertical: header spans / subzone columns / footer spans
+            content = ((geo_main.get(z) or geo_side.get(z) or {}).get("content")
+                       or _zone_content(nodes_by_cluster.get(z, [])))
+            pad = RT.GEO["zone_pad"]
+            gap = RT.GEO["card_gap"]
+            inner_x = rect["x"] + pad
+            inner_w = rect["w"] - 2 * pad
+            cy = rect["y"] + 46
+            for n in content["headers"]:
+                h = _card_h(_body_lines(n))
+                _render(n, [inner_x, cy], [inner_w, h], span=True)
+                cy += h + gap
+            col_top = cy
+            cx = inner_x
+            col_bottoms = [col_top]
+            for col in content["columns"]:
+                cw = _col_card_w(col)
+                frame_w = cw + (2 * _SUBZONE_PAD if col["sub"] else 0)
+                ccx = cx + (_SUBZONE_PAD if col["sub"] else 0)
+                ccy = col_top + (_SUBZONE_TOP if col["sub"] else 0)
+                for n in col["cards"]:
+                    h = _card_h(_body_lines(n))
+                    _render(n, [ccx, ccy], [cw, h])
+                    ccy += h + gap
+                bottom = ccy - gap
+                if col["sub"]:
+                    fh = bottom - col_top + _SUBZONE_PAD
+                    d.boundary_rect(f"bnd_{z}_{col['sub']['id']}", [cx, col_top],
+                                    [frame_w, fh], col["sub"]["kind"],
+                                    col["sub"]["label"])
+                    bottom += _SUBZONE_PAD
+                col_bottoms.append(bottom)
+                cx += frame_w + gap
+            cy = max(col_bottoms)
+            for n in content["footers"]:
+                h = _card_h(_body_lines(n))
+                _render(n, [inner_x, cy], [inner_w, h], span=True)
+                cy += h + gap
 
     # ---- header stack ---- #
     # Page hugs the content (playbook §9 canvas table: 1400x900 floor) instead
