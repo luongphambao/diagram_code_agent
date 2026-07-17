@@ -1053,8 +1053,10 @@ def edit_drawio(
 
     lint = ""
     try:
-        from domain.validation.validate_drawio import validate_file
-        report = validate_file(str(out))
+        from domain.validation.validate_drawio import validate_file, production_scorecard
+        stats_path = current_workspace() / "out.native_stats.json"
+        stats = json.loads(stats_path.read_text(encoding="utf-8")) if stats_path.exists() else {}
+        report = validate_file(str(out), stats=stats)
         lint = (f"\nLint: {report['error_count']} error(s), "
                 f"{report['warning_count']} warning(s), "
                 f"{report.get('polish_count', 0)} polish gate finding(s), "
@@ -1065,6 +1067,10 @@ def edit_drawio(
             lint += f"\nPolish gate: {'; '.join(report['polish'][:5])}"
         if report.get("advice"):
             lint += f"\nDesign advice: {'; '.join(report['advice'][:5])}"
+        # Recomputed scorecard so the drawer sees progress without re-inspecting.
+        sc = production_scorecard(report, stats)
+        lint += (f"\nProduction scorecard after edit: {sc['total']}/100 "
+                 f"({'PASS' if sc['pass'] else 'below gate'}).")
     except Exception:  # noqa: BLE001
         pass
     png = current_workspace() / "out.png"
