@@ -609,10 +609,10 @@ def export_drawio_native(style_preset: str = "") -> str:
     Falls back with a clear message if render_spec.json is missing.
 
     Args:
-        style_preset: "" (default — respect the spec's own style_preset, icon look
-            otherwise) or "refined" to force the typographic playbook preset
-            (numbered tinted zones + folder tabs, bold-heading cards with short
-            body lines, semantic edge classes + legend footer, no icons).
+        style_preset: "" (default — the REFINED typographic playbook preset:
+            numbered tinted zones + folder tabs, left-logo cards, semantic edge
+            classes + legend footer, nested cloud/VPC boundaries) or "icon" to
+            force the legacy icon-heavy / slide-hero look.
     """
     from .constants import _RENDER_SPEC_FILE
     out = current_workspace() / "out.drawio"
