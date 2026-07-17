@@ -75,7 +75,27 @@ def _body_lines(n: dict) -> list[str]:
     return []
 
 
-def _role_of(c: dict) -> str:
+# "Hard" ops — telemetry/governance that belongs in the cross-cutting band even
+# when nested inside a VPC (CloudWatch, audit). Distinct from "soft" ops words
+# (security/access) that, inside a network boundary, are main-plane edge zones.
+_HARD_OPS_RX = re.compile(r"monitor|cloudwatch|logg?ing|\blogs?\b|metric|telemetry"
+                          r"|observ|governance|complian|audit|ci[-/ ]?cd|devops", re.I)
+_NET_ZONES = {"vpc", "subnet", "subnet_public", "subnet_private", "az"}
+
+
+def _inside_network(c: dict, clusters: dict | None) -> bool:
+    """True if the cluster (or an ancestor) is a VPC/subnet/AZ boundary — i.e.
+    it lives on the data/compute plane, not the cross-cutting ops band."""
+    cur, guard = c, 0
+    while cur and guard < 20:
+        if str(cur.get("zone") or "").lower() in _NET_ZONES:
+            return True
+        cur = (clusters or {}).get(cur.get("parent"))
+        guard += 1
+    return False
+
+
+def _role_of(c: dict, clusters: dict | None = None) -> str:
     role = str(c.get("role") or "").lower()
     if role in ("ops", "operations"):
         return "ops"
@@ -86,6 +106,11 @@ def _role_of(c: dict) -> str:
     text = f"{c.get('label') or ''} {c.get('tier') or ''}"
     if _FUTURE_RX.search(text):
         return "future"
+    # A zone inside a VPC/subnet is data-plane (main) unless it's clearly
+    # telemetry/governance — this keeps "Access & Security" (edge, in-VPC) in the
+    # main row while "Identity & Access" (top-level) stays in the ops band.
+    if _inside_network(c, clusters):
+        return "ops" if _HARD_OPS_RX.search(text) else "main"
     if _OPS_RX.search(text) and not _ENTRY_RX.search(text):
         return "ops"
     if _OUTCOME_RX.search(text):
