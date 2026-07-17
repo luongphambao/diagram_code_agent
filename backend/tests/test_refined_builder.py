@@ -147,6 +147,117 @@ def test_edge_semantic_id_via_router():
     assert "strokeWidth=1.7" in xml and "endArrow=block" in xml
 
 
+def _refined_spec() -> dict:
+    return {
+        "style_preset": "refined",
+        "diagram_title": "DeepStream Detection Pipeline",
+        "subtitle": "19+ IP cameras · Multi-AZ runtime",
+        "backbone": ["Video Streams", "Secure Ingress", "GPU Inference",
+                     "State & Storage", "Outcomes"],
+        "metadata": {"format": "Editable XML"},
+        "clusters": [
+            {"id": "sources", "label": "Video Sources", "number": 1,
+             "scope": "external"},
+            {"id": "access", "label": "Access & Security", "number": 2,
+             "parent": "aws"},
+            {"id": "processing", "label": "GPU Processing", "number": 3,
+             "parent": "aws"},
+            {"id": "state", "label": "Shared State", "number": 4, "parent": "aws"},
+            {"id": "operations", "label": "Operations & Governance", "number": 5,
+             "role": "ops", "parent": "aws"},
+            {"id": "outcomes", "label": "Consumption & Outcomes", "number": 6,
+             "role": "outcome"},
+            {"id": "aws", "label": "AWS Cloud · us-east-1", "zone": "cloud"},
+        ],
+        "nodes": [
+            {"id": "cameras", "label": "19+ IP Cameras", "cluster": "sources",
+             "body": ["RTSP / RTMP streams", "H.264 / H.265 video"]},
+            {"id": "ingress", "label": "Stream Ingress", "cluster": "access",
+             "body": ["RTSP allow-list", "NAT Gateway"]},
+            {"id": "sg", "label": "Security Groups", "cluster": "access"},
+            {"id": "worker1", "label": "DeepStream Worker 1",
+             "cluster": "processing", "body": ["EC2 g4dn.2xlarge", "NVIDIA T4"]},
+            {"id": "worker2", "label": "DeepStream Worker 2",
+             "cluster": "processing", "body": ["EC2 g4dn.2xlarge", "NVIDIA T4"]},
+            {"id": "redis", "label": "ElastiCache Redis", "cluster": "state",
+             "body": ["cache.r6g.large", "Multi-AZ"]},
+            {"id": "note_state", "label": "Runtime responsibility",
+             "cluster": "state", "kind": "note",
+             "body": ["Fast shared state; downstream handoff."]},
+            {"id": "iam", "label": "IAM Role", "cluster": "operations",
+             "body": ["Least privilege"]},
+            {"id": "cloudwatch", "label": "CloudWatch", "cluster": "operations",
+             "body": ["Logs · metrics · alarms"]},
+            {"id": "dashboard", "label": "Detection Dashboard",
+             "cluster": "outcomes", "body": ["Operator view"]},
+        ],
+        "edges": [
+            {"from": "cameras", "to": "ingress", "label": "RTSP", "flow": "data"},
+            {"from": "ingress", "to": "worker1", "flow": "serving"},
+            {"from": "ingress", "to": "worker2", "flow": "serving"},
+            {"from": "worker1", "to": "redis", "flow": "data"},
+            {"from": "worker2", "to": "cloudwatch", "flow": "monitoring"},
+            {"from": "iam", "to": "worker1", "flow": "security"},
+            {"from": "redis", "to": "dashboard", "flow": "data"},
+        ],
+    }
+
+
+def test_refined_composition_structure():
+    from prettygraph.native.topology import build_drawio_from_spec
+    xml, stats = build_drawio_from_spec(_refined_spec(), "Refined")
+    assert stats["style_preset"] == "refined"
+    root = ET.fromstring(xml)
+    model = root.find(".//mxGraphModel")
+    cells = {c.get("id"): c for c in model.iter("mxCell")}
+    # zones + folder tabs for every content cluster
+    for z in ("zone_sources", "zone_access", "zone_processing", "zone_state",
+              "zone_operations", "zone_outcomes"):
+        assert z in cells, f"missing {z}"
+        assert f"tab_{z}" in cells, f"missing tab for {z}"
+    # numbered tabs
+    assert "1 · VIDEO SOURCES" in cells["tab_zone_sources"].get("value")
+    # header stack + backbone + legend footer + background
+    for cid in ("__title", "__subtitle", "backbone", "footer", "__bg"):
+        assert cid in cells, f"missing {cid}"
+    assert "VIDEO STREAMS" in cells["backbone"].get("value")
+    # boundary rect over the aws children, visual only
+    assert "bnd_aws" in cells and "tab_bnd_aws" in cells
+    # scope pill on the external zone
+    assert "tag_sources" in cells
+    # glue note emitted as a note card
+    assert "note_state" in cells
+    # everything flat at parent="1"
+    vertices = [c for c in cells.values() if c.get("vertex") == "1"]
+    assert vertices and all(c.get("parent") == "1" for c in vertices)
+    # semantic edge ids with the 5-class styling
+    assert "e_cameras_ingress" in cells
+    style = cells["e_cameras_ingress"].get("style")
+    assert "strokeColor=#2563EB" in style and "strokeWidth=1.7" in style
+    assert "endArrow=block" in style
+    mon = cells["e_worker2_cloudwatch"].get("style")
+    assert "strokeColor=#C96A1B" in mon and "dashed=1" in mon
+    sec = cells["e_iam_worker1"].get("style")  # security -> control alias
+    assert "strokeColor=#536174" in sec
+    # ops band spans the main row bottom; outcomes zone sits right of main zones
+    R = {c.get("id"): c.find("mxGeometry") for c in vertices}
+    ops_g, out_g = R["zone_operations"], R["zone_outcomes"]
+    state_g = R["zone_state"]
+    assert float(ops_g.get("y")) > float(state_g.get("y"))
+    assert float(out_g.get("x")) > float(state_g.get("x"))
+    # no icons, no shadow cells in refined output
+    assert "resIcon=mxgraph" not in xml
+    assert "__sh" not in xml
+
+
+def test_refined_grid_and_page():
+    from prettygraph.native.topology import build_drawio_from_spec
+    xml, _ = build_drawio_from_spec(_refined_spec(), "Refined")
+    model = ET.fromstring(xml).find(".//mxGraphModel")
+    assert model.get("grid") == "1"
+    assert float(model.get("pageWidth")) >= 1920
+
+
 def test_refined_theme_tokens_json():
     j = RT.as_json()
     assert j["font"] == "Helvetica"
