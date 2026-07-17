@@ -190,11 +190,11 @@ def _pick_band_cols(main_roots: list[str], nodes_in_root: dict,
     if not big:
         return {}
 
-    def predicted_ratio(cols: int) -> float:
+    def predicted_ratio(cols: int | None) -> float:
         widths, height = [], 0.0
         for cid in main_roots:
             n = nodes_in_root.get(cid, 0)
-            if cid in big:
+            if cols and cid in big:
                 rows = -(-n // cols)
                 widths.append(cols * _EST_CARD_W)
                 height += rows * _EST_CARD_H + _EST_BAND_CHROME_H
@@ -208,7 +208,13 @@ def _pick_band_cols(main_roots: list[str], nodes_in_root: dict,
             height = max(height, -(-sidebar_nodes // 2) * _EST_CARD_H)
         return width / max(1.0, height)
 
+    # If the natural (unwrapped) layout already lands near the target band,
+    # don't force-wrap anything — wrapping has real routing cost.
+    if 1.3 <= predicted_ratio(None) <= 1.9:
+        return {}
     best_cols = min((3, 2, 4), key=lambda c: abs(predicted_ratio(c) - TARGET_RATIO))
+    if abs(predicted_ratio(best_cols) - TARGET_RATIO) >= abs(predicted_ratio(None) - TARGET_RATIO):
+        return {}
     return {cid: best_cols for cid in big}
 
 
