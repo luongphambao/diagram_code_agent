@@ -272,11 +272,14 @@ def _band_tint(c: dict, i: int) -> tuple[str, str]:
     return stage_fill(i), stage_stroke(i)
 
 
-def build_tree(spec: dict, flat: bool = False):
+def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
     """Build a native layout tree (+ Diagram, edges) from a render_spec dict.
 
     Returns (diagram, root_tree) with the tree already rendered into the diagram.
     flat=True emits absolute geometry at parent="1" (for slide embedding).
+    plan: optional layout_plan from layout_plan.analyze_layout — edge-aware band
+    order, per-band grid columns and hub edge bundling. Every plan key is
+    optional; plan=None is byte-identical to the unplanned build.
     """
     cat = _load_catalog() if _load_catalog else None
     provider = str(spec.get("provider") or "aws").lower()
