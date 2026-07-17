@@ -52,8 +52,24 @@ def _overlap(a: tuple, b: tuple) -> bool:
 _DECOR_SUFFIXES = ("__sh", "__ac", "__pill")
 
 
+def _is_refined_chrome(cid: str | None) -> bool:
+    """Refined-preset chrome that OVERLAPS by design (folder tabs crossing the
+    zone top edge, scope tags, legend internals, the background rect) — must be
+    invisible to every geometry/overlap/bbox audit."""
+    return bool(cid) and (cid.startswith(("tab_", "tag_", "footer__"))
+                          or cid == "__bg")
+
+
+def _is_refined_container(cid: str | None) -> bool:
+    """Refined-preset zones/boundaries/bands are flat (parent="1") — no children
+    to infer container-ness from, so recognize them by id convention. They
+    legitimately sit under their member cards and must not count as cards."""
+    return bool(cid) and (cid.startswith(("zone_", "bnd_"))
+                          or cid in ("footer", "backbone"))
+
+
 def _is_decor(cid: str | None) -> bool:
-    return bool(cid) and cid.endswith(_DECOR_SUFFIXES)
+    return bool(cid) and (cid.endswith(_DECOR_SUFFIXES) or _is_refined_chrome(cid))
 
 
 def _primary_model(xml: str) -> str:
