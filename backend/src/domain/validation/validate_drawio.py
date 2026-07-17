@@ -738,10 +738,14 @@ def audit_production_polish(xml: str) -> list[str]:
     cells = [c for c in _parse_cells(xml) if c["id"]]
     by_id = {c["id"]: c for c in cells}
     has_children = {c["parent"] for c in cells if c["parent"]}
+    # Refined typographic preset: icon-free by design, legend rendered as the
+    # "footer" band, zones already tinted — detected by its id conventions.
+    refined = 'id="tab_zone_' in xml or 'id="backbone"' in xml
     is_text = lambda c: bool(re.search(r"(?:^|;)(text|line);", c["style"])) \
         or (c["id"] or "").startswith(("__title", "__legend"))
     vertices = [c for c in cells if c["edge"] != "1" and c["geo"]
-                and not is_text(c) and not _is_decor(c["id"])]
+                and not is_text(c) and not _is_decor(c["id"])
+                and not _is_refined_container(c["id"])]
 
     # 1) Layer bands not tinted: 3+ container frames, every one white/none.
     frames = [c for c in vertices
