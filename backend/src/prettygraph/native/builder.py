@@ -504,12 +504,19 @@ class Diagram:
             '<mxCell id="boundaries" value="Stack boundaries (locked)" parent="0" '
             'style="locked=1;"/>' if 'parent="boundaries"' in cells_xml else "")
         return (
-            '<mxGraphModel dx="1400" dy="900" grid="0" gridSize="10" guides="1" '
+            f'<mxGraphModel dx="1400" dy="900" grid="{1 if self.grid else 0}" '
+            'gridSize="10" guides="1" '
             'tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" '
             f'pageWidth="{self.page[0]:.0f}" pageHeight="{self.page[1]:.0f}" math="0" '
             'shadow="0"><root><mxCell id="0"/><mxCell id="1" parent="0"/>'
             f'{bounds_layer}{cells_xml}</root></mxGraphModel>')
 
-    def mxfile(self, name="Diagram") -> str:
-        return (f'<mxfile host="app.diagrams.net"><diagram name="{_esc(name)}" id="d">'
-                f'{self.to_xml()}</diagram></mxfile>')
+    def mxfile(self, name="Diagram",
+               extra_pages: list[tuple[str, str]] | None = None) -> str:
+        """Full .drawio XML. ``extra_pages`` appends additional pages as
+        (page_name, uncompressed mxGraphModel xml) — used by the refined upgrade
+        path to retain the source as an "Original Source" page (playbook §3)."""
+        pages = (f'<diagram name="{_esc(name)}" id="d">{self.to_xml()}</diagram>')
+        for i, (pname, model_xml) in enumerate(extra_pages or [], start=1):
+            pages += f'<diagram name="{_esc(pname)}" id="d{i}">{model_xml}</diagram>'
+        return f'<mxfile host="app.diagrams.net" compressed="false">{pages}</mxfile>'
