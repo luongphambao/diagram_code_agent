@@ -232,6 +232,150 @@ class Diagram:
             lb["ob"] = False
         return self.R[id]
 
+    # ---- refined-preset emitters (playbook look; tokens from refined_theme) ---- #
+    def pill(self, id, xy, wh, label, *, fill, stroke=None, font_color="#FFFFFF",
+             fs=None, bold=True, arc=None, z=Z_CHROME, ob=False, parent="1") -> dict:
+        """Rounded chip: zone folder-tabs, scope tags, backbone strip, AZ labels."""
+        fs = fs if fs is not None else RT.TYPE_SCALE["pill"]
+        arc = arc if arc is not None else RT.GEO["arc_pill"]
+        style = (f"rounded=1;arcSize={arc};html=1;whiteSpace=wrap;fillColor={fill};"
+                 f"strokeColor={stroke or fill};strokeWidth=1;align=center;"
+                 f"verticalAlign=middle;fontFamily={RT.FONT};fontColor={font_color};"
+                 f"fontSize={fs};fontStyle={1 if bold else 0};")
+        r = self._put(id, parent, xy[0], xy[1], wh[0], wh[1], style, label, z=z)
+        r["ob"] = ob
+        return r
+
+    def rich_card(self, id, xy, wh, title, body_lines=(), *, fill=None, stroke=None,
+                  fs=None, align="left", dashed=False, font_color=None,
+                  parent="1") -> dict:
+        """Refined card: bold heading + 2-4 short body lines, flat (shadow=0),
+        white-on-tint elevation. Playbook §10.2/§12 anatomy — no shadow cell,
+        no accent stripe, no icon."""
+        fs = fs if fs is not None else RT.TYPE_SCALE["card"]
+        label = f"<b>{_esc(title)}</b>"
+        lines = [str(l) for l in (body_lines or ()) if str(l).strip()]
+        if lines:
+            label += "<br><br>" + "<br>".join(_esc(l) for l in lines)
+        va = "top" if align == "left" else "middle"
+        style = (f"rounded=1;arcSize={RT.GEO['arc_zone']};html=1;whiteSpace=wrap;"
+                 f"fillColor={fill or RT.CHROME['card_fill']};"
+                 f"strokeColor={stroke or '#D0D5DD'};"
+                 f"strokeWidth={RT.GEO['card_stroke_w']};shadow=0;align={align};"
+                 f"verticalAlign={va};spacing={RT.GEO['card_spacing']};"
+                 f"fontFamily={RT.FONT};fontColor={font_color or RT.INK['body']};"
+                 f"fontSize={fs};" + ("dashed=1;" if dashed else ""))
+        r = self._put(id, parent, xy[0], xy[1], wh[0], wh[1], style, label, z=Z_NODE)
+        r["ob"] = True
+        return r
+
+    def note_card(self, id, xy, wh, title, lines=(), *, fill=None, stroke="#D0D5DD",
+                  fs=None, parent="1") -> dict:
+        """Semantic glue note (Security boundary / Runtime responsibility /
+        Target outcome): small centred card carrying rationale, not a component."""
+        fs = fs if fs is not None else RT.TYPE_SCALE["note"]
+        label = f"<b>{_esc(title)}</b>"
+        lines = [str(l) for l in (lines or ()) if str(l).strip()]
+        if lines:
+            label += "<br>" + "<br>".join(_esc(l) for l in lines)
+        style = (f"rounded=1;arcSize={RT.GEO['arc_zone']};html=1;whiteSpace=wrap;"
+                 f"fillColor={fill or RT.CHROME['card_fill']};strokeColor={stroke};"
+                 f"strokeWidth=1;shadow=0;align=center;verticalAlign=middle;"
+                 f"spacing=8;fontFamily={RT.FONT};fontColor={RT.INK['body']};"
+                 f"fontSize={fs};")
+        r = self._put(id, parent, xy[0], xy[1], wh[0], wh[1], style, label, z=Z_NODE)
+        r["ob"] = True
+        return r
+
+    def tab_zone(self, id, xy, wh, title, hue, *, number=None, tint=True) -> dict:
+        """Numbered refined zone: tinted rect + saturated folder-tab pill
+        overlapping the top edge at zone.y - tab_overlap."""
+        tab_fill, stroke, zone_tint = RT.ZONE_HUES.get(hue, RT.ZONE_HUES["slate"])
+        style = (f"rounded=1;arcSize={RT.GEO['arc_zone']};html=1;whiteSpace=wrap;"
+                 f"fillColor={zone_tint if tint else '#FFFFFF'};strokeColor={stroke};"
+                 f"strokeWidth={RT.GEO['zone_stroke_w']};shadow=0;verticalAlign=top;"
+                 f"align=left;spacing=12;fontFamily={RT.FONT};"
+                 f"fontColor={RT.INK['body']};")
+        r = self._put(id, "1", xy[0], xy[1], wh[0], wh[1], style, "", z=Z_CONTAINER)
+        r["ob"] = False  # container: edges route across it
+        label = f"{number} · {title}" if number is not None else str(title)
+        tab_w = max(100, round(len(label) * 7.2) + 34)
+        self.pill(f"tab_{id}", [xy[0] + 18, xy[1] - RT.GEO["tab_overlap"]],
+                  [tab_w, RT.GEO["tab_h"]], label, fill=tab_fill,
+                  fs=RT.TYPE_SCALE["tab"], z=Z_CHROME)
+        return r
+
+    def boundary_rect(self, id, xy, wh, kind, label="") -> dict:
+        """Visual cloud/VPC/AZ boundary (refined preset): rect behind zones with
+        its own colored tab. Never a parent — nesting is z-order only."""
+        fill, stroke, dash, tab_fill = RT.BOUNDARY.get(kind, RT.BOUNDARY["cloud"])
+        style = (f"rounded=1;arcSize={RT.GEO['arc_zone']};html=1;whiteSpace=wrap;"
+                 f"fillColor={fill or 'none'};strokeColor={stroke};"
+                 f"strokeWidth={RT.GEO['boundary_stroke_w']};shadow=0;")
+        if dash:
+            style += f"dashed=1;dashPattern={dash};"
+        r = self._put(id, "1", xy[0], xy[1], wh[0], wh[1], style, "", z=Z_CONTAINER)
+        r["ob"] = False
+        if label:
+            tab_w = max(90, round(len(label) * 7.2) + 30)
+            self.pill(f"tab_{id}", [xy[0] + 20, xy[1] - RT.GEO["tab_overlap"]],
+                      [tab_w, 28], label, fill=tab_fill,
+                      fs=RT.TYPE_SCALE["tab"], z=Z_CHROME)
+        return r
+
+    def legend_band(self, id, xy, w, entries, *, scope_note="", metadata="",
+                    title="CONNECTOR SEMANTICS & SCOPE", h=None) -> dict:
+        """Refined footer band: edge-class swatches + optional scope note and
+        metadata cards. The band itself is a router obstacle (edges must not
+        tunnel through the footer)."""
+        h = h or 145
+        x, y = xy
+        band = self._put(id, "1", x, y, w, h,
+                         f"rounded=1;arcSize={RT.GEO['arc_zone']};html=1;"
+                         f"whiteSpace=wrap;fillColor={RT.CHROME['strip_fill']};"
+                         f"strokeColor={RT.CHROME['strip_stroke']};strokeWidth=1.3;"
+                         f"shadow=0;", "", z=Z_CONTAINER)
+        band["ob"] = True
+        tx = self._put(f"{id}__title", "1", x + 25, y + 15, 280, 24,
+                       f"text;html=1;align=left;verticalAlign=middle;"
+                       f"fontFamily={RT.FONT};fontColor={RT.INK['slate']};"
+                       f"fontSize=12;fontStyle=1;", title, z=Z_CHROME)
+        tx["ob"] = False
+        cx = x + 30
+        sy = y + 60
+        for i, (label, color, dashed) in enumerate(entries or []):
+            ln = self._put(f"{id}__ln{i}", "1", cx, sy + 10, 45, 3,
+                           f"line;html=1;strokeWidth=2;strokeColor={color};"
+                           f"fillColor=none;" + ("dashed=1;dashPattern=6 4;" if dashed else ""),
+                           "", z=Z_CHROME)
+            ln["ob"] = False
+            lw = max(90, round(len(str(label)) * 6.5) + 10)
+            lb = self._put(f"{id}__lb{i}", "1", cx + 55, sy - 3, lw, 28,
+                           f"text;html=1;align=left;verticalAlign=middle;"
+                           f"fontFamily={RT.FONT};fontColor={RT.INK['body']};"
+                           f"fontSize={RT.TYPE_SCALE['legend']};", label, z=Z_CHROME)
+            lb["ob"] = False
+            cx += 55 + lw + 30
+        right = x + w
+        if metadata:
+            mw = 210
+            md = self.note_card(f"{id}__meta", [right - mw - 30, y + 30],
+                                [mw, 80], "", [metadata])
+            md["ob"] = False
+            right -= mw + 50
+        if scope_note:
+            sw = min(520, max(300, right - cx - 40))
+            if sw >= 200:
+                sn = self._put(f"{id}__scope", "1", right - sw - 20, y + 30, sw, 80,
+                               f"rounded=1;arcSize={RT.GEO['arc_zone']};html=1;"
+                               f"whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#D0D5DD;"
+                               f"strokeWidth=1;shadow=0;align=left;verticalAlign=top;"
+                               f"spacing=10;fontFamily={RT.FONT};"
+                               f"fontColor={RT.INK['body']};fontSize=9.5;",
+                               f"<b>Scope</b><br>{_esc(scope_note)}", z=Z_CHROME)
+                sn["ob"] = False
+        return band
+
     def group(self, id, gname, xy, wh, label="", *, parent="1", fill=None,
               stroke=None) -> dict:
         s = _style_for_group(self.c, gname)
