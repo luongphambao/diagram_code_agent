@@ -966,24 +966,34 @@ def validate_xml(xml: str, profile: str = "auto", stats: dict | None = None) -> 
                 "polish_count": 0, "collision_count": 0, "ok": False}
     pages = root.findall("diagram") or [root]
     errors, warns = [], []
-    for page in pages:
-        e, w = check_page(page)
+    if len(pages) > 1:
+        # Multi-page: lint page 1 only — later pages are preserved originals
+        # (refined upgrade keeps the source verbatim as "Original Source") and
+        # are audited by definition of what they are, not what they should be.
+        e, w = check_page(pages[0])
         errors += e
         warns += w
+        warns.append(f"pages 2-{len(pages)}: preserved original(s), lint skipped")
+    else:
+        for page in pages:
+            e, w = check_page(page)
+            errors += e
+            warns += w
     advice: list[str] = []
     polish: list[str] = []
     collisions: list[str] = []
     metrics: dict = {}
     try:
+        pxml = _primary_model(xml)  # string audits see page 1 only
         if "</mxGraphModel>" in xml:  # skip compressed/empty pages
-            se, sw = check_stencils(xml)
+            se, sw = check_stencils(pxml)
             errors += se
             warns += sw
-            advice = audit_xml(xml, profile)
-            polish = audit_production_polish(xml)
-            collisions = audit_card_collisions(xml)
+            advice = audit_xml(pxml, profile)
+            polish = audit_production_polish(pxml)
+            collisions = audit_card_collisions(pxml)
             warns += collisions  # cross-container card overlaps -> layout warnings
-            metrics = audit_layout_metrics(xml, stats)
+            metrics = audit_layout_metrics(pxml, stats)
     except Exception:  # noqa: BLE001 — design audits are best-effort
         pass
     return {
