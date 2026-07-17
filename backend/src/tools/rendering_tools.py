@@ -675,13 +675,18 @@ def export_drawio_native() -> str:
 
 
 @tool(parse_docstring=True)
-def upgrade_drawio(source_path: str) -> str:
-    """Upgrade an EXISTING .drawio file into a production-styled diagram (V2 approach).
+def upgrade_drawio(source_path: str, style_preset: str = "refined") -> str:
+    """Upgrade an EXISTING .drawio file into a production-styled diagram.
 
     Ingests the source: extracts its nodes, subtitles, edges, cluster membership
     and EMBEDDED icons, PRESERVES the original cell ids, then rebuilds the geometry
-    with the native engine (production cards + shadow/accent, tinted layer bands,
-    routed connectors) — reusing the source icons, never re-authoring the meaning.
+    with the native engine — never re-authoring the meaning.
+
+    Default preset is "refined" (typographic playbook look): numbered tinted
+    zones with folder tabs, bold-heading cards with short body lines, semantic
+    edge classes + legend footer, NO icons, and a TWO-PAGE output whose page 2
+    is the untouched source ("02 — Original Source") for audit/diff. Pass
+    style_preset="icon" for the previous icon-heavy single-page rebuild.
     Writes inventory.json + render_spec.json + out.drawio + out.png and reports a
     semantic-preservation check (source vs rebuilt) plus the production scorecard.
 
@@ -690,6 +695,7 @@ def upgrade_drawio(source_path: str) -> str:
 
     Args:
         source_path: Path to the source .drawio (absolute, or relative to the workspace).
+        style_preset: "refined" (default, typographic 2-page) or "icon" (legacy).
     """
     from pathlib import Path
     from .constants import _RENDER_SPEC_FILE
@@ -707,7 +713,11 @@ def upgrade_drawio(source_path: str) -> str:
     if not inv["nodes"]:
         return f"upgrade_drawio: no nodes found in {src.name} (empty or unsupported)."
     (ws / "inventory.json").write_text(json.dumps(inv, indent=2), encoding="utf-8")
-    spec = inventory_to_render_spec(inv)
+    preset = str(style_preset or "refined").lower()
+    spec = inventory_to_render_spec(
+        inv, style_preset=preset if preset == "refined" else "")
+    if preset == "refined":
+        spec["source_page"] = {"name": "02 — Original Source", "path": str(src)}
     _RENDER_SPEC_FILE.write_text(json.dumps(spec), encoding="utf-8")
     try:
         stats = _render_native_from_spec(spec, ws)
