@@ -475,7 +475,18 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     from prettygraph.native.topology import build_drawio_from_spec
     out = workspace / "out.drawio"
     name = spec.get("slide_title") or spec.get("diagram_title") or "Architecture"
-    _attach_icon_fallbacks(spec, workspace)
+    refined = str(spec.get("style_preset") or "").lower() == "refined"
+    if refined:
+        # Refined preset is icon-free by design — skip icon fallback embedding,
+        # and dump the design tokens next to the render (playbook §19).
+        try:
+            from prettygraph.native import refined_theme
+            (workspace / "design_tokens.json").write_text(
+                json.dumps(refined_theme.as_json(), indent=2), encoding="utf-8")
+        except Exception:  # noqa: BLE001
+            pass
+    else:
+        _attach_icon_fallbacks(spec, workspace)
     # Layout analysis (0 LLM tokens): edge-aware band order, hub edge bundling,
     # aspect-aware grid columns. Best-effort — a failed analysis renders unplanned.
     plan = None
