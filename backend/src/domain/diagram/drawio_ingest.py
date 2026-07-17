@@ -344,6 +344,9 @@ def extract_inventory(path: str) -> dict:
             keep = False  # badges / label pills ("T4", "VPC") without edges
         elif str(n["title"]).strip().lower() in ("legend", "metadata", "notes"):
             keep = False
+        elif re.search(r"designed by|project\s*:|author\s*:|version\s*:|date\s*:",
+                       f"{n['title']} {n['sub']}", re.I):
+            keep = False  # metadata card (author/date/version), not a component
         else:
             keep = True
         n["_keep"] = keep
