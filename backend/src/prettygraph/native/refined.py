@@ -181,6 +181,13 @@ def build_refined(spec: dict, plan: dict | None = None):
     sides = [z for z in order if _role_of(clusters[z]) in ("sidebar", "future")]
     if not mains:  # never render an empty main row
         mains, ops, sides = order, [], []
+    # Main-flow order: the source's own section numbers are the author's reading
+    # order — sort by them first (stable, so plan/spec order breaks ties among
+    # duplicates and unnumbered zones sink to the end).
+    def _num_key(z: str):
+        n = clusters[z].get("number")
+        return int(n) if str(n).isdigit() else 999
+    mains.sort(key=_num_key)
 
     # ---- measure zones ---- #
     def _zone_geom(zid: str, horizontal: bool = False) -> dict:
