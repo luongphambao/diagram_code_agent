@@ -502,7 +502,7 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
             # Too dense for a slide: the fixed 16:9 panel would shrink the body to
             # `fit` and collide its text. Render the STANDALONE diagram instead — the
             # non-flat body already carries its own title + legend. Readability > chrome.
-            xml, stats = build_drawio_from_spec(spec, name, flat=False)
+            xml, stats = build_drawio_from_spec(spec, name, flat=False, plan=plan)
             out.write_text(xml, encoding="utf-8")
             (workspace / "out.slide.json").write_text(
                 json.dumps({"drawio": "out.drawio", "png": "out.png",
