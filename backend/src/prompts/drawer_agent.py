@@ -133,6 +133,18 @@ stray cell, add a missing edge). It auto re-validates and re-renders `out.png` s
 you can verify. You get at most 2 edit batches per export — plan the whole batch
 from the read_drawio findings before calling. Then finalize (step 9).
 
+**Engineer loop (quality gate).** The export already ran a deterministic layout
+analysis + auto-repair (see the layout plan / engineer report the Lint line
+mentions) — the layout you got is the best of several candidates, so never
+re-export hoping for a different geometry. ONLY if the reported Production
+scorecard is below 85: call `inspect_render_quality()` ONCE — it returns the
+scorecard breakdown, objective layout metrics (ratio, crossings, icon coverage,
+label collisions) and the rendered image — then fix the named findings with ONE
+batched `edit_drawio` call. Re-inspect only if the post-edit scorecard is still
+below the gate (hard budget: 2 inspections per export, code-enforced). When the
+scorecard reports PASS, or the budget is exhausted, STOP polishing and finalize,
+mentioning any residual findings in your summary.
+
 ## Environment
 {env_note}
 
