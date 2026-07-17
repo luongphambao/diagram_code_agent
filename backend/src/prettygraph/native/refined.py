@@ -686,6 +686,13 @@ def build_refined(spec: dict, plan: dict | None = None):
     rep_keys = {tuple(b.get("rep") or []) for b in plan.get("edge_bundles", [])}
     node_by_id = {n["id"]: n for n in nodes}
     side_set = set(sides)
+    # Left-to-right position of each main zone — an edge between two ADJACENT
+    # main zones just follows the backbone spine, so its label is redundant and
+    # only clutters the narrow inter-zone gap (playbook §13.7). Labels on edges
+    # to the ops band / sidebar / skip-level zones (the non-obvious ones) stay.
+    main_x_order = sorted((z for z in mains if z in zone_rects),
+                          key=lambda z: zone_rects[z]["x"])
+    main_pos = {z: i for i, z in enumerate(main_x_order)}
 
     def _ectx(nid: str) -> tuple[str, bool]:
         n = node_by_id.get(nid) or {}
