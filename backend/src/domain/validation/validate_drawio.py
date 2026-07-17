@@ -824,6 +824,57 @@ PRODUCTION_TARGET = {
     "tinted_bands": True,
 }
 
+# The refined typographic preset's bar (playbook §20/§25): no icon requirement —
+# structure quality is carried by backbone/zone-numbering/glue/legend instead.
+REFINED_TARGET = {
+    "ratio": (1.5, 2.1),          # 1920x1080 doc sits mid-band (~1.78)
+    "collisions": 0,
+    "crossings_max": 3,
+    "title": True,
+    "legend": True,
+    "backbone": True,
+    "zones": (3, 9),               # numbered zones (playbook §7.1 wants 5-9;
+                                   # small diagrams legitimately have 3-4)
+    "body_line_max": 38,           # chars per card body line (§12.4 + slack)
+}
+
+
+def audit_refined_structure(xml: str) -> dict:
+    """Structure metrics for the refined preset (0 LLM tokens): backbone strip,
+    zone tab numbering, glue notes, body-line length, legend coverage of the
+    edge classes actually used. Merged into layout_metrics when refined ids are
+    detected, so production_scorecard can score them without re-reading XML."""
+    tabs = re.findall(r'id="tab_zone_[^"]*" value="([^"]*)"', xml)
+    nums = [int(m.group(1)) for v in tabs for m in [re.match(r"\s*(\d+)", v)] if m]
+    sequential = bool(nums) and sorted(nums) == list(range(1, len(nums) + 1))
+    edge_colors: set[str] = set()
+    for m in re.finditer(r'<mxCell id="[^"]*"[^>]*style="([^"]*)"[^>]*edge="1"', xml):
+        c = re.search(r"strokeColor=([^;]+)", m.group(1))
+        if c:
+            edge_colors.add(c.group(1))
+    swatch_colors = {m.group(1) for m in re.finditer(
+        r'id="footer__ln\d+"[^>]*style="[^"]*strokeColor=([^;"]+)', xml)}
+    # outcome/future edges are deliberately unlegended (self-evident sinks)
+    unlegended_ok = {"#2E7D4F", "#98A2B3"}
+    legend_covers = edge_colors <= (swatch_colors | unlegended_ok) if edge_colors else True
+    overlong = 0
+    for m in re.finditer(r'<mxCell id="(?!zone_|bnd_|tab_|tag_|footer|__)[^"]*" '
+                         r'value="([^"]*)"[^>]*vertex="1"', xml):
+        for line in m.group(1).split("&lt;br&gt;"):
+            plain = re.sub(r"&lt;[^&]*&gt;", "", line)
+            plain = plain.replace("&amp;amp;", "&").replace("&amp;", "&").strip()
+            if len(plain) > REFINED_TARGET["body_line_max"]:
+                overlong += 1
+    return {
+        "refined": True,
+        "backbone_present": 'id="backbone"' in xml,
+        "zone_count": len(tabs),
+        "zone_numbers_sequential": sequential,
+        "glue_notes": xml.count('id="note_'),
+        "overlong_body_lines": overlong,
+        "legend_covers_edge_classes": legend_covers,
+    }
+
 
 def audit_layout_metrics(xml: str, stats: dict | None = None) -> dict:
     """Objective composition metrics the scorecard was blind to (0 LLM tokens).
