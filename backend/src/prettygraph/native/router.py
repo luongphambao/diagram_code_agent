@@ -735,11 +735,16 @@ def _emit_edge(d, e, r, fr, geom) -> None:
     if raw_style:
         st += raw_style if raw_style.endswith(";") else raw_style + ";"
     d.eid += 1
+    # Semantic edge id (refined preset: e_<src>_<tgt>, playbook §18.3) when the
+    # caller supplies one and it is still free; ed{n} otherwise.
+    eid = opts.get("id") or f"ed{d.eid}"
+    if eid != f"ed{d.eid}" and eid in d._cell_index:
+        eid = f"ed{d.eid}"
     # Z_EDGE tag => to_xml() sorts connectors behind card shadows/bodies (V2 §7.2).
     from .builder import Z_EDGE
     d._emit_cell(
-        f"ed{d.eid}",
-        f'<mxCell id="ed{d.eid}" value="{_esc(label)}" style="{st}" edge="1" parent="1" '
+        eid,
+        f'<mxCell id="{eid}" value="{_esc(label)}" style="{st}" edge="1" parent="1" '
         f'source="{e["src"]}" target="{e["tgt"]}"><mxGeometry relative="1" as="geometry">'
         f'{wp_xml}</mxGeometry></mxCell>',
         Z_EDGE)
