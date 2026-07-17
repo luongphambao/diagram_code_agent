@@ -517,7 +517,9 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     # the native body. The embedded body must be FLAT (parent="1", absolute coords)
     # for the slide compositor's _transform_drawio_body.
     presentation = str(spec.get("presentation_style") or "slide").lower()
-    want_slide = presentation == "slide"
+    # Refined preset IS the presentation — a document-grade standalone page with
+    # its own header/legend chrome; never wrap it in the slide hero band.
+    want_slide = presentation == "slide" and not refined
     xml, stats = build_drawio_from_spec(spec, name, flat=want_slide, plan=plan)
 
     if want_slide:
