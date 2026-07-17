@@ -87,3 +87,36 @@ def test_edit_budget_resets_on_fresh_export(ws, monkeypatch):
     from tools.rendering_tools import _render_native_from_spec
     _render_native_from_spec(dict(_GCP_SPEC, presentation_style="diagram"), ws)
     assert edit_drawio.func(ops=op, tool_call_id="t9").status == "success"
+
+
+def test_inspect_render_quality_budget_cap_and_reset(ws, monkeypatch):
+    from tools.rendering_tools import (_ENGINEER_INSPECT_CAP,
+                                       inspect_render_quality)
+    import json
+    (ws / "out.native_stats.json").write_text(
+        json.dumps({"nodes": 5, "edges": 3}), encoding="utf-8")
+    for i in range(_ENGINEER_INSPECT_CAP):
+        msg = inspect_render_quality.func(tool_call_id=f"i{i}")
+        assert msg.status == "success", msg.content
+        assert "Production scorecard" in msg.content
+        assert f"{i + 1}/{_ENGINEER_INSPECT_CAP}" in msg.content
+    blocked = inspect_render_quality.func(tool_call_id="ix")
+    assert blocked.status == "error"
+    assert "budget exhausted" in blocked.content.lower()
+    # A fresh export resets the engineer budget together with the edit budget.
+    from tools.rendering_tools import _render_native_from_spec
+    _render_native_from_spec(dict(_GCP_SPEC, presentation_style="diagram"), ws)
+    assert inspect_render_quality.func(tool_call_id="i9").status == "success"
+
+
+def test_render_native_writes_engineer_artifacts(ws):
+    # engineer_report.json comes from the icon preset's deterministic auto_repair
+    # (the refined default skips it), so pin this to the icon path explicitly.
+    from tools.rendering_tools import _render_native_from_spec
+    _render_native_from_spec(
+        dict(_GCP_SPEC, presentation_style="diagram", style_preset="icon"), ws)
+    assert (ws / "layout_plan.json").exists()
+    assert (ws / "engineer_report.json").exists()
+    import json
+    rep = json.loads((ws / "engineer_report.json").read_text(encoding="utf-8"))
+    assert rep["iterations"] and rep["chosen"]
