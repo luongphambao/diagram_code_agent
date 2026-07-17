@@ -366,6 +366,8 @@ def build_refined(spec: dict, plan: dict | None = None):
         if cls in RT.EDGE_LEGEND_LABELS and cls not in legend_flows:
             legend_flows.append(cls)
         label = e.get("label") or ""
+        if key in rep_keys and "(all layers)" not in label:
+            label = (label + " (all layers)").strip()
         if cls == "future" and "future" not in label.lower():
             label = (label + " (future)").strip()
         d.link(sid, tid, label, id=f"e_{sid}_{tid}", stroke=color, dash=dashed,
