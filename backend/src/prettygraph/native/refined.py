@@ -103,6 +103,29 @@ _CTRL_RX = re.compile(r"\biam\b|identity|least.priv|access|policy|permission"
                       r"|secret|auth", re.I)
 
 
+def _label_offset(src_r: dict, tgt_r: dict, top_bound: float | None) -> tuple[float, float] | None:
+    """Nudge a same-row edge label off the direct line so it clears the source/
+    target cards instead of sitting on top of them (the raw-midpoint default —
+    fine for the reference's generous card gaps, not for tightly-packed
+    upgraded layouts). Horizontal-dominant edges only: label goes into the open
+    strip above the row (below the row if that strip is inside the zone tab).
+    Vertical-dominant edges are left alone (minority case, lower risk)."""
+    scx = src_r["x"] + src_r["w"] / 2
+    scy = src_r["y"] + src_r["h"] / 2
+    tcx = tgt_r["x"] + tgt_r["w"] / 2
+    tcy = tgt_r["y"] + tgt_r["h"] / 2
+    if abs(tcx - scx) < abs(tcy - scy):
+        return None  # vertical-dominant: unnudged
+    mid_y = (scy + tcy) / 2
+    top = min(src_r["y"], tgt_r["y"])
+    bottom = max(src_r["y"] + src_r["h"], tgt_r["y"] + tgt_r["h"])
+    want_y = top - 20
+    if top_bound is not None and want_y - 8 < top_bound:
+        want_y = bottom + 18  # no room above (top of zone) -> drop below instead
+    dy = want_y - mid_y
+    return (0.0, dy) if abs(dy) > 1 else None
+
+
 def _edge_class(e: dict, ctx: dict | None = None) -> str:
     """Semantic edge class: explicit ``flow`` wins; otherwise infer from the
     endpoints (upgraded sources rarely carry flow tags): edges touching a
