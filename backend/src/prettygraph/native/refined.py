@@ -459,7 +459,13 @@ def build_refined(spec: dict, plan: dict | None = None):
             label = (label + " (all layers)").strip()
         if cls == "future" and "future" not in label.lower():
             label = (label + " (future)").strip()
+        label_offset = None
+        if label:
+            src_zone = zone_rects.get(node_by_id.get(s, {}).get("cluster"))
+            top_bound = (src_zone["y"] + 18) if src_zone else None
+            label_offset = _label_offset(d.R[sid], d.R[tid], top_bound)
         d.link(sid, tid, label, id=f"e_{sid}_{tid}", stroke=color, dash=dashed,
+               label_offset=label_offset,
                style=(f"strokeWidth={width};endArrow=block;endFill=1;"
                       f"fontFamily={RT.FONT};fontSize={RT.TYPE_SCALE['edge']};"
                       f"fontColor={RT.INK['body']};labelBackgroundColor=#FFFFFF;"))
