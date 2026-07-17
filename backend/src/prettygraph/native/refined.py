@@ -97,13 +97,32 @@ def _card_h(lines: list[str]) -> int:
     return _CARD_PAD_H + (8 + _LINE_H * len(lines) if lines else 8)
 
 
-def _edge_class(e: dict) -> str:
+_MON_RX = re.compile(r"monitor|cloudwatch|logg?ing|\blogs?\b|metric|telemetry"
+                     r"|alarm|observ", re.I)
+_CTRL_RX = re.compile(r"\biam\b|identity|least.priv|access|policy|permission"
+                      r"|secret|auth", re.I)
+
+
+def _edge_class(e: dict, ctx: dict | None = None) -> str:
+    """Semantic edge class: explicit ``flow`` wins; otherwise infer from the
+    endpoints (upgraded sources rarely carry flow tags): edges touching a
+    monitoring node/zone are telemetry, edges FROM an IAM/identity node are
+    control, sink-to-sink fan-out in the outcomes sidebar is outcome."""
     flow = str(e.get("flow") or "").lower()
     flow = RT.FLOW_ALIAS.get(flow, flow)
     if flow in RT.EDGE_CLASSES:
         return flow
     if str(e.get("scope") or "").lower() == "future":
         return "future"
+    if ctx:
+        s_txt, t_txt = ctx.get("s_txt", ""), ctx.get("t_txt", "")
+        label = str(e.get("label") or "")
+        if _MON_RX.search(t_txt) or _MON_RX.search(label):
+            return "monitoring"
+        if _CTRL_RX.search(s_txt):
+            return "control"
+        if ctx.get("s_side") and ctx.get("t_side"):
+            return "outcome"
     return "data"
 
 
