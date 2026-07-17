@@ -391,10 +391,14 @@ def _parse_cells(xml: str) -> list[dict]:
                        "w": float(gw.group(1)), "h": float(gh.group(1))}
         wp = [{"x": float(m.group(1)), "y": float(m.group(2))}
               for m in re.finditer(r'<mxPoint\s+x="(-?[\d.]+)"\s+y="(-?[\d.]+)"\s*/>', body)]
+        # Native drawio edge-label offset point (refined preset): relocates
+        # WHERE THE LABEL RENDERS without touching the routed polyline.
+        lo = re.search(r'<mxPoint\s+x="(-?[\d.]+)"\s+y="(-?[\d.]+)"\s+as="offset"\s*/>', body)
+        label_offset = {"x": float(lo.group(1)), "y": float(lo.group(2))} if lo else None
         out.append({"id": a("id"), "parent": a("parent"), "source": a("source"),
                     "target": a("target"), "edge": a("edge"), "value": a("value"),
                     "style": a("style") or "", "hasPoints": 'as="points"' in body,
-                    "wp": wp, "geo": geo, "absGeo": None})
+                    "wp": wp, "geo": geo, "absGeo": None, "label_offset": label_offset})
     by_id = {c["id"]: c for c in out if c["id"]}
     for c in out:
         if not c["geo"]:
