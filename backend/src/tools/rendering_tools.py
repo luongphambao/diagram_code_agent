@@ -759,6 +759,90 @@ def _drawio_edit_rounds() -> int:
         return 0
 
 
+def _bump_engineer_rounds() -> int:
+    p = current_workspace() / _ENGINEER_ROUNDS_FILE
+    n = 0
+    if p.exists():
+        try:
+            n = int(p.read_text(encoding="utf-8").strip() or 0)
+        except (OSError, ValueError):
+            n = 0
+    n += 1
+    p.write_text(str(n), encoding="utf-8")
+    return n
+
+
+@tool
+def inspect_render_quality(tool_call_id: Annotated[str, InjectedToolCallId]) -> ToolMessage:
+    """Look at the rendered diagram with the full quality dossier to plan ONE fix batch.
+
+    Returns the production scorecard, objective layout metrics (aspect ratio,
+    edge crossings, icon coverage, label collisions), the auto-repair engineer
+    report (what the deterministic tier already tried), and the rendered out.png
+    image. Budgeted: max 2 calls per export — inspect once, then apply ONE
+    batched edit_drawio with every fix, re-inspect only if the score is still
+    below the gate. Do NOT re-export to chase polish.
+    """
+    ws = current_workspace()
+    out = ws / "out.drawio"
+    if not out.exists():
+        return ToolMessage(content="No out.drawio yet — export first.",
+                           name="inspect_render_quality",
+                           tool_call_id=tool_call_id, status="error")
+    rounds = _bump_engineer_rounds()
+    if rounds > _ENGINEER_INSPECT_CAP:
+        return ToolMessage(
+            content=(f"Engineer budget exhausted ({_ENGINEER_INSPECT_CAP} inspections "
+                     "used for this export). Finalize with the current score and "
+                     "report residual findings — do not keep polishing."),
+            name="inspect_render_quality", tool_call_id=tool_call_id, status="error")
+    text = f"Engineer inspection {rounds}/{_ENGINEER_INSPECT_CAP}."
+    try:
+        from domain.validation.validate_drawio import validate_file, production_scorecard
+        stats_path = ws / "out.native_stats.json"
+        stats = json.loads(stats_path.read_text(encoding="utf-8")) if stats_path.exists() else {}
+        report = validate_file(str(out), stats=stats)
+        sc = production_scorecard(report, stats)
+        m = report.get("layout_metrics") or {}
+        text += (f"\nProduction scorecard: {sc['total']}/100 "
+                 f"({'PASS' if sc['pass'] else 'below gate — fix the worst categories'})\n"
+                 + ", ".join(f"{k}={v}" for k, v in sc["breakdown"].items())
+                 + f"\nLayout metrics: ratio={m.get('ratio')} (target 1.3-1.9), "
+                   f"crossings={m.get('edge_crossings')}, long_edges={m.get('long_edges')}, "
+                   f"icon_coverage={m.get('icon_coverage')}, "
+                   f"label_overlaps={m.get('edge_label_overlaps')}, "
+                   f"collisions={sc.get('collisions')}")
+        if report.get("polish"):
+            text += "\nPolish findings: " + "; ".join(report["polish"][:4])
+        if report.get("collisions"):
+            text += "\nCollisions: " + "; ".join(report["collisions"][:4])
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        er = ws / "engineer_report.json"
+        if er.exists():
+            rep = json.loads(er.read_text(encoding="utf-8"))
+            text += (f"\nAuto-repair already ran: chose '{rep.get('chosen')}' "
+                     f"at {rep.get('final_score')}/100 over "
+                     f"{len(rep.get('iterations', []))} candidate(s) — don't re-try "
+                     "those; fix what it couldn't (labels, styles, single-cell moves).")
+    except Exception:  # noqa: BLE001
+        pass
+    text += ("\nApply every fix in ONE batched edit_drawio call "
+             f"(edit budget {_drawio_edit_rounds()}/{_DRAWIO_EDIT_CAP} used).")
+    png = ws / "out.png"
+    include_image = os.getenv("RENDER_INCLUDES_IMAGE", "1").lower() not in ("0", "false", "no")
+    if png.exists() and include_image:
+        b64, mime = _inspection_image_b64(png)
+        return ToolMessage(
+            content_blocks=[{"type": "text", "text": text},
+                            {"type": "image", "base64": b64, "mime_type": mime}],
+            name="inspect_render_quality", tool_call_id=tool_call_id, status="success")
+    return ToolMessage(content=text + "\n(no out.png to attach)",
+                       name="inspect_render_quality",
+                       tool_call_id=tool_call_id, status="success")
+
+
 def _style_get(style: str, key: str) -> str | None:
     for part in (style or "").split(";"):
         if "=" in part and part.split("=", 1)[0] == key:
