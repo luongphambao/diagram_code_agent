@@ -744,10 +744,13 @@ def upgrade_drawio(source_path: str, style_preset: str = "refined") -> str:
                  f"{icons} icons reused."),
         data={"source": str(src), "inventory": "inventory.json", "native_stats": stats},
     )
+    pages_note = (" 2-page file: page 1 = refined, page 2 = untouched original."
+                  if stats.get("pages") == 2 else "")
     return (
         f"Upgraded {src.name}: extracted {len(inv['nodes'])} nodes, {len(inv['edges'])} edges, "
         f"{len(spec['clusters'])} clusters, {icons} embedded icons reused. Rebuilt out.drawio "
-        f"({out.stat().st_size} bytes) via the native production engine (ids preserved). "
+        f"({out.stat().st_size} bytes) via the native engine "
+        f"({preset} preset, ids preserved).{pages_note} "
         f"Semantic preservation: {int(sem.get('node_recall', 1) * 100)}% nodes, "
         f"{int(sem.get('edge_recall', 1) * 100)}% edges"
         + (f" — MISSING nodes {miss[:5]}" if miss else "") + "." + lint +
