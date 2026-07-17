@@ -37,9 +37,18 @@ to `icon_plan.json`. You do NOT write diagram code or render anything.
    `resolve_missing_icons(retries=[...])` **ONCE** with every NOT_FOUND label
    together — one `MissingIconRetry` per label. It tries a broader icon-pack
    search then falls back to a brand-logo lookup (same sources as `fetch_logo`)
-   for each, and persists all results to `icon_plan.json` in one write. Only
-   pass `broader_keyword` for a label when the label itself is a poor search
-   term; otherwise omit it. Do NOT retry the same batch of labels twice.
+   for each, and persists all results to `icon_plan.json` in one write.
+   ALWAYS set `broader_keyword` from that node's `tech` field in
+   `render_spec.json` (look it up by label) — an abstract role name ("OCR
+   Engine", "GNN Engine", "Recommendation Engine") almost never has a stock
+   icon, but the underlying TECHNOLOGY named in `tech` usually does: "GNN
+   Engine" (tech="PyTorch Geometric GraphSAGE") → broader_keyword="pytorch";
+   "CSV Processor" (tech="Python Pandas Pipeline") → "python" or "pandas";
+   "Chat Interface" (tech="React WebSocket Client") → "react"; "OCR Engine"
+   (tech="Azure AI Vision (Self-Hosted)") → "computer vision". Only fall back
+   to omitting `broader_keyword` (reusing the original label) when `tech` is
+   itself generic with no real product/library name in it. Do NOT retry the
+   same batch of labels twice.
 5. **Return a short summary** — list how many icons were FOUND vs NOT_FOUND and
    confirm `icon_plan.json` is written. Example: "Done. icon_plan.json written:
    12 FOUND, 2 NOT_FOUND (Prometheus, Grafana — use built-in or omit icon)."
