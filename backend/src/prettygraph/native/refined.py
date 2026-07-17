@@ -229,9 +229,20 @@ def build_refined(spec: dict, plan: dict | None = None):
 
     # ---- emit zones + cards ---- #
     hue_i = 0
-    number = 1
     legend_flows: list[str] = []
-    for z in mains + sides + ops:
+    zone_order = mains + sides + ops
+    # Zone numbering: honour spec numbers only when they form a clean unique
+    # 1..n sequence (real-world sources routinely carry duplicate section
+    # numbers — the playbook demands a coherent reading order, so renumber).
+    given = [clusters[z].get("number") for z in zone_order]
+    ints = [int(n) for n in given if str(n).isdigit()]
+    use_given = (len(ints) == len(zone_order)
+                 and sorted(ints) == list(range(1, len(ints) + 1)))
+    if use_given:
+        zone_order = [z for _, z in sorted(zip(ints, zone_order))]
+    zone_no = {z: (int(clusters[z]["number"]) if use_given else i + 1)
+               for i, z in enumerate(zone_order)}
+    for z in zone_order:
         c = clusters[z]
         rect = zone_rects[z]
         role = _role_of(c)
@@ -244,8 +255,7 @@ def build_refined(spec: dict, plan: dict | None = None):
             else:
                 hue = RT.HUE_ORDER[hue_i % (len(RT.HUE_ORDER) - 1)]
                 hue_i += 1
-        num = c.get("number") if c.get("number") is not None else number
-        number = max(number + 1, int(num) + 1 if str(num).isdigit() else number + 1)
+        num = zone_no[z]
         zid = z if str(z).startswith("zone_") else f"zone_{z}"
         d.tab_zone(zid, [rect["x"], rect["y"]], [rect["w"], rect["h"]],
                    str(c.get("label") or z).upper(), hue, number=num)
