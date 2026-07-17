@@ -837,7 +837,7 @@ def audit_layout_metrics(xml: str, stats: dict | None = None) -> dict:
                     and not _is_decor(c["id"]) and not c["id"].endswith("__ic")}
     is_text = lambda c: bool(re.search(r"(?:^|;)(text|line);", c["style"])) \
         or (c["id"] or "").startswith(("__title", "__legend"))
-    is_container = lambda c: (c["id"] in has_children or bool(
+    is_container = lambda c: (c["id"] in has_children or _is_refined_container(c["id"]) or bool(
         re.search(r"container=1|shape=mxgraph\.aws4\.group|grIcon=|group;|swimlane", c["style"])))
     vertices = [c for c in cells if c["edge"] != "1" and box_of(c) and c["id"]
                 and not is_text(c) and not _is_decor(c["id"])]
