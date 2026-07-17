@@ -1051,22 +1051,26 @@ def check_semantic_preservation(expected_node_ids, expected_edges, xml: str):
 
 
 def production_scorecard(report: dict, stats: dict | None = None) -> dict:
-    """V2 §16 production QA scorecard (0-100) over a validate_file() report + the
-    native engine stats (semantic preservation + routing residuals).
+    """V2 §16 production QA scorecard (0-100) over a validate_file()/validate_xml()
+    report + the native engine stats (semantic preservation + routing residuals).
 
-    Categories & weights: semantic completeness 25, relationship correctness 20,
-    layer clarity 15, connector readability 15, typography 10, spacing 10,
-    editability 5. PASS iff total >= 85 AND semantic = 100% AND relationship =
-    100% AND zero XML errors.
+    Categories & weights: semantic completeness 25, relationship correctness 15,
+    connector readability 15, layer clarity 10, spacing/typography 10,
+    composition 10, iconography 10, editability 5. The last two plus geometric
+    crossings come from ``report["layout_metrics"]`` (audit_layout_metrics) —
+    absent metrics score neutral (same blindness as before, never a false fail).
+    PASS iff total >= 85 AND semantic = 100% AND relationship = 100% AND zero
+    XML errors AND zero card collisions AND (for slide output) no dense-scale
+    fallback on diagrams small enough that a 16:9 fit is realistic (<=40 nodes).
     """
     stats = stats or {}
     sem = stats.get("semantic") or {}
     node_recall = float(sem.get("node_recall", 1.0))
     edge_recall = float(sem.get("edge_recall", 1.0))
     errs = report.get("errors", []) or []
-    warns = report.get("warnings", []) or []
     advice = report.get("advice", []) or []
     polish = report.get("polish", []) or []
+    metrics = report.get("layout_metrics") or {}
     err_count = report.get("error_count", len(errs))
     ok = report.get("ok", not errs)
     collisions = int(report.get("collision_count", 0))
@@ -1075,35 +1079,70 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
         return sum(1 for s in items if any(k in str(s).lower() for k in kw))
 
     edge_struct_err = _hits(errs, "edge ", "source ", "target ")
-    cross = int(stats.get("edge_cross", 0)) + int(stats.get("edge_overlaps", 0))
+    # Geometric crossings measured on the baked XML beat router residuals
+    # (residuals only count what the router itself controlled).
+    if metrics.get("edge_crossings") is not None:
+        cross = int(metrics["edge_crossings"])
+    else:
+        cross = int(stats.get("edge_cross", 0)) + int(stats.get("edge_overlaps", 0))
+    long_edges = int(metrics.get("long_edges") or 0)
+    label_overlaps = int(metrics.get("edge_label_overlaps") or 0)
+
+    # Composition: ratio inside PRODUCTION_TARGET band = full marks, linear
+    # falloff outside (0 at ratio 1.0 / 2.6); dense fallback is a real miss.
+    ratio = metrics.get("ratio")
+    lo, hi = PRODUCTION_TARGET["ratio"]
+    if ratio is None:
+        composition = 10.0
+    elif lo <= ratio <= hi:
+        composition = 10.0
+    elif ratio < lo:
+        composition = 10.0 * max(0.0, (ratio - 1.0) / (lo - 1.0))
+    else:
+        composition = 10.0 * max(0.0, (2.6 - ratio) / (2.6 - hi))
+    if metrics.get("dense_fallback"):
+        composition -= 4.0
+    if (metrics.get("page_fill") or 1.0) < 0.5:
+        composition -= 2.0
+
+    coverage = metrics.get("icon_coverage")
+    iconography = 10.0 if coverage is None else 10.0 * min(
+        1.0, coverage / PRODUCTION_TARGET["icon_coverage"])
 
     bd = {
         # 1. Semantic completeness — every source node survived.
         "semantic_completeness": 25.0 * node_recall,
         # 2. Relationship correctness — every renderable edge survived, no dangling.
-        "relationship_correctness": 0.0 if edge_struct_err else 20.0 * edge_recall,
-        # 3. Layer clarity — tinted bands (polish flags untinted/legend gaps).
-        "layer_clarity": 15.0 - 6.0 * _hits(polish, "untinted", "band", "layer", "legend"),
-        # 4. Connector readability — router residuals + tangle/detour advice.
-        "connector_readability": (15.0 - min(10.0, 2.0 * cross)
-                                  - 3.0 * _hits(advice, "crossing", "tangled",
+        "relationship_correctness": 0.0 if edge_struct_err else 15.0 * edge_recall,
+        # 3. Connector readability — geometric crossings + overlong edges + tangle advice.
+        "connector_readability": (15.0 - min(10.0, 2.0 * cross) - 1.0 * long_edges
+                                  - 2.0 * _hits(advice, "crossing", "tangled",
                                                 "detour", "long connector")),
-        # 5. Typography — font-count / tiny-font findings.
-        "typography": 10.0 - 3.0 * _hits(advice + polish, "font", "tiny", "text size"),
-        # 6. Spacing / alignment — CARD COLLISIONS (V2 §18.1) dominate, plus spills.
-        "spacing_alignment": (10.0 - 3.0 * collisions
+        # 4. Layer clarity — tinted bands / legend (polish flags the gaps).
+        "layer_clarity": 10.0 - 5.0 * _hits(polish, "untinted", "band", "layer", "legend"),
+        # 5. Spacing/typography — CARD COLLISIONS dominate; label collisions + tiny fonts.
+        "spacing_alignment": (10.0 - 3.0 * collisions - 1.5 * label_overlaps
+                              - 3.0 * _hits(advice + polish, "font", "tiny", "text size")
                               - 2.0 * _hits(advice, "spill", "whitespace")),
-        # 7. Editability — parses, no errors, not compressed.
+        # 6. Composition — content aspect ratio + page fill + slide-fit health.
+        "composition": composition,
+        # 7. Iconography — real icon coverage vs the 90% production bar.
+        "iconography": iconography,
+        # 8. Editability — parses, no errors, not compressed.
         "editability": 5.0 if (ok and err_count == 0) else 0.0,
     }
     bd = {k: round(max(0.0, v), 1) for k, v in bd.items()}
     total = round(sum(bd.values()), 1)
     # A render with colliding cards can NEVER pass — the exact blind spot that let a
-    # crammed slide falsely report PASS before.
+    # crammed slide falsely report PASS before. Likewise a dense-scale fallback on a
+    # normal-sized diagram (the "tiny content, huge whitespace" complaint).
+    node_count = int(stats.get("nodes") or 0)
+    fit_ok = not (metrics.get("dense_fallback") and node_count and node_count <= 40)
     passed = bool(total >= 85.0 and node_recall >= 1.0 and edge_recall >= 1.0
-                  and err_count == 0 and collisions == 0)
+                  and err_count == 0 and collisions == 0 and fit_ok)
     return {"total": total, "breakdown": bd, "pass": passed, "collisions": collisions,
-            "node_recall": round(node_recall, 4), "edge_recall": round(edge_recall, 4)}
+            "node_recall": round(node_recall, 4), "edge_recall": round(edge_recall, 4),
+            "metrics": metrics, "target": PRODUCTION_TARGET}
 
 
 def main() -> None:
