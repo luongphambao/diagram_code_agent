@@ -985,6 +985,9 @@ def audit_layout_metrics(xml: str, stats: dict | None = None) -> dict:
         mid = pts[len(pts) // 2] if len(pts) % 2 else {
             "x": (pts[len(pts) // 2 - 1]["x"] + pts[len(pts) // 2]["x"]) / 2,
             "y": (pts[len(pts) // 2 - 1]["y"] + pts[len(pts) // 2]["y"]) / 2}
+        off = e.get("label_offset")  # refined preset: real drawio label-offset point
+        if off:
+            mid = {"x": mid["x"] + off["x"], "y": mid["y"] + off["y"]}
         lw, lh = len(e["label"]) * 6.6, 14.0
         lb = {"x": mid["x"] - lw / 2, "y": mid["y"] - lh / 2, "w": lw, "h": lh}
         for r in card_rects:
