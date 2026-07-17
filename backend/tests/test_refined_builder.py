@@ -425,6 +425,39 @@ def test_ingest_refined_spec(tmp_path):
     assert 'id="api"' in xml and "tab_zone_tier_app" in xml
 
 
+def test_e2e_refined_upgrade_deepstream():
+    """Integration: refined upgrade of the real DeepStream 'before' file must
+    produce a 2-page PASS-grade document (skips if the fixture is absent)."""
+    import pytest
+    from pathlib import Path
+    src = (Path(__file__).resolve().parents[2]
+           / "deepstream_aws_architecture_improved(1).drawio")
+    if not src.exists():
+        pytest.skip("deepstream before-file not present")
+    import domain.validation.validate_drawio as vd
+    from domain.diagram.drawio_ingest import (extract_inventory,
+                                              inventory_to_render_spec,
+                                              first_page_model_xml)
+    from prettygraph.native.topology import build_drawio_from_spec
+    from prettygraph.native.repair import semantic_stats
+    inv = extract_inventory(str(src))
+    spec = inventory_to_render_spec(inv, style_preset="refined")
+    xml, stats = build_drawio_from_spec(spec, "01 — Refined Architecture")
+    stats["semantic"] = semantic_stats(spec, xml, None)
+    xml = xml.replace("</mxfile>",
+                      '<diagram name="02 — Original Source" id="dsrc">'
+                      + first_page_model_xml(str(src)) + "</diagram></mxfile>")
+    pages = ET.fromstring(xml).findall("diagram")
+    assert len(pages) == 2
+    report = vd.validate_xml(xml, stats=stats)
+    sc = vd.production_scorecard(report, stats)
+    assert sc["node_recall"] == 1.0 and sc["edge_recall"] == 1.0
+    assert report["error_count"] == 0 and report["collision_count"] == 0
+    m = report["layout_metrics"]
+    assert m["backbone_present"] and m["zone_numbers_sequential"]
+    assert sc["total"] >= 85 and sc["pass"], sc
+
+
 def test_refined_theme_tokens_json():
     j = RT.as_json()
     assert j["font"] == "Helvetica"
