@@ -153,7 +153,17 @@ def extract_inventory(path: str) -> dict:
         title, sub = _split_label(c["value"])
         if not (title or sub or icon):
             continue  # pure decoration — skip
-        parent = c["parent"] if c["parent"] in cluster_ids else None
+
+        def _real_cluster(pid: str | None) -> str | None:
+            guard = 0
+            while pid and guard < 20:  # walk past skipped decor containers (__grid)
+                if pid in cluster_ids:
+                    return pid
+                pid = (by_id.get(pid) or {}).get("parent")
+                guard += 1
+            return None
+
+        parent = _real_cluster(c["parent"])
         pos = _abs(c)
         nodes.append({"id": c["id"], "title": title or c["id"], "sub": sub,
                       "cluster": parent, "icon": icon, "_x": pos["x"], "_y": pos["y"]})
