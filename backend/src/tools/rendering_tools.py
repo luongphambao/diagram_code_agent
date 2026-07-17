@@ -660,7 +660,7 @@ def upgrade_drawio(source_path: str) -> str:
     lint = ""
     try:
         from domain.validation.validate_drawio import validate_file, production_scorecard
-        report = validate_file(str(out))
+        report = validate_file(str(out), stats=stats)
         sc = production_scorecard(report, stats)
         verdict = ("PASS" if sc["pass"]
                    else "BELOW GATE (need >=85, semantic & relationship = 100%)")
