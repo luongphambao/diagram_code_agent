@@ -368,7 +368,7 @@ def build_refined(spec: dict, plan: dict | None = None):
     # never overriding a spec-authored note ---- #
     used_glue: set[str] = set()
     for z in mains + ops + sides:
-        role = _role_of(clusters[z])
+        role = _role_of(clusters[z], clusters)
         cat = ("sidebar" if role == "sidebar"
                else "security" if role == "ops" else "state")
         if cat in used_glue:
