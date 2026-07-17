@@ -734,6 +734,13 @@ def _emit_edge(d, e, r, fr, geom) -> None:
             wp_xml = f'<Array as="points">{pts}</Array>'
     if raw_style:
         st += raw_style if raw_style.endswith(";") else raw_style + ";"
+    off_xml = ""
+    label_offset = opts.get("label_offset")
+    if label and label_offset:
+        # Nudges WHERE THE LABEL RENDERS off the line/midpoint (drawio's native
+        # edge-label offset point) without touching the routed polyline itself —
+        # used by the refined preset to keep labels out of adjacent cards.
+        off_xml = f'<mxPoint x="{_r(label_offset[0])}" y="{_r(label_offset[1])}" as="offset"/>'
     d.eid += 1
     # Semantic edge id (refined preset: e_<src>_<tgt>, playbook §18.3) when the
     # caller supplies one and it is still free; ed{n} otherwise.
