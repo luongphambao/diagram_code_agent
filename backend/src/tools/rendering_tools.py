@@ -888,7 +888,11 @@ def _style_set(style: str, key: str, value) -> str:
 
 def _load_drawio_model(path: Path):
     """Parse out.drawio and return (tree, model_root) where model_root is the
-    <root> element holding the mxCells. Raises ValueError on compressed files."""
+    <root> element holding the mxCells. Raises ValueError on compressed files.
+
+    CONTRACT: find() returns the FIRST <mxGraphModel> — on multi-page refined
+    output every read/edit therefore targets page 1 only; the preserved
+    "Original Source" page 2 is written back untouched by tree.write()."""
     import xml.etree.ElementTree as ET
     tree = ET.parse(str(path))
     root = tree.getroot()
