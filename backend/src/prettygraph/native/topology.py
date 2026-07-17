@@ -281,6 +281,12 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
     order, per-band grid columns and hub edge bundling. Every plan key is
     optional; plan=None is byte-identical to the unplanned build.
     """
+    if str(spec.get("style_preset") or "").lower() == "refined":
+        # Refined typographic preset (playbook look): its own page-template
+        # composition — handles zones, edges and legend itself, same
+        # (diagram, root) contract. flat is implied (always parent="1").
+        from .refined import build_refined
+        return build_refined(spec, plan=plan)
     cat = _load_catalog() if _load_catalog else None
     provider = str(spec.get("provider") or "aws").lower()
     clusters = {c["id"]: c for c in spec.get("clusters", []) if c.get("id")}
