@@ -155,6 +155,21 @@ def extract_inventory(path: str) -> dict:
     def _is_decor(cid: str | None) -> bool:
         return bool(cid) and (cid.endswith(_DECOR) or cid.startswith(("__legend", "__title")))
 
+    def _box(c: dict) -> dict | None:
+        if not c.get("geo"):
+            return None
+        p = _abs(c)
+        return {"x": p["x"], "y": p["y"], "w": c["geo"]["w"], "h": c["geo"]["h"]}
+
+    def _center_in(inner: dict, outer: dict) -> bool:
+        cx, cy = inner["x"] + inner["w"] / 2, inner["y"] + inner["h"] / 2
+        return (outer["x"] <= cx <= outer["x"] + outer["w"]
+                and outer["y"] <= cy <= outer["y"] + outer["h"])
+
+    _ZONE_HINT = re.compile(r"\bvpc\b|\bvnet\b|availability|\baz\b"
+                            r"|\bus-(east|west)-\d[a-f]?\b|\baws\b|\bazure\b"
+                            r"|\bgcp\b|\bcloud\b|on[- ]?prem", re.I)
+
     # Clusters = container vertices; nodes = leaf vertices with a label or icon.
     clusters, nodes, edges = [], [], []
     for c in cells:
@@ -165,6 +180,67 @@ def extract_inventory(path: str) -> dict:
             clusters.append({"id": c["id"], "label": label or c["id"],
                              "_style": c["style"], "_pid": c.get("parent")})
     cluster_ids = {cl["id"] for cl in clusters}
+
+    # SPATIAL containment inference (playbook §4): flat files (ChatGPT-style,
+    # everything parent="1") express grouping purely by geometry — a labeled
+    # rect drawn behind ≥2 substantial vertices IS a section/zone even though
+    # nothing is XML-nested inside it. Without this, a flat source ingests as
+    # one giant loose-node pile.
+    vert_cells = [c for c in cells if c["vertex"] and c["geo"]
+                  and not _is_decor(c["id"])]
+    boxes = {c["id"]: _box(c) for c in vert_cells}
+    substantial = [c for c in vert_cells
+                   if boxes[c["id"]]["w"] * boxes[c["id"]]["h"] >= 2000]
+    for c in vert_cells:
+        if c["id"] in cluster_ids or _is_container(c):
+            continue
+        b = boxes[c["id"]]
+        if b["w"] * b["h"] < 25000:
+            continue
+        contained = [o for o in substantial
+                     if o["id"] != c["id"] and _center_in(boxes[o["id"]], b)
+                     and boxes[o["id"]]["w"] * boxes[o["id"]]["h"] < b["w"] * b["h"] * 0.8]
+        if len(contained) < 2:
+            continue
+        label, _ = _split_label(c["value"])
+        if not label:
+            # Unlabeled boundary: adopt a tiny label-pill hugging its top edge
+            # (the "VPC" chip pattern), else a zone-ish id ("aws_shell").
+            pill = next((p for p in vert_cells
+                         if p["id"] != c["id"] and p["geo"]["h"] <= 32
+                         and p["geo"]["w"] * p["geo"]["h"] <= 8000
+                         and _split_label(p["value"])[0]
+                         and abs(boxes[p["id"]]["y"] - b["y"]) <= 30
+                         and _center_in(boxes[p["id"]], b)), None)
+            if pill is not None:
+                label = _split_label(pill["value"])[0]
+            elif _ZONE_HINT.search(c["id"]):
+                label = c["id"].replace("_", " ").replace("-", " ").title()
+            else:
+                continue
+        clusters.append({"id": c["id"], "label": label,
+                         "_style": c["style"], "_pid": c.get("parent"),
+                         "_spatial": True})
+        cluster_ids.add(c["id"])
+
+    # Spatial cluster nesting: parent = smallest other cluster fully containing it.
+    cl_boxes = {cl["id"]: boxes.get(cl["id"]) for cl in clusters}
+    for cl in clusters:
+        if not cl.get("_spatial"):
+            continue
+        b = cl_boxes[cl["id"]]
+        best = None
+        for other in clusters:
+            ob = cl_boxes.get(other["id"])
+            if other["id"] == cl["id"] or not ob or not b:
+                continue
+            if (ob["x"] <= b["x"] + 2 and ob["y"] <= b["y"] + 2
+                    and ob["x"] + ob["w"] >= b["x"] + b["w"] - 2
+                    and ob["y"] + ob["h"] >= b["y"] + b["h"] - 2):
+                if best is None or ob["w"] * ob["h"] < best[1]:
+                    best = (other["id"], ob["w"] * ob["h"])
+        if best:
+            cl["_pid"] = best[0]
     # Original container nesting + topology-zone guess ("_"-prefixed: consumed
     # only by the refined upgrade path; the icon path must keep seeing today's
     # flat cluster list, or upgrades would flip into topology nesting mode).
