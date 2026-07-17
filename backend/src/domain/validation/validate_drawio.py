@@ -1040,6 +1040,10 @@ def check_semantic_preservation(expected_node_ids, expected_edges, xml: str):
     exp_edges = [tuple(e) for e in expected_edges if e and e[0] and e[1]]
     present_v: set[str] = set()
     present_e: set[tuple] = set()
+    # Multi-page files: recall is measured on page 1 only — a node found only on
+    # the preserved "Original Source" page 2 must still count as missing.
+    if xml.count("<mxGraphModel") > 1:
+        xml = _primary_model(xml)
     try:
         root = ET.fromstring(xml)
     except ET.ParseError as exc:
