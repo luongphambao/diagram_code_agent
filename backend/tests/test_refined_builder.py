@@ -508,6 +508,40 @@ def test_refined_subzone_span_and_subtint():
     assert float(w1g.get("x")) + float(w1g.get("width")) <= float(fr.get("x")) + float(fr.get("width")) + 1
 
 
+def test_refined_card_logo_badge():
+    """Refined component cards render a vendor logo as a top-right badge that the
+    validator treats as decor (no false collision)."""
+    from prettygraph.native.topology import build_drawio_from_spec
+    import domain.validation.validate_drawio as vd
+    uri = "data:image/png;base64,iVBORw0KGgoAAAANS=="
+    spec = {
+        "style_preset": "refined", "provider": "gcp", "diagram_title": "T",
+        "clusters": [{"id": "z", "label": "Web", "number": 1, "hue": "blue"}],
+        "nodes": [
+            {"id": "dns", "cluster": "z", "label": "Cloud DNS", "body": ["Managed"],
+             "icon_data_uri": uri},
+            {"id": "lb", "cluster": "z", "label": "Load Balancer", "body": ["ALB"]},
+        ],
+        "edges": [{"from": "dns", "to": "lb", "flow": "data"}],
+    }
+    xml, _ = build_drawio_from_spec(spec, "T")
+    cells = {c.get("id"): c for c in ET.fromstring(xml).iter("mxCell")}
+    assert "dns__ic" in cells and "shape=image" in cells["dns__ic"].get("style")
+    assert "spacingRight=30" in cells["dns"].get("style")  # text clears the badge
+    # the logo badge must not register as a colliding card
+    rep = vd.validate_xml(xml)
+    assert rep["collision_count"] == 0
+
+
+def test_refined_external_tier_is_sidebar():
+    """An 'External …' tier is a sidebar dependency, not the ops band, even when
+    its name also contains ops words like 'identity'."""
+    from prettygraph.native.refined import _role_of
+    assert _role_of({"label": "External Identity & Services"}) == "sidebar"
+    assert _role_of({"label": "Third-Party APIs"}) == "sidebar"
+    assert _role_of({"label": "Operations & Governance"}) == "ops"
+
+
 def test_refined_access_zone_stays_main_inside_vpc():
     """A security/access zone nested in a VPC is main-plane (edge), NOT the ops
     band — the fix that keeps 'Access & Security' in the top row."""
