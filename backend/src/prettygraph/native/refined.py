@@ -472,11 +472,26 @@ def build_refined(spec: dict, plan: dict | None = None):
     content_bottom = max([r["y"] + r["h"] for r in zone_rects.values()] or [600])
 
     # ---- emit boundaries first (behind zones, same z-bucket, stable order) ---- #
+    # Nesting depth staggers the pad so an outer boundary (AWS Cloud) extends
+    # further out than an inner one (VPC) even when both wrap the same top row —
+    # otherwise their folder tabs land on the same corner and overlap.
+    def _b_anc(bid: str) -> int:
+        n, cur, guard = 0, clusters[bid].get("parent"), 0
+        while cur and guard < 20:
+            if cur in boundary_ids:
+                n += 1
+            cur = (clusters.get(cur) or {}).get("parent")
+            guard += 1
+        return n
+    max_anc = max((_b_anc(b) for b in boundary_ids), default=0)
     for bid in boundary_ids:
-        members = [zone_rects[z] for z in _descendant_zones(bid)]
+        # Wrap only main-row members: the ops band is full-width and would balloon
+        # the box out under external zones; the sidebar sits outside the cloud.
+        members = [zone_rects[z] for z in _descendant_zones(bid)
+                   if _role_of(clusters[z], clusters) == "main" and z in zone_rects]
         if not members:
             continue
-        pad = 25
+        pad = 18 + (max_anc - _b_anc(bid)) * 16
         bx = min(r["x"] for r in members) - pad
         by = min(r["y"] for r in members) - pad - RT.GEO["tab_overlap"]
         bw = max(r["x"] + r["w"] for r in members) + pad - bx
