@@ -312,7 +312,9 @@ def build_refined(spec: dict, plan: dict | None = None):
                     cy += h + RT.GEO["card_gap"]
 
     # ---- header stack ---- #
-    page_w = max(RT.GEO["page_w"], content_right + margin)
+    # Page hugs the content (playbook §9 canvas table: 1400x900 floor) instead
+    # of forcing 1920 — small diagrams shouldn't swim in whitespace.
+    page_w = max(1400, content_right + margin)
     title = (spec.get("diagram_title") or spec.get("slide_title")
              or spec.get("title") or "Architecture")
     t = d._put("__title", "1", margin, _HEADER_Y[0], page_w - 2 * margin, 42,
