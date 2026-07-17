@@ -802,7 +802,10 @@ def audit_layout_metrics(xml: str, stats: dict | None = None) -> dict:
     stats = stats or {}
     cells = _parse_cells(xml)
     box_of = lambda c: c["absGeo"] or c["geo"]
-    has_children = {c["parent"] for c in cells if c["parent"]}
+    # A card whose only children are decoratives (__sh/__ac/__pill) or its own
+    # sub-icon (__ic) is still a LEAF — only structural children make a container.
+    has_children = {c["parent"] for c in cells if c["parent"] and c["id"]
+                    and not _is_decor(c["id"]) and not c["id"].endswith("__ic")}
     is_text = lambda c: bool(re.search(r"(?:^|;)(text|line);", c["style"])) \
         or (c["id"] or "").startswith(("__title", "__legend"))
     is_container = lambda c: (c["id"] in has_children or bool(
