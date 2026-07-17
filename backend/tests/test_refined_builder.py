@@ -255,7 +255,7 @@ def test_refined_grid_and_page():
     xml, _ = build_drawio_from_spec(_refined_spec(), "Refined")
     model = ET.fromstring(xml).find(".//mxGraphModel")
     assert model.get("grid") == "1"
-    assert float(model.get("pageWidth")) >= 1920
+    assert float(model.get("pageWidth")) >= 1400  # page hugs content, 1400 floor
 
 
 _DIRTY_PAGE = (
