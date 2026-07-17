@@ -105,14 +105,11 @@ def _auto_glue(zone_id: str, cluster: dict, role: str) -> tuple[str, list[str]] 
     label = str(cluster.get("label") or zone_id)
     text = f"{label} {cluster.get('tier') or ''}"
     if role == "ops" and _SECURITY_RX.search(text):
-        return ("Security boundary",
-               [f"{label} controls what reaches the components downstream."])
+        return ("Security boundary", ["Gates what reaches downstream."])
     if role == "main" and _STATE_RX.search(text):
-        return ("Runtime responsibility",
-               ["Shared state for this stage; hands off to what's next."])
+        return ("Runtime responsibility", ["Shared state for this pipeline stage."])
     if role == "sidebar":
-        return ("Target outcome",
-               ["Downstream consumers act on these results."])
+        return ("Target outcome", ["Consumers act on these results."])
     return None
 
 
