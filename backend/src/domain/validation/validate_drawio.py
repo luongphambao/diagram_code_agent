@@ -1001,10 +1001,14 @@ def audit_layout_metrics(xml: str, stats: dict | None = None) -> dict:
         "long_edges": long_edges,
         "icon_coverage": icon_coverage,
         "edge_label_overlaps": label_overlaps,
+    metrics = {
         "title_present": '"__title"' in xml or "id=\"__title" in xml,
         "tinted_bands": tinted_bands,
         "legend_present": "legend" in xml.lower() or 'id="footer"' in xml,
     }
+    if 'id="tab_zone_' in xml or 'id="backbone"' in xml:
+        metrics.update(audit_refined_structure(xml))
+    return metrics
 
 
 def audit_xml(xml: str, profile: str = "auto") -> list[str]:
