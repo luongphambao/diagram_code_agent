@@ -10,6 +10,7 @@ until it lands, edges emit as plain orthogonal source→target connectors.
 from __future__ import annotations
 
 from .theme import THEME
+from . import refined_theme as RT
 
 try:
     from ..drawio_catalog import (
