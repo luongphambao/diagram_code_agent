@@ -351,9 +351,9 @@ def build_refined(spec: dict, plan: dict | None = None):
     if plan and plan.get("band_order"):
         planned = [z for z in plan["band_order"] if z in order]
         order = planned + [z for z in order if z not in planned]
-    mains = [z for z in order if _role_of(clusters[z]) == "main"]
-    ops = [z for z in order if _role_of(clusters[z]) == "ops"]
-    sides = [z for z in order if _role_of(clusters[z]) in ("sidebar", "future")]
+    mains = [z for z in order if _role_of(clusters[z], clusters) == "main"]
+    ops = [z for z in order if _role_of(clusters[z], clusters) == "ops"]
+    sides = [z for z in order if _role_of(clusters[z], clusters) in ("sidebar", "future")]
     if not mains:  # never render an empty main row
         mains, ops, sides = order, [], []
     # Main-flow order: the source's own section numbers are the author's reading
