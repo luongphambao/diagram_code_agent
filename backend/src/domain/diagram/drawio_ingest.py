@@ -222,19 +222,69 @@ def extract_inventory(path: str) -> dict:
             "nodes": nodes, "edges": edges}
 
 
+def _wrap_body(text: str, width: int = 32, max_lines: int = 3) -> list[str]:
+    """Split a long subtitle into short refined card body lines (playbook §12.4)."""
+    words = str(text or "").split()
+    lines: list[str] = []
+    cur = ""
+    for w in words:
+        if cur and len(cur) + 1 + len(w) > width:
+            lines.append(cur)
+            cur = w
+            if len(lines) == max_lines:
+                break
+        else:
+            cur = f"{cur} {w}".strip()
+    if cur and len(lines) < max_lines:
+        lines.append(cur)
+    return lines
+
+
 def inventory_to_render_spec(inv: dict, *, provider: str | None = None,
-                             title: str | None = None) -> dict:
+                             title: str | None = None,
+                             style_preset: str = "") -> dict:
     """Map an inventory to a render_spec the native engine can rebuild, preserving
-    original ids and reusing embedded icons (V2 §2.2 rebuild-geometry-not-semantic)."""
+    original ids and reusing embedded icons (V2 §2.2 rebuild-geometry-not-semantic).
+
+    ``style_preset="refined"`` targets the typographic playbook preset: card
+    subtitles become 2-4 short body lines, and the source's container nesting /
+    topology-zone guesses ("_parent"/"_zone" from extract_inventory) surface as
+    cluster parent/zone so the refined page can draw visual cloud/VPC boundaries.
+    The default (icon) path is byte-identical to before.
+    """
+    refined = str(style_preset).lower() == "refined"
     used_clusters = {n.get("cluster") for n in inv["nodes"] if n.get("cluster")}
-    return {
+    clusters = [cl for cl in inv["clusters"] if cl["id"] in used_clusters]
+    if refined:
+        # Keep ancestor wrapper containers too — they become visual boundaries.
+        by_id = {cl["id"]: cl for cl in inv["clusters"]}
+        keep = {cl["id"] for cl in clusters}
+        for cl in list(clusters):
+            pid = cl.get("_parent")
+            while pid and pid in by_id and pid not in keep:
+                keep.add(pid)
+                clusters.append(by_id[pid])
+                pid = by_id[pid].get("_parent")
+        clusters = [{k: v for k, v in cl.items() if not k.startswith("_")}
+                    | ({"parent": cl["_parent"]} if cl.get("_parent") else {})
+                    | ({"zone": cl["_zone"]} if cl.get("_zone") else {})
+                    for cl in clusters]
+    nodes = []
+    for n in inv["nodes"]:
+        node = {"id": n["id"], "label": n["title"], "tech": n.get("sub") or "",
+                "cluster": n.get("cluster"), "icon_data_uri": n.get("icon")}
+        if refined and n.get("sub"):
+            node["body"] = _wrap_body(n["sub"])
+        nodes.append(node)
+    spec = {
         "provider": provider or inv.get("provider") or "generic",
         "presentation_style": "diagram",  # faithful plain rebuild, no slide chrome
         "diagram_title": title or inv.get("title") or "Upgraded Architecture",
-        "clusters": [cl for cl in inv["clusters"] if cl["id"] in used_clusters],
-        "nodes": [{"id": n["id"], "label": n["title"], "tech": n.get("sub") or "",
-                   "cluster": n.get("cluster"),
-                   "icon_data_uri": n.get("icon")} for n in inv["nodes"]],
+        "clusters": clusters,
+        "nodes": nodes,
         "edges": [{"from": e["source"], "to": e["target"],
                    "label": e.get("label") or ""} for e in inv["edges"]],
     }
+    if refined:
+        spec["style_preset"] = "refined"
+    return spec
