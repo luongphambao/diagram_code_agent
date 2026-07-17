@@ -254,6 +254,26 @@ def build_refined(spec: dict, plan: dict | None = None):
         return int(n) if str(n).isdigit() else 999
     mains.sort(key=_num_key)
 
+    # ---- auto-glue (playbook §14): one note per category, first match wins,
+    # never overriding a spec-authored note ---- #
+    used_glue: set[str] = set()
+    for z in mains + ops + sides:
+        role = _role_of(clusters[z])
+        cat = ("sidebar" if role == "sidebar"
+               else "security" if role == "ops" else "state")
+        if cat in used_glue:
+            continue
+        if any(str(n.get("kind") or "") == "note" for n in nodes_by_cluster.get(z, [])):
+            used_glue.add(cat)  # spec already covers this category here
+            continue
+        glue = _auto_glue(z, clusters[z], role)
+        if glue:
+            title, lines = glue
+            nodes_by_cluster.setdefault(z, []).append(
+                {"id": f"note_auto_{z}", "cluster": z, "kind": "note",
+                 "label": title, "body": lines})
+            used_glue.add(cat)
+
     # ---- measure zones ---- #
     def _zone_geom(zid: str, horizontal: bool = False) -> dict:
         members = nodes_by_cluster.get(zid, [])
