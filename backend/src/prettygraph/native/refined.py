@@ -116,6 +116,8 @@ def _role_of(c: dict, clusters: dict | None = None) -> str:
     # main row while "Identity & Access" (top-level) stays in the ops band.
     if _inside_network(c, clusters):
         return "ops" if _HARD_OPS_RX.search(text) else "main"
+    if _EXTERNAL_RX.search(text):
+        return "sidebar"
     if _OPS_RX.search(text) and not _ENTRY_RX.search(text):
         return "ops"
     if _OUTCOME_RX.search(text):
