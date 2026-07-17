@@ -451,7 +451,8 @@ def audit_geometry(xml: str) -> list[str]:
     TOL = 3
     box = lambda c: c["absGeo"] or c["geo"]
     is_text = lambda c: bool(re.search(r"(?:^|;)text;", c["style"])) or c["id"] == "__title"
-    is_container = lambda c: bool(re.search(r"container=1|shape=mxgraph\.aws4\.group|grIcon=", c["style"])) or c["id"] in has_children
+    is_container = lambda c: (bool(re.search(r"container=1|shape=mxgraph\.aws4\.group|grIcon=", c["style"]))
+                              or c["id"] in has_children or _is_refined_container(c["id"]))
     is_vertex = lambda c: (c["edge"] != "1" and c["geo"] and c["id"]
                            and not is_text(c) and not _is_decor(c["id"]))
 
