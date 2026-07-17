@@ -248,25 +248,42 @@ class Diagram:
 
     def rich_card(self, id, xy, wh, title, body_lines=(), *, fill=None, stroke=None,
                   fs=None, align="left", dashed=False, font_color=None,
-                  parent="1") -> dict:
+                  icon_name=None, image_data_uri=None, parent="1") -> dict:
         """Refined card: bold heading + 2-4 short body lines, flat (shadow=0),
         white-on-tint elevation. Playbook §10.2/§12 anatomy — no shadow cell,
-        no accent stripe, no icon."""
+        no accent stripe. An optional vendor logo sits as a small top-right
+        badge (does not disturb the left-aligned text flow)."""
         fs = fs if fs is not None else RT.TYPE_SCALE["card"]
         label = f"<b>{_esc(title)}</b>"
         lines = [str(l) for l in (body_lines or ()) if str(l).strip()]
         if lines:
             label += "<br><br>" + "<br>".join(_esc(l) for l in lines)
         va = "top" if align == "left" else "middle"
+        has_icon = bool(icon_name or image_data_uri)
         style = (f"rounded=1;arcSize={RT.GEO['arc_zone']};html=1;whiteSpace=wrap;"
                  f"fillColor={fill or RT.CHROME['card_fill']};"
                  f"strokeColor={stroke or '#D0D5DD'};"
                  f"strokeWidth={RT.GEO['card_stroke_w']};shadow=0;align={align};"
                  f"verticalAlign={va};spacing={RT.GEO['card_spacing']};"
                  f"fontFamily={RT.FONT};fontColor={font_color or RT.INK['body']};"
-                 f"fontSize={fs};" + ("dashed=1;" if dashed else ""))
+                 f"fontSize={fs};"
+                 + ("spacingRight=30;" if has_icon and align == "left" else "")
+                 + ("dashed=1;" if dashed else ""))
         r = self._put(id, parent, xy[0], xy[1], wh[0], wh[1], style, label, z=Z_NODE)
         r["ob"] = True
+        if has_icon:
+            ic = 22
+            ix, iy = round(xy[0] + wh[0] - ic - 8), round(xy[1] + 8)
+            if image_data_uri:
+                safe = image_data_uri.replace(";base64,", ",", 1)
+                istyle = f"shape=image;html=1;imageAspect=1;aspect=fixed;image={safe};"
+            else:
+                s = _style_for_icon(self.c, icon_name)
+                if not s:
+                    return r  # unknown stencil — card is fine without the badge
+                istyle = s["style"]
+            ir = self._put(f"{id}__ic", "1", ix, iy, ic, ic, istyle, "", z=Z_FORE)
+            ir["ob"] = False
         return r
 
     def note_card(self, id, xy, wh, title, lines=(), *, fill=None, stroke="#D0D5DD",
