@@ -596,6 +596,7 @@ def build_drawio_from_spec(spec: dict, name: str = "Architecture",
     d, _ = build_tree(spec, flat=flat, plan=plan)
     xml = d.mxfile(name)
     stats = {
+        "style_preset": str(spec.get("style_preset") or "icon").lower(),
         "nodes": len(spec.get("nodes", [])),
         "edges": len(spec.get("edges", [])),
         "native_icons": xml.count("resIcon=mxgraph.aws4."),
