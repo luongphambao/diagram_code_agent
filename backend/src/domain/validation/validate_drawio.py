@@ -1086,13 +1086,20 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
 
     edge_struct_err = _hits(errs, "edge ", "source ", "target ")
     # Geometric crossings measured on the baked XML beat router residuals
-    # (residuals only count what the router itself controlled).
+    # (residuals only count what the router itself controlled). Normalized per
+    # edge — orthogonal diagrams always have SOME right-angle crossings; what
+    # reads as spaghetti is a high crossings-to-edges ratio.
+    n_edges = max(1, int(stats.get("edges") or sem.get("source_edges") or 1))
     if metrics.get("edge_crossings") is not None:
         cross = int(metrics["edge_crossings"])
+        cross_pen = min(9.0, 12.0 * max(0.0, cross / n_edges - 0.5))
     else:
         cross = int(stats.get("edge_cross", 0)) + int(stats.get("edge_overlaps", 0))
-    long_edges = int(metrics.get("long_edges") or 0)
-    label_overlaps = int(metrics.get("edge_label_overlaps") or 0)
+        cross_pen = min(9.0, 2.0 * cross)
+    long_ratio = (metrics.get("long_edges") or 0) / n_edges
+    long_pen = min(4.0, 8.0 * max(0.0, long_ratio - 0.35))
+    label_ratio = (metrics.get("edge_label_overlaps") or 0) / n_edges
+    label_pen = min(4.0, 12.0 * max(0.0, label_ratio - 0.15))
 
     # Composition: ratio inside PRODUCTION_TARGET band = full marks, linear
     # falloff outside (0 at ratio 1.0 / 2.6); dense fallback is a real miss.
