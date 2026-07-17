@@ -212,16 +212,23 @@ def build_refined(spec: dict, plan: dict | None = None):
     content_right = (sx + max((g["w"] for g in geo_side.values()), default=0)
                      if sides else main_right)
 
-    # ---- operations band (full main-row width) ---- #
+    # ---- operations band: ops zones share ONE horizontal band row (the
+    # reference's cross-cutting strip), wrapping to a second row if needed ---- #
     ops_rects: dict[str, dict] = {}
     oy = max(main_bottom, (sy - RT.GEO["zone_gap"] - RT.GEO["tab_overlap"])
              if sides else 0) + _OPS_GAP
+    avail = max(main_right, content_right) - margin
+    ox, row_h_ops = margin, 0
     for z in ops:
         g = _zone_geom(z, horizontal=True)
-        ops_rects[z] = {"x": margin, "y": oy, "w": main_right - margin,
-                        "h": g["h"], "cards": g["cards"]}
+        w = min(g["w"], avail)
+        if ox > margin and ox + w > margin + avail:  # wrap band row
+            oy += row_h_ops + RT.GEO["zone_gap"] + RT.GEO["tab_overlap"]
+            ox, row_h_ops = margin, 0
+        ops_rects[z] = {"x": ox, "y": oy, "w": w, "h": g["h"], "cards": g["cards"]}
         zone_rects[z] = ops_rects[z]
-        oy += g["h"] + RT.GEO["zone_gap"] + RT.GEO["tab_overlap"]
+        ox += w + RT.GEO["zone_gap"]
+        row_h_ops = max(row_h_ops, g["h"])
     content_bottom = max([r["y"] + r["h"] for r in zone_rects.values()] or [600])
 
     # ---- emit boundaries first (behind zones, same z-bucket, stable order) ---- #
