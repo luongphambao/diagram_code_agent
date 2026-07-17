@@ -554,6 +554,22 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
                 json.dumps({"drawio": "out.drawio", "png": "out.png",
                             "engine": "native", "style": "slide"}), encoding="utf-8")
     else:
+        sp = spec.get("source_page") or {}
+        if refined and sp.get("path"):
+            # Playbook §3: keep the source verbatim as page 2 ("Original
+            # Source") so the upgrade is auditable/diffable. Validators, PNG
+            # export and edit_drawio all target page 1 only.
+            try:
+                from domain.diagram.drawio_ingest import first_page_model_xml
+                from xml.sax.saxutils import quoteattr
+                pname = str(sp.get("name") or "02 — Original Source")
+                xml = xml.replace(
+                    "</mxfile>",
+                    f'<diagram name={quoteattr(pname)} id="dsrc">'
+                    f'{first_page_model_xml(str(sp["path"]))}</diagram></mxfile>')
+                stats["pages"] = 2
+            except Exception:  # noqa: BLE001 — page 1 alone is still a valid result
+                stats["pages"] = 1
         out.write_text(xml, encoding="utf-8")
 
     # Semantic count preservation (V2 §15.5) — measured on the native body (original
