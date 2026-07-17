@@ -476,12 +476,22 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     out = workspace / "out.drawio"
     name = spec.get("slide_title") or spec.get("diagram_title") or "Architecture"
     _attach_icon_fallbacks(spec, workspace)
+    # Layout analysis (0 LLM tokens): edge-aware band order, hub edge bundling,
+    # aspect-aware grid columns. Best-effort — a failed analysis renders unplanned.
+    plan = None
+    try:
+        from prettygraph.native.layout_plan import analyze_layout
+        plan = analyze_layout(spec)
+        (workspace / "layout_plan.json").write_text(
+            json.dumps(plan, indent=2), encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        plan = None
     # Slide presentations (the default) get the hero-band + legend chrome by wrapping
     # the native body. The embedded body must be FLAT (parent="1", absolute coords)
     # for the slide compositor's _transform_drawio_body.
     presentation = str(spec.get("presentation_style") or "slide").lower()
     want_slide = presentation == "slide"
-    xml, stats = build_drawio_from_spec(spec, name, flat=want_slide)
+    xml, stats = build_drawio_from_spec(spec, name, flat=want_slide, plan=plan)
 
     if want_slide:
         from prettygraph.slide import compose_native_slide, slide_fit_scale
