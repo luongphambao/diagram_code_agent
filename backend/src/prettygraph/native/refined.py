@@ -25,6 +25,9 @@ from . import refined_theme as RT
 _OPS_RX = re.compile(r"security|iam\b|monitor|logging|log\b|cloudwatch|governance"
                      r"|compliance|audit|ci[-/ ]?cd|operation|devops|observ"
                      r"|identity|access|foundation", re.I)
+# Entry-ish zones ("NETWORK & SECURITY", "ACCESS & EDGE") carry main-flow
+# traffic — they beat the ops match (reference: zone 2 sits in the main row).
+_ENTRY_RX = re.compile(r"network|ingress|\bedge\b|gateway", re.I)
 _OUTCOME_RX = re.compile(r"outcome|consum|downstream|client|dashboard|notification",
                          re.I)
 _FUTURE_RX = re.compile(r"future|phase\s*2|deferred|roadmap|planned", re.I)
