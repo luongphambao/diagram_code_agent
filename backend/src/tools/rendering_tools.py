@@ -592,7 +592,7 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
 
 
 @tool
-def export_drawio_native() -> str:
+def export_drawio_native(style_preset: str = "") -> str:
     """Build an editable out.drawio straight from render_spec.json with the NATIVE
     layout engine — deterministic geometry, ground-truth stencils (AWS + on-prem +
     OSS/AI-ML packs), an obstacle-avoiding edge router, and full slide chrome. No
@@ -601,6 +601,12 @@ def export_drawio_native() -> str:
     The DEFAULT for any architecture diagram with a blueprint (all providers, slide
     or plain). Call after propose_blueprint instead of render_diagram + export_drawio.
     Falls back with a clear message if render_spec.json is missing.
+
+    Args:
+        style_preset: "" (default — respect the spec's own style_preset, icon look
+            otherwise) or "refined" to force the typographic playbook preset
+            (numbered tinted zones + folder tabs, bold-heading cards with short
+            body lines, semantic edge classes + legend footer, no icons).
     """
     from .constants import _RENDER_SPEC_FILE
     out = current_workspace() / "out.drawio"
@@ -608,6 +614,8 @@ def export_drawio_native() -> str:
         return "No render_spec.json — call propose_blueprint first (native export needs a blueprint)."
     try:
         spec = json.loads(_RENDER_SPEC_FILE.read_text(encoding="utf-8"))
+        if str(style_preset or "").lower() == "refined":
+            spec["style_preset"] = "refined"
         stats = _render_native_from_spec(spec, current_workspace())
     except Exception as exc:  # noqa: BLE001 — surface to the agent
         return f"export_drawio_native failed: {exc}"
