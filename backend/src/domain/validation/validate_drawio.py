@@ -56,6 +56,18 @@ def _is_decor(cid: str | None) -> bool:
     return bool(cid) and cid.endswith(_DECOR_SUFFIXES)
 
 
+def _primary_model(xml: str) -> str:
+    """Substring of the FIRST <mxGraphModel> page. Multi-page files (refined
+    upgrade output keeps the messy source as an "Original Source" page 2) must
+    be audited on page 1 only — every string-scanning audit goes through this,
+    or page-2 findings silently tank the scorecard."""
+    start = xml.find("<mxGraphModel")
+    if start == -1:
+        return xml
+    end = xml.find("</mxGraphModel>", start)
+    return xml[start:end + len("</mxGraphModel>")] if end != -1 else xml[start:]
+
+
 def check_page(diagram: ET.Element) -> tuple[list[str], list[str]]:
     """Return (errors, warnings) for one <diagram> page."""
     name = diagram.get("name", "?")
