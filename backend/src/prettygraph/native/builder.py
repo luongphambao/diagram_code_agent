@@ -278,11 +278,13 @@ class Diagram:
         lines = [str(l) for l in (lines or ()) if str(l).strip()]
         if lines:
             label += "<br>" + "<br>".join(_esc(l) for l in lines)
+        # glueNote=1 is a benign custom style key (draw.io ignores unknown keys)
+        # that lets the validator count semantic glue notes regardless of id.
         style = (f"rounded=1;arcSize={RT.GEO['arc_zone']};html=1;whiteSpace=wrap;"
                  f"fillColor={fill or RT.CHROME['card_fill']};strokeColor={stroke};"
                  f"strokeWidth=1;shadow=0;align=center;verticalAlign=middle;"
                  f"spacing=8;fontFamily={RT.FONT};fontColor={RT.INK['body']};"
-                 f"fontSize={fs};")
+                 f"fontSize={fs};glueNote=1;")
         r = self._put(id, parent, xy[0], xy[1], wh[0], wh[1], style, label, z=Z_NODE)
         r["ob"] = True
         return r
