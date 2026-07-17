@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from tools.icon_tools import _search_icon_hits
 from domain.diagram.aiicons import search_ai_brands
+from domain.diagram.drawio_catalog import load_catalog
+from prettygraph.native.topology import _resolve_node_icon
 
 
 def _stem(path: str) -> str:
