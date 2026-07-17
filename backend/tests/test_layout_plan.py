@@ -57,14 +57,12 @@ def test_analyze_layout_is_deterministic():
     assert json.dumps(a, sort_keys=True) == json.dumps(b, sort_keys=True)
 
 
-def test_hub_fanout_bundles_within_cap():
+def test_hub_fanout_respects_suppression_cap():
+    # 6 telemetry edges would need drop=5, but only 4 may be suppressed (40% of
+    # 11 edges) — the group is skipped whole rather than partially bundled.
     plan = analyze_layout(_hub_spec())
-    assert len(plan["edge_bundles"]) == 1
-    bundle = plan["edge_bundles"][0]
-    # 6 telemetry edges but only 4 may be suppressed (40% of 11 edges) — the
-    # group is skipped rather than partially bundled... unless it fits. Here
-    # drop=5 > cap=4, so nothing is bundled — cap respected.
-    assert len(plan["suppressed_edges"]) <= int(11 * 0.4) or not plan["edge_bundles"]
+    assert plan["edge_bundles"] == []
+    assert plan["suppressed_edges"] == []
 
 
 def test_hub_fanout_bundles_when_cap_allows():
