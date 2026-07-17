@@ -57,11 +57,7 @@ def _score_candidate(spec: dict, name: str, plan: dict | None) -> dict:
     return {"scorecard": sc, "metrics": m, "stats": stats}
 
 
-def _candidates(plan: dict | None, spec: dict) -> list[tuple[str, dict | None]]:
-    """Rule-bounded plan variants (<= _MAX_CANDIDATES incl. the two baselines)."""
-    out: list[tuple[str, dict | None]] = [("planned", plan), ("unplanned", None)]
-    if not plan:
-        return out
+def _wrappable_bands(plan: dict, spec: dict) -> list[str]:
     counts: dict[str, int] = {}
     cluster_root: dict[str, str] = {}
     clusters = {c["id"]: c for c in spec.get("clusters", []) if c.get("id")}
@@ -78,19 +74,37 @@ def _candidates(plan: dict | None, spec: dict) -> list[tuple[str, dict | None]]:
         r = cluster_root.get(n.get("cluster") or "")
         if r and r in (plan.get("band_order") or []):
             counts[r] = counts.get(r, 0) + 1
-    wrappable = [cid for cid, n in counts.items() if n >= 4]
-    for cols in (3, 2, 4):
-        if len(out) >= _MAX_CANDIDATES:
-            break
-        if wrappable and plan.get("band_cols", {}) != {c: cols for c in wrappable}:
-            v = copy.deepcopy(plan)
-            v["band_cols"] = {c: cols for c in wrappable}
-            out.append((f"cols{cols}", v))
-    if plan.get("edge_bundles") and len(out) < _MAX_CANDIDATES:
+    return [cid for cid, n in counts.items() if n >= 4]
+
+
+def _variants_for(plan: dict | None, spec: dict,
+                  baseline_metrics: dict) -> list[tuple[str, dict | None]]:
+    """Rule-gated plan variants — only build what the baseline's symptoms call
+    for (each candidate costs a full engine build; typical case adds 0-2)."""
+    if not plan:
+        return []
+    out: list[tuple[str, dict | None]] = []
+    lo, hi = 1.3, 1.9
+    ratio = baseline_metrics.get("ratio")
+    wrappable = _wrappable_bands(plan, spec)
+    if ratio is not None and ratio > hi and wrappable:
+        # Too wide: force-wrap dense bands into grids (narrower, taller).
+        for cols in (3, 4):
+            if plan.get("band_cols", {}) != {c: cols for c in wrappable}:
+                v = copy.deepcopy(plan)
+                v["band_cols"] = {c: cols for c in wrappable}
+                out.append((f"cols{cols}", v))
+    elif ratio is not None and ratio < lo and plan.get("band_cols"):
+        # Too tall: undo forced wrapping so bands spread horizontally again.
         v = copy.deepcopy(plan)
-        v["edge_bundles"], v["suppressed_edges"] = [], []
-        out.append(("no-bundles", v))
-    return out[:_MAX_CANDIDATES]
+        v["band_cols"] = {}
+        out.append(("no-cols", v))
+    if (baseline_metrics.get("collisions") or 0) > 0 and plan.get("band_cols"):
+        v = copy.deepcopy(plan)
+        v["band_cols"] = {c: max(2, n - 1) for c, n in plan["band_cols"].items()}
+        if v["band_cols"] != plan.get("band_cols"):
+            out.append(("fewer-cols", v))
+    return out[:_MAX_CANDIDATES - 2]
 
 
 def _rank_key(res: dict) -> tuple:
