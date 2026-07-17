@@ -874,7 +874,9 @@ def audit_refined_structure(xml: str) -> dict:
         "backbone_present": 'id="backbone"' in xml,
         "zone_count": len(tabs),
         "zone_numbers_sequential": sequential,
-        "glue_notes": xml.count('id="note_'),
+        # glueNote=1 marks a semantic note card regardless of its id; older
+        # note_-prefixed ids still count for back-compat.
+        "glue_notes": xml.count("glueNote=1") or xml.count('id="note_'),
         "overlong_body_lines": overlong,
         "legend_covers_edge_classes": legend_covers,
     }
