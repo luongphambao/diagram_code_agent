@@ -162,8 +162,29 @@ def extract_inventory(path: str) -> dict:
             continue
         if c["vertex"] and _is_container(c):
             label, _ = _split_label(c["value"])
-            clusters.append({"id": c["id"], "label": label or c["id"]})
+            clusters.append({"id": c["id"], "label": label or c["id"],
+                             "_style": c["style"], "_pid": c.get("parent")})
     cluster_ids = {cl["id"] for cl in clusters}
+    # Original container nesting + topology-zone guess ("_"-prefixed: consumed
+    # only by the refined upgrade path; the icon path must keep seeing today's
+    # flat cluster list, or upgrades would flip into topology nesting mode).
+    _ZONE_RX = [("vpc", re.compile(r"\bvpc\b|\bvnet\b", re.I)),
+                ("az", re.compile(r"availability|\baz\b|\bus-(east|west)-\d[a-f]\b", re.I)),
+                ("onprem", re.compile(r"on[- ]?prem|data ?cent", re.I)),
+                ("cloud", re.compile(r"\baws\b|\bazure\b|\bgcp\b|\bcloud\b", re.I))]
+    for cl in clusters:
+        pid, guard = cl.pop("_pid", None), 0
+        while pid and pid not in cluster_ids and guard < 20:
+            pid = (by_id.get(pid) or {}).get("parent")
+            guard += 1
+        if pid in cluster_ids and pid != cl["id"]:
+            cl["_parent"] = pid
+        style = cl.pop("_style", "")
+        text = f"{cl['label']} {style}"
+        for kind, rx in _ZONE_RX:
+            if rx.search(text):
+                cl["_zone"] = kind
+                break
     for c in cells:
         if not c["vertex"] or _is_container(c) or _is_decor(c["id"]):
             continue
