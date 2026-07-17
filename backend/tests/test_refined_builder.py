@@ -458,6 +458,71 @@ def test_e2e_refined_upgrade_deepstream():
     assert sc["total"] >= 85 and sc["pass"], sc
 
 
+def test_refined_subzone_span_and_subtint():
+    """Pro authored features: AZ sub-frames inside a zone, header/footer span
+    distributor cards, and per-card hue sub-tint (playbook §8.5 / §10.3)."""
+    from prettygraph.native.topology import build_drawio_from_spec
+    from prettygraph.native import refined_theme as RT
+    spec = {
+        "style_preset": "refined",
+        "diagram_title": "T",
+        "clusters": [
+            {"id": "p", "label": "GPU Processing", "number": 1, "hue": "teal"},
+            {"id": "q", "label": "State", "number": 2, "hue": "purple"},
+        ],
+        "nodes": [
+            {"id": "router", "cluster": "p", "span": "header",
+             "label": "Stream assignment", "body": ["Distribute feeds"]},
+            {"id": "w1", "cluster": "p", "label": "Worker 1", "body": ["g4dn"],
+             "subzone": {"id": "az1", "label": "us-east-1a · PRIVATE", "kind": "az"}},
+            {"id": "ebs1", "cluster": "p", "label": "EBS gp3", "hue": "orange",
+             "body": ["encrypted"],
+             "subzone": {"id": "az1", "label": "us-east-1a · PRIVATE", "kind": "az"}},
+            {"id": "w2", "cluster": "p", "label": "Worker 2", "body": ["g4dn"],
+             "subzone": {"id": "az2", "label": "us-east-1b · PRIVATE", "kind": "az"}},
+            {"id": "out", "cluster": "p", "span": "footer", "hue": "teal",
+             "label": "Detection events"},
+            {"id": "redis", "cluster": "q", "label": "Redis", "body": ["cache"]},
+        ],
+        "edges": [{"from": "router", "to": "w1", "flow": "execution"},
+                  {"from": "w1", "to": "out", "flow": "execution"},
+                  {"from": "out", "to": "redis", "flow": "data"}],
+    }
+    xml, _ = build_drawio_from_spec(spec, "T")
+    root = ET.fromstring(xml)
+    cells = {c.get("id"): c for c in root.iter("mxCell")}
+    # AZ sub-frames rendered as dashed boundary rects with tab pills
+    assert "bnd_p_az1" in cells and "bnd_p_az2" in cells
+    assert "dashed=1" in cells["bnd_p_az1"].get("style")
+    assert "tab_bnd_p_az1" in cells and "PRIVATE" in cells["tab_bnd_p_az1"].get("value")
+    # per-card sub-tint: orange EBS card carries the orange tint, not zone teal
+    orange_tint = RT.ZONE_HUES["orange"][2]
+    assert f"fillColor={orange_tint}" in cells["ebs1"].get("style")
+    # header/footer span cards are centre-aligned distributor cards
+    assert "align=center" in cells["router"].get("style")
+    assert "align=center" in cells["out"].get("style")
+    # subzone cards sit inside the AZ frame geometry
+    fr = cells["bnd_p_az1"].find("mxGeometry")
+    w1g = cells["w1"].find("mxGeometry")
+    assert float(w1g.get("x")) >= float(fr.get("x")) - 1
+    assert float(w1g.get("x")) + float(w1g.get("width")) <= float(fr.get("x")) + float(fr.get("width")) + 1
+
+
+def test_refined_access_zone_stays_main_inside_vpc():
+    """A security/access zone nested in a VPC is main-plane (edge), NOT the ops
+    band — the fix that keeps 'Access & Security' in the top row."""
+    from prettygraph.native.refined import _role_of
+    clusters = {
+        "vpc": {"id": "vpc", "zone": "vpc"},
+        "access": {"id": "access", "label": "Access & Security", "parent": "vpc"},
+        "identity": {"id": "identity", "label": "Identity & Access"},
+        "cw": {"id": "cw", "label": "Monitoring & Logging", "parent": "vpc"},
+    }
+    assert _role_of(clusters["access"], clusters) == "main"   # in-VPC edge zone
+    assert _role_of(clusters["identity"], clusters) == "ops"  # top-level governance
+    assert _role_of(clusters["cw"], clusters) == "ops"        # telemetry even in-VPC
+
+
 def test_refined_theme_tokens_json():
     j = RT.as_json()
     assert j["font"] == "Helvetica"
