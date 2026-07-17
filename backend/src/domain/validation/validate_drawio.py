@@ -1254,10 +1254,12 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
                                                        "detour", "long connector"))),
         # 4. Layer clarity — tinted bands / legend (polish flags the gaps).
         "layer_clarity": 10.0 - 5.0 * _hits(polish, "untinted", "band", "layer", "legend"),
-        # 5. Spacing/typography — CARD COLLISIONS dominate; label collisions + tiny fonts.
+        # 5. Spacing/typography — CARD COLLISIONS dominate; label collisions + tiny
+        # fonts; refined additionally pays for over-long card body lines (§12.4).
         "spacing_alignment": (10.0 - 3.0 * collisions - label_pen
                               - 2.0 * min(2, _hits(advice + polish, "font", "tiny", "text size"))
-                              - 2.0 * _hits(advice, "spill", "whitespace")),
+                              - 2.0 * _hits(advice, "spill", "whitespace")
+                              - min(2.0, 0.5 * (metrics.get("overlong_body_lines") or 0))),
         # 6. Composition — content aspect ratio + page fill + slide-fit health.
         "composition": composition,
         # 7. Iconography — real icon coverage vs the 90% production bar.
