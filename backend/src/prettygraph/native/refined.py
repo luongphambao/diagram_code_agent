@@ -356,7 +356,7 @@ def build_refined(spec: dict, plan: dict | None = None):
             title, lines = glue
             nodes_by_cluster.setdefault(z, []).append(
                 {"id": f"note_auto_{z}", "cluster": z, "kind": "note",
-                 "label": title, "body": lines})
+                 "span": "footer", "label": title, "body": lines})
             used_glue.add(cat)
 
     # ---- measure zones ---- #
