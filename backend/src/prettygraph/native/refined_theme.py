@@ -121,7 +121,7 @@ GEO = {
     "card_stroke_w": 1,
     "card_spacing": 10,
     "zone_pad": 14,      # inner padding between zone border and cards
-    "zone_gap": 30,      # gap between adjacent zones
+    "zone_gap": 44,      # gap between adjacent zones (room for cross-zone edge labels)
     "card_gap": 14,      # vertical gap between stacked cards
     "body_line_max": 35, # chars per body line (playbook §12.4)
     "body_lines_max": 4,
