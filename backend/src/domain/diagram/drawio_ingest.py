@@ -191,6 +191,7 @@ def extract_inventory(path: str) -> dict:
     boxes = {c["id"]: _box(c) for c in vert_cells}
     substantial = [c for c in vert_cells
                    if boxes[c["id"]]["w"] * boxes[c["id"]]["h"] >= 2000]
+    unlabeled_cands: list[dict] = []
     for c in vert_cells:
         if c["id"] in cluster_ids or _is_container(c):
             continue
@@ -200,28 +201,38 @@ def extract_inventory(path: str) -> dict:
         contained = [o for o in substantial
                      if o["id"] != c["id"] and _center_in(boxes[o["id"]], b)
                      and boxes[o["id"]]["w"] * boxes[o["id"]]["h"] < b["w"] * b["h"] * 0.8]
-        if len(contained) < 2:
+        if not contained:
             continue
         label, _ = _split_label(c["value"])
-        if not label:
-            # Unlabeled boundary: adopt a tiny label-pill hugging its top edge
-            # (the "VPC" chip pattern), else a zone-ish id ("aws_shell").
-            pill = next((p for p in vert_cells
-                         if p["id"] != c["id"] and p["geo"]["h"] <= 32
-                         and p["geo"]["w"] * p["geo"]["h"] <= 8000
-                         and _split_label(p["value"])[0]
-                         and abs(boxes[p["id"]]["y"] - b["y"]) <= 30
-                         and _center_in(boxes[p["id"]], b)), None)
-            if pill is not None:
-                label = _split_label(pill["value"])[0]
-            elif _ZONE_HINT.search(c["id"]):
-                label = c["id"].replace("_", " ").replace("-", " ").title()
-            else:
-                continue
-        clusters.append({"id": c["id"], "label": label,
-                         "_style": c["style"], "_pid": c.get("parent"),
-                         "_spatial": True})
+        cl = {"id": c["id"], "label": label,
+              "_style": c["style"], "_pid": c.get("parent"), "_spatial": True}
+        clusters.append(cl)
         cluster_ids.add(c["id"])
+        if not label:
+            unlabeled_cands.append(cl)
+    # Unlabeled boundaries adopt the tiny label-pill hugging their top edge
+    # (the "VPC" chip pattern). A pill goes to the candidate whose top edge is
+    # CLOSEST — several nested boundaries can share the same top strip.
+    if unlabeled_cands:
+        pills = [p for p in vert_cells
+                 if p["id"] not in cluster_ids and p["geo"]["h"] <= 32
+                 and p["geo"]["w"] * p["geo"]["h"] <= 8000
+                 and _split_label(p["value"])[0]]
+        for p in pills:
+            pb = boxes[p["id"]]
+            near = [cl for cl in unlabeled_cands if not cl["label"]
+                    and _center_in(pb, boxes[cl["id"]])
+                    and abs(pb["y"] - boxes[cl["id"]]["y"]) <= 30]
+            if near:
+                best = min(near, key=lambda cl: abs(pb["y"] - boxes[cl["id"]]["y"]))
+                best["label"] = _split_label(p["value"])[0]
+        for cl in list(unlabeled_cands):
+            if not cl["label"]:
+                if _ZONE_HINT.search(cl["id"]):
+                    cl["label"] = cl["id"].replace("_", " ").replace("-", " ").title()
+                else:  # nameless big rect: not a meaningful section — retract
+                    clusters.remove(cl)
+                    cluster_ids.discard(cl["id"])
 
     # Spatial cluster nesting: parent = smallest other cluster fully containing it.
     cl_boxes = {cl["id"]: boxes.get(cl["id"]) for cl in clusters}
