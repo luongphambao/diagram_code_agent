@@ -482,10 +482,23 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     try:
         from prettygraph.native.layout_plan import analyze_layout
         plan = analyze_layout(spec)
-        (workspace / "layout_plan.json").write_text(
-            json.dumps(plan, indent=2), encoding="utf-8")
     except Exception:  # noqa: BLE001
         plan = None
+    # Engineer loop tier 0 — deterministic auto-repair: score a handful of plan
+    # variants on the standalone body (no PNGs) and keep the best. The unplanned
+    # baseline is always among the candidates, so this never makes things worse.
+    try:
+        from prettygraph.native.repair import auto_repair
+        plan, engineer_report = auto_repair(spec, name, plan)
+        (workspace / "engineer_report.json").write_text(
+            json.dumps(engineer_report, indent=2), encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        (workspace / "layout_plan.json").write_text(
+            json.dumps(plan or {}, indent=2), encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        pass
     # Slide presentations (the default) get the hero-band + legend chrome by wrapping
     # the native body. The embedded body must be FLAT (parent="1", absolute coords)
     # for the slide compositor's _transform_drawio_body.
