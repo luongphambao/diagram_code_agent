@@ -992,7 +992,7 @@ def audit_layout_metrics(xml: str, stats: dict | None = None) -> dict:
     frames = [c for c in vertices if c["id"] in has_children and "fillColor=" in c["style"]
               and not re.search(r"shape=image|resIcon=", c["style"])]
     tinted_bands = bool(frames) and not all(_WHITE_FILLS.search(c["style"]) for c in frames)
-    return {
+    metrics = {
         "ratio": ratio,
         "page_fill": page_fill,
         "fit_scale": fit_scale,
@@ -1001,7 +1001,6 @@ def audit_layout_metrics(xml: str, stats: dict | None = None) -> dict:
         "long_edges": long_edges,
         "icon_coverage": icon_coverage,
         "edge_label_overlaps": label_overlaps,
-    metrics = {
         "title_present": '"__title"' in xml or "id=\"__title" in xml,
         "tinted_bands": tinted_bands,
         "legend_present": "legend" in xml.lower() or 'id="footer"' in xml,
