@@ -719,17 +719,23 @@ def upgrade_drawio(source_path: str) -> str:
 
 _DRAWIO_EDIT_CAP = 2          # edit_drawio batches per exported diagram
 _EDIT_ROUNDS_FILE = ".drawio_edit_rounds"
+# Engineer loop tiers 1-2 (LLM rounds): hard cap on inspect_render_quality calls
+# per export — each call ships a (downscaled) image to the model, so the budget
+# is code-enforced like the edit cap, not prompt-enforced.
+_ENGINEER_INSPECT_CAP = 2
+_ENGINEER_ROUNDS_FILE = ".engineer_rounds"
 
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
 
 
 def _reset_drawio_edit_rounds() -> None:
-    p = current_workspace() / _EDIT_ROUNDS_FILE
-    if p.exists():
-        try:
-            p.unlink()
-        except OSError:
-            pass
+    for name in (_EDIT_ROUNDS_FILE, _ENGINEER_ROUNDS_FILE):
+        p = current_workspace() / name
+        if p.exists():
+            try:
+                p.unlink()
+            except OSError:
+                pass
 
 
 def _bump_drawio_edit_rounds() -> int:
