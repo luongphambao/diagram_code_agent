@@ -259,7 +259,9 @@ class Diagram:
         if lines:
             label += "<br><br>" + "<br>".join(_esc(l) for l in lines)
         va = "top" if align == "left" else "middle"
-        has_icon = bool(icon_name or image_data_uri)
+        has_icon = bool(icon_name or image_data_uri) and align == "left"
+        ic = 26                       # left logo size
+        pad_l = ic + 16               # text indent so it clears the logo
         style = (f"rounded=1;arcSize={RT.GEO['arc_zone']};html=1;whiteSpace=wrap;"
                  f"fillColor={fill or RT.CHROME['card_fill']};"
                  f"strokeColor={stroke or '#D0D5DD'};"
@@ -267,20 +269,22 @@ class Diagram:
                  f"verticalAlign={va};spacing={RT.GEO['card_spacing']};"
                  f"fontFamily={RT.FONT};fontColor={font_color or RT.INK['body']};"
                  f"fontSize={fs};"
-                 + ("spacingRight=30;" if has_icon and align == "left" else "")
+                 + (f"spacingLeft={pad_l};" if has_icon else "")
                  + ("dashed=1;" if dashed else ""))
         r = self._put(id, parent, xy[0], xy[1], wh[0], wh[1], style, label, z=Z_NODE)
         r["ob"] = True
         if has_icon:
-            ic = 22
-            ix, iy = round(xy[0] + wh[0] - ic - 8), round(xy[1] + 8)
+            # Logo on the LEFT, aligned with the title row (top). draw.io splits
+            # style strings on ';', so a "data:...;base64," URI must drop the
+            # ";base64" marker to survive (mxGraph still decodes the bare form).
+            ix, iy = round(xy[0] + 12), round(xy[1] + 13)
             if image_data_uri:
                 safe = image_data_uri.replace(";base64,", ",", 1)
                 istyle = f"shape=image;html=1;imageAspect=1;aspect=fixed;image={safe};"
             else:
                 s = _style_for_icon(self.c, icon_name)
                 if not s:
-                    return r  # unknown stencil — card is fine without the badge
+                    return r  # unknown stencil — card is fine without the logo
                 istyle = s["style"]
             ir = self._put(f"{id}__ic", "1", ix, iy, ic, ic, istyle, "", z=Z_FORE)
             ir["ob"] = False
