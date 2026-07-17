@@ -437,12 +437,28 @@ def build_refined(spec: dict, plan: dict | None = None):
                      if sides else main_right)
 
     # ---- operations band: ops zones share ONE horizontal band row (the
-    # reference's cross-cutting strip), wrapping to a second row if needed ---- #
+    # reference's cross-cutting strip under the cloud), wrapping if needed ---- #
+    # Align the band under the cloud/VPC span (zones with a boundary ancestor),
+    # not the full page — otherwise it pokes out under external zones like Sources.
+    def _has_boundary_ancestor(zid: str) -> bool:
+        cur, guard = clusters[zid].get("parent"), 0
+        while cur and guard < 20:
+            if cur in boundary_ids:
+                return True
+            cur = (clusters.get(cur) or {}).get("parent")
+            guard += 1
+        return False
+    cloud_mains = [z for z in mains if _has_boundary_ancestor(z) and z in zone_rects]
+    if cloud_mains:
+        band_left = min(zone_rects[z]["x"] for z in cloud_mains)
+        band_right = max(zone_rects[z]["x"] + zone_rects[z]["w"] for z in cloud_mains)
+    else:
+        band_left, band_right = margin, max(main_right, content_right)
     ops_rects: dict[str, dict] = {}
     oy = max(main_bottom, (sy - RT.GEO["zone_gap"] - RT.GEO["tab_overlap"])
              if sides else 0) + _OPS_GAP
-    avail = max(main_right, content_right) - margin
-    ox, row_h_ops = margin, 0
+    avail = band_right - band_left
+    ox, row_h_ops = band_left, 0
     for z in ops:
         g = _zone_geom(z, horizontal=True)
         w = min(g["w"], avail)
