@@ -1128,14 +1128,14 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
         # 2. Relationship correctness — every renderable edge survived, no dangling.
         "relationship_correctness": 0.0 if edge_struct_err else 15.0 * edge_recall,
         # 3. Connector readability — geometric crossings + overlong edges + tangle advice.
-        "connector_readability": (15.0 - min(10.0, 2.0 * cross) - 1.0 * long_edges
-                                  - 2.0 * _hits(advice, "crossing", "tangled",
-                                                "detour", "long connector")),
+        "connector_readability": (15.0 - cross_pen - long_pen
+                                  - 1.0 * min(2, _hits(advice, "crossing", "tangled",
+                                                       "detour", "long connector"))),
         # 4. Layer clarity — tinted bands / legend (polish flags the gaps).
         "layer_clarity": 10.0 - 5.0 * _hits(polish, "untinted", "band", "layer", "legend"),
         # 5. Spacing/typography — CARD COLLISIONS dominate; label collisions + tiny fonts.
-        "spacing_alignment": (10.0 - 3.0 * collisions - 1.5 * label_overlaps
-                              - 3.0 * _hits(advice + polish, "font", "tiny", "text size")
+        "spacing_alignment": (10.0 - 3.0 * collisions - label_pen
+                              - 2.0 * min(2, _hits(advice + polish, "font", "tiny", "text size"))
                               - 2.0 * _hits(advice, "spill", "whitespace")),
         # 6. Composition — content aspect ratio + page fill + slide-fit health.
         "composition": composition,
