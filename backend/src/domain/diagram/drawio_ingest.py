@@ -261,8 +261,18 @@ def extract_inventory(path: str) -> dict:
             if rx.search(text):
                 cl["_zone"] = kind
                 break
+    linked: set[str] = set()
     for c in cells:
-        if not c["vertex"] or _is_container(c) or _is_decor(c["id"]):
+        if c["edge"]:
+            linked.update(x for x in (c["source"], c["target"]) if x)
+
+    title_guess = ""
+    page_w = max((boxes[c["id"]]["x"] + boxes[c["id"]]["w"]
+                  for c in vert_cells), default=0)
+    raw_nodes: list[dict] = []
+    for c in cells:
+        if (not c["vertex"] or _is_container(c) or _is_decor(c["id"])
+                or c["id"] in cluster_ids):
             continue
         icon = extract_image_uri(c["style"])
         title, sub = _split_label(c["value"])
@@ -279,9 +289,57 @@ def extract_inventory(path: str) -> dict:
             return None
 
         parent = _real_cluster(c["parent"])
+        b = boxes.get(c["id"])
+        if parent is None and b:
+            # flat file: membership = smallest spatial cluster containing centre
+            best = None
+            for cl in clusters:
+                cb = cl_boxes.get(cl["id"])
+                if cb and _center_in(b, cb):
+                    if best is None or cb["w"] * cb["h"] < best[1]:
+                        best = (cl["id"], cb["w"] * cb["h"])
+            parent = best[0] if best else None
         pos = _abs(c)
-        nodes.append({"id": c["id"], "title": title or c["id"], "sub": sub,
-                      "cluster": parent, "icon": icon, "_x": pos["x"], "_y": pos["y"]})
+        raw_nodes.append({"id": c["id"], "title": title or c["id"], "sub": sub,
+                          "cluster": parent, "icon": icon,
+                          "_labeled": bool(title or sub), "_box": b,
+                          "_x": pos["x"], "_y": pos["y"]})
+
+    # Chrome filtering + icon merging (flat real-world files carry title boxes,
+    # legend swatches, metadata cards and loose icon glyphs as ordinary cells):
+    legendish = {cl["id"] for cl in clusters
+                 if str(cl["label"]).strip().lower() in ("legend", "metadata", "notes")}
+    labeled = [n for n in raw_nodes if n["_labeled"] and n["_box"]]
+    for n in raw_nodes:
+        b, area = n["_box"], 0.0
+        if b:
+            area = b["w"] * b["h"]
+        if n["id"] in linked:
+            keep = True
+        elif n["cluster"] in legendish:
+            keep = False  # legend/metadata internals
+        elif not n["_labeled"]:
+            # unlabeled icon glyph: merge into the labeled card it sits on, else drop
+            host = next((h for h in labeled if h["id"] != n["id"] and not h["icon"]
+                         and b and _center_in(b, h["_box"])), None)
+            if host is not None and n["icon"]:
+                host["icon"] = n["icon"]
+            keep = False
+        elif (not title_guess and b and b["y"] < 100 and page_w
+              and b["w"] >= 0.4 * page_w):
+            title_guess = (n["title"] + (f" — {n['sub']}" if n["sub"] else "")).strip()
+            keep = False  # the diagram's own title box, not a component
+        elif area and area < 3000:
+            keep = False  # badges / label pills ("T4", "VPC") without edges
+        elif str(n["title"]).strip().lower() in ("legend", "metadata", "notes"):
+            keep = False
+        else:
+            keep = True
+        n["_keep"] = keep
+    nodes = [n for n in raw_nodes if n["_keep"]]
+    clusters = [cl for cl in clusters if cl["id"] not in legendish]
+    cluster_ids -= legendish
+
     for c in cells:
         if c["edge"] and c["source"] and c["target"]:
             label, _ = _split_label(c["value"])
@@ -292,9 +350,17 @@ def extract_inventory(path: str) -> dict:
     edges = [e for e in edges if e["source"] in node_ids and e["target"] in node_ids]
     nodes.sort(key=lambda n: (round(n["_y"] / 60), n["_x"]))  # reading order
     for n in nodes:
-        n.pop("_x", None)
-        n.pop("_y", None)
-    return {"title": "", "provider": "generic", "clusters": clusters,
+        for k in ("_x", "_y", "_box", "_labeled", "_keep"):
+            n.pop(k, None)
+
+    # Leading "N ·" section numbers in cluster labels become explicit numbers
+    # (the engine renders its own "N · LABEL" tab — keeping both would double).
+    for cl in clusters:
+        m = re.match(r"\s*(\d+)\s*[·.:\-–]\s*(.+)", str(cl["label"]))
+        if m:
+            cl["number"] = int(m.group(1))
+            cl["label"] = m.group(2).strip()
+    return {"title": title_guess, "provider": "generic", "clusters": clusters,
             "nodes": nodes, "edges": edges}
 
 
