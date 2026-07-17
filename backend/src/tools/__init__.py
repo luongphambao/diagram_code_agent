@@ -98,6 +98,7 @@ from .rendering_tools import (
     export_drawio_native,
     finalize_diagram,
     fit_labels,
+    inspect_render_quality,
     list_saved_diagrams,
     plan_style_sizes,
     read_drawio,
