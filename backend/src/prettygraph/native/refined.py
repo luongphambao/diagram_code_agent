@@ -596,9 +596,11 @@ def build_refined(spec: dict, plan: dict | None = None):
                 d.note_card(n["id"], xy, wh, n.get("label") or n["id"],
                             _body_lines(n), fill=fill, stroke=cstroke or "#D0D5DD")
             else:
+                iname, img = (None, None) if span else _node_icon(n)
                 d.rich_card(n["id"], xy, wh, n.get("label") or n["id"],
                             _body_lines(n), fill=fill, stroke=cstroke,
                             align="center" if span else "left",
+                            icon_name=iname, image_data_uri=img,
                             dashed=str(n.get("scope") or "") == "future")
 
         if z in ops_rects:  # horizontal band
