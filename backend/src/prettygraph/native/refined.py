@@ -93,6 +93,29 @@ def _role_of(c: dict) -> str:
     return "main"
 
 
+_SECURITY_RX = re.compile(r"security|access|iam\b|auth|identity|ingress", re.I)
+_STATE_RX = re.compile(r"redis|cache|database|\bdb\b|state|queue|broker|message", re.I)
+
+
+def _auto_glue(zone_id: str, cluster: dict, role: str) -> tuple[str, list[str]] | None:
+    """Playbook §14 semantic glue: a short rationale note for zones whose
+    purpose isn't self-evident from component names alone. Only synthesized
+    when the zone has no note already (spec-authored notes always win) — pure
+    heuristic on the zone's own label, safe to be generic/conservative."""
+    label = str(cluster.get("label") or zone_id)
+    text = f"{label} {cluster.get('tier') or ''}"
+    if role == "ops" and _SECURITY_RX.search(text):
+        return ("Security boundary",
+               [f"{label} controls what reaches the components downstream."])
+    if role == "main" and _STATE_RX.search(text):
+        return ("Runtime responsibility",
+               ["Shared state for this stage; hands off to what's next."])
+    if role == "sidebar":
+        return ("Target outcome",
+               ["Downstream consumers act on these results."])
+    return None
+
+
 def _card_h(lines: list[str]) -> int:
     return _CARD_PAD_H + (8 + _LINE_H * len(lines) if lines else 8)
 
