@@ -24,10 +24,12 @@ def _bind(monkeypatch, ws):
 def test_drawer_toolset():
     # render-refine loop (declare_poster_grid, render_diagram, export_drawio) plus
     # the native default path (export_drawio_native), the upgrade-existing-.drawio
-    # path (upgrade_drawio), and the in-place fix loop (read_drawio / edit_drawio).
+    # path (upgrade_drawio), the in-place fix loop (read_drawio / edit_drawio),
+    # and the engineer-loop quality inspection (inspect_render_quality, cap 2).
     assert [t.name for t in DRAWER_TOOLS] == [
         "declare_poster_grid", "render_diagram", "export_drawio",
         "export_drawio_native", "upgrade_drawio", "read_drawio", "edit_drawio",
+        "inspect_render_quality",
     ]
 
 
