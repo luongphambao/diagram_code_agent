@@ -23,8 +23,8 @@ from . import refined_theme as RT
 
 # Role inference when the spec doesn't say (playbook §5 inventory classes).
 _OPS_RX = re.compile(r"security|iam\b|monitor|logging|log\b|cloudwatch|governance"
-                     r"|compliance|audit|ci[-/ ]?cd|operations?\b|devops|observ",
-                     re.I)
+                     r"|compliance|audit|ci[-/ ]?cd|operation|devops|observ"
+                     r"|identity|access|foundation", re.I)
 _OUTCOME_RX = re.compile(r"outcome|consum|downstream|client|dashboard|notification",
                          re.I)
 _FUTURE_RX = re.compile(r"future|phase\s*2|deferred|roadmap|planned", re.I)
