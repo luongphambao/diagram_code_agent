@@ -478,6 +478,12 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     from prettygraph.native.topology import build_drawio_from_spec
     out = workspace / "out.drawio"
     name = spec.get("slide_title") or spec.get("diagram_title") or "Architecture"
+    # DEFAULT preset is the refined typographic look (numbered tinted zones with
+    # folder tabs, left-logo cards, semantic edge legend, nested cloud/VPC
+    # boundaries) for EVERY architecture diagram. Pass style_preset="icon"
+    # explicitly for the legacy icon-heavy / slide-hero look.
+    if not spec.get("style_preset"):
+        spec["style_preset"] = "refined"
     refined = str(spec.get("style_preset") or "").lower() == "refined"
     if refined and spec.get("source_page"):
         name = "01 — Refined Architecture"  # page name; the title cell keeps diagram_title
