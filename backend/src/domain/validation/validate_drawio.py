@@ -1066,8 +1066,7 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
     crossings come from ``report["layout_metrics"]`` (audit_layout_metrics) —
     absent metrics score neutral (same blindness as before, never a false fail).
     PASS iff total >= 85 AND semantic = 100% AND relationship = 100% AND zero
-    XML errors AND zero card collisions AND (for slide output) no dense-scale
-    fallback on diagrams small enough that a 16:9 fit is realistic (<=40 nodes).
+    XML errors AND zero card collisions.
     """
     stats = stats or {}
     sem = stats.get("semantic") or {}
