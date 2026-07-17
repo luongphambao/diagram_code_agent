@@ -859,15 +859,18 @@ def audit_layout_metrics(xml: str, stats: dict | None = None) -> dict:
             if any(_segs_intersect(e["pts"][a], e["pts"][a + 1], f["pts"][b], f["pts"][b + 1])
                    for a in range(len(e["pts"]) - 1) for b in range(len(f["pts"]) - 1)):
                 crossings += 1
+    # "Long" is relative to the diagram, not absolute px: an edge whose polyline
+    # spans most of the content width/height reads as a cross-page detour.
     long_edges = 0
-    if cards and polys:
-        mean_diag = sum((g["w"] ** 2 + g["h"] ** 2) ** 0.5
-                        for g in (box_of(c) for c in cards)) / len(cards)
+    if geo_of and polys:
+        minx = min(g["x"] for g in geo_of.values())
+        miny = min(g["y"] for g in geo_of.values())
+        W = max(1.0, max(g["x"] + g["w"] for g in geo_of.values()) - minx)
+        H = max(1.0, max(g["y"] + g["h"] for g in geo_of.values()) - miny)
         for e in polys:
-            length = sum(abs(e["pts"][k + 1]["x"] - e["pts"][k]["x"])
-                         + abs(e["pts"][k + 1]["y"] - e["pts"][k]["y"])
-                         for k in range(len(e["pts"]) - 1))
-            if length > 2.5 * mean_diag:
+            xs = [p["x"] for p in e["pts"]]
+            ys = [p["y"] for p in e["pts"]]
+            if (max(xs) - min(xs)) > 0.55 * W or (max(ys) - min(ys)) > 0.45 * H:
                 long_edges += 1
 
     # --- icon coverage over leaf cards ---
