@@ -61,10 +61,15 @@ production path; the mingrammer/Graphviz flow (steps 5-8) is the OLD path.
   batches). NEVER call `render_diagram` or re-export to fix a native diagram.
 - **UPGRADE an existing .drawio**: if the user supplies an existing `.drawio` file
   to clean up / make production-quality (NOT a fresh brief), call
-  `upgrade_drawio(source_path)` ONCE. It extracts the source inventory + embedded
-  icons, PRESERVES the original ids, and rebuilds the geometry with the native
-  engine (production cards, layer bands, routed connectors). Then act on any Lint /
-  semantic-loss warning and finalize. Do NOT re-author its XML from scratch.
+  `upgrade_drawio(source_path)` ONCE. Default output is the REFINED typographic
+  preset: a 2-page file (page 1 = refined rebuild with numbered tinted zones,
+  bold-heading cards, semantic edge legend; page 2 = the untouched original — do
+  NOT edit or delete it). No icons by design — never chase icon coverage on a
+  refined result. Edits target page 1 only; if the validator flags over-long
+  card body lines, rewrite them with `set_label` inside the normal 2-batch
+  `edit_drawio` budget. Pass `style_preset="icon"` only if the user explicitly
+  wants the icon look. Then act on any Lint / semantic-loss warning and
+  finalize. Do NOT re-author its XML from scratch.
 - **ONLY** for ERD / UML / flowchart / sequence / code-visualization / free-form
   graphs that are NOT an infrastructure architecture: use the mingrammer flow
   (steps 5-8). Graphviz is better for those. Do NOT default to `render_diagram` for
