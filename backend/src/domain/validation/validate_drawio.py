@@ -775,6 +775,146 @@ def audit_production_polish(xml: str) -> list[str]:
     return findings
 
 
+# The measurable definition of the "production look" (reference:
+# production_diagram1.png — title, tinted layer bands, icon on ~every node,
+# legend, ~16:9 dense packing, no card collisions, few crossings). Echoed in
+# scorecard output and engineer_report.json so every gate/agent sees the same bar.
+PRODUCTION_TARGET = {
+    "ratio": (1.3, 1.9),          # content bbox W/H
+    "icon_coverage": 0.9,          # leaves with a real icon / all leaves
+    "collisions": 0,
+    "crossings_max": 3,            # geometric edge crossings
+    "title": True,
+    "legend": True,
+    "tinted_bands": True,
+}
+
+
+def audit_layout_metrics(xml: str, stats: dict | None = None) -> dict:
+    """Objective composition metrics the scorecard was blind to (0 LLM tokens).
+
+    Measures the rendered GEOMETRY, not intentions: content aspect ratio and
+    page fill, geometric edge crossings over the baked waypoints (router
+    residuals only see what the router controlled), overlong edges, icon
+    coverage, and edge-label-vs-card collisions. ``stats`` is the native
+    engine's out.native_stats.json dict (for fit_scale/dense_fallback).
+    """
+    stats = stats or {}
+    cells = _parse_cells(xml)
+    box_of = lambda c: c["absGeo"] or c["geo"]
+    has_children = {c["parent"] for c in cells if c["parent"]}
+    is_text = lambda c: bool(re.search(r"(?:^|;)(text|line);", c["style"])) \
+        or (c["id"] or "").startswith(("__title", "__legend"))
+    is_container = lambda c: (c["id"] in has_children or bool(
+        re.search(r"container=1|shape=mxgraph\.aws4\.group|grIcon=|group;|swimlane", c["style"])))
+    vertices = [c for c in cells if c["edge"] != "1" and box_of(c) and c["id"]
+                and not is_text(c) and not _is_decor(c["id"])]
+    cards = [c for c in vertices if not is_container(c)]
+
+    # --- composition: content bbox vs page ---
+    ratio = page_fill = None
+    top = [c for c in vertices if c["parent"] in ("1", "boundaries")]
+    if top:
+        gs = [box_of(c) for c in top]
+        x0 = min(g["x"] for g in gs); y0 = min(g["y"] for g in gs)
+        x1 = max(g["x"] + g["w"] for g in gs); y1 = max(g["y"] + g["h"] for g in gs)
+        if (y1 - y0) > 0:
+            ratio = round((x1 - x0) / (y1 - y0), 2)
+        m = re.search(r'pageWidth="([\d.]+)"\s+pageHeight="([\d.]+)"', xml)
+        if m:
+            pw, ph = float(m.group(1)), float(m.group(2))
+            if pw * ph > 0:
+                page_fill = round(((x1 - x0) * (y1 - y0)) / (pw * ph), 2)
+
+    fallback = stats.get("slide_fallback") or {}
+    fit_scale = fallback.get("fit_scale")
+    dense_fallback = bool(fit_scale is not None
+                          and fit_scale < fallback.get("floor", 0.72))
+
+    # --- edges: geometric crossings + overlong polylines ---
+    geo_of = {c["id"]: box_of(c) for c in vertices}
+    on_pt = lambda g, fx, fy: {"x": g["x"] + (fx if fx is not None else 0.5) * g["w"],
+                               "y": g["y"] + (fy if fy is not None else 0.5) * g["h"]}
+    polys = []
+    for c in cells:
+        if c["edge"] != "1" or not c["source"] or not c["target"]:
+            continue
+        sg, tg = geo_of.get(c["source"]), geo_of.get(c["target"])
+        if not sg or not tg:
+            continue
+        poly = ([on_pt(sg, _num(c["style"], "exitX"), _num(c["style"], "exitY"))]
+                + (c["wp"] or [])
+                + [on_pt(tg, _num(c["style"], "entryX"), _num(c["style"], "entryY"))])
+        polys.append({"pts": poly, "src": c["source"], "tgt": c["target"],
+                      "label": (c["value"] or "").strip()})
+    crossings = 0
+    for i in range(len(polys)):
+        for j in range(i + 1, len(polys)):
+            e, f = polys[i], polys[j]
+            if e["src"] in (f["src"], f["tgt"]) or e["tgt"] in (f["src"], f["tgt"]):
+                continue
+            if any(_segs_intersect(e["pts"][a], e["pts"][a + 1], f["pts"][b], f["pts"][b + 1])
+                   for a in range(len(e["pts"]) - 1) for b in range(len(f["pts"]) - 1)):
+                crossings += 1
+    long_edges = 0
+    if cards and polys:
+        mean_diag = sum((g["w"] ** 2 + g["h"] ** 2) ** 0.5
+                        for g in (box_of(c) for c in cards)) / len(cards)
+        for e in polys:
+            length = sum(abs(e["pts"][k + 1]["x"] - e["pts"][k]["x"])
+                         + abs(e["pts"][k + 1]["y"] - e["pts"][k]["y"])
+                         for k in range(len(e["pts"]) - 1))
+            if length > 2.5 * mean_diag:
+                long_edges += 1
+
+    # --- icon coverage over leaf cards ---
+    icon_coverage = None
+    leaves = [c for c in cards if (box_of(c)["w"] or 0) >= 40 and (box_of(c)["h"] or 0) >= 30]
+    if leaves:
+        def _has_icon(c):
+            if re.search(r"resIcon=|image=data:|shape=mxgraph\.", c["style"]):
+                return True
+            return any(k.get("parent") == c["id"]
+                       and re.search(r"resIcon=|image=data:", k["style"]) for k in cells)
+        icon_coverage = round(sum(1 for c in leaves if _has_icon(c)) / len(leaves), 2)
+
+    # --- edge labels colliding with cards (char-estimate box at polyline midpoint) ---
+    label_overlaps = 0
+    card_rects = [box_of(c) for c in cards]
+    for e in polys:
+        if not e["label"]:
+            continue
+        pts = e["pts"]
+        mid = pts[len(pts) // 2] if len(pts) % 2 else {
+            "x": (pts[len(pts) // 2 - 1]["x"] + pts[len(pts) // 2]["x"]) / 2,
+            "y": (pts[len(pts) // 2 - 1]["y"] + pts[len(pts) // 2]["y"]) / 2}
+        lw, lh = len(e["label"]) * 6.6, 14.0
+        lb = {"x": mid["x"] - lw / 2, "y": mid["y"] - lh / 2, "w": lw, "h": lh}
+        for r in card_rects:
+            ix = min(lb["x"] + lb["w"], r["x"] + r["w"]) - max(lb["x"], r["x"])
+            iy = min(lb["y"] + lb["h"], r["y"] + r["h"]) - max(lb["y"], r["y"])
+            if ix > 4 and iy > 4:
+                label_overlaps += 1
+                break
+
+    frames = [c for c in vertices if c["id"] in has_children and "fillColor=" in c["style"]
+              and not re.search(r"shape=image|resIcon=", c["style"])]
+    tinted_bands = bool(frames) and not all(_WHITE_FILLS.search(c["style"]) for c in frames)
+    return {
+        "ratio": ratio,
+        "page_fill": page_fill,
+        "fit_scale": fit_scale,
+        "dense_fallback": dense_fallback,
+        "edge_crossings": crossings,
+        "long_edges": long_edges,
+        "icon_coverage": icon_coverage,
+        "edge_label_overlaps": label_overlaps,
+        "title_present": '"__title"' in xml or "id=\"__title" in xml,
+        "tinted_bands": tinted_bands,
+        "legend_present": "legend" in xml.lower(),
+    }
+
+
 def audit_xml(xml: str, profile: str = "auto") -> list[str]:
     """Run the design audits and return the combined advice list.
 
