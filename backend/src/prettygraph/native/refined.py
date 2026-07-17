@@ -111,8 +111,33 @@ def build_refined(spec: dict, plan: dict | None = None):
     """Compose the refined page. Returns (Diagram, pseudo_root_rect) — the same
     contract as topology.build_tree so build_drawio_from_spec needs no change."""
     clusters = {c["id"]: c for c in spec.get("clusters", []) if c.get("id")}
-    nodes = [n for n in spec.get("nodes", []) if n.get("id")]
+    nodes = [dict(n) for n in spec.get("nodes", []) if n.get("id")]
     edges = list(spec.get("edges", []))
+
+    # Section collapse: real-world sources nest zones deeply (section > az >
+    # subnet > card). The refined page reads best as FLAT numbered sections —
+    # reassign every node in an unnumbered interior zone to its nearest
+    # NUMBERED ancestor section; the interior boundary either becomes a visual
+    # boundary rect (zone-tagged, node-free) or disappears.
+    numbered = {cid for cid, c in clusters.items()
+                if c.get("number") is not None}
+
+    def _nearest_numbered(cid: str) -> str | None:
+        cur, guard = cid, 0
+        while cur and guard < 20:
+            if cur in numbered:
+                return cur
+            cur = (clusters.get(cur) or {}).get("parent")
+            guard += 1
+        return None
+
+    if numbered:
+        for n in nodes:
+            cid = n.get("cluster")
+            if cid in clusters and cid not in numbered:
+                tgt = _nearest_numbered(cid)
+                if tgt:
+                    n["cluster"] = tgt
 
     nodes_by_cluster: dict[str, list[dict]] = {}
     loose: list[dict] = []
