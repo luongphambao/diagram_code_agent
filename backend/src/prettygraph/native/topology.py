@@ -337,6 +337,12 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
                    if _CROSS_CUT.search(f"{clusters[cid].get('label') or ''} "
                                         f"{clusters[cid].get('tier') or ''}")]
     main_roots = [cid for cid in roots if cid not in cross_roots]
+    plan = plan or {}
+    if plan.get("band_order"):
+        # Edge-aware flow order from the layout plan: planned ids first (in plan
+        # order), any band the plan didn't know about keeps its spec position.
+        planned = [cid for cid in plan["band_order"] if cid in main_roots]
+        main_roots = planned + [cid for cid in main_roots if cid not in planned]
     # Topology mode (Workstream 1): honour real containment nesting
     # (cloud>vpc>subnet>az) as concentric boundaries instead of flat bands — BUT
     # ONLY when a zone actually participates in a containment tree (has a zoned
