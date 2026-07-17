@@ -362,20 +362,14 @@ def build_refined(spec: dict, plan: dict | None = None):
     # ---- measure zones ---- #
     def _zone_geom(zid: str, horizontal: bool = False) -> dict:
         members = nodes_by_cluster.get(zid, [])
-        cards = [(n, _body_lines(n)) for n in members]
         if horizontal:
+            cards = [(n, _body_lines(n)) for n in members]
             w = 30 + sum(min(300, max(150, _CARD_W)) + 14 for _ in cards)
             h = 40 + max((_card_h(l) for _, l in cards), default=60) + 20
-        else:
-            cols = max(1, (len(cards) + _MAX_ROWS - 1) // _MAX_ROWS)
-            per_col = (len(cards) + cols - 1) // cols or 1
-            col_hs = []
-            for ci in range(cols):
-                chunk = cards[ci * per_col:(ci + 1) * per_col]
-                col_hs.append(sum(_card_h(l) + RT.GEO["card_gap"] for _, l in chunk))
-            w = cols * _CARD_W + (cols + 1) * RT.GEO["zone_pad"]
-            h = 46 + (max(col_hs) if col_hs else 60) + 6
-        return {"cards": cards, "w": max(w, 170), "h": max(h, 120)}
+            return {"cards": cards, "w": max(w, 170), "h": max(h, 120)}
+        content = _zone_content(members)
+        w, h = _measure_content(content)
+        return {"content": content, "w": w, "h": h}
 
     geo_main = {z: _zone_geom(z) for z in mains}
     geo_side = {z: _zone_geom(z) for z in sides}
