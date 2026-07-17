@@ -540,20 +540,8 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     # Semantic count preservation (V2 §15.5) — measured on the native body (original
     # ids; the composed slide re-prefixes them). Surfaces silently-dropped nodes/edges.
     try:
-        from domain.validation.validate_drawio import check_semantic_preservation
-        src_nodes = [n.get("id") for n in spec.get("nodes", [])]
-        # A bundle-suppressed edge is INTENTIONALLY absent (its representative
-        # carries the meaning) — count it preserved, not missing. Only (s,t)
-        # pairs whose every parallel edge was suppressed leave the expectation.
-        sup_triples = {tuple(x) for x in (plan or {}).get("suppressed_edges", [])}
-        kept_pairs = {(e.get("from"), e.get("to")) for e in spec.get("edges", [])
-                      if (e.get("from"), e.get("to"), e.get("label") or "")
-                      not in sup_triples}
-        src_edges = [(e.get("from"), e.get("to")) for e in spec.get("edges", [])
-                     if (e.get("from"), e.get("to")) in kept_pairs]
-        _, stats["semantic"] = check_semantic_preservation(src_nodes, src_edges, xml)
-        if sup_triples:
-            stats["semantic"]["bundled_edges"] = len(sup_triples)
+        from prettygraph.native.repair import semantic_stats
+        stats["semantic"] = semantic_stats(spec, xml, plan)
     except Exception:  # noqa: BLE001 — best-effort, never block a render
         pass
     _render_drawio_png(out, workspace / "out.png")
