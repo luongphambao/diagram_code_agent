@@ -180,8 +180,8 @@ def build_refined(spec: dict, plan: dict | None = None):
     d.grid = True
     margin = RT.GEO["margin"]
 
-    # ---- place main zones: left->right rows of ≤5 (playbook aspect target) ---- #
-    n_rows = max(1, -(-len(mains) // 5))
+    # ---- place main zones: left->right rows of ≤6 (playbook aspect target) ---- #
+    n_rows = max(1, -(-len(mains) // 6))
     per_row = -(-len(mains) // n_rows) if mains else 1
     zone_rects: dict[str, dict] = {}
     ry = _ZONE_TOP
