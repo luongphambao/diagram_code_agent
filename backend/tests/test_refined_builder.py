@@ -258,6 +258,74 @@ def test_refined_grid_and_page():
     assert float(model.get("pageWidth")) >= 1920
 
 
+_DIRTY_PAGE = (
+    # deliberately awful page: overlapping cards, duplicate-ish geometry, a
+    # dangling edge — must NOT leak into a multi-page report
+    '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>'
+    '<mxCell id="o1" value="A" vertex="1" parent="1" style="rounded=1;">'
+    '<mxGeometry x="10" y="10" width="120" height="60" as="geometry"/></mxCell>'
+    '<mxCell id="o2" value="B" vertex="1" parent="1" style="rounded=1;">'
+    '<mxGeometry x="20" y="20" width="120" height="60" as="geometry"/></mxCell>'
+    '<mxCell id="bad" edge="1" parent="1" source="o1" target="ghost">'
+    '<mxGeometry relative="1" as="geometry"/></mxCell>'
+    '</root></mxGraphModel>')
+
+
+def test_validator_scopes_to_first_page():
+    import domain.validation.validate_drawio as vd
+    from prettygraph.native.topology import build_drawio_from_spec
+    d_xml, _ = build_drawio_from_spec(_refined_spec(), "Refined")
+    # splice the dirty page in as page 2 (what the refined upgrade emits)
+    two_page = d_xml.replace(
+        "</mxfile>",
+        f'<diagram name="02 — Original Source" id="d1">{_DIRTY_PAGE}</diagram></mxfile>')
+    clean = vd.validate_xml(d_xml)
+    multi = vd.validate_xml(two_page)
+    # page-2 dangling edge / overlaps must not add errors or collisions
+    assert multi["error_count"] == clean["error_count"]
+    assert multi["collision_count"] == clean["collision_count"]
+    assert any("preserved original" in w for w in multi["warnings"])
+
+
+def test_semantic_preservation_page1_only():
+    import domain.validation.validate_drawio as vd
+    one = ('<mxfile><diagram name="p1"><mxGraphModel><root>'
+           '<mxCell id="0"/><mxCell id="1" parent="0"/>'
+           '<mxCell id="a" value="A" vertex="1" parent="1">'
+           '<mxGeometry x="0" y="0" width="10" height="10" as="geometry"/></mxCell>'
+           '</root></mxGraphModel></diagram>'
+           f'<diagram name="p2" id="d1">{_DIRTY_PAGE}</diagram></mxfile>')
+    # "o1" exists only on page 2 -> must count as missing
+    errors, sem = vd.check_semantic_preservation(["a", "o1"], [], one)
+    assert sem["node_recall"] == 0.5
+    assert "o1" in sem["missing_nodes"]
+
+
+def test_edit_preserves_second_page(tmp_path):
+    from tools.rendering_tools import _load_drawio_model
+    from prettygraph.native.topology import build_drawio_from_spec
+    d_xml, _ = build_drawio_from_spec(_refined_spec(), "Refined")
+    two_page = d_xml.replace(
+        "</mxfile>",
+        f'<diagram name="02 — Original Source" id="d1">{_DIRTY_PAGE}</diagram></mxfile>')
+    f = tmp_path / "out.drawio"
+    f.write_text(two_page, encoding="utf-8")
+    tree, cell_root = _load_drawio_model(f)
+    # mutate a page-1 cell, as edit_drawio does
+    cell = next(c for c in cell_root.iter("mxCell") if c.get("id") == "cameras")
+    cell.set("value", "edited")
+    tree.write(str(f), encoding="unicode", xml_declaration=False)
+    out = ET.parse(str(f)).getroot()
+    pages = out.findall("diagram")
+    assert len(pages) == 2
+    # page 2 cells untouched
+    p2_ids = {c.get("id") for c in pages[1].iter("mxCell")}
+    assert {"o1", "o2", "bad"} <= p2_ids
+    # page-1 edit landed
+    p1_vals = {c.get("value") for c in pages[0].iter("mxCell")}
+    assert "edited" in p1_vals
+
+
 def test_refined_theme_tokens_json():
     j = RT.as_json()
     assert j["font"] == "Helvetica"
