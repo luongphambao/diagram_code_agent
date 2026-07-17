@@ -760,15 +760,17 @@ def audit_production_polish(xml: str) -> list[str]:
     # 2) Legend missing when 2+ edge flow colours are used.
     edge_colors = {m.group(1) for c in cells if c["edge"] == "1"
                    for m in [re.search(r"strokeColor=([^;]+)", c["style"])] if m}
-    if len(edge_colors) >= 2 and "legend" not in xml.lower():
+    if (len(edge_colors) >= 2 and "legend" not in xml.lower()
+            and 'id="footer"' not in xml):
         findings.append(
             f"{len(edge_colors)} edge colours but NO legend — add a legend box "
             "mapping each colour/dash to its flow meaning.")
 
-    # 3) Icon coverage: too many plain boxes among leaf nodes.
+    # 3) Icon coverage: too many plain boxes among leaf nodes. Not applicable
+    # to the refined preset (typographic, icon-free by design).
     leaves = [c for c in vertices if c["id"] not in has_children
               and (c["geo"]["w"] or 0) >= 40 and (c["geo"]["h"] or 0) >= 30]
-    if len(leaves) >= 5:
+    if len(leaves) >= 5 and not refined:
         def _has_icon(c):
             if re.search(r"resIcon=|image=data:|shape=mxgraph\.", c["style"]):
                 return True
