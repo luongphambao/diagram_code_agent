@@ -753,5 +753,5 @@ def _emit_edge(d, e, r, fr, geom) -> None:
         eid,
         f'<mxCell id="{eid}" value="{_esc(label)}" style="{st}" edge="1" parent="1" '
         f'source="{e["src"]}" target="{e["tgt"]}"><mxGeometry relative="1" as="geometry">'
-        f'{wp_xml}</mxGeometry></mxCell>',
+        f'{wp_xml}{off_xml}</mxGeometry></mxCell>',
         Z_EDGE)
