@@ -498,13 +498,16 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     # Engineer loop tier 0 — deterministic auto-repair: score a handful of plan
     # variants on the standalone body (no PNGs) and keep the best. The unplanned
     # baseline is always among the candidates, so this never makes things worse.
-    try:
-        from prettygraph.native.repair import auto_repair
-        plan, engineer_report = auto_repair(spec, name, plan)
-        (workspace / "engineer_report.json").write_text(
-            json.dumps(engineer_report, indent=2), encoding="utf-8")
-    except Exception:  # noqa: BLE001
-        pass
+    # Refined preset bypasses it: the variants mutate band-wrap knobs that don't
+    # exist in the refined page template (only plan.band_order is consumed).
+    if not refined:
+        try:
+            from prettygraph.native.repair import auto_repair
+            plan, engineer_report = auto_repair(spec, name, plan)
+            (workspace / "engineer_report.json").write_text(
+                json.dumps(engineer_report, indent=2), encoding="utf-8")
+        except Exception:  # noqa: BLE001
+            pass
     try:
         (workspace / "layout_plan.json").write_text(
             json.dumps(plan or {}, indent=2), encoding="utf-8")
