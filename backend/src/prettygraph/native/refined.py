@@ -487,7 +487,7 @@ def build_refined(spec: dict, plan: dict | None = None):
     for z in zone_order:
         c = clusters[z]
         rect = zone_rects[z]
-        role = _role_of(c)
+        role = _role_of(c, clusters)
         hue = str(c.get("hue") or "").lower()
         if hue not in RT.ZONE_HUES:
             if role == "ops":
