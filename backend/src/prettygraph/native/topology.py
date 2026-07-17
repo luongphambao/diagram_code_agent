@@ -564,21 +564,24 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
     return d, root
 
 
-def render_spec_to_drawio(spec: dict, name: str = "Architecture") -> str:
+def render_spec_to_drawio(spec: dict, name: str = "Architecture",
+                          plan: dict | None = None) -> str:
     """Convenience: build from spec and return the full .drawio (mxfile) XML."""
-    d, _ = build_tree(spec)
+    d, _ = build_tree(spec, plan=plan)
     return d.mxfile(name)
 
 
 def build_drawio_from_spec(spec: dict, name: str = "Architecture",
-                           flat: bool = False) -> tuple[str, dict]:
+                           flat: bool = False,
+                           plan: dict | None = None) -> tuple[str, dict]:
     """Build a native .drawio from a render_spec and return (xml, stats).
 
     stats reports fidelity + routing quality for the caller to log: native icon /
     group counts, and the router's residual edge crossings / parallel overlaps.
     flat=True emits a flat body (parent="1", absolute coords) for slide embedding.
+    plan: optional layout_plan (see layout_plan.analyze_layout).
     """
-    d, _ = build_tree(spec, flat=flat)
+    d, _ = build_tree(spec, flat=flat, plan=plan)
     xml = d.mxfile(name)
     stats = {
         "nodes": len(spec.get("nodes", [])),
