@@ -424,6 +424,8 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
             wrap_at = 6 if (depth == 0 and band_dir == "row") else (4 if is_sidebar else 3)
             if len(items) > wrap_at and not children_of.get(cid):
                 cols = 2 if len(items) <= 8 else 3
+                if plan.get("band_cols", {}).get(cid):
+                    cols = max(2, min(4, int(plan["band_cols"][cid])))
                 # Sidebar cards are often chained by real sequential edges (e.g.
                 # WAF -> LB -> CDN -> NAT) whose labels need real breathing room —
                 # the row-band grid's tight 22px gap has an edge label spill onto
