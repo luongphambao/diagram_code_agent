@@ -952,7 +952,7 @@ def audit_layout_metrics(xml: str, stats: dict | None = None) -> dict:
         "edge_label_overlaps": label_overlaps,
         "title_present": '"__title"' in xml or "id=\"__title" in xml,
         "tinted_bands": tinted_bands,
-        "legend_present": "legend" in xml.lower(),
+        "legend_present": "legend" in xml.lower() or 'id="footer"' in xml,
     }
 
 
