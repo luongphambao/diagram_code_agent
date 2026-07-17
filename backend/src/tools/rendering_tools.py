@@ -571,7 +571,7 @@ def export_drawio_native() -> str:
     lint = ""
     try:
         from domain.validation.validate_drawio import validate_file
-        report = validate_file(str(out))
+        report = validate_file(str(out), stats=stats)
         lint = (f"\nLint: {report['error_count']} error(s), "
                 f"{report['warning_count']} warning(s), "
                 f"{report.get('polish_count', 0)} polish gate finding(s), "
