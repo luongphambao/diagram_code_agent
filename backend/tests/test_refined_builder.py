@@ -373,6 +373,58 @@ def test_icon_mode_scorecard_unchanged():
     assert sc["breakdown"]["iconography"] == 10.0
 
 
+_SRC_DRAWIO = (
+    '<mxfile><diagram name="src" id="s1"><mxGraphModel><root>'
+    '<mxCell id="0"/><mxCell id="1" parent="0"/>'
+    '<mxCell id="aws_shell" value="AWS Cloud" vertex="1" parent="1" style="rounded=0;">'
+    '<mxGeometry x="0" y="0" width="900" height="500" as="geometry"/></mxCell>'
+    '<mxCell id="tier_app" value="Application Tier" vertex="1" parent="aws_shell" style="rounded=0;">'
+    '<mxGeometry x="20" y="40" width="400" height="300" as="geometry"/></mxCell>'
+    '<mxCell id="api" value="API Gateway&lt;br&gt;Authentication, rate limiting, '
+    'traffic routing and request transformation" vertex="1" parent="tier_app" style="rounded=1;">'
+    '<mxGeometry x="30" y="60" width="160" height="80" as="geometry"/></mxCell>'
+    '<mxCell id="svc" value="Core Service" vertex="1" parent="tier_app" style="rounded=1;">'
+    '<mxGeometry x="30" y="180" width="160" height="60" as="geometry"/></mxCell>'
+    '<mxCell id="e1" value="HTTPS" edge="1" parent="1" source="api" target="svc">'
+    '<mxGeometry relative="1" as="geometry"/></mxCell>'
+    '</root></mxGraphModel></diagram>'
+    f'<diagram name="extra" id="s2">{_DIRTY_PAGE}</diagram></mxfile>')
+
+
+def test_ingest_refined_spec(tmp_path):
+    from domain.diagram.drawio_ingest import (extract_inventory,
+                                              inventory_to_render_spec,
+                                              first_page_model_xml)
+    f = tmp_path / "src.drawio"
+    f.write_text(_SRC_DRAWIO, encoding="utf-8")
+    inv = extract_inventory(str(f))
+    spec = inventory_to_render_spec(inv, style_preset="refined")
+    assert spec["style_preset"] == "refined"
+    api = next(n for n in spec["nodes"] if n["id"] == "api")
+    # long subtitle became 2-3 short body lines, none over the char budget
+    assert 2 <= len(api["body"]) <= 3
+    assert all(len(l) <= 35 for l in api["body"])
+    # source nesting surfaced: tier_app under aws_shell, aws_shell tagged cloud
+    tier = next(c for c in spec["clusters"] if c["id"] == "tier_app")
+    assert tier.get("parent") == "aws_shell"
+    shell = next(c for c in spec["clusters"] if c["id"] == "aws_shell")
+    assert shell.get("zone") == "cloud"
+    # no underscore-private keys leak into the refined spec
+    assert not any(k.startswith("_") for c in spec["clusters"] for k in c)
+    # icon path stays flat: no parent/zone keys without the preset
+    flat = inventory_to_render_spec(inv)
+    assert "style_preset" not in flat
+    assert all("parent" not in c and "zone" not in c for c in flat["clusters"])
+    # first page serialization: page-1 cells only
+    model = first_page_model_xml(str(f))
+    assert 'id="api"' in model and 'id="o1"' not in model
+    # and the refined build renders it end-to-end
+    from prettygraph.native.topology import build_drawio_from_spec
+    xml, stats = build_drawio_from_spec(spec, "Upgraded")
+    assert stats["style_preset"] == "refined"
+    assert 'id="api"' in xml and "tab_zone_tier_app" in xml
+
+
 def test_refined_theme_tokens_json():
     j = RT.as_json()
     assert j["font"] == "Helvetica"
