@@ -182,11 +182,11 @@ def _pick_band_cols(main_roots: list[str], nodes_in_root: dict,
                     sidebar_nodes: int) -> dict:
     """Choose per-band grid columns so the predicted body ratio nears 16:9.
 
-    Only bands past the wrap threshold get an entry (matching the builder's
-    grid-wrap branch); the same column count is applied to every big band —
-    the auto-repair loop refines per-band later if needed.
+    A band_cols entry force-wraps its band from 4 cards up (the builder only
+    auto-wraps past 6 in a row band); the same column count is applied to every
+    big band — the auto-repair loop refines per-band later if needed.
     """
-    big = [cid for cid in main_roots if nodes_in_root.get(cid, 0) > 6]
+    big = [cid for cid in main_roots if nodes_in_root.get(cid, 0) >= 4]
     if not big:
         return {}
 
