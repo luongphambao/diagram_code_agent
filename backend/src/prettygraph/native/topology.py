@@ -422,10 +422,16 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
             # routing risk that disabled the (still opt-in) grid-of-bands layout.
             is_sidebar = depth == 0 and band_dir == "col"
             wrap_at = 6 if (depth == 0 and band_dir == "row") else (4 if is_sidebar else 3)
-            if len(items) > wrap_at and not children_of.get(cid):
+            # A plan band_cols entry FORCES grid wrapping from 4 cards up (an
+            # unwrapped 5-6 card row is ~2000px wide — the main driver of
+            # ultra-wide strip layouts) — otherwise wrap on the usual threshold.
+            forced_cols = plan.get("band_cols", {}).get(cid)
+            wants_wrap = (len(items) > wrap_at
+                          or (forced_cols and len(items) >= 4))
+            if wants_wrap and not children_of.get(cid):
                 cols = 2 if len(items) <= 8 else 3
-                if plan.get("band_cols", {}).get(cid):
-                    cols = max(2, min(4, int(plan["band_cols"][cid])))
+                if forced_cols:
+                    cols = max(2, min(4, int(forced_cols)))
                 # Sidebar cards are often chained by real sequential edges (e.g.
                 # WAF -> LB -> CDN -> NAT) whose labels need real breathing room —
                 # the row-band grid's tight 22px gap has an edge label spill onto
