@@ -1227,9 +1227,21 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
     if (metrics.get("page_fill") or 1.0) < 0.5:
         composition -= 2.0
 
-    coverage = metrics.get("icon_coverage")
-    iconography = 10.0 if coverage is None else 10.0 * min(
-        1.0, coverage / PRODUCTION_TARGET["icon_coverage"])
+    if refined:
+        # Typographic-structure score stands in for iconography (10 pts):
+        # backbone 3 + numbering 3 (sequential 2, count in band 1) + glue 2 +
+        # legend-covers-edge-classes 2.
+        zlo, zhi = REFINED_TARGET["zones"]
+        iconography = (
+            (3.0 if metrics.get("backbone_present") else 0.0)
+            + (2.0 if metrics.get("zone_numbers_sequential") else 0.0)
+            + (1.0 if zlo <= (metrics.get("zone_count") or 0) <= zhi else 0.0)
+            + (2.0 if (metrics.get("glue_notes") or 0) >= 1 else 0.0)
+            + (2.0 if metrics.get("legend_covers_edge_classes") else 0.0))
+    else:
+        coverage = metrics.get("icon_coverage")
+        iconography = 10.0 if coverage is None else 10.0 * min(
+            1.0, coverage / PRODUCTION_TARGET["icon_coverage"])
 
     bd = {
         # 1. Semantic completeness — every source node survived.
