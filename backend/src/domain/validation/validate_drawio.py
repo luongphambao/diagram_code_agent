@@ -862,7 +862,7 @@ def audit_refined_structure(xml: str) -> dict:
     unlegended_ok = {"#2E7D4F", "#98A2B3"}
     legend_covers = edge_colors <= (swatch_colors | unlegended_ok) if edge_colors else True
     overlong = 0
-    for m in re.finditer(r'<mxCell id="(?!zone_|bnd_|tab_|tag_|footer|__)[^"]*" '
+    for m in re.finditer(r'<mxCell id="(?!zone_|bnd_|tab_|tag_|footer|backbone|__)[^"]*" '
                          r'value="([^"]*)"[^>]*vertex="1"', xml):
         for line in m.group(1).split("&lt;br&gt;"):
             plain = re.sub(r"&lt;[^&]*&gt;", "", line)
