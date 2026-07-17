@@ -433,6 +433,28 @@ def build_refined(spec: dict, plan: dict | None = None):
     d.grid = True
     margin = RT.GEO["margin"]
 
+    # Vendor-logo resolution: an attached icon_data_uri (GCP/Azure raster, set by
+    # _attach_icon_fallbacks) wins; otherwise resolve a native catalog stencil
+    # (AWS). Cards render whichever as a small top-right badge.
+    provider = str(spec.get("provider") or "").lower()
+    try:
+        from .topology import _resolve_node_icon as _rni, _load_catalog as _lc
+        _cat = _lc() if _lc else None
+    except Exception:  # noqa: BLE001
+        _cat, _rni = None, None
+
+    def _node_icon(n: dict):
+        img = n.get("icon_data_uri")
+        if img:
+            return None, img
+        name = n.get("icon")
+        if not name and _cat is not None and _rni is not None:
+            try:
+                name = _rni(_cat, n, provider)
+            except Exception:  # noqa: BLE001
+                name = None
+        return name, None
+
     # ---- place main zones: left->right rows of ≤6 (playbook aspect target) ---- #
     n_rows = max(1, -(-len(mains) // 6))
     per_row = -(-len(mains) // n_rows) if mains else 1
