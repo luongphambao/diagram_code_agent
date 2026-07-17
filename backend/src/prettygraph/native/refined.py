@@ -86,7 +86,7 @@ def _role_of(c: dict) -> str:
     text = f"{c.get('label') or ''} {c.get('tier') or ''}"
     if _FUTURE_RX.search(text):
         return "future"
-    if _OPS_RX.search(text):
+    if _OPS_RX.search(text) and not _ENTRY_RX.search(text):
         return "ops"
     if _OUTCOME_RX.search(text):
         return "sidebar"
