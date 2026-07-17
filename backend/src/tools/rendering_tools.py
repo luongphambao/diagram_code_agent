@@ -479,6 +479,8 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     out = workspace / "out.drawio"
     name = spec.get("slide_title") or spec.get("diagram_title") or "Architecture"
     refined = str(spec.get("style_preset") or "").lower() == "refined"
+    if refined and spec.get("source_page"):
+        name = "01 — Refined Architecture"  # page name; the title cell keeps diagram_title
     if refined:
         # Refined preset is icon-free by design — skip icon fallback embedding,
         # and dump the design tokens next to the render (playbook §19).
