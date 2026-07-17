@@ -66,6 +66,24 @@ def _model_roots(path: str) -> list[ET.Element]:
     return roots
 
 
+def first_page_model_xml(path: str) -> str:
+    """Serialize the FIRST page's <mxGraphModel> uncompressed — used by the
+    refined upgrade path to append the source verbatim as an "Original Source"
+    page (playbook §3: always preserve the original)."""
+    root = ET.parse(path).getroot()
+    if root.tag == "mxGraphModel":
+        return ET.tostring(root, encoding="unicode")
+    d = root.find("diagram")
+    if d is None:
+        raise ValueError(f"no <diagram> page in {path}")
+    model = d.find("mxGraphModel")
+    if model is None and (d.text or "").strip():
+        model = ET.fromstring(_inflate(d.text.strip()))
+    if model is None:
+        raise ValueError(f"first page of {path} has no mxGraphModel")
+    return ET.tostring(model, encoding="unicode")
+
+
 def _split_label(value: str | None) -> tuple[str, str]:
     """(title, subtitle) from an mxCell HTML value — first line vs the rest."""
     if not value:
