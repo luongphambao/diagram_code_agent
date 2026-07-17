@@ -123,12 +123,13 @@ def auto_repair(spec: dict, name: str, plan: dict | None) -> tuple[dict | None, 
     """
     iterations = []
     results: list[tuple[str, dict | None, dict]] = []
-    for label, cand in _candidates(plan, spec):
+
+    def _try(label: str, cand: dict | None) -> dict | None:
         try:
             res = _score_candidate(spec, name, cand)
         except Exception as exc:  # noqa: BLE001 — drop broken candidates
             iterations.append({"candidate": label, "error": str(exc)[:200]})
-            continue
+            return None
         results.append((label, cand, res))
         iterations.append({
             "candidate": label,
@@ -138,6 +139,18 @@ def auto_repair(spec: dict, name: str, plan: dict | None) -> tuple[dict | None, 
             "crossings": res["metrics"].get("edge_crossings"),
             "collisions": res["scorecard"].get("collisions"),
         })
+        return res
+
+    baseline = _try("planned", plan)
+    # A passing baseline needs no repair — skip the extra builds entirely.
+    if baseline and not baseline["scorecard"]["pass"]:
+        if plan is not None:
+            _try("unplanned", None)
+        for label, cand in _variants_for(plan, spec, baseline["metrics"]
+                                         | {"collisions": baseline["scorecard"]["collisions"]}):
+            if len(results) >= _MAX_CANDIDATES:
+                break
+            _try(label, cand)
     if not results:
         return plan, {"iterations": iterations, "chosen": "planned",
                       "final_score": None}
