@@ -42,8 +42,8 @@ RENDER_HARD_CAP = 6
 # batch resolve_icons — each a full wasted model call. Caps tightened so a
 # non-batched attempt fails fast (was 6/3, warn at 3) instead of burning ~13 calls
 # before the model gives up and switches to batching.
-ICON_SEARCH_PER_QUERY_CAP = 2      # matches the docstring's own "one keyword, one broader term" flow
-ICON_SEARCH_DEFAULT_TOTAL_CAP = 12
+ICON_SEARCH_PER_QUERY_CAP = 3      # one keyword + one broader term + one tech-derived retry
+ICON_SEARCH_DEFAULT_TOTAL_CAP = 20
 NODE_SINGLE_SEARCH_WARN = 1
 NODE_SINGLE_SEARCH_HARD_CAP = 2
 CRITIC_REVISION_HARD_CAP = 2
