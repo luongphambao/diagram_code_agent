@@ -523,7 +523,7 @@ def audit_card_collisions(xml: str) -> list[str]:
     cells = _parse_cells(xml)
     has_children = {c["parent"] for c in cells if c["parent"]}
     box = lambda c: c["absGeo"] or c["geo"]
-    is_container = lambda c: (c["id"] in has_children
+    is_container = lambda c: (c["id"] in has_children or _is_refined_container(c["id"])
                              or bool(re.search(r"container=1|shape=mxgraph\.aws4\.group|grIcon=|group;|swimlane", c["style"])))
     is_text = lambda c: bool(re.search(r"(?:^|;)(text|line);", c["style"])) or (c["id"] or "").startswith(("__title", "__legend"))
     cards = [c for c in cells if c["edge"] != "1" and box(c) and c["id"]
