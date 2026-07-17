@@ -58,6 +58,7 @@ class Diagram:
         # _transform_drawio_body assumes a flat body. self.R stays absolute either
         # way, so the router is unaffected.
         self.flat = flat
+        self.grid = False  # refined preset turns the 10px grid on (playbook §9.2)
         self.page = list(page)
         self.cells: list[str] = []
         self._cell_z: list[int] = []  # z-bucket per cell, aligned with self.cells
