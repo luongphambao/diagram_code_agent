@@ -359,8 +359,13 @@ class Diagram:
         right = x + w
         if metadata:
             mw = 210
-            md = self.note_card(f"{id}__meta", [right - mw - 30, y + 30],
-                                [mw, 80], "", [metadata])
+            md = self._put(f"{id}__meta", "1", right - mw - 30, y + 30, mw, 80,
+                           f"rounded=1;arcSize={RT.GEO['arc_zone']};html=1;"
+                           f"whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#D0D5DD;"
+                           f"strokeWidth=1;shadow=0;align=left;verticalAlign=top;"
+                           f"spacing=10;fontFamily={RT.FONT};"
+                           f"fontColor={RT.INK['body']};fontSize=9.5;",
+                           metadata, z=Z_CHROME)
             md["ob"] = False
             right -= mw + 50
         if scope_note:
