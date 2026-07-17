@@ -326,6 +326,53 @@ def test_edit_preserves_second_page(tmp_path):
     assert "edited" in p1_vals
 
 
+def test_refined_scorecard_pass_and_structure():
+    import domain.validation.validate_drawio as vd
+    from prettygraph.native.topology import build_drawio_from_spec
+    spec = _refined_spec()
+    xml, stats = build_drawio_from_spec(spec, "Refined")
+    from prettygraph.native.repair import semantic_stats
+    stats["semantic"] = semantic_stats(spec, xml, None)
+    report = vd.validate_xml(xml, stats=stats)
+    # zones must never register as colliding cards (flat layout)
+    assert report["collision_count"] == 0, report["collisions"]
+    m = report["layout_metrics"]
+    assert m["refined"] is True
+    assert m["backbone_present"] and m["zone_numbers_sequential"]
+    assert m["glue_notes"] >= 1
+    assert m["legend_present"] is True
+    sc = vd.production_scorecard(report, stats)
+    assert sc["style_preset"] == "refined"
+    assert sc["target"] is vd.REFINED_TARGET
+    assert sc["breakdown"]["iconography"] >= 8.0  # typographic structure score
+    assert sc["node_recall"] == 1.0 and sc["edge_recall"] == 1.0
+    assert sc["pass"], sc
+
+
+def test_refined_scorecard_fails_without_backbone():
+    import domain.validation.validate_drawio as vd
+    from prettygraph.native.topology import build_drawio_from_spec
+    spec = _refined_spec()
+    xml, stats = build_drawio_from_spec(spec, "Refined")
+    xml_nb = xml.replace('id="backbone"', 'id="stripped"')
+    report = vd.validate_xml(xml_nb, stats=stats)
+    sc = vd.production_scorecard(report, stats)
+    full = vd.production_scorecard(vd.validate_xml(xml, stats=stats), stats)
+    assert sc["breakdown"]["iconography"] <= full["breakdown"]["iconography"] - 3
+
+
+def test_icon_mode_scorecard_unchanged():
+    import domain.validation.validate_drawio as vd
+    # no style_preset -> icon branch, PRODUCTION_TARGET, same shape as before
+    report = {"errors": [], "warnings": [], "advice": [], "polish": [],
+              "layout_metrics": {"ratio": 1.6, "icon_coverage": 0.95},
+              "error_count": 0, "ok": True, "collision_count": 0}
+    sc = vd.production_scorecard(report, {"edges": 4})
+    assert sc["style_preset"] == "icon"
+    assert sc["target"] is vd.PRODUCTION_TARGET
+    assert sc["breakdown"]["iconography"] == 10.0
+
+
 def test_refined_theme_tokens_json():
     j = RT.as_json()
     assert j["font"] == "Helvetica"
