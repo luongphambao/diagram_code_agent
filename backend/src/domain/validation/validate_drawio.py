@@ -1147,12 +1147,11 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
     bd = {k: round(max(0.0, v), 1) for k, v in bd.items()}
     total = round(sum(bd.values()), 1)
     # A render with colliding cards can NEVER pass — the exact blind spot that let a
-    # crammed slide falsely report PASS before. Likewise a dense-scale fallback on a
-    # normal-sized diagram (the "tiny content, huge whitespace" complaint).
-    node_count = int(stats.get("nodes") or 0)
-    fit_ok = not (metrics.get("dense_fallback") and node_count and node_count <= 40)
+    # crammed slide falsely report PASS before. dense_fallback is deliberately NOT a
+    # hard block (good standalone renders commonly come from it) — it costs 4
+    # composition points, which the engineer loop tries to win back.
     passed = bool(total >= 85.0 and node_recall >= 1.0 and edge_recall >= 1.0
-                  and err_count == 0 and collisions == 0 and fit_ok)
+                  and err_count == 0 and collisions == 0)
     return {"total": total, "breakdown": bd, "pass": passed, "collisions": collisions,
             "node_recall": round(node_recall, 4), "edge_recall": round(edge_recall, 4),
             "metrics": metrics, "target": PRODUCTION_TARGET}
