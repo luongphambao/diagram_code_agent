@@ -174,23 +174,33 @@ def build_refined(spec: dict, plan: dict | None = None):
 
     geo_main = {z: _zone_geom(z) for z in mains}
     geo_side = {z: _zone_geom(z) for z in sides}
-    row_h = max([g["h"] for g in geo_main.values()] or [200])
-    for g in geo_main.values():
-        g["h"] = row_h  # uniform main-row height (aligned zone bottoms)
 
     d = Diagram(spec.get("pattern", "pipeline"), contract="bake", flat=True,
                 page=(RT.GEO["page_w"], RT.GEO["page_h"]))
     d.grid = True
     margin = RT.GEO["margin"]
 
-    # ---- place main row ---- #
-    x = margin
+    # ---- place main zones: left->right rows of ≤5 (playbook aspect target) ---- #
+    n_rows = max(1, -(-len(mains) // 5))
+    per_row = -(-len(mains) // n_rows) if mains else 1
     zone_rects: dict[str, dict] = {}
-    for z in mains:
-        g = geo_main[z]
-        zone_rects[z] = {"x": x, "y": _ZONE_TOP, "w": g["w"], "h": g["h"]}
-        x += g["w"] + RT.GEO["zone_gap"]
-    main_right = x - RT.GEO["zone_gap"]
+    ry = _ZONE_TOP
+    main_right = margin
+    for r in range(n_rows):
+        row = mains[r * per_row:(r + 1) * per_row]
+        if not row:
+            continue
+        row_h = max(geo_main[z]["h"] for z in row)
+        for z in row:
+            geo_main[z]["h"] = row_h  # aligned zone bottoms per row
+        x = margin
+        for z in row:
+            g = geo_main[z]
+            zone_rects[z] = {"x": x, "y": ry, "w": g["w"], "h": row_h}
+            x += g["w"] + RT.GEO["zone_gap"]
+        main_right = max(main_right, x - RT.GEO["zone_gap"])
+        ry += row_h + RT.GEO["zone_gap"] + RT.GEO["tab_overlap"]
+    main_bottom = ry - RT.GEO["zone_gap"] - RT.GEO["tab_overlap"]
 
     # ---- sidebar (outcomes / future) ---- #
     sx = main_right + _SIDEBAR_GAP
@@ -204,7 +214,8 @@ def build_refined(spec: dict, plan: dict | None = None):
 
     # ---- operations band (full main-row width) ---- #
     ops_rects: dict[str, dict] = {}
-    oy = _ZONE_TOP + row_h + _OPS_GAP
+    oy = max(main_bottom, (sy - RT.GEO["zone_gap"] - RT.GEO["tab_overlap"])
+             if sides else 0) + _OPS_GAP
     for z in ops:
         g = _zone_geom(z, horizontal=True)
         ops_rects[z] = {"x": margin, "y": oy, "w": main_right - margin,
