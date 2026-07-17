@@ -365,7 +365,10 @@ def _render_drawio_png(drawio_path: Path, png_path: Path, scale: int = 2) -> boo
     import shutil
     exe = _find_drawio_cli()
     if exe:
+        # --page-index 0 pins the export to page 1 — multi-page refined output
+        # keeps the messy original as page 2, which must never be the PNG.
         cmd = [exe, "--export", "--format", "png", "--scale", str(scale), "--border", "20",
+               "--page-index", "0",
                "--output", str(png_path), str(drawio_path), "--no-sandbox"]
         # draw.io desktop is an Electron app; on headless Linux (containers) it
         # needs an X server. Wrap in xvfb-run when available.
