@@ -724,7 +724,10 @@ def build_refined(spec: dict, plan: dict | None = None):
         s_cl = node_by_id.get(s, {}).get("cluster")
         t_cl = node_by_id.get(t_, {}).get("cluster")
         if label and s_cl is not None and s_cl == t_cl:
-            label = ""
+            label = ""  # same-zone adjacency is self-evident
+        elif (label and s_cl in main_pos and t_cl in main_pos
+              and abs(main_pos[s_cl] - main_pos[t_cl]) == 1):
+            label = ""  # adjacent main zones follow the backbone L->R
         if key in rep_keys and "(all layers)" not in label:
             label = (label + " (all layers)").strip()
         if cls == "future" and "future" not in label.lower():
