@@ -306,12 +306,34 @@ def build_refined(spec: dict, plan: dict | None = None):
             guard += 1
         return None
 
+    _SUB_ZONES = {"az": "az", "subnet": "subnet", "subnet_public": "subnet",
+                  "subnet_private": "subnet"}
+
+    def _interior_subzone(cid: str, tgt: str) -> dict | None:
+        """The AZ/subnet the node sat in before section-collapse, so the refined
+        page can redraw it as a dashed sub-frame (AZ nesting on the upgrade
+        path). Prefer the AZ level; fall back to the closest subnet."""
+        cur, best, guard = cid, None, 0
+        while cur and cur != tgt and guard < 20:
+            zk = _SUB_ZONES.get(str((clusters.get(cur) or {}).get("zone") or "").lower())
+            if zk == "az":
+                return {"id": cur, "label": clusters[cur].get("label") or cur, "kind": "az"}
+            if zk == "subnet" and best is None:
+                best = {"id": cur, "label": clusters[cur].get("label") or cur, "kind": "subnet"}
+            cur = (clusters.get(cur) or {}).get("parent")
+            guard += 1
+        return best
+
     if numbered:
         for n in nodes:
             cid = n.get("cluster")
             if cid in clusters and cid not in numbered:
                 tgt = _nearest_numbered(cid)
                 if tgt:
+                    if not n.get("subzone"):
+                        sz = _interior_subzone(cid, tgt)
+                        if sz:
+                            n["subzone"] = sz
                     n["cluster"] = tgt
 
     nodes_by_cluster: dict[str, list[dict]] = {}
