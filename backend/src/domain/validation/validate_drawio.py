@@ -939,7 +939,8 @@ def audit_layout_metrics(xml: str, stats: dict | None = None) -> dict:
                 + (c["wp"] or [])
                 + [on_pt(tg, _num(c["style"], "entryX"), _num(c["style"], "entryY"))])
         polys.append({"pts": poly, "src": c["source"], "tgt": c["target"],
-                      "label": (c["value"] or "").strip()})
+                      "label": (c["value"] or "").strip(),
+                      "label_offset": c.get("label_offset")})
     crossings = 0
     for i in range(len(polys)):
         for j in range(i + 1, len(polys)):
