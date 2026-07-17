@@ -348,12 +348,18 @@ def build_refined(spec: dict, plan: dict | None = None):
                     font_color=RT.INK["muted"], fs=RT.TYPE_SCALE["backbone"],
                     arc=RT.GEO["arc_zone"], ob=True)
 
-    # ---- edges ---- #
+    # ---- edges (honouring the layout plan's hub bundling, like topology) ---- #
+    plan = plan or {}
+    suppressed = {tuple(x) for x in plan.get("suppressed_edges", [])}
+    rep_keys = {tuple(b.get("rep") or []) for b in plan.get("edge_bundles", [])}
     for e in edges:
         s, t_ = e.get("from"), e.get("to")
         sid = s if s in d.R else (f"zone_{s}" if f"zone_{s}" in d.R else s)
         tid = t_ if t_ in d.R else (f"zone_{t_}" if f"zone_{t_}" in d.R else t_)
         if sid not in d.R or tid not in d.R:
+            continue
+        key = (s, t_, e.get("label") or "")
+        if key in suppressed:
             continue
         cls = _edge_class(e)
         color, width, dashed = RT.EDGE_CLASSES[cls]
