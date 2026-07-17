@@ -46,10 +46,12 @@ def _overlap(a: tuple, b: tuple) -> bool:
     return ax < bx + bw and bx < ax + aw and ay < by + bh and by < ay + ah
 
 
-# Decorative card sub-cells (drop-shadow / accent bar, native builder card()):
-# they intentionally overlap their card, so exclude them from geometry/overlap/
-# edge-intersection audits or every card would flag a false overlap.
-_DECOR_SUFFIXES = ("__sh", "__ac", "__pill")
+# Decorative card sub-cells (drop-shadow / accent bar / logo badge): they
+# intentionally overlap their card, so exclude them from geometry/overlap/
+# edge-intersection audits or every card would flag a false overlap. __ic is a
+# card's own logo — in the flat refined preset it sits at parent="1" over its
+# card, so it must be treated as decor here, not counted as a colliding card.
+_DECOR_SUFFIXES = ("__sh", "__ac", "__pill", "__ic")
 
 
 def _is_refined_chrome(cid: str | None) -> bool:
