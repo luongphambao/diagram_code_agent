@@ -141,8 +141,15 @@ def _diagram_gate_note(*, block: bool = False) -> str:
     drawio_path = current_workspace() / "out.drawio"
     if not drawio_path.exists():
         return ""
+    import json as _json
+    stats = {}
     try:
-        result = validate_file(str(drawio_path))
+        stats_path = current_workspace() / "out.native_stats.json"
+        stats = _json.loads(stats_path.read_text(encoding="utf-8")) if stats_path.exists() else {}
+    except Exception:
+        pass
+    try:
+        result = validate_file(str(drawio_path), stats=stats)
         findings = findings_from_validation(result)
     except Exception:
         return ""
@@ -150,16 +157,16 @@ def _diagram_gate_note(*, block: bool = False) -> str:
     # preservation + routing residuals) from the last export.
     scorecard_note = ""
     try:
-        import json as _json
         from domain.validation.validate_drawio import production_scorecard
-        stats_path = current_workspace() / "out.native_stats.json"
-        stats = _json.loads(stats_path.read_text(encoding="utf-8")) if stats_path.exists() else {}
         sc = production_scorecard(result, stats)
         verdict = ("PASS" if sc["pass"]
                    else "BELOW GATE (need >=85, semantic & relationship = 100%)")
+        bd = sc.get("breakdown", {})
         scorecard_note = (f"\n\nPRODUCTION SCORECARD: {sc['total']}/100 — {verdict} "
                           f"(semantic {int(sc['node_recall'] * 100)}%, "
-                          f"relationship {int(sc['edge_recall'] * 100)}%).")
+                          f"relationship {int(sc['edge_recall'] * 100)}%, "
+                          f"composition {bd.get('composition', '?')}/10, "
+                          f"iconography {bd.get('iconography', '?')}/10).")
     except Exception:
         pass
     try:
