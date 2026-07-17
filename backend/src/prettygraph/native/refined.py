@@ -406,6 +406,15 @@ def build_refined(spec: dict, plan: dict | None = None):
     plan = plan or {}
     suppressed = {tuple(x) for x in plan.get("suppressed_edges", [])}
     rep_keys = {tuple(b.get("rep") or []) for b in plan.get("edge_bundles", [])}
+    node_by_id = {n["id"]: n for n in nodes}
+    side_set = set(sides)
+
+    def _ectx(nid: str) -> tuple[str, bool]:
+        n = node_by_id.get(nid) or {}
+        cid = n.get("cluster")
+        c = clusters.get(cid) or {}
+        txt = f"{n.get('label') or ''} {c.get('label') or ''}"
+        return txt, cid in side_set
     for e in edges:
         s, t_ = e.get("from"), e.get("to")
         sid = s if s in d.R else (f"zone_{s}" if f"zone_{s}" in d.R else s)
@@ -415,7 +424,10 @@ def build_refined(spec: dict, plan: dict | None = None):
         key = (s, t_, e.get("label") or "")
         if key in suppressed:
             continue
-        cls = _edge_class(e)
+        s_txt, s_side = _ectx(s)
+        t_txt, t_side = _ectx(t_)
+        cls = _edge_class(e, {"s_txt": s_txt, "t_txt": t_txt,
+                              "s_side": s_side, "t_side": t_side})
         color, width, dashed = RT.EDGE_CLASSES[cls]
         if cls in RT.EDGE_LEGEND_LABELS and cls not in legend_flows:
             legend_flows.append(cls)
