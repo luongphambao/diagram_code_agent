@@ -482,16 +482,16 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     if refined and spec.get("source_page"):
         name = "01 — Refined Architecture"  # page name; the title cell keeps diagram_title
     if refined:
-        # Refined preset is icon-free by design — skip icon fallback embedding,
-        # and dump the design tokens next to the render (playbook §19).
+        # Dump the design tokens next to the render (playbook §19).
         try:
             from prettygraph.native import refined_theme
             (workspace / "design_tokens.json").write_text(
                 json.dumps(refined_theme.as_json(), indent=2), encoding="utf-8")
         except Exception:  # noqa: BLE001
             pass
-    else:
-        _attach_icon_fallbacks(spec, workspace)
+    # Attach vendor logos to nodes (both presets) — refined draws each as a small
+    # top-right badge on its component card.
+    _attach_icon_fallbacks(spec, workspace)
     # Layout analysis (0 LLM tokens): edge-aware band order, hub edge bundling,
     # aspect-aware grid columns. Best-effort — a failed analysis renders unplanned.
     plan = None
