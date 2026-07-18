@@ -456,7 +456,7 @@ def build_refined(spec: dict, plan: dict | None = None):
     margin = RT.GEO["margin"]
 
     # Vendor-logo resolution: an attached icon_data_uri (GCP/Azure raster, set by
-    # _attach_icon_fallbacks) wins; otherwise resolve a native catalog stencil
+    # _bake_icon_plan) wins; otherwise resolve a native catalog stencil
     # (AWS). Cards render whichever as a small top-right badge.
     provider = str(spec.get("provider") or "").lower()
     try:
