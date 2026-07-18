@@ -279,7 +279,10 @@ class Diagram:
             # Logo on the LEFT, aligned with the title row (top). draw.io splits
             # style strings on ';', so a "data:...;base64," URI must drop the
             # ";base64" marker to survive (mxGraph still decodes the bare form).
-            ix, iy = round(xy[0] + 12), round(xy[1] + 13)
+            # centre the badge vertically within the card's first ~64px so a
+            # 38px logo stays inside short cards instead of hanging past them.
+            ix = round(xy[0] + 10)
+            iy = round(xy[1] + max(8, (min(wh[1], 64) - ic) // 2))
             if image_data_uri:
                 safe = image_data_uri.replace(";base64,", ",", 1)
                 istyle = f"shape=image;html=1;imageAspect=1;aspect=fixed;image={safe};"
