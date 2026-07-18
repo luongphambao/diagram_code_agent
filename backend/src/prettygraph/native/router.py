@@ -723,7 +723,7 @@ def _solve_label_offset(d, label: str, pts: list[dict],
     overprint reads as garbage text in the export)."""
     mid = _path_mid(pts)
     lw = max(30.0, len(label) * 6.6)
-    lh = 16.0
+    lh = 14.0  # matches validate_drawio's edge-label-overlap estimate
     boxes = getattr(d, "_label_boxes", None)
     if boxes is None:
         boxes = d._label_boxes = []
