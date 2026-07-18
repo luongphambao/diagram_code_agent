@@ -869,8 +869,11 @@ def build_refined(spec: dict, plan: dict | None = None):
     if scope_note:
         legend_w += 360
     legend_w = min(legend_w, page_w - 2 * margin)
+    # Swatch row only -> shallow band; the 145px default exists for the
+    # scope/metadata cards.
+    legend_h = 145 if (meta_html or scope_note) else 100
     d.legend_band("footer", [margin, fy], legend_w, entries,
-                  scope_note=scope_note, metadata=meta_html)
+                  scope_note=scope_note, metadata=meta_html, h=legend_h)
 
     # ---- background + page ---- #
     page_h = max(900, fy + 145 + 35)
