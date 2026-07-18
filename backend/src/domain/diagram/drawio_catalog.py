@@ -162,7 +162,8 @@ def _score_entry(entry: dict, q_tokens: list[str], q_raw: str) -> int:
         # the entry name IS one of the query words — an exact product hit
         # ("SQS FIFO Queue" -> entry "sqs"). Without this, short canonical
         # names score below verbose partial matches and the icon is lost.
-        score += 60
+        # Earlier tokens outrank later ones ("S3 Bucket": entry "s3" > "bucket").
+        score += max(40, 60 - 4 * q_tokens.index(name))
     name_words = name.split(" ")
     for t in q_tokens:
         if not t:
