@@ -1410,25 +1410,34 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
 
     # Composition: ratio inside the target band = full marks, linear
     # falloff outside (0 at ratio 1.0 / 2.6); dense fallback is a real miss.
-    ratio = metrics.get("ratio")
-    lo, hi = target["ratio"]
-    if ratio is None:
+    # A pool has no aspect-ratio dial for the author to get right (it auto-
+    # sizes to lanes x phases), so BPMN skips this dimension entirely.
+    if bpmn:
         composition = 10.0
-    elif lo <= ratio <= hi:
-        composition = 10.0
-    elif ratio < lo:
-        composition = 10.0 * max(0.0, (ratio - 1.0) / (lo - 1.0))
     else:
-        composition = 10.0 * max(0.0, (2.6 - ratio) / (2.6 - hi))
-    if metrics.get("dense_fallback"):
-        composition -= 4.0
-    fill = metrics.get("page_fill")
-    if fill is not None and fill < 0.40:
-        composition -= 4.0
-    elif fill is not None and fill < 0.55:
-        composition -= 2.0
+        ratio = metrics.get("ratio")
+        lo, hi = target["ratio"]
+        if ratio is None:
+            composition = 10.0
+        elif lo <= ratio <= hi:
+            composition = 10.0
+        elif ratio < lo:
+            composition = 10.0 * max(0.0, (ratio - 1.0) / (lo - 1.0))
+        else:
+            composition = 10.0 * max(0.0, (2.6 - ratio) / (2.6 - hi))
+        if metrics.get("dense_fallback"):
+            composition -= 4.0
+        fill = metrics.get("page_fill")
+        if fill is not None and fill < 0.40:
+            composition -= 4.0
+        elif fill is not None and fill < 0.55:
+            composition -= 2.0
 
-    if refined:
+    if bpmn:
+        # No icon-coverage concept for a pool — neutral (matches the "absent
+        # metrics score neutral" convention used everywhere else).
+        iconography = 10.0
+    elif refined:
         # Refined carries full-color baked icons now — icon coverage is 60% of
         # the dimension (below 0.95 means the bake/fallback chain regressed),
         # topped up with structure points: backbone 1.5 + numbering 1.5
