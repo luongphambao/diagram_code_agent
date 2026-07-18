@@ -71,8 +71,20 @@ def _is_refined_container(cid: str | None) -> bool:
                           or cid in ("footer", "backbone"))
 
 
+_RE_POOL_CHROME = re.compile(r"__(band|lane|phase)\d+$")
+
+
+def _is_pool_chrome(cid: str | None) -> bool:
+    """BPMN pool lane bands / lane labels / phase headers (layout_engine.py
+    _emit_pool) are siblings of the steps parented to the SAME pool id
+    (``_emit(d, c, n["id"])``), so they legitimately overlap every step placed
+    in their cell — the sibling-overlap check must not flag that as a defect."""
+    return bool(cid) and bool(_RE_POOL_CHROME.search(cid))
+
+
 def _is_decor(cid: str | None) -> bool:
-    return bool(cid) and (cid.endswith(_DECOR_SUFFIXES) or _is_refined_chrome(cid))
+    return bool(cid) and (cid.endswith(_DECOR_SUFFIXES) or _is_refined_chrome(cid)
+                          or _is_pool_chrome(cid))
 
 
 def _primary_model(xml: str) -> str:
