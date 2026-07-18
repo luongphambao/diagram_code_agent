@@ -579,6 +579,9 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
     # knows one arrow stands for the whole fan-out.
     suppressed = {tuple(x) for x in plan.get("suppressed_edges", [])}
     rep_keys = {tuple(b.get("rep") or []) for b in plan.get("edge_bundles", [])}
+    rep_pair_count = {tuple(b.get("rep") or []): len(b.get("members") or []) + 1
+                      for b in plan.get("edge_bundles", [])
+                      if b.get("kind") == "pair"}
     flows_seen: list[str] = []
     for e in spec.get("edges", []):
         s, t = e.get("from"), e.get("to")
@@ -587,7 +590,11 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
             key = (s, t, label)
             if key in suppressed:
                 continue
-            if key in rep_keys and "(all layers)" not in label:
+            if key in rep_pair_count:
+                n = rep_pair_count[key]
+                if f"×{n}" not in label:
+                    label = (label + f" (×{n} flows)").strip()
+            elif key in rep_keys and "(all layers)" not in label:
                 label = (label + " (all layers)").strip()
             flow = str(e.get("flow") or "").lower()
             fc = FLOW_COLORS.get(flow)
