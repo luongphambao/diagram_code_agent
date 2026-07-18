@@ -83,7 +83,29 @@ def _variants_for(plan: dict | None, spec: dict,
     for (each candidate costs a full engine build; typical case adds 0-2)."""
     if not plan:
         return []
-    out: list[tuple[str, dict | None]] = []
+    if str(spec.get("style_preset") or "").lower() == "refined":
+        # The refined page template ignores band_cols — its knobs are zones
+        # per main row and whether the ops shelves pack across the full
+        # content width. Symptom-gate like the band variants below.
+        out: list[tuple[str, dict | None]] = []
+        ratio = baseline_metrics.get("ratio")
+        cur_zpr = int(plan.get("refined_zones_per_row") or 6)
+        if ratio is not None and ratio > 2.1:
+            for zpr in (4, 5):
+                if zpr < cur_zpr:
+                    v = copy.deepcopy(plan)
+                    v["refined_zones_per_row"] = zpr
+                    out.append((f"zpr{zpr}", v))
+        elif ratio is not None and ratio < 1.5 and cur_zpr < 6:
+            v = copy.deepcopy(plan)
+            v["refined_zones_per_row"] = 6
+            out.append(("zpr6", v))
+        if (baseline_metrics.get("page_fill") or 1.0) < 0.5:
+            v = copy.deepcopy(plan)
+            v["refined_ops_pack"] = not plan.get("refined_ops_pack", True)
+            out.append(("ops-pack-toggle", v))
+        return out[:_MAX_CANDIDATES - 2]
+    out = []
     lo, hi = 1.3, 1.9
     ratio = baseline_metrics.get("ratio")
     wrappable = _wrappable_bands(plan, spec)
