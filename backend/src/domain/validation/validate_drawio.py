@@ -1256,20 +1256,26 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
         composition = 10.0 * max(0.0, (2.6 - ratio) / (2.6 - hi))
     if metrics.get("dense_fallback"):
         composition -= 4.0
-    if (metrics.get("page_fill") or 1.0) < 0.5:
+    fill = metrics.get("page_fill")
+    if fill is not None and fill < 0.40:
+        composition -= 4.0
+    elif fill is not None and fill < 0.55:
         composition -= 2.0
 
     if refined:
-        # Typographic-structure score stands in for iconography (10 pts):
-        # backbone 3 + numbering 3 (sequential 2, count in band 1) + glue 2 +
-        # legend-covers-edge-classes 2.
+        # Refined carries full-color baked icons now — icon coverage is 60% of
+        # the dimension (below 0.95 means the bake/fallback chain regressed),
+        # topped up with structure points: backbone 1.5 + numbering 1.5
+        # (sequential 1, count in band 0.5) + legend-covers-edge-classes 1.
         zlo, zhi = REFINED_TARGET["zones"]
+        coverage = metrics.get("icon_coverage")
+        cov_pts = 6.0 if coverage is None else 6.0 * min(1.0, coverage / 0.95)
         iconography = (
-            (3.0 if metrics.get("backbone_present") else 0.0)
-            + (2.0 if metrics.get("zone_numbers_sequential") else 0.0)
-            + (1.0 if zlo <= (metrics.get("zone_count") or 0) <= zhi else 0.0)
-            + (2.0 if (metrics.get("glue_notes") or 0) >= 1 else 0.0)
-            + (2.0 if metrics.get("legend_covers_edge_classes") else 0.0))
+            cov_pts
+            + (1.5 if metrics.get("backbone_present") else 0.0)
+            + (1.0 if metrics.get("zone_numbers_sequential") else 0.0)
+            + (0.5 if zlo <= (metrics.get("zone_count") or 0) <= zhi else 0.0)
+            + (1.0 if metrics.get("legend_covers_edge_classes") else 0.0))
     else:
         coverage = metrics.get("icon_coverage")
         iconography = 10.0 if coverage is None else 10.0 * min(
