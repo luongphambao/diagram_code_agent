@@ -559,8 +559,11 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
         xml, stats = build_drawio_from_spec(spec, name, flat=False, plan=None)
         out.write_text(xml, encoding="utf-8")
         try:
-            from prettygraph.native.repair import semantic_stats
-            stats["semantic"] = semantic_stats(spec, xml, None)
+            from domain.validation.validate_drawio import check_semantic_preservation
+            process = spec.get("process") or {}
+            step_ids = [s.get("id") for s in (process.get("steps") or [])]
+            flow_pairs = [(f.get("from"), f.get("to")) for f in (process.get("flows") or [])]
+            _, stats["semantic"] = check_semantic_preservation(step_ids, flow_pairs, xml)
         except Exception:  # noqa: BLE001
             pass
         _render_drawio_png(out, workspace / "out.png")
