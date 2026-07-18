@@ -659,6 +659,7 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     except Exception:  # noqa: BLE001 — best-effort, never block a render
         pass
     _render_drawio_png(out, workspace / "out.png")
+    stats["fallback_icons"] = int(spec.get("_fallback_icons") or 0)
     try:  # persist stats so the diagram gate / finalize can score without the spec
         (workspace / "out.native_stats.json").write_text(
             json.dumps(stats), encoding="utf-8")
