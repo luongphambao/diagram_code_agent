@@ -811,7 +811,7 @@ def build_refined(spec: dict, plan: dict | None = None):
                style_extra=(f"strokeWidth={width};endArrow=block;endFill=1;"
                             f"fontFamily={RT.FONT};fontSize={RT.TYPE_SCALE['edge']};"
                             f"fontColor={RT.INK['body']};labelBackgroundColor=#FFFFFF;"))
-        if (cls == "data" and not str(sid).startswith("zone_")
+        if ((cls == "data" or sequence_mode) and not str(sid).startswith("zone_")
                 and not str(tid).startswith("zone_")):
             data_chain.append((sid, tid))
 
