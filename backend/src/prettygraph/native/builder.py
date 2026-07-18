@@ -260,8 +260,10 @@ class Diagram:
             label += "<br><br>" + "<br>".join(_esc(l) for l in lines)
         va = "top" if align == "left" else "middle"
         has_icon = bool(icon_name or image_data_uri) and align == "left"
-        ic = 26                       # left logo size
-        pad_l = ic + 16               # text indent so it clears the logo
+        # Left logo size: 38px keeps official full-color icons legible — at 26px
+        # AWS category icons collapse into indistinguishable color chips.
+        ic = 38
+        pad_l = ic + 14               # text indent so it clears the logo
         style = (f"rounded=1;arcSize={RT.GEO['arc_zone']};html=1;whiteSpace=wrap;"
                  f"fillColor={fill or RT.CHROME['card_fill']};"
                  f"strokeColor={stroke or '#D0D5DD'};"
