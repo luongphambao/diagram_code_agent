@@ -157,34 +157,54 @@ _CTRL_RX = re.compile(r"\biam\b|identity|least.priv|access|policy|permission"
                       r"|secret|auth", re.I)
 
 
-def _label_offset(src_r: dict, tgt_r: dict, top_bound: float | None) -> tuple[float, float] | None:
+def _label_box_free(cx: float, cy: float, label: str,
+                    card_rects: list[dict]) -> bool:
+    """True when a label box centred at (cx, cy) clears every card. Box size
+    mirrors validate_drawio's edge-label estimate (6.6px/char × 14px)."""
+    w = max(30.0, len(label) * 6.6)
+    x0, x1 = cx - w / 2, cx + w / 2
+    y0, y1 = cy - 8, cy + 8
+    for r in card_rects:
+        if (x0 < r["x"] + r["w"] and x1 > r["x"]
+                and y0 < r["y"] + r["h"] and y1 > r["y"]):
+            return False
+    return True
+
+
+def _label_offset(src_r: dict, tgt_r: dict, top_bound: float | None,
+                  label: str = "",
+                  card_rects: list[dict] | None = None) -> tuple[float, float] | None:
     """Nudge a same-row edge label off the direct line so it clears the source/
     target cards instead of sitting on top of them (the raw-midpoint default —
     fine for the reference's generous card gaps, not for tightly-packed
     upgraded layouts). Horizontal-dominant edges only: label goes into the open
-    strip above the row (below the row if that strip is inside the zone tab).
-    Vertical-dominant edges are left alone (minority case, lower risk)."""
+    strip above the row (below the row if that strip is inside the zone tab),
+    and the chosen strip is verified card-free when card_rects are supplied.
+    Vertical-dominant and long cross-band edges are left to the router: their
+    polylines are now A*-routed through card-free corridors, so the native
+    midpoint placement already sits clear of cards."""
     scx = src_r["x"] + src_r["w"] / 2
     scy = src_r["y"] + src_r["h"] / 2
     tcx = tgt_r["x"] + tgt_r["w"] / 2
     tcy = tgt_r["y"] + tgt_r["h"] / 2
     if abs(tcx - scx) < abs(tcy - scy):
-        return None  # vertical-dominant: unnudged
+        return None  # vertical-dominant: routed corridor placement
     if abs(tcy - scy) > 80:
-        # Not really "same row" — a long cross-band edge routes via detour
-        # waypoints the router chooses, so the node-center midpoint this
-        # function assumes no longer approximates where the label actually
-        # renders; nudging against that assumption can fling the label way
-        # off (e.g. up past the title). Leave the router's own placement.
-        return None
+        return None  # long cross-band: routed corridor placement
+    mid_x = (scx + tcx) / 2
     mid_y = (scy + tcy) / 2
     top = min(src_r["y"], tgt_r["y"])
     bottom = max(src_r["y"] + src_r["h"], tgt_r["y"] + tgt_r["h"])
-    want_y = top - 20
-    if top_bound is not None and want_y - 8 < top_bound:
-        want_y = bottom + 18  # no room above (top of zone) -> drop below instead
-    dy = max(-70.0, min(70.0, want_y - mid_y))  # bounded nudge, never a runaway offset
-    return (0.0, dy) if abs(dy) > 1 else None
+    above, below = top - 20, bottom + 18
+    candidates = [above, below] if (top_bound is None or above - 8 >= top_bound) \
+        else [below, above]
+    for want_y in candidates:
+        dy = max(-70.0, min(70.0, want_y - mid_y))  # bounded, never a runaway
+        if abs(dy) <= 1:
+            continue
+        if card_rects is None or _label_box_free(mid_x, mid_y + dy, label, card_rects):
+            return (0.0, dy)
+    return None
 
 
 def _edge_class(e: dict, ctx: dict | None = None) -> str:
