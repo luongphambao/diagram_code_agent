@@ -309,6 +309,7 @@ def _build_render_spec(blueprint: Blueprint, provider: str) -> dict:
         "brand": blueprint.brand,
         "diagram_title": blueprint.diagram_title,
         "legend": legend,
+        "hub": blueprint.hub,
         "nodes": [
             {"id": n.id, "label": n.label, "tech": n.tech, "cluster": n.cluster, "type": n.type}
             for n in blueprint.nodes
