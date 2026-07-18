@@ -237,7 +237,7 @@ def search_icon(cat: Catalog, query: str, category: str | None = None,
                 limit: int = 8, kind: str | None = None) -> list[dict]:
     """Search for an icon/group by keyword; returns ranked decorated entries."""
     q_raw = _norm(query)
-    q_tokens = [t for t in q_raw.split(" ") if t]
+    q_tokens = expand_tokens([t for t in q_raw.split(" ") if t])
     cat_filter = _norm(category) if category else None
     ranked: list[tuple[dict, int]] = []
     for entry in cat.by_name.values():
