@@ -781,13 +781,20 @@ def audit_production_polish(xml: str) -> list[str]:
             f"{len(edge_colors)} edge colours but NO legend — add a legend box "
             "mapping each colour/dash to its flow meaning.")
 
-    # 3) Icon coverage: too many plain boxes among leaf nodes. Not applicable
-    # to the refined preset (typographic, icon-free by design).
+    # 3) Icon coverage: too many plain boxes among leaf nodes. Applies to BOTH
+    # presets — refined cards carry a baked "<card>__ic" badge cell (parented
+    # to the root, hence the sibling-id check).
     leaves = [c for c in vertices if c["id"] not in has_children
               and (c["geo"]["w"] or 0) >= 40 and (c["geo"]["h"] or 0) >= 30]
-    if len(leaves) >= 5 and not refined:
+    if len(leaves) >= 5:
+        badge_owner = {k["id"][:-4] for k in cells
+                       if str(k.get("id") or "").endswith("__ic")
+                       and re.search(r"resIcon=|image=data:|shape=mxgraph\.", k["style"])}
+
         def _has_icon(c):
             if re.search(r"resIcon=|image=data:|shape=mxgraph\.", c["style"]):
+                return True
+            if c["id"] in badge_owner:
                 return True
             return any(k.get("parent") == c["id"]
                        and re.search(r"resIcon=|image=data:", k["style"])
