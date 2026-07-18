@@ -746,7 +746,11 @@ def _solve_label_offset(d, label: str, pts: list[dict],
         cands.append((float(want[0]), float(want[1])))
     cands += [(0, 0), (0, -22), (0, 22), (-52, 0), (52, 0), (0, -44), (0, 44),
               (-88, 0), (88, 0), (-52, -22), (52, -22), (-52, 22), (52, 22),
-              (-88, -22), (88, -22), (-124, 0), (124, 0)]
+              (-88, -22), (88, -22), (-124, 0), (124, 0),
+              # tight vertical row-gaps need a bigger jump to clear the NEXT
+              # row entirely rather than nudging a few px into it
+              (0, -66), (0, 66), (0, -90), (0, 90), (-52, -44), (52, -44),
+              (-52, 44), (52, 44)]
     chosen = None
     for c in cands:
         if _overlap(*c) == 0.0:
