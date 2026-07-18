@@ -727,24 +727,33 @@ def _solve_label_offset(d, label: str, pts: list[dict],
         boxes = d._label_boxes = []
     obstacles = [r for r in d.R.values() if r.get("ob")]
 
-    def _free(dx: float, dy: float) -> bool:
+    def _overlap(dx: float, dy: float) -> float:
+        """Total intersection area with obstacle cards and placed labels."""
         x0, y0 = mid["x"] + dx - lw / 2, mid["y"] + dy - lh / 2
+        area = 0.0
         for rr in obstacles:
-            if (x0 < rr["x"] + rr["w"] and x0 + lw > rr["x"]
-                    and y0 < rr["y"] + rr["h"] and y0 + lh > rr["y"]):
-                return False
+            area += (max(0.0, min(x0 + lw, rr["x"] + rr["w"]) - max(x0, rr["x"]))
+                     * max(0.0, min(y0 + lh, rr["y"] + rr["h"]) - max(y0, rr["y"])))
         for bx, by, bw, bh in boxes:
-            if (x0 < bx + bw and x0 + lw > bx
-                    and y0 < by + bh and y0 + lh > by):
-                return False
-        return True
+            area += (max(0.0, min(x0 + lw, bx + bw) - max(x0, bx))
+                     * max(0.0, min(y0 + lh, by + bh) - max(y0, by)))
+        return area
 
     cands: list[tuple[float, float]] = []
     if want:
         cands.append((float(want[0]), float(want[1])))
-    cands += [(0, 0), (0, -22), (0, 22), (-52, 0), (52, 0), (0, -44), (0, 44)]
-    chosen = next((c for c in cands if _free(*c)),
-                  (float(want[0]), float(want[1])) if want else (0.0, 0.0))
+    cands += [(0, 0), (0, -22), (0, 22), (-52, 0), (52, 0), (0, -44), (0, 44),
+              (-88, 0), (88, 0), (-52, -22), (52, -22), (-52, 22), (52, 22),
+              (-88, -22), (88, -22), (-124, 0), (124, 0)]
+    chosen = None
+    for c in cands:
+        if _overlap(*c) == 0.0:
+            chosen = c
+            break
+    if chosen is None:
+        # Nothing fully clears — take the least-bad position instead of piling
+        # onto the raw midpoint (a garbled overprint is the worst outcome).
+        chosen = min(cands, key=lambda c: _overlap(*c))
     boxes.append((mid["x"] + chosen[0] - lw / 2,
                   mid["y"] + chosen[1] - lh / 2, lw, lh))
     return chosen if chosen != (0.0, 0.0) else None
