@@ -777,7 +777,11 @@ def build_refined(spec: dict, plan: dict | None = None):
         elif (label and s_cl in main_pos and t_cl in main_pos
               and abs(main_pos[s_cl] - main_pos[t_cl]) == 1):
             label = ""  # adjacent main zones follow the backbone L->R
-        if key in rep_keys and "(all layers)" not in label:
+        if key in rep_pair_count:
+            n = rep_pair_count[key]
+            if f"×{n}" not in label:
+                label = (label + f" (×{n} flows)").strip()
+        elif key in rep_keys and "(all layers)" not in label:
             label = (label + " (all layers)").strip()
         if cls == "future" and "future" not in label.lower():
             label = (label + " (future)").strip()
