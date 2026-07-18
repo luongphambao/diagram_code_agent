@@ -157,6 +157,11 @@ def _score_entry(entry: dict, q_tokens: list[str], q_raw: str) -> int:
         score += 100
     if name.replace(" ", "") == q_raw.replace(" ", ""):
         score += 60
+    if name in q_tokens:
+        # the entry name IS one of the query words — an exact product hit
+        # ("SQS FIFO Queue" -> entry "sqs"). Without this, short canonical
+        # names score below verbose partial matches and the icon is lost.
+        score += 60
     name_words = name.split(" ")
     for t in q_tokens:
         if not t:
