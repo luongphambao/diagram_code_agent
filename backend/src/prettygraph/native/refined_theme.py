@@ -1,10 +1,12 @@
 """Design tokens for the "refined" typographic preset (playbook look).
 
-Single source of truth for the refined style — the flat, icon-free,
-document-grade look from General_Drawio_Optimization_Playbook.md and the
-deepstream_aws_architecture_refined.drawio reference: numbered tinted zones
-with folder-tab pills, white cards with bold heading + short body lines,
-semantic edge classes, legend footer, 1920x1080 canvas.
+Single source of truth for the refined style — the flat, document-grade look
+from General_Drawio_Optimization_Playbook.md, upgraded to the client-deliverable
+standard: neutral near-white zones with restrained accent tabs (≤3 hues: navy
+for the main flow, slate for ops/governance, green for outcomes), white cards
+with a 38px full-color vendor icon + bold heading + short body lines, semantic
+edge classes (secondary flows visually recessive), legend footer, 1920x1080
+canvas. The full-color icons carry the color story; zone chrome stays quiet.
 
 Deliberately PLAIN HEX (no light-dark() wrappers, unlike theme.py): the
 reference recipe paints an explicit white background cell, so dark-mode
