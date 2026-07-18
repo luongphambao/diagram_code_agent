@@ -1210,6 +1210,7 @@ def audit_xml(xml: str, profile: str = "auto") -> list[str]:
     advice += audit_geometry(xml)
     advice += audit_edges(xml)
     advice += audit_bpmn(xml)
+    advice += audit_architecture(xml)
     return advice
 
 
