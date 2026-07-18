@@ -1461,12 +1461,19 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
         "semantic_completeness": 25.0 * node_recall,
         # 2. Relationship correctness — every renderable edge survived, no dangling.
         "relationship_correctness": 0.0 if edge_struct_err else 15.0 * edge_recall,
-        # 3. Connector readability — geometric crossings + overlong edges + tangle advice.
+        # 3. Connector readability — geometric crossings + overlong edges + tangle
+        # advice; BPMN additionally pays for audit_bpmn semantic defects (a
+        # gateway that doesn't split/merge, a connected start/end, orphan flow
+        # objects) — the structural-correctness signal a pool has instead of
+        # the routing/composition checks that don't apply to it.
         "connector_readability": (15.0 - cross_pen - long_pen
                                   - 1.0 * min(2, _hits(advice, "crossing", "tangled",
-                                                       "detour", "long connector"))),
-        # 4. Layer clarity — tinted bands / legend (polish flags the gaps).
-        "layer_clarity": 10.0 - 5.0 * _hits(polish, "untinted", "band", "layer", "legend"),
+                                                       "detour", "long connector"))
+                                  - (3.0 * min(3, _hits(advice, "bpmn")) if bpmn else 0.0)),
+        # 4. Layer clarity — tinted bands / legend (polish flags the gaps); N/A
+        # for a BPMN pool (no layer bands or legend concept).
+        "layer_clarity": (10.0 if bpmn else
+                          10.0 - 5.0 * _hits(polish, "untinted", "band", "layer", "legend")),
         # 5. Spacing/typography — CARD COLLISIONS dominate; label collisions + tiny
         # fonts; refined additionally pays for over-long card body lines (§12.4).
         "spacing_alignment": (10.0 - 3.0 * collisions - label_pen
