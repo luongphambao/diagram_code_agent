@@ -242,12 +242,22 @@ def _decorate(cat: Catalog, entry: dict, score: int | None = None) -> dict:
 
 def search_icon(cat: Catalog, query: str, category: str | None = None,
                 limit: int = 8, kind: str | None = None) -> list[dict]:
-    """Search for an icon/group by keyword; returns ranked decorated entries."""
+    """Search for an icon/group by keyword; returns ranked decorated entries.
+
+    BPMN stencils (bpmn_*) are excluded from generic search — "gateway"/"task"/
+    "user" queries from architecture specs would otherwise resolve to a BPMN
+    diamond/rounded-rect instead of the intended cloud icon. Only a query that
+    itself mentions "bpmn" (or an explicit category="BPMN" filter) can surface
+    them, mirroring how the BPMN builder looks up its own stencils by exact name.
+    """
     q_raw = _norm(query)
     q_tokens = [t for t in q_raw.split(" ") if t]
     cat_filter = _norm(category) if category else None
+    want_bpmn = "bpmn" in q_tokens or cat_filter == "bpmn"
     ranked: list[tuple[dict, int]] = []
     for entry in cat.by_name.values():
+        if not want_bpmn and str(entry.get("name") or "").startswith("bpmn_"):
+            continue
         if kind and entry.get("kind") != kind:
             continue
         if cat_filter:
