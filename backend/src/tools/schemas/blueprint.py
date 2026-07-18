@@ -144,6 +144,13 @@ class Blueprint(CoercingModel):
     pillar_coverage: Optional[PillarCoverage] = Field(default=None, description="WAF 6-pillar coverage: addressed_by node IDs + known gaps per pillar")
     nfr_mapping: list[NFRMapping] = Field(default_factory=list, description="each NFR mapped to mechanism and node_ids; use measurable NFRs (SLA%, latency ms)")
     legend: list[LegendEntry] = Field(default_factory=list, description="legend rows per flow category; empty=auto-derive from edges")
+    hub: str = Field(
+        "",
+        description=(
+            "layout_intent='hub_spoke' ONLY: node id to use as the hub. Empty = "
+            "auto-pick the highest-degree node."
+        ),
+    )
     nodes: list[BPNode] = Field(default_factory=list)
     clusters: list[BPCluster] = Field(default_factory=list)
     edges: list[BPEdge] = Field(default_factory=list)
