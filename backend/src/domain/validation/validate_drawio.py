@@ -753,8 +753,8 @@ def audit_production_polish(xml: str) -> list[str]:
     cells = [c for c in _parse_cells(xml) if c["id"]]
     by_id = {c["id"]: c for c in cells}
     has_children = {c["parent"] for c in cells if c["parent"]}
-    # Refined typographic preset: icon-free by design, legend rendered as the
-    # "footer" band, zones already tinted — detected by its id conventions.
+    # Refined typographic preset: full-color baked icon badges, legend rendered
+    # as the "footer" band, neutral zones — detected by its id conventions.
     refined = 'id="tab_zone_' in xml or 'id="backbone"' in xml
     is_text = lambda c: bool(re.search(r"(?:^|;)(text|line);", c["style"])) \
         or (c["id"] or "").startswith(("__title", "__legend"))
