@@ -316,6 +316,11 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
     order, per-band grid columns and hub edge bundling. Every plan key is
     optional; plan=None is byte-identical to the unplanned build.
     """
+    if spec.get("process"):
+        # BPMN swimlane process — a distinct diagram family (pool/lane/phase),
+        # never routed through the architecture cluster-nesting logic below or
+        # through the refined preset (the pool IS the presentation).
+        return _build_bpmn_tree(spec, flat=flat)
     if str(spec.get("style_preset") or "").lower() == "refined":
         # Refined typographic preset (playbook look): its own page-template
         # composition — handles zones, edges and legend itself, same
