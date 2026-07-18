@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 
+import httpx
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
