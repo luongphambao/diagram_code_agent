@@ -981,8 +981,18 @@ def audit_layout_metrics(xml: str, stats: dict | None = None) -> dict:
     icon_coverage = None
     leaves = [c for c in cards if (box_of(c)["w"] or 0) >= 40 and (box_of(c)["h"] or 0) >= 30]
     if leaves:
+        # A card's icon badge may be a CHILD cell or (refined rich_card) a
+        # SIBLING "<card>__ic" cell parented to the root — match both, and
+        # count catalog stencils and data URIs. Remote image=https:// cells do
+        # NOT count: they render broken (and are flagged as errors elsewhere).
+        badge_owner = {k["id"][:-4] for k in cells
+                       if str(k.get("id") or "").endswith("__ic")
+                       and re.search(r"resIcon=|image=data:|shape=mxgraph\.", k["style"])}
+
         def _has_icon(c):
             if re.search(r"resIcon=|image=data:|shape=mxgraph\.", c["style"]):
+                return True
+            if c["id"] in badge_owner:
                 return True
             return any(k.get("parent") == c["id"]
                        and re.search(r"resIcon=|image=data:", k["style"]) for k in cells)
