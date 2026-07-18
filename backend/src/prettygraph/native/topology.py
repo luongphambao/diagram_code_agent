@@ -522,11 +522,13 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
         # hub_spoke/hierarchy/mesh are node-level topologies with no
         # representation in the refined preset's numbered-zones page
         # template — always force icon preset (log the downgrade so the
-        # caller can see style_preset was overridden).
+        # caller — and build_drawio_from_spec's stats, which reads this same
+        # field — see style_preset was overridden).
         if str(spec.get("style_preset") or "").lower() == "refined":
             spec["_downgrade_note"] = (
                 f'layout_intent="{intent}" has no refined-preset layout — '
                 'rendered with style_preset="icon" instead.')
+        spec["style_preset"] = "icon"
         return _build_exotic_tree(spec, flat, intent)
     if str(spec.get("style_preset") or "").lower() == "refined":
         # Refined typographic preset (playbook look): its own page-template
