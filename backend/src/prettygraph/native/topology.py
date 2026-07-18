@@ -793,8 +793,7 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
                 label = (label + " (all layers)").strip()
             if sequence_mode:
                 seq_i += 1
-                label = f"{seq_i} · {label}".rstrip(" ·") if not label \
-                    else f"{seq_i} · {label}"
+                label = f"{seq_i} · {label}" if label else str(seq_i)
             flow = str(e.get("flow") or "").lower()
             fc = FLOW_COLORS.get(flow)
             if fc and flow not in flows_seen:
