@@ -1223,23 +1223,24 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
     # edge — orthogonal diagrams always have SOME right-angle crossings; what
     # reads as spaghetti is a high crossings-to-edges ratio.
     n_edges = max(1, int(stats.get("edges") or sem.get("source_edges") or 1))
+    # Preset branch first — refined owns its routing and label placement now,
+    # so it pays for defects from the first overlap instead of enjoying the
+    # grace thresholds meant for hand-tuned files.
+    refined = (str(stats.get("style_preset") or "").lower() == "refined"
+               or bool(metrics.get("refined")))
+    target = REFINED_TARGET if refined else PRODUCTION_TARGET
+    cross_grace = 0.3 if refined else 0.5
     if metrics.get("edge_crossings") is not None:
         cross = int(metrics["edge_crossings"])
-        cross_pen = min(9.0, 12.0 * max(0.0, cross / n_edges - 0.5))
+        cross_pen = min(9.0, 12.0 * max(0.0, cross / n_edges - cross_grace))
     else:
         cross = int(stats.get("edge_cross", 0)) + int(stats.get("edge_overlaps", 0))
         cross_pen = min(9.0, 2.0 * cross)
     long_ratio = (metrics.get("long_edges") or 0) / n_edges
     long_pen = min(4.0, 8.0 * max(0.0, long_ratio - 0.35))
     label_ratio = (metrics.get("edge_label_overlaps") or 0) / n_edges
-    label_pen = min(4.0, 12.0 * max(0.0, label_ratio - 0.15))
-
-    # Preset branch: the refined typographic preset trades icon coverage for
-    # structure quality (backbone / numbered zones / glue / legend coverage)
-    # and reads its ratio band from REFINED_TARGET.
-    refined = (str(stats.get("style_preset") or "").lower() == "refined"
-               or bool(metrics.get("refined")))
-    target = REFINED_TARGET if refined else PRODUCTION_TARGET
+    label_pen = (min(4.0, 14.0 * label_ratio) if refined
+                 else min(4.0, 12.0 * max(0.0, label_ratio - 0.15)))
 
     # Composition: ratio inside the target band = full marks, linear
     # falloff outside (0 at ratio 1.0 / 2.6); dense fallback is a real miss.
