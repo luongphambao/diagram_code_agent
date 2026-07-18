@@ -836,4 +836,6 @@ def build_drawio_from_spec(spec: dict, name: str = "Architecture",
         "edge_cross": getattr(d, "_cross", 0),
         "edge_overlaps": getattr(d, "_overlaps", 0),
     }
+    if spec.get("_downgrade_note"):
+        stats["downgrade_note"] = spec["_downgrade_note"]
     return xml, stats
