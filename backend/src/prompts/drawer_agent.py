@@ -73,10 +73,17 @@ production path; the mingrammer/Graphviz flow (steps 5-8) is the OLD path.
   `edit_drawio` budget. Pass `style_preset="icon"` only if the user explicitly
   wants the icon look. Then act on any Lint / semantic-loss warning and
   finalize. Do NOT re-author its XML from scratch.
+- **BPMN / swimlane / business process diagram**: also the native engine.
+  `render_spec.json` has a top-level `process` key (lanes/phases/steps/flows)
+  instead of `nodes`/`clusters`/`edges` — `export_drawio_native()` detects it
+  automatically and builds a swimlane pool with real `mxgraph.bpmn.*` stencils.
+  **SKIP steps 5-8** exactly like an architecture diagram; the mingrammer flow
+  has no BPMN shapes and would render generic boxes instead of BPMN notation.
 - **ONLY** for ERD / UML / flowchart / sequence / code-visualization / free-form
-  graphs that are NOT an infrastructure architecture: use the mingrammer flow
-  (steps 5-8). Graphviz is better for those. Do NOT default to `render_diagram` for
-  an architecture diagram — that is the deprecated path and produces generic boxes.
+  graphs that are NOT an infrastructure architecture and NOT a BPMN process: use
+  the mingrammer flow (steps 5-8). Graphviz is better for those. Do NOT default
+  to `render_diagram` for an architecture or BPMN diagram — that is the
+  deprecated path and produces generic boxes.
 
 ## Your job (execute in order)
 1. Read the relevant skill(s) to understand the API and icon rules. Also read
