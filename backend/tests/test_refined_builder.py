@@ -344,7 +344,10 @@ def test_refined_scorecard_pass_and_structure():
     sc = vd.production_scorecard(report, stats)
     assert sc["style_preset"] == "refined"
     assert sc["target"] is vd.REFINED_TARGET
-    assert sc["breakdown"]["iconography"] >= 8.0  # typographic structure score
+    # Iconography = 6pt icon-coverage blend + 4pt structure. The raw builder
+    # (no icon_plan bake — that happens in _render_native_from_spec) only gets
+    # partial live-catalog coverage, so just the structure floor is guaranteed.
+    assert sc["breakdown"]["iconography"] >= 4.0
     assert sc["node_recall"] == 1.0 and sc["edge_recall"] == 1.0
     assert sc["pass"], sc
 
