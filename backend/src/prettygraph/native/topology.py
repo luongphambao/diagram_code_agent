@@ -248,7 +248,14 @@ def _resolve_node_icon(cat, node: dict, provider: str = "aws") -> str | None:
         # last resort: the first two significant words ("Pub/Sub Commands" ->
         # "pub sub") so role qualifiers don't hide the product name.
         head = " ".join(cleaned.split(" ")[:2])
-        for query in dict.fromkeys((cleaned, raw, head)):  # de-duped, in order
+        # abbreviation rescue LAST: "aws kms" carries no catalog words, so the
+        # expanded form ("kms key management service") is tried only after the
+        # literal queries miss — expanding up front dilutes exact short names
+        # ("waf") under verbose partial matches.
+        expanded = " ".join(_expand_tokens(cleaned.split(" "))) if cleaned else ""
+        queries = dict.fromkeys((cleaned, raw, head,
+                                 expanded if expanded != cleaned else ""))
+        for query in queries:  # de-duped, in order
             if not query:
                 continue
             hits = _search_icon(cat, query, limit=8, kind="icon")
