@@ -165,15 +165,24 @@ def _node_provider(node: dict, default: str) -> str:
     return default
 
 
+def _sig_tokens(query: str) -> tuple[list[str], list[str]]:
+    """(significant, significant-and-non-generic) query tokens, abbreviation-
+    expanded so "AWS KMS" carries key/management/service like the catalog names."""
+    sig = [t for t in re.split(r"[^a-z0-9]+", query.lower())
+           if t and t not in _VENDOR_WORDS]
+    sig = _expand_tokens(sig)
+    return sig, [t for t in sig if t not in _GENERIC_TOKENS]
+
+
 def _pick_hit(hits: list[dict], prefix: str | None, query: str) -> str | None:
     """Choose the best catalog hit while keeping vendor identity honest:
     provider-prefixed packs first, then provider-neutral icons — never another
-    vendor's branded icon."""
+    vendor's branded icon. A hit must share at least one NON-GENERIC significant
+    token with the query (when the query has any): ranked-score alone lets
+    filler words carry a wrong icon, e.g. "Fund Management Service" scoring
+    into key_management_service purely on management+service."""
+    sig, sig_ng = _sig_tokens(query)
     if prefix:  # gcp/azure diagram node
-        # significant tokens = the query minus vendor/filler words; a vendor-pack
-        # hit is accepted at a reduced score only when it contains ALL of them.
-        sig = [t for t in re.split(r"[^a-z0-9]+", query.lower())
-               if t and t not in _VENDOR_WORDS]
         for h in hits:
             if not h["name"].startswith(prefix):
                 continue
@@ -183,8 +192,10 @@ def _pick_hit(hits: list[dict], prefix: str | None, query: str) -> str | None:
             hit = lambda t, _c=compact: t in _c or (len(t) >= 5 and t[:5] in _c)
             if h.get("score", 0) >= _ICON_SCORE_MIN:
                 # strong hit — trust the ranker, but demand at least one
-                # significant token so filler words alone can't match.
-                if not sig or any(hit(t) for t in sig):
+                # significant token (non-generic when the query has one) so
+                # filler words alone can't match.
+                check = sig_ng or sig
+                if not check or any(hit(t) for t in check):
                     return h["name"]
                 continue
             # weak hit: EVERY significant token must appear (5-char stems allow
@@ -199,13 +210,22 @@ def _pick_hit(hits: list[dict], prefix: str | None, query: str) -> str | None:
             if ("mxgraph.aws4" in (h.get("style") or "")
                     and not _GENERIC_AWS_OK.match(h["name"])):
                 continue  # AWS-branded stencil in a non-AWS diagram
+            compact = h["name"].replace("_", "")
+            hit = lambda t, _c=compact: t in _c or (len(t) >= 5 and t[:5] in _c)
+            if sig_ng and not any(hit(t) for t in sig_ng):
+                continue
             return h["name"]
         return None
     for h in hits:  # aws / on-prem: skip the gcp_/azure_ image packs
         if h.get("score", 0) < _ICON_SCORE_MIN:
             break
-        if not h["name"].startswith(("gcp_", "azure_")):
-            return h["name"]
+        if h["name"].startswith(("gcp_", "azure_")):
+            continue
+        compact = h["name"].replace("_", "")
+        hit = lambda t, _c=compact: t in _c or (len(t) >= 5 and t[:5] in _c)
+        if sig_ng and not any(hit(t) for t in sig_ng):
+            continue  # ranked high on generic words only — wrong-icon risk
+        return h["name"]
     return None
 
 
