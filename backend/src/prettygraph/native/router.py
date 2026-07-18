@@ -801,7 +801,6 @@ def _emit_edge(d, e, r, fr, geom) -> None:
     if raw_style:
         st += raw_style if raw_style.endswith(";") else raw_style + ";"
     off_xml = ""
-    label_offset = opts.get("label_offset")
     if label and label_offset:
         # Nudges WHERE THE LABEL RENDERS off the line/midpoint (drawio's native
         # edge-label offset point) without touching the routed polyline itself —
