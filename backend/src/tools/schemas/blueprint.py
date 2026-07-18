@@ -135,3 +135,13 @@ class Blueprint(CoercingModel):
     nodes: list[BPNode] = Field(default_factory=list)
     clusters: list[BPCluster] = Field(default_factory=list)
     edges: list[BPEdge] = Field(default_factory=list)
+    process: Optional[ProcessBlueprint] = Field(
+        None,
+        description=(
+            "Set ONLY for a BPMN swimlane process diagram (business process / "
+            "workflow with roles x phases) — routes rendering to the native BPMN "
+            "builder instead of the architecture nodes/clusters/edges above. "
+            "When set, leave nodes/clusters/edges empty; pattern/density/layout_intent "
+            "are ignored for process diagrams."
+        ),
+    )
