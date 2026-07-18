@@ -308,6 +308,69 @@ def _band_tint(c: dict, i: int) -> tuple[str, str]:
     return stage_fill(i), stage_stroke(i)
 
 
+# step.kind -> prettygraph.native.bpmn creator. Kinds taking a "type" subtype
+# (start/intermediate/end/gateway) pass it through; typed tasks/plain
+# task/sub_process ignore "type" (their creators take no type kwarg).
+_BPMN_CREATORS = {
+    "start": lambda s: _bpmn.start(s["id"], type=s.get("type") or "none",
+                                   lane=s.get("lane", 0), col=s.get("col", 0),
+                                   label=s.get("label", "")),
+    "intermediate": lambda s: _bpmn.intermediate(s["id"], type=s.get("type") or "message",
+                                                 lane=s.get("lane", 0), col=s.get("col", 0),
+                                                 label=s.get("label", "")),
+    "end": lambda s: _bpmn.end(s["id"], type=s.get("type") or "none",
+                               lane=s.get("lane", 0), col=s.get("col", 0),
+                               label=s.get("label", "")),
+    "gateway": lambda s: _bpmn.gateway(s["id"], type=s.get("type") or "exclusive",
+                                       lane=s.get("lane", 0), col=s.get("col", 0),
+                                       label=s.get("label", "")),
+    "task": lambda s: _bpmn.task(s["id"], lane=s.get("lane", 0), col=s.get("col", 0),
+                                 label=s.get("label", "")),
+    "user_task": lambda s: _bpmn.user_task(s["id"], lane=s.get("lane", 0), col=s.get("col", 0),
+                                           label=s.get("label", "")),
+    "service_task": lambda s: _bpmn.service_task(s["id"], lane=s.get("lane", 0), col=s.get("col", 0),
+                                                 label=s.get("label", "")),
+    "manual_task": lambda s: _bpmn.manual_task(s["id"], lane=s.get("lane", 0), col=s.get("col", 0),
+                                               label=s.get("label", "")),
+    "script_task": lambda s: _bpmn.script_task(s["id"], lane=s.get("lane", 0), col=s.get("col", 0),
+                                               label=s.get("label", "")),
+    "business_rule_task": lambda s: _bpmn.business_rule_task(
+        s["id"], lane=s.get("lane", 0), col=s.get("col", 0), label=s.get("label", "")),
+    "sub_process": lambda s: _bpmn.sub_process(s["id"], lane=s.get("lane", 0), col=s.get("col", 0),
+                                               label=s.get("label", "")),
+}
+
+
+def _build_bpmn_tree(spec: dict, flat: bool = False):
+    """Build a native BPMN swimlane pool from spec["process"] (ProcessBlueprint).
+
+    Never composes with the architecture cluster-nesting logic or the refined
+    preset — the pool primitive IS the presentation for a process diagram.
+    """
+    process = spec.get("process") or {}
+    steps = [s for s in (process.get("steps") or []) if s.get("id")]
+    children = []
+    for s in steps:
+        make = _BPMN_CREATORS.get(s.get("kind"))
+        if make is None:
+            continue
+        children.append(make(s))
+    tree = pool("pool", process.get("label") or "", {
+        "lanes": process.get("lanes") or [],
+        "phases": process.get("phases") or [],
+    }, children)
+    d = Diagram("bpmn", contract="bake", flat=flat)
+    render_tree(d, tree)
+    step_ids = {s["id"] for s in steps}
+    for f in process.get("flows") or []:
+        src, tgt = f.get("from"), f.get("to")
+        if src not in step_ids or tgt not in step_ids:
+            continue
+        opts = {"dash": True} if f.get("kind") == "message" else {}
+        d.link(src, tgt, f.get("label") or "", **opts)
+    return d, tree
+
+
 def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
     """Build a native layout tree (+ Diagram, edges) from a render_spec dict.
 
