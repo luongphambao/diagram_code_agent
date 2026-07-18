@@ -766,16 +766,22 @@ def build_refined(spec: dict, plan: dict | None = None):
         if cls in RT.EDGE_LEGEND_LABELS and cls not in legend_flows:
             legend_flows.append(cls)
         label = e.get("label") or ""
+        is_bundle_rep = key in rep_pair_count or key in rep_keys
         # Playbook §13.7: only label when the relationship isn't obvious from
         # source→target. Two cards in the SAME zone are adjacent and self-evident,
         # so drop the label — this is what declutters a dense diagram's centre
         # (the colour already carries the flow type). Cross-zone flows keep labels.
+        # A bundle REPRESENTATIVE is exempt: its label is the only place the
+        # "(×N flows)"/"(all layers)" multiplicity tag renders, so blanking it
+        # here would leave a base-less "(×3 flows)" floating with no verb.
         s_cl = node_by_id.get(s, {}).get("cluster")
         t_cl = node_by_id.get(t_, {}).get("cluster")
-        if label and s_cl is not None and s_cl == t_cl:
+        if is_bundle_rep and not label:
+            label = "Flows"  # bundle rep with no label of its own — give the tag a stem
+        elif label and s_cl is not None and s_cl == t_cl and not is_bundle_rep:
             label = ""  # same-zone adjacency is self-evident
         elif (label and s_cl in main_pos and t_cl in main_pos
-              and abs(main_pos[s_cl] - main_pos[t_cl]) == 1):
+              and abs(main_pos[s_cl] - main_pos[t_cl]) == 1 and not is_bundle_rep):
             label = ""  # adjacent main zones follow the backbone L->R
         if key in rep_pair_count:
             n = rep_pair_count[key]
