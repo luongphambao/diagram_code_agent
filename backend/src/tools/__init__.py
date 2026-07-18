@@ -142,6 +142,7 @@ from .analysis.blueprint_tools import (
     _validate_nfr_mapping,
     _validate_pillar_coverage,
     _validate_req_coverage,
+    find_diagram_template,
     inspect_diagram,
     propose_blueprint,
     propose_diagram_brief,
@@ -183,6 +184,7 @@ DIAGRAM_TOOLS = [
     web_research,
     record_evidence,
     propose_tech_stack,
+    find_diagram_template,
     propose_blueprint,
     audit_diagram_code,
     render_diagram,
@@ -243,6 +245,7 @@ MAIN_TOOLS = [
     export_to_delivery,       # idempotent sync of WBS work items to Jira/Linear/Confluence (gate)
     reality_sync,             # diff design vs a real repo/infra source -> drift_report.json (§5.2)
     propose_tech_stack,
+    find_diagram_template,
     propose_blueprint,
     visualize_code_structure,
     list_saved_diagrams,

@@ -203,6 +203,29 @@ def propose_tech_stack(
     return result
 
 
+@tool(parse_docstring=True)
+def find_diagram_template(query: str, provider: str = "", limit: int = 3) -> str:
+    """Find reusable architecture render_spec templates for blueprint drafting.
+
+    Use this before propose_blueprint when the user asks for a known pattern such
+    as landing zone, hub-spoke, multi-AZ, medallion lakehouse, or Azure CAF.
+    The returned nodes/clusters/edges are a skeleton to adapt, not a final answer
+    to copy unchanged.
+
+    Args:
+        query: Pattern or architecture description to search for.
+        provider: Optional provider hint such as aws, azure, gcp, databricks.
+        limit: Maximum number of matching templates to return.
+    """
+    from domain.diagram.template_library import find_template, template_skeleton
+
+    matches = find_template(query, provider=provider, limit=limit)
+    if not matches:
+        return "No matching diagram template found. Continue with a custom blueprint."
+    payload = [template_skeleton(t) for t in matches]
+    return json.dumps(payload, indent=2)
+
+
 def _req_soft_match(requirement: str, candidates: list[str]) -> bool:
     """Return True if any candidate substring-matches the requirement text."""
     req_norm = requirement.lower().replace("-", " ").replace("_", " ")
@@ -285,6 +308,161 @@ def _detect_provider() -> str:
         return ""
 
 
+def _norm_text(*parts: object) -> str:
+    return " ".join(str(p or "").lower().replace("_", " ").replace("-", " ") for p in parts)
+
+
+def _edge_key(edge: dict) -> tuple[str, str, str]:
+    return (str(edge.get("from") or ""), str(edge.get("to") or ""), str(edge.get("label") or ""))
+
+
+def _infer_edges_when_missing(spec: dict) -> list[dict]:
+    """Infer a conservative architecture flow when the LLM omitted all edges.
+
+    The renderer cannot invent semantics after the fact, but a 10+ node
+    architecture diagram with zero edges is almost always an authoring miss. This
+    fallback restores the primary request path and common side-channel relations
+    from stable node/cluster names while keeping the result deterministic.
+    """
+    if spec.get("process") or spec.get("edges") or len(spec.get("nodes") or []) < 3:
+        return []
+
+    nodes = [n for n in spec.get("nodes", []) if n.get("id")]
+    if len(nodes) < 3:
+        return []
+    valid_ids = {n["id"] for n in nodes}
+    clusters = {c.get("id"): c for c in spec.get("clusters", []) if c.get("id")}
+    node_by_id = {n["id"]: n for n in nodes}
+
+    def text(node: dict) -> str:
+        c = clusters.get(node.get("cluster")) or {}
+        return _norm_text(node.get("id"), node.get("label"), node.get("tech"),
+                          node.get("type"), node.get("cluster"), c.get("label"),
+                          c.get("tier"))
+
+    def has(node: dict, *needles: str) -> bool:
+        t = text(node)
+        return any(n.lower() in t for n in needles)
+
+    def pick(*needles: str) -> str | None:
+        for node in nodes:
+            if has(node, *needles):
+                return node["id"]
+        return None
+
+    def pick_type(kind: str, *needles: str) -> str | None:
+        for node in nodes:
+            if str(node.get("type") or "").lower() == kind and (not needles or has(node, *needles)):
+                return node["id"]
+        return None
+
+    edges: list[dict] = []
+    seen: set[tuple[str, str, str]] = set()
+
+    def add(src: str | None, dst: str | None, label: str = "",
+            flow: str = "data", style: str = "") -> None:
+        if not src or not dst or src == dst or src not in valid_ids or dst not in valid_ids:
+            return
+        edge = {"from": src, "to": dst, "label": label, "protocol": "",
+                "flow": flow, "style": style}
+        key = _edge_key(edge)
+        if key not in seen:
+            seen.add(key)
+            edges.append(edge)
+
+    user = pick("line users", "end users", "users", "clients", "browser", "mobile app")
+    messaging = pick("line messaging api", "messaging api", "webhook")
+    dns = pick("route 53", "route53", "dns")
+    cdn = pick("cloudfront", "cdn")
+    waf = pick("waf", "web application firewall")
+    gateway = pick("api gateway", "gateway", "load balancer", "alb")
+    core = (pick("aila core", "core service", "application service")
+            or pick_type("service", "lambda")
+            or pick_type("service"))
+
+    if messaging:
+        add(user, messaging, "LINE", "data")
+        add(messaging, dns or gateway or core, "Webhook", "data")
+    else:
+        add(user, dns or cdn or waf or gateway or core, "HTTPS", "data")
+
+    chain = [dns, cdn, waf, gateway, core]
+    labels = ["DNS", "HTTPS", "Filtered HTTPS", "Invoke"]
+    for idx, (src, dst) in enumerate(zip(chain, chain[1:])):
+        add(src, dst, labels[min(idx, len(labels) - 1)], "data")
+
+    chat_lambda = pick("chatgpt integration", "openai integration", "ai integration")
+    calendar_lambda = pick("calendar service", "calendar lambda")
+    summary_lambda = pick("summary generator", "summarization")
+    openai_api = pick("openai api", "chatgpt api")
+    google_calendar = pick("google calendar api")
+    line_pay = pick("line pay")
+
+    add(core, chat_lambda, "AI request", "control")
+    add(chat_lambda or core, openai_api, "LLM API", "control")
+    add(core, calendar_lambda, "Calendar", "control")
+    add(calendar_lambda or core, google_calendar, "Calendar API", "control")
+    add(core, summary_lambda, "Summarize", "control")
+    add(core, line_pay, "Payment", "control", "dashed")
+
+    data_nodes = [
+        n["id"] for n in nodes
+        if n["id"] != core and (
+            str(n.get("type") or "").lower() in {"database", "storage", "queue", "cache"}
+            or has(n, "rds", "postgres", "dynamodb", "s3", "database", "storage", "queue", "cache")
+        )
+    ]
+    for dst in data_nodes[:5]:
+        lbl = "SQL" if has(node_by_id[dst], "rds", "postgres", "sql") else "Read/write"
+        add(core, dst, lbl, "data")
+
+    rds = pick("rds", "postgres")
+    backups = pick("s3", "backup")
+    add(rds, backups, "Backup", "registry", "dashed")
+
+    lambda_nodes = [
+        n["id"] for n in nodes
+        if has(n, "lambda") or (str(n.get("type") or "").lower() == "service" and has(n, "compute"))
+    ]
+    secrets = pick("secrets manager", "secret")
+    iam = pick("iam", "identity")
+    kms = pick("kms", "key management", "encryption")
+    for dst in (lambda_nodes or ([core] if core else []))[:5]:
+        add(secrets, dst, "Secrets", "security", "dashed")
+        add(iam, dst, "IAM role", "security", "dashed")
+    for dst in data_nodes[:4]:
+        add(kms, dst, "Encrypt", "security", "dashed")
+
+    for mon in [pick("cloudwatch"), pick("x ray", "xray"), pick("cloudtrail")]:
+        add(core, mon, "Telemetry", "monitoring", "dashed")
+
+    cicd = pick("github actions", "ci cd", "pipeline")
+    registry = pick("ecr", "container registry", "artifact registry")
+    add(cicd, registry, "Build image", "registry")
+    add(cicd, core, "Deploy", "control", "dashed")
+
+    if edges:
+        return edges
+
+    # Last-resort generic path: connect one representative from each numbered
+    # cluster so the rendered topology still communicates direction.
+    cluster_order = sorted(
+        clusters.values(),
+        key=lambda c: (c.get("number") is None, c.get("number") or 999, c.get("id") or ""),
+    )
+    reps: list[str] = []
+    for cluster in cluster_order:
+        cid = cluster.get("id")
+        rep = next((n["id"] for n in nodes if n.get("cluster") == cid), None)
+        if rep:
+            reps.append(rep)
+    if len(reps) < 2:
+        reps = [n["id"] for n in nodes[:min(6, len(nodes))]]
+    for src, dst in zip(reps, reps[1:]):
+        add(src, dst, "Flow", "data")
+    return edges
+
+
 def _build_render_spec(blueprint: Blueprint, provider: str) -> dict:
     """Build a compact render spec dict from an approved blueprint."""
     legend = [{"label": le.label, "flow": le.flow} for le in blueprint.legend]
@@ -326,6 +504,13 @@ def _build_render_spec(blueprint: Blueprint, provider: str) -> dict:
             for e in blueprint.edges
         ],
     }
+    inferred_edges = _infer_edges_when_missing(spec)
+    if inferred_edges:
+        spec["edges"] = inferred_edges
+        spec["_inferred_edges"] = {
+            "reason": "blueprint had nodes/clusters but no edges",
+            "count": len(inferred_edges),
+        }
     if blueprint.process is not None:
         p = blueprint.process
         spec["process"] = {
@@ -371,13 +556,15 @@ def propose_blueprint(blueprint: Blueprint) -> str:
     if not _TECHSTACK_FILE.exists():
         return "Get the tech stack approved first by calling propose_tech_stack."
     current_workspace().mkdir(parents=True, exist_ok=True)
-    _BLUEPRINT_FILE.write_text(
-        blueprint.model_dump_json(by_alias=True, indent=2), encoding="utf-8"
-    )
 
     # Write compact render_spec.json so the drawer reads from disk.
     provider = _detect_provider()
     render_spec = _build_render_spec(blueprint, provider)
+    blueprint_data = blueprint.model_dump(by_alias=True)
+    if render_spec.get("_inferred_edges"):
+        blueprint_data["edges"] = render_spec.get("edges", [])
+        blueprint_data["_inferred_edges"] = render_spec["_inferred_edges"]
+    _BLUEPRINT_FILE.write_text(json.dumps(blueprint_data, indent=2), encoding="utf-8")
     _RENDER_SPEC_FILE.write_text(json.dumps(render_spec, indent=2), encoding="utf-8")
 
     # Pre-compute style_plan.json + label_fits.json code-side (pure functions of
@@ -405,6 +592,13 @@ def propose_blueprint(blueprint: Blueprint) -> str:
 
     # --- deterministic validators (warnings only, do not block) ---
     warnings: list[str] = []
+    inferred = render_spec.get("_inferred_edges") or {}
+    if inferred:
+        warnings.append(
+            f"blueprint omitted edges; inferred {inferred.get('count', 0)} connector(s) "
+            "from node/cluster names so the diagram keeps a visible flow. Review the "
+            "generated arrows before finalizing."
+        )
     if native_prerender_err:
         warnings.append(
             f"native pre-render FAILED ({native_prerender_err}) — out.drawio was not "
@@ -468,10 +662,10 @@ def propose_blueprint(blueprint: Blueprint) -> str:
         "propose_blueprint",
         summary=(
             f"Approved {blueprint.pattern} blueprint with {n} nodes (density={d}), "
-            f"{len(blueprint.clusters)} clusters, and {len(blueprint.edges)} edges."
+            f"{len(blueprint.clusters)} clusters, and {len(render_spec.get('edges') or [])} edges."
             + (f" {coverage_line}." if coverage_line else "")
         ),
-        data=blueprint.model_dump(by_alias=True),
+        data=blueprint_data,
     )
     reset_render_count()
     _reset_revision_count()

@@ -141,3 +141,83 @@ def test_repair_contract_valid_for_all_findings():
         assert f.finding_id.startswith("SF-"), f"bad id: {f.finding_id}"
         assert f.repair_strategy in _VALID_REPAIR, f"invalid repair_strategy: {f.repair_strategy}"
         assert f.severity in {"low", "medium", "high", "critical"}, f"invalid severity: {f.severity}"
+
+
+# --------------------------------------------------------------------------- #
+# WS3 — layout metrics + re-weighted production scorecard
+# --------------------------------------------------------------------------- #
+
+def test_validate_xml_parity_with_validate_file():
+    import os
+    import tempfile
+    xml = _xml(
+        _NODE.format(id="n1", label="A", x=10, y=10),
+        _NODE.format(id="n2", label="B", x=200, y=10),
+        '<mxCell id="e1" edge="1" source="n1" target="n2" parent="1">'
+        '<mxGeometry relative="1" as="geometry"/></mxCell>',
+    )
+    with tempfile.NamedTemporaryFile(suffix=".drawio", delete=False, mode="w",
+                                     encoding="utf-8") as f:
+        f.write(xml)
+        tmp = f.name
+    try:
+        assert vd.validate_xml(xml) == vd.validate_file(tmp)
+    finally:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+
+
+def test_layout_metrics_present_in_report():
+    xml = _xml(
+        _NODE.format(id="n1", label="A", x=0, y=0),
+        _NODE.format(id="n2", label="B", x=200, y=0),
+    )
+    m = _validate(xml)["layout_metrics"]
+    assert m["ratio"] == 6.0  # 300w x 50h content bbox
+    assert m["icon_coverage"] == 0.0
+    assert m["edge_crossings"] == 0
+
+
+def test_scorecard_composition_penalizes_ultra_wide_strip():
+    report = {"errors": [], "warnings": [], "advice": [], "polish": [],
+              "error_count": 0, "ok": True, "collision_count": 0,
+              "layout_metrics": {"ratio": 3.9, "edge_crossings": 0,
+                                 "icon_coverage": 1.0}}
+    sc = vd.production_scorecard(report, {"edges": 10})
+    assert sc["breakdown"]["composition"] == 0.0
+    ok = dict(report, layout_metrics={"ratio": 1.6, "edge_crossings": 0,
+                                      "icon_coverage": 1.0})
+    assert vd.production_scorecard(ok, {"edges": 10})["breakdown"]["composition"] == 10.0
+
+
+def test_scorecard_iconography_scales_with_coverage():
+    base = {"errors": [], "warnings": [], "advice": [], "polish": [],
+            "error_count": 0, "ok": True, "collision_count": 0}
+    def icon_score(cov):
+        r = dict(base, layout_metrics={"ratio": 1.6, "edge_crossings": 0,
+                                       "icon_coverage": cov})
+        return vd.production_scorecard(r, {"edges": 10})["breakdown"]["iconography"]
+    assert icon_score(0.0) == 0.0
+    assert icon_score(0.45) == 5.0
+    assert icon_score(0.9) == 10.0
+    assert icon_score(1.0) == 10.0
+
+
+def test_scorecard_collisions_still_block_pass():
+    report = {"errors": [], "warnings": [], "advice": [], "polish": [],
+              "error_count": 0, "ok": True, "collision_count": 1,
+              "layout_metrics": {"ratio": 1.6, "edge_crossings": 0,
+                                 "icon_coverage": 1.0}}
+    sc = vd.production_scorecard(report, {"edges": 10})
+    assert not sc["pass"]
+
+
+def test_scorecard_reports_target_profile():
+    report = {"errors": [], "warnings": [], "advice": [], "polish": [],
+              "error_count": 0, "ok": True, "collision_count": 0,
+              "layout_metrics": {}}
+    sc = vd.production_scorecard(report, {})
+    assert sc["target"] == vd.PRODUCTION_TARGET
+    assert sc["target"]["ratio"] == (1.3, 1.9)
