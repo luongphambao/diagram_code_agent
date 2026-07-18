@@ -209,6 +209,7 @@ def _bundle_edges(spec: dict, node_root: dict, band_pos: dict) -> tuple[list, li
         for m in members:
             seen.add((m["from"], m["to"], m.get("label") or ""))
         bundles.append({
+            "kind": "pair",
             "rep": [rep["from"], rep["to"], rep.get("label") or ""],
             "members": [[m["from"], m["to"], m.get("label") or ""] for m in rest],
         })
