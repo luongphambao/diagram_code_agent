@@ -173,6 +173,7 @@ async def agui_endpoint(request: Request):
     async def stream():
         _ws_token = set_current_workspace(ws)
         _upsert_snap: dict = {}
+        run_errored = False
         yield _sse({"type": "RUN_STARTED", "threadId": thread_id, "runId": run_id})
         try:
             if last_tool is not None:
