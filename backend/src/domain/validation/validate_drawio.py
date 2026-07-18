@@ -192,6 +192,15 @@ def check_stencils(xml: str, strict: bool = False) -> tuple[list[str], list[str]
     for n in (s for s in _RE_SHAPE.findall(xml) if s not in _KNOWN_SHAPE_WORDS):
         check(n, "shape")
 
+    # HARD error: remote image URLs. The offline PNG export cannot fetch them,
+    # so they render as broken-image glyphs — seen in production when an edit
+    # round hallucinated image=https://... styles. err_count>0 fails the gate.
+    for m in re.finditer(r'image=(https?://[^;"&]+)', xml, re.I):
+        errors.append(
+            f"Remote image URL in style: {m.group(1)} — renders as a broken "
+            "glyph in PNG export. Embed a data URI (icon_plan pipeline) or use "
+            "a catalog stencil instead.")
+
     # lint: resourceIcon styles should carry aspect=fixed (else they distort on resize)
     for c in re.findall(r'style="[^"]*mxgraph\.aws4\.resourceIcon[^"]*"', xml):
         if "aspect=fixed" not in c:
