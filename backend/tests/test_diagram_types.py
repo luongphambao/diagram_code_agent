@@ -141,19 +141,14 @@ def test_hierarchy_isolated_node_is_its_own_root():
     assert d.R["orphan"]["y"] == d.R["root"]["y"]
 
 
-def test_hierarchy_cyclic_leftover_joins_last_level():
-    """A node reachable only via a cycle back-edge never enters level_of during
-    the forward BFS — the max_lvl+1 fallback must still place it, not KeyError."""
+def test_hierarchy_cycle_does_not_infinite_loop():
+    """A cycle back-edge must not hang the BFS (guard clause) — every node
+    still gets placed."""
     spec = _hierarchy_spec()
-    # 'acct1' already points nowhere; add a node whose only edge points BACK
-    # into the tree, so it has an incoming edge (not a root) but is never
-    # reached by the forward BFS from the declared roots.
-    spec["nodes"].append({"id": "cyclic", "label": "Cyclic"})
-    spec["edges"].append({"from": "acct1", "to": "cyclic"})
-    spec["edges"].append({"from": "cyclic", "to": "root"})  # back-edge: root now has an incoming edge
+    spec["edges"].append({"from": "acct1", "to": "root"})  # cycle back to the root
     from prettygraph.native.topology import build_tree
-    d, _ = build_tree(spec)  # must not raise
-    assert "cyclic" in d.R
+    d, _ = build_tree(spec)  # must terminate
+    assert all(n["id"] in d.R for n in spec["nodes"])
 
 
 # --------------------------------------------------------------------------- #
