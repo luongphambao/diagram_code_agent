@@ -517,6 +517,17 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
         # never routed through the architecture cluster-nesting logic below or
         # through the refined preset (the pool IS the presentation).
         return _build_bpmn_tree(spec, flat=flat)
+    intent = str(spec.get("layout_intent", "")).lower()
+    if intent in _EXOTIC_INTENTS:
+        # hub_spoke/hierarchy/mesh are node-level topologies with no
+        # representation in the refined preset's numbered-zones page
+        # template — always force icon preset (log the downgrade so the
+        # caller can see style_preset was overridden).
+        if str(spec.get("style_preset") or "").lower() == "refined":
+            spec["_downgrade_note"] = (
+                f'layout_intent="{intent}" has no refined-preset layout — '
+                'rendered with style_preset="icon" instead.')
+        return _build_exotic_tree(spec, flat, intent)
     if str(spec.get("style_preset") or "").lower() == "refined":
         # Refined typographic preset (playbook look): its own page-template
         # composition — handles zones, edges and legend itself, same
