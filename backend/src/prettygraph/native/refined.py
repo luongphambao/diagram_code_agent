@@ -739,11 +739,15 @@ def build_refined(spec: dict, plan: dict | None = None):
             src_zone = zone_rects.get(node_by_id.get(s, {}).get("cluster"))
             top_bound = (src_zone["y"] + 18) if src_zone else None
             label_offset = _label_offset(d.R[sid], d.R[tid], top_bound)
+        # style_extra (NOT style): the class styling is appended after the
+        # router's base style, so these edges go through the deterministic
+        # A*/NUDGE router (obstacle avoidance, ports, baked waypoints) instead
+        # of being emitted raw for draw.io to route blindly at render time.
         d.link(sid, tid, label, id=f"e_{sid}_{tid}", stroke=color, dash=dashed,
                label_offset=label_offset,
-               style=(f"strokeWidth={width};endArrow=block;endFill=1;"
-                      f"fontFamily={RT.FONT};fontSize={RT.TYPE_SCALE['edge']};"
-                      f"fontColor={RT.INK['body']};labelBackgroundColor=#FFFFFF;"))
+               style_extra=(f"strokeWidth={width};endArrow=block;endFill=1;"
+                            f"fontFamily={RT.FONT};fontSize={RT.TYPE_SCALE['edge']};"
+                            f"fontColor={RT.INK['body']};labelBackgroundColor=#FFFFFF;"))
 
     # ---- legend footer ---- #
     fy = content_bottom + RT.GEO["footer_lane"] + 15
