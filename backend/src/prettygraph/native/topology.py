@@ -371,6 +371,138 @@ def _build_bpmn_tree(spec: dict, flat: bool = False):
     return d, tree
 
 
+def _build_node_element(n: dict, cat, provider: str,
+                        accent: str | None = None, size_class: str | None = None):
+    """Card/icon/box element for one render_spec node — the same choice logic
+    build_tree's build_cluster() uses, factored out so the exotic diagram-type
+    builders (hub_spoke/hierarchy/mesh — diagram_types.py) can build nodes
+    without going through the cluster/band tree at all."""
+    # Upgrade path (V2 §8): a node carrying an embedded icon reuses it directly
+    # — no catalog lookup, preserving the source diagram's exact icon.
+    img = n.get("icon_data_uri")
+    if img:
+        title, sub = _card_texts(n)
+        mn, mx = _SIZE_CLASSES.get(size_class or "medium", _SIZE_CLASSES["medium"])
+        return card(n["id"], None, title, sub, accent=accent,
+                    min_w=mn, max_w=mx, image_data_uri=img)
+    name = _resolve_node_icon(cat, n, provider)
+    label = _node_label(n)
+    longest_line = max((len(ln) for ln in label.split("\n")), default=0)
+    if (provider == "aws" and name
+            and "mxgraph.aws4" in ((_get_icon(cat, name) or {}).get("style") or "")
+            and longest_line <= _ICON_LABEL_MAX):
+        # AWS convention: native resourceIcon with the label below (short
+        # labels only — see _ICON_LABEL_MAX; a longer label falls through
+        # to the card() branch below, which wraps safely).
+        return icon(n["id"], name, label)
+    title, sub = _card_texts(n)
+    mn, mx = _SIZE_CLASSES.get(size_class or "medium", _SIZE_CLASSES["medium"])
+    if name or sub:
+        return card(n["id"], name, title, sub, accent=accent, min_w=mn, max_w=mx)
+    if name is None and provider == "aws":
+        return box(n["id"], _node_label(n), fill=THEME.base,
+                   stroke=_accent_stroke(None), fs=11)
+    return card(n["id"], name, title, sub, accent=accent, min_w=mn, max_w=mx)
+
+
+# layout_intent values that bypass the cluster/band tree entirely — a hub-and-
+# spoke fan, a BFS org tree, and a peer grid are node-level topologies, not
+# tiered layer bands. Always force style_preset="icon": these geometries have
+# no representation in the refined preset's numbered-zones page template.
+_EXOTIC_INTENTS = frozenset({"hub_spoke", "hierarchy", "mesh"})
+
+
+def _build_exotic_tree(spec: dict, flat: bool, intent: str):
+    """hub_spoke (3-column phantom: spokes | hub | spokes), hierarchy (BFS
+    level columns, TB, sharp tree edges), mesh (peer grid) — diagram_types.py
+    presets that operate directly on nodes/edges, ignoring cluster nesting."""
+    from .diagram_types import edge_rounded
+
+    cat = _load_catalog() if _load_catalog else None
+    provider = str(spec.get("provider") or "aws").lower()
+    nodes = [n for n in spec.get("nodes", []) if n.get("id")]
+    edges = [e for e in spec.get("edges", []) if e.get("from") and e.get("to")]
+    node_ids = {n["id"] for n in nodes}
+    by_id = {n["id"]: n for n in nodes}
+
+    def elem(n):
+        return _build_node_element(n, cat, provider)
+
+    if intent == "hub_spoke":
+        hub_id = spec.get("hub")
+        if hub_id not in node_ids:
+            # No explicit hub: the max-degree node (ties broken by declaration order).
+            degree = {n["id"]: 0 for n in nodes}
+            for e in edges:
+                if e["from"] in degree:
+                    degree[e["from"]] += 1
+                if e["to"] in degree:
+                    degree[e["to"]] += 1
+            hub_id = max(degree, key=lambda k: degree[k]) if degree else None
+        spokes = [n for n in nodes if n["id"] != hub_id]
+        left, right = spokes[: len(spokes) // 2 + len(spokes) % 2], spokes[len(spokes) // 2 + len(spokes) % 2:]
+        left_col = phantom("__hub_left", "", {"dir": "col", "gap": 30}, [elem(n) for n in left])
+        right_col = phantom("__hub_right", "", {"dir": "col", "gap": 30}, [elem(n) for n in right])
+        hub_elem = elem(by_id[hub_id]) if hub_id in by_id else box("__hub", "(hub)")
+        cols = [c for c in (left_col if left else None, hub_elem,
+                            right_col if right else None) if c is not None]
+        root = phantom("__hub_row", "", {"dir": "row", "gap": 70}, cols)
+    elif intent == "hierarchy":
+        incoming = {e["to"] for e in edges}
+        roots = [n for n in nodes if n["id"] not in incoming] or nodes[:1]
+        level_of: dict[str, int] = {}
+        frontier = [n["id"] for n in roots]
+        for nid in frontier:
+            level_of[nid] = 0
+        depth, guard = 0, 0
+        adj: dict[str, list[str]] = {}
+        for e in edges:
+            adj.setdefault(e["from"], []).append(e["to"])
+        while frontier and guard < len(nodes) + 1:
+            guard += 1
+            nxt = []
+            for nid in frontier:
+                for tgt in adj.get(nid, []):
+                    if tgt not in level_of:
+                        level_of[tgt] = level_of[nid] + 1
+                        nxt.append(tgt)
+            frontier = nxt
+        # Any node the BFS never reached (disconnected) joins the last level.
+        max_lvl = max(level_of.values(), default=0)
+        for n in nodes:
+            level_of.setdefault(n["id"], max_lvl + 1)
+        levels: dict[int, list] = {}
+        for n in nodes:
+            levels.setdefault(level_of[n["id"]], []).append(n)
+        cols = [phantom(f"__lvl{lvl}", "", {"dir": "row", "gap": 40},
+                        [elem(n) for n in levels[lvl]])
+               for lvl in sorted(levels)]
+        root = phantom("__hierarchy", "", {"dir": "col", "gap": 60}, cols)
+    else:  # mesh
+        clusters = [c for c in spec.get("clusters", []) if c.get("id")]
+        peer_items = ([box(c["id"], c.get("label") or c["id"], fill=THEME.base,
+                           stroke=_accent_stroke(c.get("accent")))
+                       for c in clusters] if clusters else [elem(n) for n in nodes])
+        n_items = max(1, len(peer_items))
+        cols = 2 if n_items <= 4 else 3
+        root = grid("__mesh", None, "", {"cols": cols, "gap": 50, "stroke": "none"}, peer_items)
+
+    d = Diagram(intent, contract="bake", flat=flat)
+    render_tree(d, root)
+    title = spec.get("slide_title") or spec.get("diagram_title")
+    if title and not flat:
+        d.title(title)
+    role = "tree" if intent == "hierarchy" else ""
+    rounded = edge_rounded(intent, role)
+    for e in edges:
+        s, t = e["from"], e["to"]
+        if s in d.R and t in d.R:
+            dash = str(e.get("style") or "").lower() == "dashed"
+            d.link(s, t, e.get("label") or "", dash=dash, rounded=rounded,
+                  stroke=_flow_color(e.get("flow")))
+    return d, root
+
+
 def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
     """Build a native layout tree (+ Diagram, edges) from a render_spec dict.
 
