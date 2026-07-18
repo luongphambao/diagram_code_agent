@@ -694,6 +694,62 @@ def build_edges(d) -> None:
         _emit_edge(d, e, routes[i], frac[i], geom)
 
 
+def _path_mid(pts: list[dict]) -> dict:
+    """Point halfway along a polyline's length — where draw.io anchors a
+    relative edge label (x=0) before any offset is applied."""
+    segs = list(zip(pts[:-1], pts[1:]))
+    total = sum(abs(b["x"] - a["x"]) + abs(b["y"] - a["y"]) for a, b in segs)
+    if total <= 0:
+        return dict(pts[0])
+    half = total / 2
+    for a, b in segs:
+        seg = abs(b["x"] - a["x"]) + abs(b["y"] - a["y"])
+        if half <= seg and seg:
+            f = half / seg
+            return {"x": a["x"] + (b["x"] - a["x"]) * f,
+                    "y": a["y"] + (b["y"] - a["y"]) * f}
+        half -= seg
+    return dict(pts[-1])
+
+
+def _solve_label_offset(d, label: str, pts: list[dict],
+                        want: tuple | None) -> tuple[float, float] | None:
+    """Collision-aware edge-label placement, run AFTER routing so the anchor
+    (the actual polyline midpoint) is known. Tries the caller's preferred
+    offset first, then a bounded candidate ring; a position must clear every
+    obstacle card AND every label already placed this build (label-on-label
+    overprint reads as garbage text in the export)."""
+    mid = _path_mid(pts)
+    lw = max(30.0, len(label) * 6.6)
+    lh = 16.0
+    boxes = getattr(d, "_label_boxes", None)
+    if boxes is None:
+        boxes = d._label_boxes = []
+    obstacles = [r for r in d.R.values() if r.get("ob")]
+
+    def _free(dx: float, dy: float) -> bool:
+        x0, y0 = mid["x"] + dx - lw / 2, mid["y"] + dy - lh / 2
+        for rr in obstacles:
+            if (x0 < rr["x"] + rr["w"] and x0 + lw > rr["x"]
+                    and y0 < rr["y"] + rr["h"] and y0 + lh > rr["y"]):
+                return False
+        for bx, by, bw, bh in boxes:
+            if (x0 < bx + bw and x0 + lw > bx
+                    and y0 < by + bh and y0 + lh > by):
+                return False
+        return True
+
+    cands: list[tuple[float, float]] = []
+    if want:
+        cands.append((float(want[0]), float(want[1])))
+    cands += [(0, 0), (0, -22), (0, 22), (-52, 0), (52, 0), (0, -44), (0, 44)]
+    chosen = next((c for c in cands if _free(*c)),
+                  (float(want[0]), float(want[1])) if want else (0.0, 0.0))
+    boxes.append((mid["x"] + chosen[0] - lw / 2,
+                  mid["y"] + chosen[1] - lh / 2, lw, lh))
+    return chosen if chosen != (0.0, 0.0) else None
+
+
 def _emit_edge(d, e, r, fr, geom) -> None:
     opts = e["opts"]
     label = e.get("label", "")
