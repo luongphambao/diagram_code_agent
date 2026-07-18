@@ -17,9 +17,10 @@ from __future__ import annotations
 import re
 
 from .layout_engine import (group, frame, grid, icon, box, card, phantom,
-                            zone_frame, render_tree)
+                            zone_frame, render_tree, pool)
 from .builder import Diagram
 from .theme import THEME, stage_fill, stage_stroke
+from . import bpmn as _bpmn
 
 try:
     from ..drawio_catalog import (load_catalog as _load_catalog,
