@@ -111,8 +111,9 @@ _ABBREV: dict[str, str] = {
     "route53": "route 53",
     "cfn": "cloudformation",
     "cw": "cloudwatch",
+    "cloudwatch": "cloudwatch 2",  # catalog has no bare "cloudwatch" entry
     # Azure
-    "aks": "kubernetes service",
+    "aks": "kubernetes services",
     "acr": "container registry",
     "adf": "data factory",
     "aad": "azure active directory",
