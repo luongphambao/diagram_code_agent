@@ -64,6 +64,12 @@ _ICON_SCORE_VENDOR = 28
 # Vendor / filler words that dilute a stencil search ("AWS Lambda" -> "lambda").
 _VENDOR_WORDS = {"aws", "amazon", "azure", "gcp", "google", "microsoft", "cloud",
                  "apache", "the", "a", "for", "service", "services", "managed"}
+# Role words too generic to identify a product on their own: a hit that matches
+# ONLY these is a wrong-icon risk ("Fund Management Service" must not resolve to
+# key_management_service on management+service alone).
+_GENERIC_TOKENS = {"service", "services", "management", "server", "data",
+                   "application", "system", "platform", "engine", "store",
+                   "manager", "gateway"}
 
 # name prefix per provider in the merged catalog (gcp.json / azure.json packs).
 _PROVIDER_PREFIX = {"gcp": "gcp_", "google": "gcp_",
