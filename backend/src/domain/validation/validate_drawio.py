@@ -1006,15 +1006,34 @@ def audit_layout_metrics(xml: str, stats: dict | None = None) -> dict:
         icon_coverage = round(sum(1 for c in leaves if _has_icon(c)) / len(leaves), 2)
 
     # --- edge labels colliding with cards (char-estimate box at polyline midpoint) ---
+    def _arc_mid(pts):
+        # Arc-length midpoint — where draw.io actually anchors a relative (x=0)
+        # edge label, and what refined.py's post-routing label solver targets.
+        # An index-based "middle point of the list" (the prior approach) can
+        # land far from that when NUDGE bakes several closely-spaced waypoints
+        # on one side of the route, so the two disagreed on what "the label
+        # position" even is — this keeps the metric honest against what the
+        # solver actually optimized.
+        segs = list(zip(pts[:-1], pts[1:]))
+        total = sum(abs(b["x"] - a["x"]) + abs(b["y"] - a["y"]) for a, b in segs)
+        if total <= 0:
+            return dict(pts[0])
+        half = total / 2
+        for a, b in segs:
+            seg = abs(b["x"] - a["x"]) + abs(b["y"] - a["y"])
+            if half <= seg and seg:
+                f = half / seg
+                return {"x": a["x"] + (b["x"] - a["x"]) * f,
+                        "y": a["y"] + (b["y"] - a["y"]) * f}
+            half -= seg
+        return dict(pts[-1])
+
     label_overlaps = 0
     card_rects = [box_of(c) for c in cards]
     for e in polys:
         if not e["label"]:
             continue
-        pts = e["pts"]
-        mid = pts[len(pts) // 2] if len(pts) % 2 else {
-            "x": (pts[len(pts) // 2 - 1]["x"] + pts[len(pts) // 2]["x"]) / 2,
-            "y": (pts[len(pts) // 2 - 1]["y"] + pts[len(pts) // 2]["y"]) / 2}
+        mid = _arc_mid(e["pts"])
         off = e.get("label_offset")  # refined preset: real drawio label-offset point
         if off:
             mid = {"x": mid["x"] + off["x"], "y": mid["y"] + off["y"]}
