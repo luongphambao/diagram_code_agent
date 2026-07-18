@@ -388,86 +388,156 @@ def _render_drawio_png(drawio_path: Path, png_path: Path, scale: int = 2) -> boo
 _DENSE_SCALE_FLOOR = 0.72
 
 
-def _attach_icon_fallbacks(spec: dict, workspace: Path) -> None:
-    """Attach a base64 PNG `icon_data_uri` to nodes the native drawio_catalog
-    can't resolve — it only carries AWS + generic tech packs (no azure/gcp/
-    onprem vendor stencils), so a non-AWS blueprint routinely resolves zero
-    icons even though icon_plan.json (written by propose_blueprint's pre-seed,
-    later refined by the icon_resolver subagent) already found real PNGs for
-    most nodes under resources/icons/<provider>/... AWS nodes are left alone:
-    their native vector stencils are ground-truth and preferred over a raster
-    fallback.
+def _icon_key(s: object) -> str:
+    """Normalize a node id/label/tech for icon_plan lookup: casefold, drop
+    everything non-alphanumeric ("Route 53" / "route-53" / "route_53" all meet)."""
+    return re.sub(r"[^a-z0-9]+", "", str(s or "").lower())
+
+
+def _attach_icon_data_uri(node: dict, rel: str, root: Path) -> bool:
+    """Embed the icon file at `rel` (absolute, or relative to the icon root)
+    into the node as a data URI. Returns False when the file is unreadable."""
+    icon_path = Path(rel)
+    if not icon_path.is_absolute():
+        icon_path = root / rel
+    try:
+        data = icon_path.read_bytes()
+    except OSError:
+        return False
+    import base64
+    # aiicons.lookup_ai_logo falls back to a raw cached .svg when cairosvg
+    # (native libcairo) isn't installed — labeling that as image/png would
+    # silently render as a broken image, no error surfaced anywhere.
+    mime = "image/svg+xml" if icon_path.suffix.lower() == ".svg" else "image/png"
+    node["icon_data_uri"] = f"data:{mime};base64," + base64.standard_b64encode(data).decode("ascii")
+    return True
+
+
+# Level-4 icon fallback: node semantics -> a provider-NEUTRAL stencil that is
+# verified to exist in the catalog (see topology._GENERIC_AWS_OK — these are the
+# only aws4 names safe inside a GCP/Azure diagram too). Most specific first.
+_CATEGORY_GLYPHS: tuple[tuple[str, str], ...] = (
+    (r"user|actor|customer|investor|advisor|persona|audience", "users"),
+    (r"mobile|phone|tablet|app store", "mobile_client"),
+    (r"browser|web ?app|frontend|ui\b|spa\b", "client"),
+    (r"database|\bdb\b|sql|nosql|cache|redis|replica|table", "generic_database"),
+    (r"storage|bucket|archive|backup|glacier|blob|object store", "generic_database"),
+    (r"security|firewall|waf|kms|secret|guard|shield|compliance|audit|iam|identity", "generic_firewall"),
+    (r"dns|cdn|network|gateway|load ?balanc|router|vpn|edge|proxy", "internet"),
+    (r"external|third[- ]?party|partner|saas|provider|integration", "globe"),
+    (r"server|compute|\bvm\b|host|worker|batch", "traditional_server"),
+    (r"office|organization|company|branch", "office_building"),
+)
+
+
+def _category_glyph(node: dict) -> str:
+    """Deterministic neutral glyph from node type/cluster/label semantics —
+    the never-bare-card guarantee's last resort."""
+    text = " ".join(str(node.get(k) or "")
+                    for k in ("type", "tech", "label", "cluster")).lower()
+    for pat, name in _CATEGORY_GLYPHS:
+        if re.search(pat, text):
+            return name
+    return "generic_application"
+
+
+def _bake_icon_plan(spec: dict, workspace: Path) -> None:
+    """Guarantee EVERY node carries an icon — for every provider (aws/azure/gcp/
+    onprem/multicloud). Bare cards are a production-quality defect (client
+    deliverable), so misses fall through a deterministic chain:
+
+      1. icon_plan.json FOUND entry (icon_resolver subagent / blueprint
+         pre-seed) -> full-color PNG/SVG data URI. The primary icon family:
+         in practice the resolver gets ~28/30 right, and its output was
+         previously discarded for AWS diagrams entirely.
+      2. native drawio-catalog stencil for the node's OWN provider (per-node
+         hints win, so multicloud diagrams keep each vendor's icons) — pinned
+         onto node["icon"] so the builder doesn't repeat the search.
+      3. direct filesystem search of resources/icons/ (bundled hits only —
+         no CDN calls in the render path) on tech, then label.
+      4. category glyph from the provider-neutral generic_* stencils, counted
+         in spec["_fallback_icons"] so misses surface in native_stats instead
+         of silently rendering bare.
     """
     provider = str(spec.get("provider") or "aws").lower()
-    if provider == "aws":
-        return
-    icon_plan_path = workspace / "icon_plan.json"
-    if not icon_plan_path.exists():
-        return
-    try:
-        raw_plan = json.loads(icon_plan_path.read_text(encoding="utf-8"))
-    except Exception:
-        return
 
     # icon_plan.json is either {node_id: [rel_paths]} (blueprint.py pre-seed)
     # or a list of {label, id, path, status, ...} dicts (icon_resolver
-    # subagent's fuller resolution) — normalize both into {key: path}.
+    # subagent's fuller resolution) — normalize both into {norm_key: path}.
     by_key: dict[str, str] = {}
-    if isinstance(raw_plan, dict):
-        for k, v in raw_plan.items():
-            if isinstance(v, list) and v:
-                by_key[k] = v[0]
-            elif isinstance(v, str):
-                by_key[k] = v
-    elif isinstance(raw_plan, list):
-        for entry in raw_plan:
-            if not isinstance(entry, dict) or entry.get("status") == "NOT_FOUND":
-                continue
-            # prefer the portable `icon` field (relative to LOCAL_ICONS) over
-            # `path`, which icon_resolver writes as a container-absolute path
-            # (/app/resources/...) that only resolves inside that container.
-            path = entry.get("icon") or entry.get("path")
-            if not path:
-                continue
-            for key in (entry.get("id"), entry.get("label")):
-                if key:
-                    by_key[key] = path
-    if not by_key:
-        return
+    icon_plan_path = workspace / "icon_plan.json"
+    if icon_plan_path.exists():
+        try:
+            raw_plan = json.loads(icon_plan_path.read_text(encoding="utf-8"))
+        except Exception:
+            raw_plan = None
+        if isinstance(raw_plan, dict):
+            for k, v in raw_plan.items():
+                path = v[0] if isinstance(v, list) and v else v if isinstance(v, str) else None
+                if path and _icon_key(k):
+                    by_key[_icon_key(k)] = path
+        elif isinstance(raw_plan, list):
+            for entry in raw_plan:
+                if not isinstance(entry, dict) or entry.get("status") == "NOT_FOUND":
+                    continue
+                # prefer the portable `icon` field (relative to LOCAL_ICONS) over
+                # `path`, which icon_resolver writes as a container-absolute path
+                # (/app/resources/...) that only resolves inside that container.
+                path = entry.get("icon") or entry.get("path")
+                if not path:
+                    continue
+                for key in (entry.get("id"), entry.get("label"), entry.get("name")):
+                    if key and _icon_key(key):
+                        by_key[_icon_key(key)] = path
 
     try:
         from prettygraph.native.topology import _load_catalog, _resolve_node_icon
         cat = _load_catalog() if _load_catalog else None
     except Exception:
-        cat = None
+        cat, _resolve_node_icon = None, None
 
     from backends import LOCAL_ICONS
     root = Path(LOCAL_ICONS)
+    fallback_icons = 0
     for node in spec.get("nodes", []):
-        if node.get("icon_data_uri"):
+        if node.get("icon_data_uri") or node.get("icon"):
             continue
-        if cat is not None:
+        # 1) icon_plan resolution (normalized id/label/tech match)
+        rel = next((by_key[k] for k in (_icon_key(node.get("id")),
+                                        _icon_key(node.get("label")),
+                                        _icon_key(node.get("tech"))) if k and k in by_key),
+                   None)
+        if rel and _attach_icon_data_uri(node, rel, root):
+            continue
+        # 2) provider catalog stencil
+        if cat is not None and _resolve_node_icon is not None:
             try:
-                if _resolve_node_icon(cat, node, provider):
-                    continue  # native catalog already has a real stencil
+                name = _resolve_node_icon(cat, node, provider)
             except Exception:
-                pass
-        rel = by_key.get(node.get("id")) or by_key.get(node.get("label"))
-        if not rel:
-            continue
-        icon_path = Path(rel)
-        if not icon_path.is_absolute():
-            icon_path = root / rel
+                name = None
+            if name:
+                node["icon"] = name
+                continue
+        # 3) bundled icon-pack search (tech first — it's a product name; label
+        # second). Bundled hits only: the CDN branch is slow and can 404.
+        hit = None
         try:
-            data = icon_path.read_bytes()
-        except OSError:
+            from tools.icon_tools import _resolve_one_tech_icon
+            for q in (node.get("tech"), node.get("label")):
+                if not q:
+                    continue
+                r = _resolve_one_tech_icon(str(q))
+                if r.get("source") == "bundled" and (r.get("icon") or r.get("path")):
+                    hit = r.get("icon") or r.get("path")
+                    break
+        except Exception:
+            hit = None
+        if hit and _attach_icon_data_uri(node, hit, root):
             continue
-        import base64
-        # aiicons.lookup_ai_logo falls back to a raw cached .svg when cairosvg
-        # (native libcairo) isn't installed — labeling that as image/png would
-        # silently render as a broken image, no error surfaced anywhere.
-        mime = "image/svg+xml" if icon_path.suffix.lower() == ".svg" else "image/png"
-        node["icon_data_uri"] = f"data:{mime};base64," + base64.standard_b64encode(data).decode("ascii")
+        # 4) deterministic category glyph — never a bare card.
+        node["icon"] = _category_glyph(node)
+        fallback_icons += 1
+    spec["_fallback_icons"] = fallback_icons
 
 
 def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
