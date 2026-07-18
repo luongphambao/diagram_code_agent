@@ -564,6 +564,6 @@ def test_refined_access_zone_stays_main_inside_vpc():
 def test_refined_theme_tokens_json():
     j = RT.as_json()
     assert j["font"] == "Helvetica"
-    assert j["zone_hues"]["blue"]["tab"] == "#2563EB"
+    assert j["zone_hues"]["blue"]["tab"] == "#1D4ED8"  # neutral-palette navy accent
     assert j["edge_classes"]["monitoring"]["dashed"] is True
     assert j["geometry"]["page_w"] == 1920
