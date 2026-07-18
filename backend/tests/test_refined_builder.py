@@ -245,8 +245,8 @@ def test_refined_composition_structure():
     state_g = R["zone_state"]
     assert float(ops_g.get("y")) > float(state_g.get("y"))
     assert float(out_g.get("x")) > float(state_g.get("x"))
-    # no icons, no shadow cells in refined output
-    assert "resIcon=mxgraph" not in xml
+    # refined cards now CARRY icon badges (catalog stencils or data URIs);
+    # shadow cells stay out of the refined look
     assert "__sh" not in xml
 
 
