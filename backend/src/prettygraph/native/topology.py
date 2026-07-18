@@ -69,7 +69,7 @@ _VENDOR_WORDS = {"aws", "amazon", "azure", "gcp", "google", "microsoft", "cloud"
 # key_management_service on management+service alone).
 _GENERIC_TOKENS = {"service", "services", "management", "server", "data",
                    "application", "system", "platform", "engine", "store",
-                   "manager", "gateway"}
+                   "manager", "gateway", "simple"}
 
 # name prefix per provider in the merged catalog (gcp.json / azure.json packs).
 _PROVIDER_PREFIX = {"gcp": "gcp_", "google": "gcp_",
