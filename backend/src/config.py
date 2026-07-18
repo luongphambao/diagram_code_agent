@@ -14,6 +14,8 @@ import os
 from pathlib import Path
 from typing import Any
 
+import httpx
+
 logger = logging.getLogger(__name__)
 
 # backend/src/config.py → parents[1] == backend/
