@@ -178,10 +178,14 @@ def _bundle_edges(spec: dict, node_root: dict, band_pos: dict) -> tuple[list, li
         suppressed += [[m["from"], m["to"], m.get("label") or ""] for m in rest]
 
     # Zone-pair aggregation: many-to-many spray between the SAME two bands
-    # (>=_BUNDLE_MIN same-label same-style cross-band edges, no shared hub)
-    # collapses to the most central member. This is what tames "too many
-    # arrows" on dense diagrams — six parallel blue arrows between AI COMPUTE
-    # and DATA & STORAGE carry no more information than one.
+    # (>=_BUNDLE_MIN same-style cross-band edges, no shared hub) collapses to
+    # the most central member — grouped by CLASS, not exact label wording.
+    # This is what tames "too many arrows" on dense diagrams: five distinctly
+    # WORDED calls between the same two zones ("Recommend", "Query LLM",
+    # "Find Twins"...) still read as one relationship band on a client
+    # diagram — a consulting-grade architecture shows one arrow per
+    # relationship, not one per RPC. Same-label collapsing (the historical
+    # behaviour) is the label>=3 case of this same grouping.
     pair_groups: dict[tuple, list[dict]] = {}
     for e in edges:
         k = (e["from"], e["to"], e.get("label") or "")
@@ -190,9 +194,8 @@ def _bundle_edges(spec: dict, node_root: dict, band_pos: dict) -> tuple[list, li
         ra, rb = node_root.get(e["from"]), node_root.get(e["to"])
         if not ra or not rb or ra == rb:
             continue
-        label = (e.get("label") or "").strip().lower()
         style = str(e.get("style") or e.get("flow") or "").lower()
-        pair_groups.setdefault((ra, rb, label, style), []).append(e)
+        pair_groups.setdefault((ra, rb, style), []).append(e)
     for (_ra, _rb, _label, _style), members in sorted(
             pair_groups.items(), key=lambda kv: (-len(kv[1]), kv[0])):
         if len(members) < _BUNDLE_MIN:
