@@ -298,7 +298,7 @@ def _build_render_spec(blueprint: Blueprint, provider: str) -> dict:
             if e.flow and e.flow not in seen:
                 seen.append(e.flow)
         legend = [{"label": _flow_labels.get(f, f.title()), "flow": f} for f in seen]
-    return {
+    spec = {
         "provider": provider,
         "pattern": blueprint.pattern,
         "density": blueprint.density,
@@ -325,6 +325,18 @@ def _build_render_spec(blueprint: Blueprint, provider: str) -> dict:
             for e in blueprint.edges
         ],
     }
+    if blueprint.process is not None:
+        p = blueprint.process
+        spec["process"] = {
+            "label": p.label,
+            "lanes": list(p.lanes),
+            "phases": list(p.phases),
+            "steps": [{"id": s.id, "kind": s.kind, "type": s.type,
+                      "lane": s.lane, "col": s.col, "label": s.label} for s in p.steps],
+            "flows": [{"from": f.from_, "to": f.to, "label": f.label, "kind": f.kind}
+                     for f in p.flows],
+        }
+    return spec
 
 
 def _preseed_icon_plan(blueprint: Blueprint, provider: str) -> None:
