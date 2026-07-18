@@ -791,8 +791,53 @@ def build_refined(spec: dict, plan: dict | None = None):
                style_extra=(f"strokeWidth={width};endArrow=block;endFill=1;"
                             f"fontFamily={RT.FONT};fontSize={RT.TYPE_SCALE['edge']};"
                             f"fontColor={RT.INK['body']};labelBackgroundColor=#FFFFFF;"))
+        if (cls == "data" and not str(sid).startswith("zone_")
+                and not str(tid).startswith("zone_")):
+            data_chain.append((sid, tid))
 
-    # ---- legend footer ---- #
+    # ---- numbered flow badges (consulting-deck reading order) ---- #
+    # Walk the longest simple chain of data-class edges from the entry side and
+    # drop an 18px numbered chip at each hop's source, so a client can read the
+    # primary request path 1..n without tracing arrows. spec.numbered_flow=False
+    # opts out.
+    if spec.get("numbered_flow", True) and data_chain:
+        out_map: dict[str, list[str]] = {}
+        indeg: dict[str, int] = {}
+        for a, b in data_chain:
+            out_map.setdefault(a, []).append(b)
+            indeg[b] = indeg.get(b, 0) + 1
+        starts = [a for a in out_map if not indeg.get(a)]
+        cur = min(starts, key=lambda a: (d.R[a]["x"], d.R[a]["y"])) if starts \
+            else min(out_map, key=lambda a: (d.R[a]["x"], d.R[a]["y"]))
+        seq: list[tuple[str, str]] = []
+        walked: set[tuple[str, str]] = set()
+        while cur in out_map and len(seq) < 9:
+            nxts = [t for t in out_map[cur] if (cur, t) not in walked]
+            if not nxts:
+                break
+            ra = d.R[cur]
+            nxt = min(nxts, key=lambda t: (abs(d.R[t]["y"] - ra["y"]), d.R[t]["x"]))
+            walked.add((cur, nxt))
+            seq.append((cur, nxt))
+            cur = nxt
+        for i, (a, b) in enumerate(seq, 1):
+            ra, rb = d.R[a], d.R[b]
+            if rb["x"] >= ra["x"] + ra["w"]:          # exits right
+                bx, by = ra["x"] + ra["w"] + 4, ra["y"] + ra["h"] / 2 - 21
+            elif rb["x"] + rb["w"] <= ra["x"]:        # exits left
+                bx, by = ra["x"] - 22, ra["y"] + ra["h"] / 2 - 21
+            elif rb["y"] >= ra["y"]:                  # exits bottom
+                bx, by = ra["x"] + ra["w"] / 2 + 6, ra["y"] + ra["h"] + 4
+            else:                                      # exits top
+                bx, by = ra["x"] + ra["w"] / 2 + 6, ra["y"] - 22
+            chip = d._put(f"flow_badge_{i}", "1", bx, by, 18, 18,
+                          "ellipse;html=1;fillColor=#1D4ED8;strokeColor=#FFFFFF;"
+                          f"strokeWidth=1;fontFamily={RT.FONT};fontColor=#FFFFFF;"
+                          "fontSize=9;fontStyle=1;align=center;verticalAlign=middle;",
+                          str(i), z=Z_CHROME)
+            chip["ob"] = False
+
+    # ---- legend footer (content-sized, not full-width) ---- #
     fy = content_bottom + RT.GEO["footer_lane"] + 15
     entries = [(RT.EDGE_LEGEND_LABELS[f], RT.EDGE_CLASSES[f][0],
                 RT.EDGE_CLASSES[f][2]) for f in legend_flows]
@@ -802,7 +847,18 @@ def build_refined(spec: dict, plan: dict | None = None):
     scope_note = spec.get("scope_note") or (
         "Current target architecture. Original page retained for audit and "
         "requirement comparison." if spec.get("source_page") else "")
-    d.legend_band("footer", [margin, fy], page_w - 2 * margin, entries,
+    # Width = what the swatches + optional meta/scope cards actually need
+    # (mirrors legend_band's internal layout) — a full-width legend band for
+    # three entries reads as filler on a client deliverable.
+    legend_w = 30 + sum(55 + max(90, round(len(str(lbl)) * 6.5) + 10) + 30
+                        for lbl, _c, _d in entries) + 20
+    legend_w = max(legend_w, 25 + 280 + 20)  # never narrower than the title row
+    if meta_html:
+        legend_w += 240
+    if scope_note:
+        legend_w += 360
+    legend_w = min(legend_w, page_w - 2 * margin)
+    d.legend_band("footer", [margin, fy], legend_w, entries,
                   scope_note=scope_note, metadata=meta_html)
 
     # ---- background + page ---- #
