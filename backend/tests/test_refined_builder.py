@@ -443,11 +443,15 @@ def test_e2e_refined_upgrade_deepstream():
                                               inventory_to_render_spec,
                                               first_page_model_xml)
     from prettygraph.native.topology import build_drawio_from_spec
-    from prettygraph.native.repair import semantic_stats
+    from prettygraph.native.layout_plan import analyze_layout
+    from prettygraph.native.repair import auto_repair, semantic_stats
     inv = extract_inventory(str(src))
     spec = inventory_to_render_spec(inv, style_preset="refined")
-    xml, stats = build_drawio_from_spec(spec, "01 — Refined Architecture")
-    stats["semantic"] = semantic_stats(spec, xml, None)
+    # Mirror the production path: plan + deterministic auto-repair (the strict
+    # scorecard is calibrated against repaired output, not the raw one-shot).
+    plan, _rep = auto_repair(spec, "01 — Refined Architecture", analyze_layout(spec))
+    xml, stats = build_drawio_from_spec(spec, "01 — Refined Architecture", plan=plan)
+    stats["semantic"] = semantic_stats(spec, xml, plan)
     xml = xml.replace("</mxfile>",
                       '<diagram name="02 — Original Source" id="dsrc">'
                       + first_page_model_xml(str(src)) + "</diagram></mxfile>")
