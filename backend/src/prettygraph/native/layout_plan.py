@@ -200,8 +200,19 @@ def _bundle_edges(spec: dict, node_root: dict, band_pos: dict) -> tuple[list, li
         ra, rb = node_root.get(e["from"]), node_root.get(e["to"])
         if not ra or not rb or ra == rb:
             continue
-        style = str(e.get("style") or e.get("flow") or "").lower()
-        pair_groups.setdefault((ra, rb, style), []).append(e)
+        # flow (semantic class) must win over style (solid/dashed line hint) —
+        # specs often stamp "style": "solid" on every business edge regardless
+        # of meaning, and keying on it first would silently fuse a "control"
+        # call with an unrelated "data" call that both happen to render solid.
+        cls = str(e.get("flow") or e.get("style") or "").lower()
+        if cls == "monitoring":
+            # Telemetry fan-in is the hub pass's job (grouped by the shared
+            # target node above) — merging it here too would fuse edges that
+            # target DIFFERENT hub nodes in the same zone (e.g. "monitoring"
+            # and "logging" are two distinct nodes sharing one cluster root)
+            # into a single line, silently erasing whichever loses the pick.
+            continue
+        pair_groups.setdefault((ra, rb, cls), []).append(e)
     for (_ra, _rb, _style), members in sorted(
             pair_groups.items(), key=lambda kv: (-len(kv[1]), kv[0])):
         if len(members) < _BUNDLE_MIN:
