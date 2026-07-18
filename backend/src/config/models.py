@@ -79,7 +79,7 @@ def make_llm(model: str):
             api_key=api_key,
             max_tokens=max_tokens,
             temperature=0,
-            timeout=90,
+            timeout=300,
             max_retries=6,
         )
 
