@@ -544,7 +544,9 @@ async def agui_endpoint(request: Request):
                 last_msg=_last_user_text(messages),
                 auto_name=(_last_user_text(messages) or "Untitled")[:50],
             )
-        yield _sse({"type": "RUN_FINISHED", "threadId": thread_id, "runId": run_id})
+        if not run_errored:
+            # AG-UI treats RUN_ERROR as terminal; don't also emit RUN_FINISHED.
+            yield _sse({"type": "RUN_FINISHED", "threadId": thread_id, "runId": run_id})
 
     return StreamingResponse(
         stream(),
