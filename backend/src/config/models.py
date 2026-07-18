@@ -11,6 +11,8 @@ import logging
 import os
 from typing import Any
 
+import httpx
+
 from .settings import get_config
 
 logger = logging.getLogger(__name__)
