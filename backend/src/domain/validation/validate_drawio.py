@@ -1498,7 +1498,7 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
     return {"total": total, "breakdown": bd, "pass": passed, "collisions": collisions,
             "node_recall": round(node_recall, 4), "edge_recall": round(edge_recall, 4),
             "metrics": metrics, "target": target,
-            "style_preset": "refined" if refined else "icon"}
+            "style_preset": "bpmn" if bpmn else ("refined" if refined else "icon")}
 
 
 def main() -> None:
