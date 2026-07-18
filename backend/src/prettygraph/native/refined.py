@@ -743,6 +743,7 @@ def build_refined(spec: dict, plan: dict | None = None):
         return txt, cid in side_set
     # Obstacle rects for collision-aware label placement (computed once).
     card_rects = [r for r in d.R.values() if r.get("ob")]
+    data_chain: list[tuple[str, str]] = []  # card->card data edges (flow badges)
     for e in edges:
         s, t_ = e.get("from"), e.get("to")
         sid = s if s in d.R else (f"zone_{s}" if f"zone_{s}" in d.R else s)
