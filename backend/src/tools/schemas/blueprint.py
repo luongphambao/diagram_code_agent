@@ -7,6 +7,7 @@ from typing import Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from .coercion import CoercingModel
+from .process import ProcessBlueprint
 
 
 class WAFPillar(CoercingModel):
