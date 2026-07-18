@@ -138,11 +138,17 @@ def _bundle_edges(spec: dict, node_root: dict, band_pos: dict) -> tuple[list, li
     groups: dict[tuple, list[dict]] = {}
     for e in edges:
         label = (e.get("label") or "").strip().lower()
-        style = str(e.get("style") or e.get("flow") or "").lower()
+        # `flow` is the SEMANTIC class (data/control/monitoring/...); `style`
+        # ("solid"/"dashed") is a pure line-rendering hint that specs often set
+        # on every edge regardless of meaning — grouping on it first would
+        # silently merge a control call with a data call that both happen to
+        # render solid. flow must win; style is only a fallback when flow is
+        # absent entirely.
+        cls = str(e.get("flow") or e.get("style") or "").lower()
         if e["from"] in hubs:
-            groups.setdefault((e["from"], "out", label, style), []).append(e)
+            groups.setdefault((e["from"], "out", label, cls), []).append(e)
         if e["to"] in hubs:
-            groups.setdefault((e["to"], "in", label, style), []).append(e)
+            groups.setdefault((e["to"], "in", label, cls), []).append(e)
 
     candidates = sorted(
         [(k, v) for k, v in groups.items() if len(v) >= _BUNDLE_MIN],
