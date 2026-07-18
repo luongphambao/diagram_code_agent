@@ -94,7 +94,19 @@ class Blueprint(CoercingModel):
             "channel. 'grid' (2-column layer bands) exists but is EXPERIMENTAL and "
             "opt-in only — it visibly tangles cross-band edges and wastes space "
             "stretching small bands to match the largest one, so avoid it unless "
-            "explicitly asked for a denser/more compact arrangement."
+            "explicitly asked for a denser/more compact arrangement.\n"
+            "5 topology-specific values (use ONLY when the diagram genuinely IS that "
+            "topology, not as a style choice): 'hub_spoke' (event bus / message "
+            "broker with N producers/consumers — hub node auto-picked by highest "
+            "edge count, or set top-level `hub` to a node id); 'hierarchy' (org "
+            "tree / Landing Zone OU structure — levels inferred by BFS from nodes "
+            "with no incoming edge, sharp tree-edge corners); 'mesh' (multi-account "
+            "/ service-mesh peer connectivity — no natural hub or tree); 'sequence' "
+            "(a numbered request walkthrough — every edge gets a step number in "
+            "declared order, 1..n); 'hybrid' (on-prem <-> cloud / DR — two "
+            "top-level site clusters). hub_spoke/hierarchy/mesh ALWAYS render in "
+            "the icon preset (no refined-preset layout exists for them, even if "
+            "style_preset='refined' is set); sequence/hybrid compose with refined."
         ),
     )
     presentation_style: Literal["slide", "diagram"] = Field(
