@@ -175,6 +175,43 @@ def _bundle_edges(spec: dict, node_root: dict, band_pos: dict) -> tuple[list, li
             "members": [[m["from"], m["to"], m.get("label") or ""] for m in rest],
         })
         suppressed += [[m["from"], m["to"], m.get("label") or ""] for m in rest]
+
+    # Zone-pair aggregation: many-to-many spray between the SAME two bands
+    # (>=_BUNDLE_MIN same-label same-style cross-band edges, no shared hub)
+    # collapses to the most central member. This is what tames "too many
+    # arrows" on dense diagrams — six parallel blue arrows between AI COMPUTE
+    # and DATA & STORAGE carry no more information than one.
+    pair_groups: dict[tuple, list[dict]] = {}
+    for e in edges:
+        k = (e["from"], e["to"], e.get("label") or "")
+        if k in seen:
+            continue
+        ra, rb = node_root.get(e["from"]), node_root.get(e["to"])
+        if not ra or not rb or ra == rb:
+            continue
+        label = (e.get("label") or "").strip().lower()
+        style = str(e.get("style") or e.get("flow") or "").lower()
+        pair_groups.setdefault((ra, rb, label, style), []).append(e)
+    for (_ra, _rb, _label, _style), members in sorted(
+            pair_groups.items(), key=lambda kv: (-len(kv[1]), kv[0])):
+        if len(members) < _BUNDLE_MIN:
+            continue
+        drop = len(members) - 1
+        if len(suppressed) + drop > budget:
+            continue
+        # Representative: the member whose endpoints have the highest total
+        # degree (the pair a reader would name first), stable-tied by id.
+        members = sorted(members, key=lambda e: (-(deg.get(e["from"], 0)
+                                                   + deg.get(e["to"], 0)),
+                                                 str(e["from"]), str(e["to"])))
+        rep, rest = members[0], members[1:]
+        for m in members:
+            seen.add((m["from"], m["to"], m.get("label") or ""))
+        bundles.append({
+            "rep": [rep["from"], rep["to"], rep.get("label") or ""],
+            "members": [[m["from"], m["to"], m.get("label") or ""] for m in rest],
+        })
+        suppressed += [[m["from"], m["to"], m.get("label") or ""] for m in rest]
     return bundles, suppressed
 
 
