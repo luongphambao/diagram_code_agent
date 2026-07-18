@@ -1207,6 +1207,16 @@ def edit_drawio(
                 if not op.key:
                     failed.append(f"set_style {op.id}: missing key")
                     continue
+                if (op.key.lower() in ("image", "fillpatternimage")
+                        and re.match(r"\s*https?://", str(op.value or ""), re.I)):
+                    # Remote URLs render as broken-image glyphs in the offline
+                    # PNG export (and are never catalog ground truth).
+                    failed.append(
+                        f"set_style {op.id}: remote image URLs are not allowed — "
+                        "they render as broken glyphs in PNG export. Use the "
+                        "icon_plan/data-URI pipeline or a catalog stencil "
+                        "(resIcon=mxgraph.aws4.<name>) instead.")
+                    continue
                 cell.set("style", _style_set(cell.get("style") or "", op.key, op.value))
                 applied.append(f"set_style {op.id} {op.key}={op.value}")
             elif op.op == "move":
