@@ -131,12 +131,29 @@ def test_hierarchy_edges_are_sharp_not_rounded():
     assert all("rounded=0" in s for s in edge_styles)
 
 
-def test_hierarchy_disconnected_node_joins_last_level():
+def test_hierarchy_isolated_node_is_its_own_root():
+    """A node with zero edges has no incoming edge either — it qualifies as an
+    additional root (level 0), same as a real hierarchy root."""
     spec = _hierarchy_spec()
     spec["nodes"].append({"id": "orphan", "label": "Unlinked"})
     from prettygraph.native.topology import build_tree
     d, _ = build_tree(spec)
-    assert d.R["orphan"]["y"] >= d.R["acct1"]["y"]
+    assert d.R["orphan"]["y"] == d.R["root"]["y"]
+
+
+def test_hierarchy_cyclic_leftover_joins_last_level():
+    """A node reachable only via a cycle back-edge never enters level_of during
+    the forward BFS — the max_lvl+1 fallback must still place it, not KeyError."""
+    spec = _hierarchy_spec()
+    # 'acct1' already points nowhere; add a node whose only edge points BACK
+    # into the tree, so it has an incoming edge (not a root) but is never
+    # reached by the forward BFS from the declared roots.
+    spec["nodes"].append({"id": "cyclic", "label": "Cyclic"})
+    spec["edges"].append({"from": "acct1", "to": "cyclic"})
+    spec["edges"].append({"from": "cyclic", "to": "root"})  # back-edge: root now has an incoming edge
+    from prettygraph.native.topology import build_tree
+    d, _ = build_tree(spec)  # must not raise
+    assert "cyclic" in d.R
 
 
 # --------------------------------------------------------------------------- #
