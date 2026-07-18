@@ -502,6 +502,7 @@ async def agui_endpoint(request: Request):
 
         except GraphRecursionError as exc:
             logger.exception("agent run hit the graph recursion limit: %s", exc)
+            run_errored = True
             yield _sse({
                 "type": "RUN_ERROR",
                 "message": (
@@ -512,8 +513,24 @@ async def agui_endpoint(request: Request):
                 ),
                 "code": "recursion_limit",
             })
+        except (httpx.TimeoutException, TimeoutError) as exc:
+            # Covers the raw transport read timeout (httpx.ReadTimeout) and the
+            # vendored langchain_openai StreamChunkTimeoutError (subclass of
+            # TimeoutError) — the model connection went quiet mid-stream.
+            logger.warning("agent run timed out mid-stream: %r", exc)
+            run_errored = True
+            yield _sse({
+                "type": "RUN_ERROR",
+                "message": (
+                    "The model connection timed out while generating a response "
+                    "(the endpoint went quiet). Partial artifacts, if any, are saved "
+                    "in the workspace — please resend your message to continue."
+                ),
+                "code": "model_timeout",
+            })
         except Exception as exc:  # noqa: BLE001
             logger.exception("agent run failed: %s", exc)
+            run_errored = True
             yield _sse({"type": "RUN_ERROR", "message": str(exc), "code": "internal_error"})
         finally:
             reset_current_workspace(_ws_token)
