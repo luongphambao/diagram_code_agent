@@ -330,7 +330,7 @@ def build_edges(d) -> None:
             gap = Y[k + 1] - Y[k]
             if gap >= 2 * margin + 8:
                 available = gap - 2 * margin
-                num_lanes = available // step + 1
+                num_lanes = int(available // step) + 1
                 if num_lanes > 0:
                     occupied = (num_lanes - 1) * step
                     left = _r((gap - occupied) / 2)
