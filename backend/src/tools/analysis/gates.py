@@ -150,6 +150,13 @@ def _diagram_gate_note(*, block: bool = False) -> str:
         pass
     try:
         result = validate_file(str(drawio_path), stats=stats)
+        # Spec-level Well-Architected advice (refined/non-AWS diagrams — the XML
+        # never carries mxgraph.aws4.* stencils for audit_architecture()'s own
+        # gate to key on). Merge into the same advice bucket so it gets the
+        # standard low-severity/no-action treatment via findings_from_validation.
+        well_arch = stats.get("well_arch_advice") or []
+        if well_arch:
+            result = dict(result, advice=list(result.get("advice") or []) + list(well_arch))
         findings = findings_from_validation(result)
     except Exception:
         return ""
