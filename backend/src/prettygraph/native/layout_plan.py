@@ -196,7 +196,7 @@ def _bundle_edges(spec: dict, node_root: dict, band_pos: dict) -> tuple[list, li
             continue
         style = str(e.get("style") or e.get("flow") or "").lower()
         pair_groups.setdefault((ra, rb, style), []).append(e)
-    for (_ra, _rb, _label, _style), members in sorted(
+    for (_ra, _rb, _style), members in sorted(
             pair_groups.items(), key=lambda kv: (-len(kv[1]), kv[0])):
         if len(members) < _BUNDLE_MIN:
             continue
