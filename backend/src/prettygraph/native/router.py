@@ -701,7 +701,11 @@ def _emit_edge(d, e, r, fr, geom) -> None:
     flow = opts.get("flow", False)
     rounded = opts.get("rounded", False)
     stroke = opts.get("stroke") or opts.get("color") or THEME.edge_stroke
-    raw_style = opts.get("style", "")
+    # `style` marks a RAW edge (no routing at all); `style_extra` appends class
+    # styling AFTER the routed base style, so refined edges get real A*/NUDGE
+    # routing + ports + waypoints while keeping their typographic edge classes
+    # (later mxGraph keys win, so extra strokeWidth/font overrides are safe).
+    raw_style = opts.get("style", "") or opts.get("style_extra", "")
     st = (f"edgeStyle=orthogonalEdgeStyle;html=1;rounded={1 if rounded else 0};"
           f"jettySize=auto;orthogonalLoop=1;fontSize=10;fontColor={THEME.edge_font_color};"
           f"strokeColor={stroke};strokeWidth={THEME.edge_stroke_width};")
