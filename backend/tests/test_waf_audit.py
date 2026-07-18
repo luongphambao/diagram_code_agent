@@ -76,16 +76,16 @@ def test_wired_into_audit_xml_and_validate_file(tmp_path):
 
 
 def test_well_arch_advice_is_scorecard_neutral(tmp_path):
-    """Advice-only findings must not move production_scorecard's total."""
-    clean = _xml(subnet_label="Private Subnet", az_count=2, nat_count=2)
-    flagged = _xml(subnet_label="Public Subnet", az_count=2, nat_count=1)
-    p1, p2 = tmp_path / "clean.drawio", tmp_path / "flagged.drawio"
-    p1.write_text(clean, encoding="utf-8")
-    p2.write_text(flagged, encoding="utf-8")
-    r1, r2 = vd.validate_file(str(p1)), vd.validate_file(str(p2))
-    sc1 = vd.production_scorecard(r1, {"edges": 1})
-    sc2 = vd.production_scorecard(r2, {"edges": 1})
-    assert sc1["total"] == sc2["total"]
+    """Advice-only findings must not move production_scorecard's total — same
+    report/stats, only the (well-arch) advice list differs."""
+    p = tmp_path / "flagged.drawio"
+    p.write_text(_xml(subnet_label="Public Subnet", az_count=2, nat_count=1), encoding="utf-8")
+    report = vd.validate_file(str(p))
+    stats = {"edges": 1}
+    sc_with_advice = vd.production_scorecard(report, stats)
+    report_no_advice = dict(report, advice=[])
+    sc_without_advice = vd.production_scorecard(report_no_advice, stats)
+    assert sc_with_advice["total"] == sc_without_advice["total"]
 
 
 # --------------------------------------------------------------------------- #
