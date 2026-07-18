@@ -378,6 +378,132 @@ def audit_aws_conventions(xml: str) -> list[str]:
     return advice
 
 
+# Databases are detected by name (the catalog "Database" category is noisy —
+# it also tags cloud9, application_composer, cdk…). Covers the data stores
+# that must not sit in a public subnet.
+_DB_NAME_RE = re.compile(
+    r"^(rds|aurora|dynamodb|documentdb|docdb|redshift|elasticache|memorydb|"
+    r"neptune|timestream|database|memcached|opensearch|elasticsearch)")
+
+
+def audit_architecture(xml: str) -> list[str]:
+    """Well-Architected semantic checks on the topology the diagram already
+    encodes (subnet placement, AZ count, gateways) — NOT visual checks.
+    AWS-only (gated on aws4 stencils). Ported from drawio-ai-kit/src/core.mjs
+    auditArchitecture.
+
+    Only rules that flag something PRESENT in the diagram (a DB literally in a
+    public subnet, a literally-singular NAT across AZs) — rules that infer
+    from absence fire on legitimate simplified diagrams, so they're left out.
+    """
+    advice: list[str] = []
+    if _FAMILY not in xml:
+        return advice
+    cells = []
+    for tag in _RE_OPENCELL.findall(xml):
+        cells.append({"id": _attr(tag, "id"), "parent": _attr(tag, "parent"),
+                      "value": _attr(tag, "value") or "", "style": _attr(tag, "style") or ""})
+    by_id = {c["id"]: c for c in cells if c["id"]}
+
+    def icon_name(c: dict) -> str | None:
+        m = re.search(r"resIcon=mxgraph\.aws4\.([a-z0-9_]+)", c["style"])
+        return m.group(1) if m else None
+
+    def is_subnet(c: dict) -> bool:
+        return bool(re.search(r"grIcon=mxgraph\.aws4\.group_subnet\b", c["style"]))
+
+    def is_az(c: dict) -> bool:
+        return bool(re.search(r"grIcon=mxgraph\.aws4\.group_availability_zone\b", c["style"]))
+
+    def ancestors(c: dict) -> list[dict]:
+        out, p, guard = [], by_id.get(c["parent"]), 0
+        while p and guard < 50:
+            guard += 1
+            out.append(p)
+            p = by_id.get(p["parent"])
+        return out
+
+    icons = [(c, icon_name(c)) for c in cells]
+    icons = [(c, n) for c, n in icons if n]
+    nat_count = sum(1 for _, n in icons if n.startswith("nat_gateway"))
+    az_count = sum(1 for c in cells if is_az(c))
+
+    # Rule 1 — database in a PUBLIC subnet (Security)
+    for c, name in icons:
+        if not _DB_NAME_RE.match(name):
+            continue
+        sub = next((a for a in ancestors(c) if is_subnet(a)), None)
+        if sub and re.search(r"public", sub["value"], re.I):
+            advice.append(
+                f'[well-arch] Database "{c["id"]}" ({name}) sits in a PUBLIC subnet '
+                f'("{sub["value"].strip()}") — risk: the data store is directly '
+                "reachable from the internet. Fix: move it to a private subnet and "
+                "reach it via the app tier or a VPC endpoint. (Well-Architected: Security)")
+
+    # Rule 2 — single NAT gateway across multiple AZs (Reliability SPOF)
+    if az_count >= 2 and nat_count == 1:
+        advice.append(
+            f"[well-arch] A single NAT gateway serves {az_count} availability zones — "
+            "risk: it is a single point of failure; if that AZ fails, every private "
+            "subnet loses outbound internet. Fix: deploy one NAT gateway per AZ. "
+            "(Well-Architected: Reliability)")
+
+    return advice
+
+
+def audit_spec_architecture(spec: dict) -> list[str]:
+    """Spec-level twin of audit_architecture() for the refined preset and
+    non-AWS providers, where the XML never carries mxgraph.aws4.* stencils
+    for the audit_architecture() gate to key on. Reads the render_spec's
+    nodes/clusters directly (zone chain instead of group nesting)."""
+    advice: list[str] = []
+    nodes = spec.get("nodes") or []
+    clusters = spec.get("clusters") or []
+    by_cluster_id = {c.get("id"): c for c in clusters if c.get("id")}
+
+    def zone_chain(cluster_id):
+        out, cid, guard = [], cluster_id, 0
+        while cid and guard < 50:
+            guard += 1
+            c = by_cluster_id.get(cid)
+            if not c:
+                break
+            out.append(c)
+            cid = c.get("parent")
+        return out
+
+    # Rule 1 — database node whose cluster chain reaches a public subnet zone.
+    for n in nodes:
+        ntype = str(n.get("type") or "").lower()
+        label = str(n.get("label") or "").lower()
+        tech = str(n.get("tech") or "").lower()
+        is_db = ntype == "database" or bool(_DB_NAME_RE.match(label)) or bool(_DB_NAME_RE.match(tech))
+        if not is_db:
+            continue
+        chain = zone_chain(n.get("cluster"))
+        pub = next((c for c in chain if c.get("zone") == "subnet_public"), None)
+        if pub:
+            advice.append(
+                f'[well-arch] Database "{n.get("id")}" ({n.get("label")}) sits in a '
+                f'PUBLIC subnet ("{pub.get("label")}") — risk: the data store is '
+                "directly reachable from the internet. Fix: move it to a private "
+                "subnet and reach it via the app tier or a VPC endpoint. "
+                "(Well-Architected: Security)")
+
+    # Rule 2 — single NAT-ish node vs >=2 AZ-zone clusters (Reliability SPOF).
+    az_count = sum(1 for c in clusters if c.get("zone") == "az")
+    nat_count = sum(1 for n in nodes if "nat" in str(n.get("label") or "").lower()
+                     or "nat_gateway" in str(n.get("icon") or "").lower())
+    if az_count >= 2 and nat_count == 1:
+        advice.append(
+            f"[well-arch] A single NAT gateway serves {az_count} availability zones — "
+            "risk: it is a single point of failure; if that AZ fails, every private "
+            "subnet loses outbound internet. Fix: deploy one NAT gateway per AZ. "
+            "(Well-Architected: Reliability)")
+
+    return advice
+
+
 def _parse_cells(xml: str) -> list[dict]:
     """Parse every mxCell with geometry + waypoints; resolve absolute coords."""
     out = []
