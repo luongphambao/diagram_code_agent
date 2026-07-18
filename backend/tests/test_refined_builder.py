@@ -233,10 +233,10 @@ def test_refined_composition_structure():
     # semantic edge ids with the 5-class styling
     assert "e_cameras_ingress" in cells
     style = cells["e_cameras_ingress"].get("style")
-    assert "strokeColor=#2563EB" in style and "strokeWidth=1.7" in style
+    assert "strokeColor=#1D4ED8" in style and "strokeWidth=1.7" in style
     assert "endArrow=block" in style
     mon = cells["e_worker2_cloudwatch"].get("style")
-    assert "strokeColor=#C96A1B" in mon and "dashed=1" in mon
+    assert "strokeColor=#98A2B3" in mon and "dashed=1" in mon
     sec = cells["e_iam_worker1"].get("style")  # security -> control alias
     assert "strokeColor=#536174" in sec
     # ops band spans the main row bottom; outcomes zone sits right of main zones
