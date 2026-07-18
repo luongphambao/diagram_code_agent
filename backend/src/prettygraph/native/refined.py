@@ -725,6 +725,11 @@ def build_refined(spec: dict, plan: dict | None = None):
     plan = plan or {}
     suppressed = {tuple(x) for x in plan.get("suppressed_edges", [])}
     rep_keys = {tuple(b.get("rep") or []) for b in plan.get("edge_bundles", [])}
+    # Zone-pair bundle representatives get a multiplicity tag ("×N") instead of
+    # the hub bundles' "(all layers)" phrasing.
+    rep_pair_count = {tuple(b.get("rep") or []): len(b.get("members") or []) + 1
+                      for b in plan.get("edge_bundles", [])
+                      if b.get("kind") == "pair"}
     node_by_id = {n["id"]: n for n in nodes}
     side_set = set(sides)
     # Left-to-right position of each main zone — an edge between two ADJACENT
