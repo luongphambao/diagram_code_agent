@@ -657,6 +657,15 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
         stats["semantic"] = semantic_stats(spec, xml, plan)
     except Exception:  # noqa: BLE001 — best-effort, never block a render
         pass
+    # Well-Architected semantic advice (0 LLM tokens) — spec-level twin of
+    # validate_drawio.audit_architecture() for refined/non-AWS diagrams, where
+    # the XML never carries mxgraph.aws4.* stencils for the XML-level gate to
+    # key on (reads zone chains directly off the render_spec instead).
+    try:
+        from domain.validation.validate_drawio import audit_spec_architecture
+        stats["well_arch_advice"] = audit_spec_architecture(spec)
+    except Exception:  # noqa: BLE001 — advisory only, never block a render
+        pass
     _render_drawio_png(out, workspace / "out.png")
     stats["fallback_icons"] = int(spec.get("_fallback_icons") or 0)
     try:  # persist stats so the diagram gate / finalize can score without the spec
