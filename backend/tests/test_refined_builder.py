@@ -361,7 +361,8 @@ def test_refined_scorecard_fails_without_backbone():
     report = vd.validate_xml(xml_nb, stats=stats)
     sc = vd.production_scorecard(report, stats)
     full = vd.production_scorecard(vd.validate_xml(xml, stats=stats), stats)
-    assert sc["breakdown"]["iconography"] <= full["breakdown"]["iconography"] - 3
+    # backbone is 1.5 of the 4 structure points in the coverage-blend score
+    assert sc["breakdown"]["iconography"] <= full["breakdown"]["iconography"] - 1.5
 
 
 def test_icon_mode_scorecard_unchanged():
