@@ -772,9 +772,15 @@ def _emit_edge(d, e, r, fr, geom) -> None:
     if label:
         st += f"labelBackgroundColor={THEME.edge_label_bg};"
     wp_xml = ""
+    label_offset = opts.get("label_offset")
     if r and not r.get("raw"):
         a, b = d.R[e["src"]], d.R[e["tgt"]]
         g = geom(a, b, r, fr["s"], fr["t"])
+        if label:
+            # Post-routing label solve: the polyline is now known, so place
+            # the label where it clears cards and other labels.
+            label_offset = _solve_label_offset(
+                d, label, [g["sp"], *g["wp"], g["ep"]], label_offset)
 
         def port(s, f):
             if s == "L":
