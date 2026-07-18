@@ -477,8 +477,18 @@ def build_refined(spec: dict, plan: dict | None = None):
                 name = None
         return name, None
 
-    # ---- place main zones: left->right rows of ≤6 (playbook aspect target) ---- #
-    n_rows = max(1, -(-len(mains) // 6))
+    # ---- place main zones: left->right rows of ≤N (playbook aspect target).
+    # N is an auto_repair plan knob (refined_zones_per_row) so the deterministic
+    # repair loop can trade row count against aspect ratio / page fill. ---- #
+    zones_per_row = 6
+    if plan:
+        try:
+            zpr = int(plan.get("refined_zones_per_row") or 0)
+            if zpr:
+                zones_per_row = min(6, max(3, zpr))
+        except (TypeError, ValueError):
+            pass
+    n_rows = max(1, -(-len(mains) // zones_per_row))
     per_row = -(-len(mains) // n_rows) if mains else 1
     zone_rects: dict[str, dict] = {}
     ry = _ZONE_TOP
