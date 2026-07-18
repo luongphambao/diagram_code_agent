@@ -64,8 +64,11 @@ production path; the mingrammer/Graphviz flow (steps 5-8) is the OLD path.
   `upgrade_drawio(source_path)` ONCE. Default output is the REFINED typographic
   preset: a 2-page file (page 1 = refined rebuild with numbered tinted zones,
   bold-heading cards, semantic edge legend; page 2 = the untouched original — do
-  NOT edit or delete it). No icons by design — never chase icon coverage on a
-  refined result. Edits target page 1 only; if the validator flags over-long
+  NOT edit or delete it). Refined cards carry full-color vendor icons baked
+  automatically from icon_plan.json — if the scorecard reports icon_coverage
+  below 0.95, fix the icon_plan/spec and re-export; NEVER paste remote image
+  URLs via `set_style image=` (they render as broken glyphs and hard-fail
+  validation). Edits target page 1 only; if the validator flags over-long
   card body lines, rewrite them with `set_label` inside the normal 2-batch
   `edit_drawio` budget. Pass `style_preset="icon"` only if the user explicitly
   wants the icon look. Then act on any Lint / semantic-loss warning and
