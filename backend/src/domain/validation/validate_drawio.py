@@ -987,6 +987,17 @@ REFINED_TARGET = {
     "body_line_max": 38,           # chars per card body line (§12.4 + slack)
 }
 
+# The BPMN swimlane preset's bar: a pool has no aspect-ratio dial, no icon
+# coverage concept, and no layer-band tinting — structure quality is instead
+# carried entirely by audit_bpmn's semantic checks (gateway split/merge,
+# start/end connectivity, no orphan flow objects), folded into
+# connector_readability below rather than a separate composition/iconography
+# requirement.
+BPMN_TARGET = {
+    "collisions": 0,
+    "crossings_max": 3,
+}
+
 
 def audit_refined_structure(xml: str) -> dict:
     """Structure metrics for the refined preset (0 LLM tokens): backbone strip,
