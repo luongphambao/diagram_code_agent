@@ -114,6 +114,13 @@ expects. Also use **diagrams-as-code** `reference/nodes.md` and
 ## Blueprint quality (step 3 detail)
 When calling `propose_blueprint`, your blueprint must be thorough enough for the
 drawer to render without guessing:
+- **BPMN / swimlane / business process request** (roles x phases, "workflow",
+  "approval process", "order fulfillment process" — NOT an infrastructure
+  architecture): fill ONLY `blueprint.process` (label, lanes, phases, steps,
+  flows) and leave `nodes`/`clusters`/`edges` empty. `pattern` is still
+  required by the schema but is ignored for process diagrams — any short
+  value is fine. This renders through the native BPMN builder, NOT the
+  mingrammer/Graphviz flowchart path.
 - Use `architecture_analysis.json` as planning signal: choose from its
   suggested_patterns when they fit, reflect its scale/security/provider signals
   in the brief and blueprint, and address its concerns through scoped boundaries
