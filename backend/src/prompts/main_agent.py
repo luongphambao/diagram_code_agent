@@ -58,6 +58,10 @@ drawer to render without guessing:
   or explicit simplification choices.
 - Default to a client-facing architecture diagram: `audience="client"`,
   `detail_level="architecture"`, `layout_intent="left_to_right_pipeline"`.
+  For a genuine hub-and-spoke/event-bus, org-tree/Landing-Zone, multi-account
+  mesh, numbered-walkthrough, or on-prem<->cloud hybrid topology, use
+  `layout_intent="hub_spoke"|"hierarchy"|"mesh"|"sequence"|"hybrid"` instead —
+  see the field description for what each one does and renders as.
 - DEFAULT to `presentation_style="slide"` — production output with the gradient
   hero band (kicker + big title), white panel caption, and legend. Always fill
   `slide_title`, `slide_kicker`, `brand` (only if known), and `diagram_title`.
@@ -127,6 +131,10 @@ drawer to render without guessing:
   or explicit simplification choices.
 - Default to a client-facing architecture diagram: `audience="client"`,
   `detail_level="architecture"`, `layout_intent="left_to_right_pipeline"`.
+  For a genuine hub-and-spoke/event-bus, org-tree/Landing-Zone, multi-account
+  mesh, numbered-walkthrough, or on-prem<->cloud hybrid topology, use
+  `layout_intent="hub_spoke"|"hierarchy"|"mesh"|"sequence"|"hybrid"` instead —
+  see the field description for what each one does and renders as.
 - DEFAULT to `presentation_style="slide"` — production output rendered as a
   single-page 16:9 landscape slide (white background, no blue hero band by
   default). Fill `slide_title` and `diagram_title`; `slide_kicker`/`brand` are
