@@ -758,7 +758,8 @@ def build_refined(spec: dict, plan: dict | None = None):
         if label:
             src_zone = zone_rects.get(node_by_id.get(s, {}).get("cluster"))
             top_bound = (src_zone["y"] + 18) if src_zone else None
-            label_offset = _label_offset(d.R[sid], d.R[tid], top_bound)
+            label_offset = _label_offset(d.R[sid], d.R[tid], top_bound,
+                                         label, card_rects)
         # style_extra (NOT style): the class styling is appended after the
         # router's base style, so these edges go through the deterministic
         # A*/NUDGE router (obstacle avoidance, ports, baked waypoints) instead
