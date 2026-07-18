@@ -23,12 +23,14 @@ from .theme import THEME, stage_fill, stage_stroke
 
 try:
     from ..drawio_catalog import (load_catalog as _load_catalog,
-                                  search_icon as _search_icon, get_icon as _get_icon)
+                                  search_icon as _search_icon, get_icon as _get_icon,
+                                  expand_tokens as _expand_tokens)
     from ..graph_builder import _aws_group_for_label
     from ..constants import PRO_ACCENTS, FLOW_COLORS
 except (ImportError, ValueError):  # pragma: no cover - import fallback
     from domain.diagram.drawio_catalog import (load_catalog as _load_catalog,  # type: ignore
-                                search_icon as _search_icon, get_icon as _get_icon)
+                                search_icon as _search_icon, get_icon as _get_icon,
+                                expand_tokens as _expand_tokens)
     from prettygraph.graph_builder import _aws_group_for_label  # type: ignore
     from prettygraph.constants import PRO_ACCENTS, FLOW_COLORS  # type: ignore
 
