@@ -565,9 +565,10 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
                 json.dumps(refined_theme.as_json(), indent=2), encoding="utf-8")
         except Exception:  # noqa: BLE001
             pass
-    # Attach vendor logos to nodes (both presets) — refined draws each as a small
-    # top-right badge on its component card.
-    _attach_icon_fallbacks(spec, workspace)
+    # Attach vendor logos to nodes (both presets) — refined draws each as a
+    # left badge on its component card. Guarantees 100% icon coverage via the
+    # icon_plan -> catalog -> icon-pack -> category-glyph chain.
+    _bake_icon_plan(spec, workspace)
     # Layout analysis (0 LLM tokens): edge-aware band order, hub edge bundling,
     # aspect-aware grid columns. Best-effort — a failed analysis renders unplanned.
     plan = None
