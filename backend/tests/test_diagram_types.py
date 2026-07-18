@@ -81,8 +81,7 @@ def test_hub_spoke_centers_hub_between_spoke_columns(tmp_path):
 
 
 def test_hub_spoke_explicit_hub_id_honored():
-    spec = _hub_spec(hub=("a"))
-    spec["hub"] = "a"
+    spec = _hub_spec(hub="a")
     xml, _ = build_drawio_from_spec(spec, "Hub")
     assert "Service A" in xml and "Event Bus" in xml
 
