@@ -537,6 +537,15 @@ def build_refined(spec: dict, plan: dict | None = None):
         band_right = max(zone_rects[z]["x"] + zone_rects[z]["w"] for z in cloud_mains)
     else:
         band_left, band_right = margin, max(main_right, content_right)
+    # Composition reflow: by default the ops shelves pack across the FULL
+    # content width (including under the sidebar column) so several ops zones
+    # share a row and the bottom-right of the page doesn't sit empty. The
+    # legacy cloud-aligned band survives behind an auto_repair plan knob.
+    ops_pack = True
+    if plan is not None and "refined_ops_pack" in (plan or {}):
+        ops_pack = bool(plan["refined_ops_pack"])
+    if ops_pack:
+        band_right = max(band_right, content_right)
     ops_rects: dict[str, dict] = {}
     oy = max(main_bottom, (sy - RT.GEO["zone_gap"] - RT.GEO["tab_overlap"])
              if sides else 0) + _OPS_GAP
