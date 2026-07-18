@@ -1393,7 +1393,8 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
     # grace thresholds meant for hand-tuned files.
     refined = (str(stats.get("style_preset") or "").lower() == "refined"
                or bool(metrics.get("refined")))
-    target = REFINED_TARGET if refined else PRODUCTION_TARGET
+    bpmn = str(stats.get("style_preset") or "").lower() == "bpmn"
+    target = BPMN_TARGET if bpmn else (REFINED_TARGET if refined else PRODUCTION_TARGET)
     cross_grace = 0.3 if refined else 0.5
     if metrics.get("edge_crossings") is not None:
         cross = int(metrics["edge_crossings"])
