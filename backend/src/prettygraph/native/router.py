@@ -316,7 +316,9 @@ def build_edges(d) -> None:
             gap = X[k + 1] - X[k]
             if gap >= 2 * margin + 8:
                 available = gap - 2 * margin
-                num_lanes = available // step + 1
+                # int(): upgrade-ingested cards carry float geometry, and a
+                # float // yields float — range() would raise.
+                num_lanes = int(available // step) + 1
                 if num_lanes > 0:
                     occupied = (num_lanes - 1) * step
                     left = _r((gap - occupied) / 2)
