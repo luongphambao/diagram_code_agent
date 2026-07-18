@@ -557,6 +557,7 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
         # IS the presentation, same as the refined preset).
         name = spec.get("process", {}).get("label") or name or "Process"
         xml, stats = build_drawio_from_spec(spec, name, flat=False, plan=None)
+        stats["style_preset"] = "bpmn"  # production_scorecard: no icon/zone/ratio bar
         out.write_text(xml, encoding="utf-8")
         try:
             from domain.validation.validate_drawio import check_semantic_preservation
