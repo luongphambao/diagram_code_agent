@@ -40,42 +40,45 @@ INK = {
 }
 
 # Zone hue registry: name -> (tab_fill, zone_stroke, zone_tint).
-# Formula from the reference: saturated tab + mid-saturation stroke + pale tint,
-# all the same hue. Semantic mapping per playbook §11: blue=entry/data-flow,
-# teal=core execution, purple=custom logic/state, orange=operations/storage,
-# green=outcome/success, slate=neutral/ops-governance.
+# CLIENT-DELIVERABLE PALETTE: zones are neutral near-white with quiet gray
+# strokes — the saturated value lives ONLY in the tab chip, and active accents
+# are capped at 3 hues (navy = main flow, slate = ops/governance, green =
+# outcome) so the full-color vendor icons are the diagram's color story
+# instead of competing pastel zone fills. Legacy hue KEYS are kept so specs
+# and the hue-pick logic keep working — they now map onto the reduced accents.
 ZONE_HUES: dict[str, tuple[str, str, str]] = {
-    "blue": ("#2563EB", "#B8CDF7", "#F2F7FF"),
-    "teal": ("#0F766E", "#9DD7CE", "#F1FBF9"),
-    "purple": ("#6D4DB3", "#C7B8EA", "#F7F5FF"),
-    "orange": ("#C96A1B", "#E7B27E", "#FFF8F0"),
-    "green": ("#2E7D4F", "#A8D3B7", "#F4FBF6"),
-    "slate": ("#536174", "#D0D5DD", "#FFFFFF"),
+    "blue": ("#1D4ED8", "#E4E7EC", "#FAFBFC"),
+    "teal": ("#1D4ED8", "#E4E7EC", "#FAFBFC"),
+    "purple": ("#1D4ED8", "#E4E7EC", "#FAFBFC"),
+    "orange": ("#1D4ED8", "#E4E7EC", "#FAFBFC"),
+    "green": ("#15803D", "#E4E7EC", "#F7FBF8"),
+    "slate": ("#536174", "#E4E7EC", "#FCFCFD"),
 }
 # Default hue assignment order for main-flow zones (entry->core->state->storage->outcome).
 HUE_ORDER = ["blue", "teal", "purple", "orange", "green", "slate"]
 
-# Card-on-tint stroke: one step stronger than the zone stroke so white cards
-# read as elevated without shadows (reference: #9DBAF3 on a #B8CDF7 zone).
+# Card-on-neutral stroke: uniform quiet gray — elevation comes from the white
+# card on the near-white zone, not per-hue tinted borders.
 CARD_STROKES: dict[str, str] = {
-    "blue": "#9DBAF3",
-    "teal": "#7BC8BC",
-    "purple": "#C7B8EA",
-    "orange": "#E7B27E",
-    "green": "#A8D3B7",
+    "blue": "#D0D5DD",
+    "teal": "#D0D5DD",
+    "purple": "#D0D5DD",
+    "orange": "#D0D5DD",
+    "green": "#D0D5DD",
     "slate": "#D0D5DD",
 }
 
 # Refined edge classes: name -> (color, stroke_width, dashed).
-# Solid = live data/execution; dashed = out-of-band (monitoring/control).
-# strokeWidth encodes prominence: main spine 1.7 -> telemetry 1.3.
+# Primary request/data path is navy and prominent; execution is slate solid;
+# out-of-band flows (monitoring/control/future) are THIN DASHED NEUTRALS so
+# they read as annotation, not architecture.
 EDGE_CLASSES: dict[str, tuple[str, float, bool]] = {
-    "data": ("#2563EB", 1.7, False),
-    "execution": ("#0F766E", 1.6, False),
-    "outcome": ("#2E7D4F", 1.4, False),
-    "monitoring": ("#C96A1B", 1.3, True),
-    "control": ("#536174", 1.3, True),
-    "future": ("#98A2B3", 1.3, True),
+    "data": ("#1D4ED8", 1.7, False),
+    "execution": ("#536174", 1.5, False),
+    "outcome": ("#15803D", 1.4, False),
+    "monitoring": ("#98A2B3", 1.1, True),
+    "control": ("#536174", 1.1, True),
+    "future": ("#C2C9D2", 1.0, True),
 }
 # Human legend labels for the classes worth legending (outcome/future edges are
 # self-evident sink arrows in the reference and stay off the legend).
