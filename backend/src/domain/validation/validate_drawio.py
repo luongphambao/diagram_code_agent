@@ -6,8 +6,9 @@ Catches mistakes that vision self-check is slow and unreliable at:
   - Broken parent references
   - Invented stencil names (resIcon/grIcon not in the catalog)   [errors]
   - (warnings) Off-grid geometry, overlapping sibling nodes, missing aspect=fixed
-  - (advice) aesthetics, AWS conventions, edge geometry/clearance — ported from
-    drawio-ai-kit/src/core.mjs so a render+vision pass can be skipped for these.
+  - (advice) aesthetics, AWS conventions, edge geometry/clearance, Well-Architected
+    semantic checks — ported from drawio-ai-kit/src/core.mjs so a render+vision
+    pass can be skipped for these.
 
 Runs without launching draw.io — fast pre-check before visual review.
 
