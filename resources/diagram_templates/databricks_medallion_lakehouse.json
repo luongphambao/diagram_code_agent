@@ -1,0 +1,53 @@
+{
+  "_meta": {
+    "name": "databricks_medallion_lakehouse",
+    "provider": "databricks",
+    "layout_intent": "left_to_right_pipeline",
+    "tags": ["databricks", "medallion", "lakehouse", "bronze silver gold", "unity catalog", "delta lake"],
+    "summary": "Databricks medallion lakehouse: ingestion, Bronze/Silver/Gold Delta layers governed by Unity Catalog, and BI/ML consumption. Ported from drawio-ai-kit examples/databricks/build_lakehouse.mjs."
+  },
+  "provider": "databricks",
+  "style_preset": "refined",
+  "diagram_title": "Databricks Medallion Lakehouse",
+  "subtitle": "Bronze -> Silver -> Gold · Unity Catalog governance",
+  "backbone": ["Ingestion", "Bronze", "Silver", "Gold", "Consumption"],
+  "clusters": [
+    { "id": "platform", "label": "Databricks Lakehouse Platform", "zone": "cloud" },
+    { "id": "ingest", "label": "Ingestion", "number": 1, "parent": "platform" },
+    { "id": "bronze", "label": "Bronze Layer", "number": 2, "parent": "platform" },
+    { "id": "silver", "label": "Silver Layer", "number": 3, "parent": "platform" },
+    { "id": "gold", "label": "Gold Layer", "number": 4, "parent": "platform" },
+    { "id": "consume", "label": "Consumption", "number": 5, "parent": "platform" }
+  ],
+  "nodes": [
+    { "id": "autoloader", "label": "Auto Loader", "cluster": "ingest",
+      "body": ["Cloud Files streaming ingest"] },
+    { "id": "kafka", "label": "Kafka Source", "cluster": "ingest",
+      "body": ["Event streams"] },
+    { "id": "bronze_delta", "label": "Bronze Delta Tables", "cluster": "bronze", "type": "database",
+      "body": ["Raw, append-only", "Schema-on-read"] },
+    { "id": "silver_delta", "label": "Silver Delta Tables", "cluster": "silver", "type": "database",
+      "body": ["Cleansed, deduplicated", "Conformed schema"] },
+    { "id": "gold_delta", "label": "Gold Delta Tables", "cluster": "gold", "type": "database",
+      "body": ["Business-level aggregates"] },
+    { "id": "unity", "label": "Unity Catalog", "cluster": "gold",
+      "body": ["Fine-grained governance", "Lineage across all layers"] },
+    { "id": "note_unity", "label": "Governance responsibility", "cluster": "gold", "kind": "note",
+      "body": ["Unity Catalog enforces access control end to end."] },
+    { "id": "bi", "label": "BI Dashboards", "cluster": "consume",
+      "body": ["SQL Warehouse"] },
+    { "id": "ml", "label": "ML Models", "cluster": "consume",
+      "body": ["Feature Store + MLflow"] }
+  ],
+  "edges": [
+    { "from": "autoloader", "to": "bronze_delta", "flow": "data" },
+    { "from": "kafka", "to": "bronze_delta", "flow": "data" },
+    { "from": "bronze_delta", "to": "silver_delta", "label": "clean + dedupe", "flow": "data" },
+    { "from": "silver_delta", "to": "gold_delta", "label": "aggregate", "flow": "data" },
+    { "from": "unity", "to": "bronze_delta", "flow": "security" },
+    { "from": "unity", "to": "silver_delta", "flow": "security" },
+    { "from": "unity", "to": "gold_delta", "flow": "security" },
+    { "from": "gold_delta", "to": "bi", "flow": "serving" },
+    { "from": "gold_delta", "to": "ml", "flow": "serving" }
+  ]
+}
