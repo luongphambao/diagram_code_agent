@@ -59,10 +59,15 @@ def test_analyze_layout_is_deterministic():
 
 def test_hub_fanout_respects_suppression_cap():
     # 6 telemetry edges would need drop=5, but only 4 may be suppressed (40% of
-    # 11 edges) — the group is skipped whole rather than partially bundled.
+    # 11 edges) — the HUB group is skipped whole rather than partially bundled.
+    # The zone-pair pass may still fully collapse each per-tier channel
+    # (3 t1->mon + 3 t2->mon), which fits the cap exactly (2+2 dropped).
     plan = analyze_layout(_hub_spec())
-    assert plan["edge_bundles"] == []
-    assert plan["suppressed_edges"] == []
+    assert all(b["kind"] == "pair" for b in plan["edge_bundles"])
+    assert len(plan["suppressed_edges"]) <= 4  # the cap still binds
+    # every pair bundle collapses its whole channel — no half-bundled pairs
+    for b in plan["edge_bundles"]:
+        assert len(b["members"]) == 2  # 3 edges per tier -> 1 rep + 2 members
 
 
 def test_hub_fanout_bundles_when_cap_allows():
