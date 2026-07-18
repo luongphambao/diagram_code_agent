@@ -772,6 +772,12 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
                       for b in plan.get("edge_bundles", [])
                       if b.get("kind") == "pair"}
     flows_seen: list[str] = []
+    # diagram_types.py "sequence" preset (icon-preset path — the refined path
+    # handles its own numbered-flow badges): number every edge in declared
+    # order, "1 - ", "2 - ", ... so a reader can follow the request walkthrough
+    # without a numbered-badge overlay.
+    sequence_mode = intent == "sequence"
+    seq_i = 0
     for e in spec.get("edges", []):
         s, t = e.get("from"), e.get("to")
         if s in d.R and t in d.R:
@@ -785,6 +791,10 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
                     label = (label + f" (×{n} flows)").strip()
             elif key in rep_keys and "(all layers)" not in label:
                 label = (label + " (all layers)").strip()
+            if sequence_mode:
+                seq_i += 1
+                label = f"{seq_i} · {label}".rstrip(" ·") if not label \
+                    else f"{seq_i} · {label}"
             flow = str(e.get("flow") or "").lower()
             fc = FLOW_COLORS.get(flow)
             if fc and flow not in flows_seen:
