@@ -829,6 +829,8 @@ def build_refined(spec: dict, plan: dict | None = None):
             walked.add((cur, nxt))
             seq.append((cur, nxt))
             cur = nxt
+        if len(seq) < 3:
+            seq = []  # a 1-2 hop "chain" numbers nothing worth reading
         for i, (a, b) in enumerate(seq, 1):
             ra, rb = d.R[a], d.R[b]
             if rb["x"] >= ra["x"] + ra["w"]:          # exits right
