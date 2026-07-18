@@ -468,32 +468,7 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
     layered = (intent.startswith("layer") or len(main_roots) >= 3) and not has_nested_zones
 
     def build_node(n: dict, accent: str | None = None, size_class: str | None = None):
-        # Upgrade path (V2 §8): a node carrying an embedded icon reuses it directly
-        # — no catalog lookup, preserving the source diagram's exact icon.
-        img = n.get("icon_data_uri")
-        if img:
-            title, sub = _card_texts(n)
-            mn, mx = _SIZE_CLASSES.get(size_class or "medium", _SIZE_CLASSES["medium"])
-            return card(n["id"], None, title, sub, accent=accent,
-                        min_w=mn, max_w=mx, image_data_uri=img)
-        name = _resolve_node_icon(cat, n, provider)
-        label = _node_label(n)
-        longest_line = max((len(ln) for ln in label.split("\n")), default=0)
-        if (provider == "aws" and name
-                and "mxgraph.aws4" in ((_get_icon(cat, name) or {}).get("style") or "")
-                and longest_line <= _ICON_LABEL_MAX):
-            # AWS convention: native resourceIcon with the label below (short
-            # labels only — see _ICON_LABEL_MAX; a longer label falls through
-            # to the card() branch below, which wraps safely).
-            return icon(n["id"], name, label)
-        title, sub = _card_texts(n)
-        mn, mx = _SIZE_CLASSES.get(size_class or "medium", _SIZE_CLASSES["medium"])
-        if name or sub:
-            return card(n["id"], name, title, sub, accent=accent, min_w=mn, max_w=mx)
-        if name is None and provider == "aws":
-            return box(n["id"], _node_label(n), fill=THEME.base,
-                       stroke=_accent_stroke(None), fs=11)
-        return card(n["id"], name, title, sub, accent=accent, min_w=mn, max_w=mx)
+        return _build_node_element(n, cat, provider, accent, size_class)
 
     def build_cluster(cid: str, depth: int = 0, band_i: int = 0, band_dir: str = "col"):
         c = clusters[cid]
