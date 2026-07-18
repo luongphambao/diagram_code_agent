@@ -841,6 +841,10 @@ def build_refined(spec: dict, plan: dict | None = None):
                 bx, by = ra["x"] + ra["w"] / 2 + 6, ra["y"] + ra["h"] + 4
             else:                                      # exits top
                 bx, by = ra["x"] + ra["w"] / 2 + 6, ra["y"] - 22
+            if any(bx < r["x"] + r["w"] and bx + 18 > r["x"]
+                   and by < r["y"] + r["h"] and by + 18 > r["y"]
+                   for r in card_rects):
+                continue  # never drop a chip ON a card — skip that hop instead
             chip = d._put(f"flow_badge_{i}", "1", bx, by, 18, 18,
                           "ellipse;html=1;fillColor=#1D4ED8;strokeColor=#FFFFFF;"
                           f"strokeWidth=1;fontFamily={RT.FONT};fontColor=#FFFFFF;"
