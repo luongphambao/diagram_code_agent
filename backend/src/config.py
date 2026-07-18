@@ -144,18 +144,21 @@ def make_llm(model: str):
             api_key=api_key,
             max_tokens=max_tokens,
             temperature=0,
-            timeout=90,
+            timeout=300,
             max_retries=6,
         )
 
     # OpenAI or OpenAI-compatible (mimo, etc.)
     from langchain_openai import ChatOpenAI
 
+    # See config/models.py for the rationale: long read window kept above the
+    # app-layer stream_chunk_timeout so the clean stall detector is the gatekeeper.
     kwargs: dict[str, Any] = dict(
         model=model,
         api_key=api_key,
-        timeout=90,
+        timeout=httpx.Timeout(connect=15.0, read=600.0, write=60.0, pool=600.0),
         max_retries=6,
+        stream_chunk_timeout=300.0,
     )
 
     base_url = pcfg.get("base_url")
