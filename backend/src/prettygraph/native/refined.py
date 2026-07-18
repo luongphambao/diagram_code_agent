@@ -146,7 +146,9 @@ def _auto_glue(zone_id: str, cluster: dict, role: str) -> tuple[str, list[str]] 
 
 
 def _card_h(lines: list[str]) -> int:
-    return _CARD_PAD_H + (8 + _LINE_H * len(lines) if lines else 8)
+    # Floor of 56px: every card now carries a 38px left icon badge, which needs
+    # 8px top + ~10px bottom clearance even on title-only cards.
+    return max(56, _CARD_PAD_H + (8 + _LINE_H * len(lines) if lines else 8))
 
 
 _MON_RX = re.compile(r"monitor|cloudwatch|logg?ing|\blogs?\b|metric|telemetry"
