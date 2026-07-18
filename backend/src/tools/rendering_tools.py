@@ -548,6 +548,30 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     from prettygraph.native.topology import build_drawio_from_spec
     out = workspace / "out.drawio"
     name = spec.get("slide_title") or spec.get("diagram_title") or "Architecture"
+    if spec.get("process"):
+        # BPMN swimlane process — a standalone diagram family. None of the
+        # architecture-diagram machinery below applies: no vendor icons to
+        # bake, no band/hub layout planning, no auto-repair variant search
+        # (there's nothing for it to vary — a pool has no band_cols/zone
+        # knobs), and never wrapped in the slide hero band (the pool frame
+        # IS the presentation, same as the refined preset).
+        name = spec.get("process", {}).get("label") or name or "Process"
+        xml, stats = build_drawio_from_spec(spec, name, flat=False, plan=None)
+        out.write_text(xml, encoding="utf-8")
+        try:
+            from prettygraph.native.repair import semantic_stats
+            stats["semantic"] = semantic_stats(spec, xml, None)
+        except Exception:  # noqa: BLE001
+            pass
+        _render_drawio_png(out, workspace / "out.png")
+        stats["fallback_icons"] = 0
+        try:
+            (workspace / "out.native_stats.json").write_text(
+                json.dumps(stats), encoding="utf-8")
+        except Exception:  # noqa: BLE001
+            pass
+        _reset_drawio_edit_rounds()
+        return stats
     # DEFAULT preset is the refined typographic look (numbered tinted zones with
     # folder tabs, left-logo cards, semantic edge legend, nested cloud/VPC
     # boundaries) for EVERY architecture diagram. Pass style_preset="icon"
