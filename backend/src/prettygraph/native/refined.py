@@ -317,6 +317,11 @@ def build_refined(spec: dict, plan: dict | None = None):
     clusters = {c["id"]: c for c in spec.get("clusters", []) if c.get("id")}
     nodes = [dict(n) for n in spec.get("nodes", []) if n.get("id")]
     edges = list(spec.get("edges", []))
+    # diagram_types.py "sequence" preset: a numbered request walkthrough reads
+    # every declared edge as a step, not just the "data"-classified subset the
+    # numbered-flow badges normally chain through (a control/serving-flow hop
+    # is just as much "step 3" as a data hop in a walkthrough).
+    sequence_mode = str(spec.get("layout_intent", "")).lower() == "sequence"
 
     # Section collapse: real-world sources nest zones deeply (section > az >
     # subnet > card). The refined page reads best as FLAT numbered sections —
