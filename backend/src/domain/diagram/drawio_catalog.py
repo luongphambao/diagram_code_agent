@@ -82,6 +82,69 @@ def _norm(s: object) -> str:
     return s.strip()
 
 
+# Vendor shorthand -> the words that actually appear in catalog entry names.
+# Catalog names spell products out ("key_management_service"), while specs and
+# labels use the abbreviation everyone says ("AWS KMS") — without this table
+# those queries score 0 and the node renders icon-less. Expansions ADD tokens
+# (the original stays, so exact-name entries like "s3" still get their bonus).
+_ABBREV: dict[str, str] = {
+    # AWS
+    "kms": "key management service",
+    "sqs": "simple queue service",
+    "sns": "simple notification service",
+    "s3": "simple storage service s3",
+    "ses": "simple email service",
+    "ec2": "ec2 elastic compute",
+    "ecs": "ecs elastic container service",
+    "eks": "eks elastic kubernetes service",
+    "ecr": "elastic container registry",
+    "emr": "emr elastic mapreduce",
+    "rds": "rds relational database",
+    "alb": "application load balancer",
+    "elb": "elastic load balancing",
+    "nlb": "network load balancer",
+    "ddb": "dynamodb",
+    "sfn": "step functions",
+    "acm": "certificate manager",
+    "msk": "managed streaming for apache kafka",
+    "waf": "waf web application firewall",
+    "route53": "route 53",
+    "cfn": "cloudformation",
+    "cw": "cloudwatch",
+    # Azure
+    "aks": "kubernetes service",
+    "acr": "container registry",
+    "adf": "data factory",
+    "aad": "azure active directory",
+    "entra": "entra active directory",
+    "apim": "api management",
+    "nsg": "network security group",
+    "vnet": "virtual network",
+    "adls": "data lake storage",
+    "asb": "service bus",
+    "cosmos": "cosmos db",
+    # GCP
+    "gke": "kubernetes engine",
+    "gcs": "cloud storage",
+    "bq": "bigquery",
+    "gcr": "container registry",
+    "pubsub": "pub sub",
+    "vpcsc": "vpc service controls",
+}
+
+
+def expand_tokens(tokens: list[str]) -> list[str]:
+    """Tokens + the words their abbreviations expand to (order kept, deduped)."""
+    out = list(tokens)
+    seen = set(out)
+    for t in tokens:
+        for w in _ABBREV.get(t, "").split(" "):
+            if w and w not in seen:
+                seen.add(w)
+                out.append(w)
+    return out
+
+
 def _score_entry(entry: dict, q_tokens: list[str], q_raw: str) -> int:
     name = _norm(entry.get("name"))
     haystack = _norm(" ".join(str(x) for x in [
