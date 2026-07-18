@@ -97,10 +97,12 @@ FLOW_ALIAS = {
 }
 
 # Visual boundary rects (never parents): kind -> (fill, stroke, dashPattern, tab_fill).
+# Boundaries stay inside the 3-accent budget: slate chrome + the green VPC
+# dashed convention (shared with the outcome accent).
 BOUNDARY: dict[str, tuple[str | None, str, str | None, str]] = {
-    "cloud": ("#FCFCFD", "#98A2B3", None, "#C45500"),
-    "vpc": (None, "#2E7D4F", "7 5", "#2E7D4F"),
-    "az": (None, "#69AFC0", "5 4", "#2F6672"),
+    "cloud": ("#FCFCFD", "#98A2B3", None, "#536174"),
+    "vpc": (None, "#15803D", "7 5", "#15803D"),
+    "az": (None, "#98A2B3", "5 4", "#536174"),
     "onprem": (None, "#666666", "7 5", "#666666"),
 }
 
