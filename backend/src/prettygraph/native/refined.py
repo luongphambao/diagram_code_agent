@@ -27,7 +27,9 @@ _OPS_RX = re.compile(r"security|iam\b|monitor|logging|log\b|cloudwatch|governanc
                      r"|identity|access|foundation", re.I)
 # Entry-ish zones ("NETWORK & SECURITY", "ACCESS & EDGE") carry main-flow
 # traffic — they beat the ops match (reference: zone 2 sits in the main row).
-_ENTRY_RX = re.compile(r"network|ingress|\bedge\b|gateway", re.I)
+_ENTRY_RX = re.compile(
+    r"network|ingress|\bedge\b|gateway|channel|source|presenting|producer|input",
+    re.I)
 _OUTCOME_RX = re.compile(r"outcome|consum|downstream|client|dashboard|notification",
                          re.I)
 _FUTURE_RX = re.compile(r"future|phase\s*2|deferred|roadmap|planned", re.I)
@@ -36,6 +38,10 @@ _FUTURE_RX = re.compile(r"future|phase\s*2|deferred|roadmap|planned", re.I)
 # even though "identity"/"access" also hit the ops regex.
 _EXTERNAL_RX = re.compile(r"external|third.?party|partner|\bsaas\b|vendor|"
                           r"upstream provider", re.I)
+_SUPPORT_STATE_RX = re.compile(
+    r"\b(data|database|storage|state|archive|ledger|replication|evidence"
+    r"|content|store|stores|bucket|blob|nas)\b",
+    re.I)
 
 # Boundary zone kinds recognised from the existing `zone` cluster field.
 _BOUNDARY_KINDS = {"cloud": "cloud", "region": "cloud", "account": "cloud",
@@ -116,6 +122,12 @@ def _role_of(c: dict, clusters: dict | None = None) -> str:
     # main row while "Identity & Access" (top-level) stays in the ops band.
     if _inside_network(c, clusters):
         return "ops" if _HARD_OPS_RX.search(text) else "main"
+    if _EXTERNAL_RX.search(text) and _SUPPORT_STATE_RX.search(text):
+        return "ops"
+    # External entry lanes (bank channels, sources, presenters) are the start of
+    # the left-to-right story. Pure third-party dependencies remain sidebars.
+    if _EXTERNAL_RX.search(text) and _ENTRY_RX.search(text):
+        return "main"
     if _EXTERNAL_RX.search(text):
         return "sidebar"
     if _OPS_RX.search(text) and not _ENTRY_RX.search(text):
@@ -407,24 +419,51 @@ def build_refined(spec: dict, plan: dict | None = None):
     if plan and plan.get("band_order"):
         planned = [z for z in plan["band_order"] if z in order]
         order = planned + [z for z in order if z not in planned]
-    mains = [z for z in order if _role_of(clusters[z], clusters) == "main"]
-    ops = [z for z in order if _role_of(clusters[z], clusters) == "ops"]
-    sides = [z for z in order if _role_of(clusters[z], clusters) in ("sidebar", "future")]
-    if not mains:  # never render an empty main row
-        mains, ops, sides = order, [], []
+
     # Main-flow order: the source's own section numbers are the author's reading
     # order — sort by them first (stable, so plan/spec order breaks ties among
     # duplicates and unnumbered zones sink to the end).
     def _num_key(z: str):
         n = clusters[z].get("number")
         return int(n) if str(n).isdigit() else 999
+
+    role_by_zone = {z: _role_of(clusters[z], clusters) for z in order}
+
+    def _support_state_zone(z: str) -> bool:
+        c = clusters[z]
+        text = f"{z} {c.get('label') or ''} {c.get('tier') or ''}"
+        tier = str(c.get("tier") or "").lower()
+        return tier in ("data", "storage", "database") or bool(_SUPPORT_STATE_RX.search(text))
+
+    # Dense pipeline pages read better when passive state/data zones sit in the
+    # support shelf instead of forcing a fifth main column or a short second row.
+    # Explicit roles still win; this only rebalances inferred roles.
+    if sum(1 for z in order if role_by_zone.get(z) == "main") > 4:
+        candidates = [z for z in order
+                      if role_by_zone.get(z) == "main"
+                      and not clusters[z].get("role")
+                      and _support_state_zone(z)]
+        for z in sorted(candidates, key=_num_key, reverse=True):
+            if sum(1 for x in order if role_by_zone.get(x) == "main") <= 4:
+                break
+            role_by_zone[z] = "ops"
+
+    def _layout_role(z: str) -> str:
+        return role_by_zone.get(z, _role_of(clusters[z], clusters))
+
+    mains = [z for z in order if _layout_role(z) == "main"]
+    ops = [z for z in order if _layout_role(z) == "ops"]
+    sides = [z for z in order if _layout_role(z) in ("sidebar", "future")]
+    if not mains:  # never render an empty main row
+        mains, ops, sides = order, [], []
+        role_by_zone = {z: "main" for z in order}
     mains.sort(key=_num_key)
 
     # ---- auto-glue (playbook §14): one note per category, first match wins,
     # never overriding a spec-authored note ---- #
     used_glue: set[str] = set()
     for z in mains + ops + sides:
-        role = _role_of(clusters[z], clusters)
+        role = _layout_role(z)
         cat = ("sidebar" if role == "sidebar"
                else "security" if role == "ops" else "state")
         if cat in used_glue:
@@ -585,7 +624,7 @@ def build_refined(spec: dict, plan: dict | None = None):
         # Wrap only main-row members: the ops band is full-width and would balloon
         # the box out under external zones; the sidebar sits outside the cloud.
         members = [zone_rects[z] for z in _descendant_zones(bid)
-                   if _role_of(clusters[z], clusters) == "main" and z in zone_rects]
+                   if _layout_role(z) == "main" and z in zone_rects]
         if not members:
             continue
         pad = 18 + (max_anc - _b_anc(bid)) * 22
@@ -615,7 +654,7 @@ def build_refined(spec: dict, plan: dict | None = None):
     for z in zone_order:
         c = clusters[z]
         rect = zone_rects[z]
-        role = _role_of(c, clusters)
+        role = _layout_role(z)
         hue = str(c.get("hue") or "").lower()
         if hue not in RT.ZONE_HUES:
             if role == "ops":

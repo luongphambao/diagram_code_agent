@@ -16,7 +16,16 @@ duplicated contextvar. See ``session_state.py``'s module docstring.
 from __future__ import annotations
 
 from .labels import _display_subagent, _label, _SUBAGENT_DISPLAY_NAMES, _TOOL_LABELS, _TOOL_TO_SUBAGENT
-from .sse import _compact_json, _sse, _text_of, _tool_detail, _tool_output_detail
+from .sse import (
+    _compact_json,
+    _looks_like_tool_selection_prefix,
+    _sse,
+    _text_of,
+    _tool_detail,
+    _tool_output_detail,
+    _tool_selection_detail,
+    _tool_selection_tools,
+)
 from .followups import (
     _is_pdf_followup,
     _is_ppt_followup,

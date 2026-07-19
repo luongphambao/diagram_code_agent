@@ -8,13 +8,13 @@
 #   main:   claude-sonnet-4-6   → uses ANTHROPIC_API_KEY
 
 models:
-  main:           mimo-v2.5
-  icon_resolver:  mimo-v2.5
-  drawer:         mimo-v2.5
-  critic:         mimo-v2.5
-  wbs_planner:    mimo-v2.5  # structured JSON estimation — direct OpenAI is more reliable than the mimo endpoint for this many sequential tool calls
-  ppt_outline:    mimo-v2.5   # LLM outline generation for PPT proposals; swap to claude-sonnet-4-6 for richer output
-  ppt_generator:  mimo-v2.5   # ppt_generator subagent (agent.py); was silently falling back to 'main' — now explicit
+  main:           gpt-5.6-luna
+  icon_resolver:  gpt-5.6-luna
+  drawer:         gpt-5.6-luna
+  critic:         gpt-5.6-luna
+  wbs_planner:    gpt-5.6-luna
+  ppt_outline:    gpt-5.6-luna
+  ppt_generator:  gpt-5.6-luna
 
 
 # ─── Provider Configurations ──────────────────────────────────────────────────
@@ -38,6 +38,10 @@ providers:
     vision_in_tools: false  # mimo-v2.5 has vision but rejects image blocks in tool messages (400: text not set)
     supports_structured_output: false  # mimo rejects function_calling/json_schema ("Unsupported function") and ignores the schema in json_mode → disables LLMToolSelectorMiddleware for it (else tool selection returns off-task JSON, KeyError 'tools', and the model stops calling tools)
 
+  aiand:
+    api_key_env: AIAND_API_KEY
+    base_url: https://api.aiand.com/v1   # OpenAI-compatible endpoint
+
   anthropic:
     api_key_env: ANTHROPIC_API_KEY
     max_tokens: 16000
@@ -54,3 +58,4 @@ model_prefixes:
   "o4-":     openai
   "claude-": anthropic
   "mimo-":   mimo
+  "deepseek-ai/": aiand

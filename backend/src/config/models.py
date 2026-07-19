@@ -88,15 +88,13 @@ def make_llm(model: str):
 
     # Streaming needs a long read window: the raw httpx read timeout is inter-byte
     # and, for endpoints that go fully silent (no SSE keepalives), fires as a bare
-    # httpx.ReadTimeout. Keep it high (600s) and above stream_chunk_timeout so the
-    # vendored app-layer stall detector (300s, ignores keepalives, clean error +
-    # iterator cleanup) is the real gatekeeper instead of a terse transport error.
+    # httpx.ReadTimeout. Do not pass stream_chunk_timeout here: current
+    # langchain-openai forwards unknown kwargs to the provider API payload.
     kwargs: dict[str, Any] = dict(
         model=model,
         api_key=api_key,
         timeout=httpx.Timeout(connect=15.0, read=600.0, write=60.0, pool=600.0),
         max_retries=6,
-        stream_chunk_timeout=300.0,
     )
 
     base_url = pcfg.get("base_url")

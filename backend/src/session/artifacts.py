@@ -46,7 +46,10 @@ def _stage_artifacts(workspace) -> dict:
     analysis = _read_json(workspace / "architecture_analysis.json")
     brief = _read_json(workspace / "diagram_brief.json")
     ts = _read_json(workspace / "tech_stack.json")
+    ts_draft = _read_json(workspace / "tech_stack_draft.json")
     bp = _read_json(workspace / "blueprint.json")
+    bp_draft = _read_json(workspace / "blueprint_draft.json")
+    pending_gate = _read_json(workspace / "pending_gate.json")
     tool_summary = _read_json(workspace / "tool_budget_summary.json")
     wbs = _read_json(workspace / "wbs.json")
     if analysis:
@@ -55,8 +58,14 @@ def _stage_artifacts(workspace) -> dict:
         out["diagram_brief"] = _coerce_brief(brief)
     if ts:
         out["tech_stack"] = _normalize_tech_stack(ts)
+    elif ts_draft:
+        out["tech_stack_draft"] = ts_draft
     if bp:
         out["blueprint"] = _normalize_blueprint(bp)
+    elif bp_draft:
+        out["blueprint_draft"] = _normalize_blueprint(bp_draft)
+    if pending_gate:
+        out["pending_gate"] = pending_gate
     if tool_summary:
         out["tool_budget_summary"] = tool_summary
     if wbs:

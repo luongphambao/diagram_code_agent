@@ -107,6 +107,9 @@ def _coerce_value(value, ann):
             parsed = _maybe_json(value)
             if isinstance(parsed, (list, dict)):
                 value = parsed
+            elif item_ann is str:
+                parts = [p.strip() for p in re.split(r"[,;\n]+", value) if p.strip()]
+                return parts or ([value.strip()] if value.strip() else [])
         if isinstance(value, dict):
             as_list = _numeric_dict_to_list(value)
             value = as_list if as_list is not None else list(value.values())

@@ -145,6 +145,46 @@ def test_generate_ppt_proposal_maps_to_hitl_card():
     assert "technical_stack" in card["missing_sections"]
 
 
+def test_tech_stack_gate_persists_pending_draft(monkeypatch, tmp_path):
+    _use_workspace(monkeypatch, tmp_path)
+    args = {
+        "tech_stack": [{"layer": "compute", "choice": "GKE"}],
+        "assumptions": {"compliance": ["ISO 27001"]},
+        "estimated_total_monthly_cost_usd": {"min_usd": 1000, "max_usd": 2000},
+    }
+
+    card, step, delta = server._card_for(
+        {"action_requests": [{"name": "propose_tech_stack", "args": args}]},
+        summary="",
+    )
+
+    assert step == "awaiting_techstack"
+    assert card["type"] == "techstack_approval"
+    assert delta["tech_stack_draft"] == args
+    assert json.loads((tmp_path / "pending_gate.json").read_text(encoding="utf-8"))["tool"] == "propose_tech_stack"
+    assert json.loads((tmp_path / "tech_stack_draft.json").read_text(encoding="utf-8")) == args
+
+
+def test_blueprint_gate_persists_pending_draft(monkeypatch, tmp_path):
+    _use_workspace(monkeypatch, tmp_path)
+    blueprint = {
+        "pattern": "hybrid",
+        "nodes": [{"id": "api", "label": "API"}],
+        "edges": [{"from": "api", "to": "db"}],
+    }
+
+    card, step, delta = server._card_for(
+        {"action_requests": [{"name": "propose_blueprint", "args": {"blueprint": blueprint}}]},
+        summary="",
+    )
+
+    assert step == "awaiting_blueprint"
+    assert card["type"] == "blueprint_approval"
+    assert delta["blueprint_draft"] == blueprint
+    assert json.loads((tmp_path / "pending_gate.json").read_text(encoding="utf-8"))["tool"] == "propose_blueprint"
+    assert json.loads((tmp_path / "blueprint_draft.json").read_text(encoding="utf-8")) == blueprint
+
+
 def test_last_tool_msg_only_when_latest_message_is_tool():
     history_then_user = [
         {"role": "user", "content": "make a diagram"},

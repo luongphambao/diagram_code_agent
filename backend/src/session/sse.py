@@ -32,6 +32,45 @@ def _compact_json(value, *, limit: int = 260) -> str:
     return text[:limit] + ("..." if len(text) > limit else "")
 
 
+def _strip_json_fence(text: str) -> str:
+    """Return JSON text, accepting a complete ```json fenced block."""
+    s = text.strip()
+    if not s.startswith("```"):
+        return s
+    lines = s.splitlines()
+    if len(lines) < 2 or not lines[-1].strip().startswith("```"):
+        return s
+    return "\n".join(lines[1:-1]).strip()
+
+
+def _tool_selection_tools(text: str) -> list[str] | None:
+    """Detect LLMToolSelectorMiddleware's internal ``{"tools": [...]}`` output."""
+    raw = _strip_json_fence(text)
+    try:
+        data = json.loads(raw)
+    except Exception:
+        return None
+    if not isinstance(data, dict) or set(data) != {"tools"}:
+        return None
+    tools = data.get("tools")
+    if not isinstance(tools, list) or not all(isinstance(t, str) for t in tools):
+        return None
+    return tools
+
+
+def _looks_like_tool_selection_prefix(text: str) -> bool:
+    """Return True while a streamed chunk could still become selector JSON."""
+    s = text.lstrip()
+    if not s:
+        return True
+    return s.startswith("{") or s.startswith("```")
+
+
+def _tool_selection_detail(tools: list[str], *, limit: int = 220) -> str:
+    detail = f"{len(tools)} tool(s): {', '.join(tools)}"
+    return detail[:limit] + ("..." if len(detail) > limit else "")
+
+
 def _tool_detail(tool: str, args: dict | None, *, limit: int = 260) -> str:
     """Summarize tool input for UI logs without dumping huge code/prompts."""
     if not isinstance(args, dict) or not args:

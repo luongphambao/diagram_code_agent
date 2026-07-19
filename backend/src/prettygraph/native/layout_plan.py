@@ -15,6 +15,7 @@ plan is byte-identical to today's behavior.
 
 from __future__ import annotations
 
+import re
 from itertools import permutations
 
 try:
@@ -34,6 +35,12 @@ _EST_CARD_W = (_SIZE_CLASSES["medium"][0] + _SIZE_CLASSES["medium"][1]) / 2 + 22
 _EST_CARD_H = 64 + 18
 _EST_BAND_CHROME_H = 70   # band title + padding
 _EST_PAGE_GAP = 46        # _LAYER_LANE_GAP
+_REFINED_SUPPORT_RX = re.compile(
+    r"security|secret|iam\b|identity|access|governance|audit|observ|monitor"
+    r"|operation|devops|ci\s*/?\s*cd|data|database|storage|state|archive"
+    r"|ledger|replication|evidence|content|store|stores|bucket|blob|nas",
+    re.IGNORECASE)
+_REFINED_FLOW_ALIAS = {"security": "control", "serving": "execution"}
 
 
 def _cluster_maps(spec: dict):
@@ -236,6 +243,90 @@ def _bundle_edges(spec: dict, node_root: dict, band_pos: dict) -> tuple[list, li
         suppressed += [[m["from"], m["to"], m.get("label") or ""] for m in rest]
     return bundles, suppressed
 
+def _bundle_refined_support_edges(spec: dict, clusters: dict, node_root: dict,
+                                  bundles: list, suppressed: list) -> tuple[list, list]:
+    """Collapse refined-preset support wiring.
+
+    Refined pages reserve visual weight for the main request path. Repeated
+    control/monitoring/audit links that fan out from or into the same support
+    zone are more readable as one labelled representative ("all layers") than
+    as several long dashed lines crossing the body.
+    """
+    edges = [e for e in spec.get("edges", []) if e.get("from") and e.get("to")]
+    if len(edges) < 2:
+        return [], []
+
+    def _edge_key(e: dict) -> tuple:
+        return (e.get("from"), e.get("to"), e.get("label") or "")
+
+    def _class(e: dict) -> str:
+        flow = str(e.get("flow") or e.get("style") or "").lower()
+        return _REFINED_FLOW_ALIAS.get(flow, flow)
+
+    def _support_root(root_id: str | None) -> bool:
+        if not root_id:
+            return False
+        c = clusters.get(root_id) or {}
+        text = f"{root_id} {c.get('label') or ''} {c.get('tier') or ''}"
+        return bool(_REFINED_SUPPORT_RX.search(text))
+
+    used = {tuple(x) for x in suppressed}
+    for b in bundles:
+        rep = tuple(b.get("rep") or [])
+        if rep:
+            used.add(rep)
+        used.update(tuple(m) for m in b.get("members") or [])
+
+    groups: dict[tuple, list[tuple[int, dict]]] = {}
+    for i, e in enumerate(edges):
+        if _edge_key(e) in used:
+            continue
+        cls = _class(e)
+        if cls not in {"control", "monitoring", "data", "registry", "execution"}:
+            continue
+        ra, rb = node_root.get(e["from"]), node_root.get(e["to"])
+        if ra and rb and ra == rb:
+            continue
+        if _support_root(ra):
+            groups.setdefault((ra, "out"), []).append((i, e))
+        if _support_root(rb):
+            groups.setdefault((rb, "in"), []).append((i, e))
+
+    budget = int(len(edges) * _BUNDLE_EDGE_CAP) - len(suppressed)
+    if budget <= 0:
+        return [], []
+
+    def _rep_rank(item: tuple[int, dict]) -> tuple:
+        i, e = item
+        label = str(e.get("label") or "").lower()
+        preferred = 0 if re.search(r"authori[sz]ation|policy|decision|metrics", label) else 1
+        return (preferred, i)
+
+    extra_bundles: list[dict] = []
+    extra_suppressed: list[list] = []
+    for key, members in sorted(groups.items(), key=lambda kv: (-len(kv[1]), kv[0])):
+        members = [(i, e) for i, e in members if _edge_key(e) not in used]
+        if len(members) < 2:
+            continue
+        drop = len(members) - 1
+        if drop > budget:
+            continue
+        members = sorted(members, key=_rep_rank)
+        rep = members[0][1]
+        rest = [e for _i, e in members[1:]]
+        bundle = {
+            "kind": "hub",
+            "rep": [rep["from"], rep["to"], rep.get("label") or ""],
+            "members": [[m["from"], m["to"], m.get("label") or ""] for m in rest],
+        }
+        extra_bundles.append(bundle)
+        for e in [rep] + rest:
+            used.add(_edge_key(e))
+        for m in rest:
+            extra_suppressed.append([m["from"], m["to"], m.get("label") or ""])
+        budget -= drop
+    return extra_bundles, extra_suppressed
+
 
 def _pick_band_cols(main_roots: list[str], nodes_in_root: dict,
                     sidebar_nodes: int) -> dict:
@@ -317,6 +408,10 @@ def analyze_layout(spec: dict) -> dict:
     band_pos = {cid: i for i, cid in enumerate(band_order)}
 
     bundles, suppressed = _bundle_edges(spec, node_root, band_pos)
+    if str(spec.get("style_preset") or "").lower() == "refined":
+        eb, es = _bundle_refined_support_edges(spec, clusters, node_root, bundles, suppressed)
+        bundles += eb
+        suppressed += es
     if bundles:
         notes.append(f"bundled {len(suppressed)} repetitive hub edge(s) into "
                      f"{len(bundles)} representative(s)")

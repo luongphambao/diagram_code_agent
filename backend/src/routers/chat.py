@@ -35,6 +35,7 @@ from session_state import (
     _label,
     _last_tool_msg,
     _last_user_text,
+    _looks_like_tool_selection_prefix,
     _pending_action_name,
     _pending_interrupt,
     _run_metrics,
@@ -45,6 +46,8 @@ from session_state import (
     _TOOL_TO_SUBAGENT,
     _tool_detail,
     _tool_output_detail,
+    _tool_selection_detail,
+    _tool_selection_tools,
 )
 
 logger = logging.getLogger("diagram-agent")
@@ -312,10 +315,48 @@ async def agui_endpoint(request: Request):
                 )
 
             current_id: str | None = None
+            selector_candidate_id: str | None = None
+            selector_buffer = ""
+            suppressed_text_ids: set[str] = set()
             seen_starts: set[str] = set()
             seen_ends: set[str] = set()
             _pending_tasks: dict[str, dict] = {}
             _completed_delegations: list[dict] = []
+
+            def _text_events(message_id: str, delta: str) -> list[dict]:
+                nonlocal current_id
+                events: list[dict] = []
+                if message_id != current_id:
+                    if current_id is not None:
+                        events.append({"type": "TEXT_MESSAGE_END", "messageId": current_id})
+                    current_id = message_id
+                    events.append({
+                        "type": "TEXT_MESSAGE_START",
+                        "messageId": current_id,
+                        "role": "assistant",
+                    })
+                events.append({
+                    "type": "TEXT_MESSAGE_CONTENT",
+                    "messageId": current_id,
+                    "delta": delta,
+                })
+                return events
+
+            def _selector_events(message_id: str, tools: list[str]) -> list[dict]:
+                nonlocal current_id
+                events: list[dict] = []
+                if current_id is not None and current_id != message_id:
+                    events.append({"type": "TEXT_MESSAGE_END", "messageId": current_id})
+                    current_id = None
+                detail = _tool_selection_detail(tools)
+                events.append(_activity_event(
+                    "start", "tool_selector", label="Selecting tools", detail=detail
+                ))
+                events.append(_activity_event(
+                    "end", "tool_selector", label="Selecting tools", detail=detail, ok=True
+                ))
+                return events
+
             async for mode, payload in agen:
                 if mode == "messages":
                     chunk, _meta = payload
@@ -325,12 +366,47 @@ async def agui_endpoint(request: Request):
                     if not text:
                         continue
                     mid = getattr(chunk, "id", None) or "ai"
-                    if mid != current_id:
-                        if current_id is not None:
-                            yield _sse({"type": "TEXT_MESSAGE_END", "messageId": current_id})
-                        current_id = mid
-                        yield _sse({"type": "TEXT_MESSAGE_START", "messageId": current_id, "role": "assistant"})
-                    yield _sse({"type": "TEXT_MESSAGE_CONTENT", "messageId": current_id, "delta": text})
+                    if mid in suppressed_text_ids:
+                        continue
+
+                    if selector_candidate_id is not None and mid != selector_candidate_id:
+                        if selector_buffer:
+                            for event in _text_events(selector_candidate_id, selector_buffer):
+                                yield _sse(event)
+                        selector_candidate_id = None
+                        selector_buffer = ""
+
+                    if selector_candidate_id == mid:
+                        selector_buffer += text
+                        tools = _tool_selection_tools(selector_buffer)
+                        if tools is not None:
+                            suppressed_text_ids.add(mid)
+                            selector_candidate_id = None
+                            selector_buffer = ""
+                            logger.info("tool selector chose: %s", ", ".join(tools))
+                            for event in _selector_events(mid, tools):
+                                yield _sse(event)
+                            continue
+                        if _looks_like_tool_selection_prefix(selector_buffer) and len(selector_buffer) <= 4096:
+                            continue
+                        text = selector_buffer
+                        selector_candidate_id = None
+                        selector_buffer = ""
+                    elif _looks_like_tool_selection_prefix(text):
+                        selector_candidate_id = mid
+                        selector_buffer = text
+                        tools = _tool_selection_tools(selector_buffer)
+                        if tools is not None:
+                            suppressed_text_ids.add(mid)
+                            selector_candidate_id = None
+                            selector_buffer = ""
+                            logger.info("tool selector chose: %s", ", ".join(tools))
+                            for event in _selector_events(mid, tools):
+                                yield _sse(event)
+                        continue
+
+                    for event in _text_events(mid, text):
+                        yield _sse(event)
                 elif mode == "updates":
                     for _node, upd in (payload or {}).items():
                         if not isinstance(upd, dict):
@@ -389,10 +465,15 @@ async def agui_endpoint(request: Request):
                                     yield _sse({"type": "STATE_DELTA", "delta": [
                                         {"op": "add", "path": "/delegations", "value": all_delegations}
                                     ]})
-                                logger.info("← %s %s%s", name, "ok" if ok else "ERROR",
-                                            f" [{subagent}]" if subagent else "")
+                                output_detail = _tool_output_detail(m.content)
+                                if ok:
+                                    logger.info("← %s ok%s", name, f" [{subagent}]" if subagent else "")
+                                else:
+                                    logger.info("← %s ERROR%s — %s", name,
+                                                f" [{subagent}]" if subagent else "",
+                                                output_detail)
                                 yield _sse(_activity_event("end", name, ok=ok,
-                                            detail=_tool_output_detail(m.content), subagent=subagent))
+                                            detail=output_detail, subagent=subagent))
                                 if name in {"generate_pdf_report", "generate_ppt_proposal"} and ok:
                                     artifact_delta = [
                                         {"op": "add", "path": f"/{k}", "value": v}
@@ -437,6 +518,9 @@ async def agui_endpoint(request: Request):
                                 record.pop("current_label", None)
                                 record.pop("current_detail", None)
                                 break
+            if selector_candidate_id is not None and selector_buffer:
+                for event in _text_events(selector_candidate_id, selector_buffer):
+                    yield _sse(event)
             if current_id is not None:
                 yield _sse({"type": "TEXT_MESSAGE_END", "messageId": current_id})
 

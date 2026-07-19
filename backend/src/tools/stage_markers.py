@@ -102,6 +102,8 @@ def clear_stage_markers() -> None:
         ws / "wbs_skeleton.json", ws / "wbs.json", ws / "wbs_filled.xlsx",
         ws / "solution_model.json", ws / "trace_links.json",
         ws / "evidence_log.json",
+        ws / "pending_gate.json", ws / "tech_stack_draft.json",
+        ws / "blueprint_draft.json",
         ws / "deck_plan.json", ws / "deck_qa_result.json",
         ws / "quality_snapshot.json", ws / "compliance_pack.json",
         ws / "delivery_export_preview.json",

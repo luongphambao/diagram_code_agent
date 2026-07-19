@@ -46,6 +46,7 @@ from session import (  # noqa: F401 — re-exported for backward compatibility
     _label,
     _last_tool_msg,
     _last_user_text,
+    _looks_like_tool_selection_prefix,
     _matches_whole_phrase,
     _normalize_blueprint,
     _normalize_tech_stack,
@@ -58,6 +59,8 @@ from session import (  # noqa: F401 — re-exported for backward compatibility
     _text_of,
     _tool_detail,
     _tool_output_detail,
+    _tool_selection_detail,
+    _tool_selection_tools,
     decision_record_from_payload,
 )
 
@@ -109,7 +112,7 @@ async def _summary_and_logs(config: dict) -> tuple[str, list]:
                 logs.append(entry)
                 pending[tc.get("id", "")] = entry
             txt = _text_of(m.content).strip()
-            if txt:
+            if txt and _tool_selection_tools(txt) is None:
                 summary = txt
         elif isinstance(m, ToolMessage):
             entry = pending.get(getattr(m, "tool_call_id", ""))

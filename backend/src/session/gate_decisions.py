@@ -8,12 +8,47 @@ imports from below.
 
 from __future__ import annotations
 
+import json
+
 from domain.reporting.ppt_reporting import DEFAULT_PPT_SECTIONS
 from domain.reporting.reporting import DEFAULT_REPORT_SECTIONS
 
 from .normalize import _coerce_assumptions, _coerce_list, _normalize_blueprint, _normalize_tech_stack
 
 _DEFAULT_TZ = "Asia/Ho_Chi_Minh"
+
+def _persist_pending_gate(name: str, args: dict) -> None:
+    """Persist the exact HITL proposal payload before the tool is approved.
+
+    Deep Agents interrupts happen before the gated tool executes, so canonical
+    files like tech_stack.json/blueprint.json are not written until approval.
+    These draft files make paused/failed gates inspectable on disk without
+    pretending the stage was approved.
+    """
+    if not isinstance(args, dict):
+        return
+    try:
+        from backends import current_workspace
+
+        workspace = current_workspace()
+        workspace.mkdir(parents=True, exist_ok=True)
+        (workspace / "pending_gate.json").write_text(
+            json.dumps({"tool": name, "args": args}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        if name == "propose_tech_stack":
+            (workspace / "tech_stack_draft.json").write_text(
+                json.dumps(args, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+        elif name == "propose_blueprint":
+            blueprint = args.get("blueprint", args)
+            (workspace / "blueprint_draft.json").write_text(
+                json.dumps(blueprint, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+    except Exception:
+        return
 
 
 def _pending_action_name(val) -> str | None:
@@ -46,6 +81,7 @@ def _card_for(val, summary: str):
     name = ars[0].get("name")
     args = ars[0].get("args") or {}
     if name == "propose_tech_stack":
+        _persist_pending_gate(name, args)
         ts = _normalize_tech_stack(args.get("tech_stack"))
         scaling_roadmap = _coerce_list(args.get("scaling_roadmap"))
         assumptions = _coerce_assumptions(args.get("assumptions"))
@@ -59,17 +95,19 @@ def _card_for(val, summary: str):
         }
         state_delta = {
             "tech_stack": ts,
+            "tech_stack_draft": args,
             "tech_assumptions": assumptions,
             "tech_scaling_roadmap": scaling_roadmap,
             "tech_total_cost": args.get("estimated_total_monthly_cost_usd"),
         }
         return (card_data, "awaiting_techstack", state_delta)
     if name == "propose_blueprint":
+        _persist_pending_gate(name, args)
         bp = _normalize_blueprint(args.get("blueprint", {}))
         return (
             {"type": "blueprint_approval", "blueprint": bp,
              "question": "Review the architecture blueprint. Approve, or request changes."},
-            "awaiting_blueprint", {"blueprint": bp},
+            "awaiting_blueprint", {"blueprint": bp, "blueprint_draft": args.get("blueprint", {})},
         )
     if name == "finalize_diagram":
         return (

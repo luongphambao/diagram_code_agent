@@ -72,6 +72,7 @@ from .middleware.phase_filter import (
     _UTILITY_TOOLS,
     _detect_phase,
     _missing_artifact_tools,
+    _pending_gate_tools,
     _strip_phase_spans,
     _tool_name,
 )

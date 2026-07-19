@@ -99,5 +99,12 @@ _WARN_INPUT_TOKENS = int(os.getenv("WARN_INPUT_TOKENS", "80000"))
 # the model actually needed.
 _MAIN_TOOL_SELECTOR = os.getenv("MAIN_TOOL_SELECTOR", "1").strip().lower() not in ("0", "false", "no")
 _MAIN_TOOL_SELECTOR_ALWAYS_INCLUDE = [
-    "read_file", "ls", "glob", "grep", "task", "write_todos", "finalize_diagram",
+    "read_file", "ls", "glob", "grep", "task", "write_todos",
+    # Stage and approval gates are control-flow tools. If the selector drops one,
+    # the model can get stuck saying the required gate is unavailable.
+    "analyze_architecture_requirements", "propose_diagram_brief",
+    "propose_tech_stack", "propose_blueprint", "finalize_diagram",
+    "generate_pdf_report", "propose_deck_plan", "generate_ppt_proposal",
+    "send_email", "create_client_meeting", "propose_wbs_skeleton",
+    "propose_wbs", "export_wbs_excel", "export_to_delivery",
 ]

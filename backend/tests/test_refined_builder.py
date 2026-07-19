@@ -545,9 +545,49 @@ def test_refined_external_tier_is_sidebar():
     """An 'External …' tier is a sidebar dependency, not the ops band, even when
     its name also contains ops words like 'identity'."""
     from prettygraph.native.refined import _role_of
+    assert _role_of({"label": "Bank Channels & External Parties"}) == "main"
     assert _role_of({"label": "External Identity & Services"}) == "sidebar"
     assert _role_of({"label": "Third-Party APIs"}) == "sidebar"
     assert _role_of({"label": "Operations & Governance"}) == "ops"
+
+
+def test_refined_reflows_entry_channels_and_support_data():
+    """Entry-like external zones start the main row; passive state/data zones
+    move to the support shelf when the main row would otherwise be too crowded."""
+    from prettygraph.native.layout_plan import analyze_layout
+    from prettygraph.native.topology import build_drawio_from_spec
+    spec = {
+        "style_preset": "refined",
+        "diagram_title": "Trade Finance",
+        "clusters": [
+            {"id": "channels", "label": "Bank Channels & External Parties", "number": 1},
+            {"id": "integration", "label": "Secure Integration Zone", "number": 2},
+            {"id": "intake", "label": "Message & Document Intake", "number": 3},
+            {"id": "workflow", "label": "LC Control Workflow", "number": 4},
+            {"id": "data", "label": "Transaction & Evidence Data", "tier": "data", "number": 5},
+            {"id": "controls", "label": "Security & Governance", "role": "ops", "number": 6},
+        ],
+        "nodes": [
+            {"id": "user", "label": "Trade Users", "cluster": "channels"},
+            {"id": "gw", "label": "Integration Gateway", "cluster": "integration"},
+            {"id": "doc", "label": "Document Intake", "cluster": "intake"},
+            {"id": "case", "label": "Case API", "cluster": "workflow"},
+            {"id": "db", "label": "Case Database", "cluster": "data"},
+            {"id": "iam", "label": "Enterprise IAM", "cluster": "controls"},
+        ],
+        "edges": [
+            {"from": "user", "to": "case", "label": "HTTPS", "flow": "serving"},
+            {"from": "gw", "to": "doc", "flow": "data"},
+            {"from": "doc", "to": "case", "flow": "data"},
+            {"from": "case", "to": "db", "label": "case state", "flow": "data"},
+            {"from": "iam", "to": "case", "label": "identity claims", "flow": "security"},
+        ],
+    }
+    xml, _ = build_drawio_from_spec(spec, "Trade", plan=analyze_layout(spec))
+    cells = {c.get("id"): c for c in ET.fromstring(xml).iter("mxCell")}
+    geom = {cid: cells[cid].find("mxGeometry") for cid in cells}
+    assert float(geom["zone_channels"].get("x")) < float(geom["zone_integration"].get("x"))
+    assert float(geom["zone_data"].get("y")) > float(geom["zone_workflow"].get("y"))
 
 
 def test_refined_access_zone_stays_main_inside_vpc():

@@ -107,6 +107,50 @@ def test_semantic_stats_counts_bundled_edges_as_preserved():
     assert sem["node_recall"] == 1.0
     assert sem["bundled_edges"] == 5
 
+def test_refined_support_edges_bundle_across_support_zones():
+    spec = {
+        "style_preset": "refined",
+        "clusters": [
+            {"id": "integration", "label": "Secure Integration Zone"},
+            {"id": "workflow", "label": "LC Control Workflow"},
+            {"id": "data", "label": "Transaction & Evidence Data", "tier": "data"},
+            {"id": "controls", "label": "Security & Governance"},
+            {"id": "operations", "label": "Platform & Operations"},
+        ],
+        "nodes": [
+            {"id": "gw", "label": "Integration Gateway", "cluster": "integration"},
+            {"id": "event_backbone", "label": "Event Backbone", "cluster": "integration"},
+            {"id": "case_api", "label": "Case API", "cluster": "workflow"},
+            {"id": "workflow_engine", "label": "Workflow Engine", "cluster": "workflow"},
+            {"id": "audit_service", "label": "Audit Ledger", "cluster": "data"},
+            {"id": "enterprise_iam", "label": "Enterprise IAM", "cluster": "controls"},
+            {"id": "policy_engine", "label": "Policy Engine", "cluster": "controls"},
+            {"id": "secrets_hsm", "label": "Secrets & HSM", "cluster": "controls"},
+            {"id": "observability", "label": "Observability", "cluster": "operations"},
+        ],
+        "edges": [
+            {"from": "enterprise_iam", "to": "case_api", "label": "identity claims", "flow": "security"},
+            {"from": "policy_engine", "to": "workflow_engine", "label": "authorization gate", "flow": "security"},
+            {"from": "secrets_hsm", "to": "gw", "label": "keys / secrets", "flow": "security"},
+            {"from": "workflow_engine", "to": "audit_service", "label": "decision event", "flow": "monitoring"},
+            {"from": "case_api", "to": "audit_service", "label": "user action", "flow": "monitoring"},
+            {"from": "observability", "to": "workflow_engine", "label": "metrics / traces", "flow": "monitoring"},
+            {"from": "observability", "to": "event_backbone", "label": "health telemetry", "flow": "monitoring"},
+            {"from": "gw", "to": "event_backbone", "label": "durable events", "flow": "data"},
+            {"from": "event_backbone", "to": "case_api", "label": "case event", "flow": "data"},
+            {"from": "case_api", "to": "workflow_engine", "label": "review action", "flow": "control"},
+            {"from": "workflow_engine", "to": "case_api", "label": "case update", "flow": "control"},
+            {"from": "gw", "to": "case_api", "label": "query", "flow": "serving"},
+            {"from": "event_backbone", "to": "workflow_engine", "label": "workflow event", "flow": "data"},
+        ],
+    }
+    plan = analyze_layout(spec)
+    suppressed = {tuple(x) for x in plan["suppressed_edges"]}
+    assert ("enterprise_iam", "case_api", "identity claims") in suppressed
+    assert ("case_api", "audit_service", "user action") in suppressed
+    assert ("observability", "event_backbone", "health telemetry") in suppressed
+    assert any(b["rep"][2] == "authorization gate" for b in plan["edge_bundles"])
+
 
 def test_plan_none_is_byte_identical():
     spec = _chain_spec()

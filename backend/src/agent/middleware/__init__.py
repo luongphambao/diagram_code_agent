@@ -20,10 +20,12 @@ import logging
 import os
 
 from langchain.agents.middleware import (
+    AgentMiddleware,
     ClearToolUsesEdit,
     ContextEditingMiddleware,
     LLMToolSelectorMiddleware,
     ModelCallLimitMiddleware,
+    ModelRequest,
     ModelFallbackMiddleware,
     ToolCallLimitMiddleware,
 )
@@ -49,6 +51,42 @@ from .usage import UsageLoggingMiddleware
 from .vision import VisionErrorFallbackMiddleware
 
 logger = logging.getLogger(__name__)
+
+class SafeLLMToolSelectorMiddleware(AgentMiddleware):
+    """LLM tool selector that intersects always_include with current tools.
+
+    PhaseToolFilterMiddleware intentionally removes tools that are invalid in the
+    current workflow phase. LangChain's selector validates ``always_include``
+    against that filtered request, so static entries like ``finalize_diagram``
+    can raise before the model call. Build an inner selector per request with
+    only the names still present.
+    """
+
+    def __init__(self, *, max_tools: int | None = None,
+                 always_include: list[str] | None = None):
+        super().__init__()
+        self.max_tools = max_tools
+        self.always_include = always_include or []
+
+    @staticmethod
+    def _tool_name(tool) -> str:
+        if isinstance(tool, dict):
+            return tool.get("name", "")
+        return getattr(tool, "name", "")
+
+    def _selector(self, request: ModelRequest) -> LLMToolSelectorMiddleware:
+        available = {self._tool_name(tool) for tool in request.tools or []}
+        always_include = [name for name in self.always_include if name in available]
+        return LLMToolSelectorMiddleware(
+            max_tools=self.max_tools,
+            always_include=always_include,
+        )
+
+    async def awrap_model_call(self, request: ModelRequest, handler):
+        return await self._selector(request).awrap_model_call(request, handler)
+
+    def wrap_model_call(self, request: ModelRequest, handler):
+        return self._selector(request).wrap_model_call(request, handler)
 
 
 def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
@@ -124,7 +162,7 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
         layers.append(PhaseToolFilterMiddleware())
         layers.append(PhasePromptFilterMiddleware())
     if use_tool_selector and _MAIN_TOOL_SELECTOR:
-        layers.append(LLMToolSelectorMiddleware(
+        layers.append(SafeLLMToolSelectorMiddleware(
             max_tools=20,
             always_include=_MAIN_TOOL_SELECTOR_ALWAYS_INCLUDE,
         ))

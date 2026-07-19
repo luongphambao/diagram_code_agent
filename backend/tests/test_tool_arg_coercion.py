@@ -122,6 +122,107 @@ def test_coerce_model_values_usable_as_validator_body():
     assert values["edge_labels"] == ["x"]
     assert _Args.model_validate(values).edge_labels == ["x"]
 
+def test_tech_stack_cost_range_accepts_min_max_aliases():
+    from tools.schemas.tech_stack import ProposeTechStackArgs
+
+    args = ProposeTechStackArgs.model_validate({
+        "tech_stack": [{
+            "layer": "compute",
+            "choice": "4x A100",
+            "estimated_monthly_cost_usd": {"min": 7000, "max": 13000},
+            "alternatives": [],
+        }],
+        "estimated_total_monthly_cost_usd": {"min": 7000, "max": 13000},
+    })
+
+    assert args.tech_stack[0].estimated_monthly_cost_usd.min_usd == 7000
+    assert args.tech_stack[0].estimated_monthly_cost_usd.max_usd == 13000
+    assert args.estimated_total_monthly_cost_usd.min_usd == 7000
+
+def test_tech_stack_accepts_scalar_compliance_and_total_cost():
+    from tools.schemas.tech_stack import ProposeTechStackArgs
+
+    args = ProposeTechStackArgs.model_validate({
+        "tech_stack": [{"layer": "compute", "choice": "EKS"}],
+        "assumptions": {"compliance": "data_sovereignty, iso27001"},
+        "estimated_total_monthly_cost_usd": "$7k-$13k/mo",
+    })
+
+    assert args.assumptions.compliance == ["data_sovereignty", "iso27001"]
+    assert args.estimated_total_monthly_cost_usd.min_usd == 7000
+    assert args.estimated_total_monthly_cost_usd.max_usd == 13000
+
+def test_tech_stack_accepts_wrapped_layers_and_numeric_total_cost():
+    from tools.schemas.tech_stack import ProposeTechStackArgs
+
+    args = ProposeTechStackArgs.model_validate({
+        "tech_stack": {"layers": {"compute": {"choice": "EKS"}}},
+        "estimated_total_monthly_cost_usd": 1200,
+    })
+
+    assert args.tech_stack[0].layer == "compute"
+    assert args.tech_stack[0].choice == "EKS"
+    assert args.estimated_total_monthly_cost_usd.min_usd == 1200
+
+def test_tech_stack_accepts_provider_shorthand_shapes():
+    from tools.schemas.tech_stack import ProposeTechStackArgs
+
+    args = ProposeTechStackArgs.model_validate({
+        "tech_stack": [{
+            "layer": "Compute & Orchestration",
+            "choice": "GKE Autopilot",
+            "decision_criteria": [
+                {"criterion": "Cost efficiency", "score": 3},
+                {"criterion": "Operational simplicity", "score": 4},
+                {"criterion": "Scalability", "score": 5},
+            ],
+            "alternatives": [
+                {"why_rejected": "Too much operational overhead"},
+                "Cloud Run",
+            ],
+            "risks": [
+                "GPU availability in asia-southeast1",
+                {"title": "Cold start latency", "mitigation": "Keep minimum replicas"},
+            ],
+        }],
+        "assumptions": {
+            "users": "~200 concurrent operators",
+            "peak_rps": "~100 inference requests/sec",
+            "data_volume": "~500GB/month",
+            "team_size": "8-15 AI/platform engineers",
+            "compliance": ["ISO 9001", "ISO 27001"],
+        },
+    })
+
+    layer = args.tech_stack[0]
+    assert layer.decision_criteria.cost == 3
+    assert layer.decision_criteria.ops_complexity == 4
+    assert layer.decision_criteria.scalability == 5
+    assert [a.name for a in layer.alternatives] == ["Alternative", "Cloud Run"]
+    assert layer.risks[0].risk == "GPU availability in asia-southeast1"
+    assert layer.risks[1].risk == "Cold start latency"
+    assert args.assumptions.users.peak_concurrent == 200
+    assert args.assumptions.users.peak_rps == 100
+    assert args.assumptions.data.initial_gb == 500
+    assert args.assumptions.team.size == 8
+
+def test_blueprint_key_decision_objects_become_strings():
+    from tools.schemas.blueprint import Blueprint
+
+    bp = Blueprint.model_validate({
+        "pattern": "hybrid",
+        "key_decisions": [{
+            "decision": "Use SGLang for model serving",
+            "rationale": "It supports continuous batching.",
+            "tradeoffs": ["Operational ownership", "Version pinning required"],
+        }],
+    })
+
+    assert bp.key_decisions == [
+        "Use SGLang for model serving — It supports continuous batching. — "
+        "Trade-offs: Operational ownership; Version pinning required"
+    ]
+
 
 # ── middleware behavior ──────────────────────────────────────────────────────
 
@@ -201,7 +302,7 @@ async def test_middleware_async_path():
 # ── critic lenient enum coercion (findings.py) ──────────────────────────────
 
 def test_diagram_finding_lenient_enums():
-    from findings import DiagramFinding
+    from domain.diagram.findings import DiagramFinding
     f = DiagramFinding.model_validate({
         "severity": "major",          # off-enum → medium
         "confidence": "certain",      # off-enum → medium
@@ -220,3 +321,31 @@ def test_diagram_finding_lenient_enums():
     })
     assert ok.severity == "critical"
     assert ok.category == "completeness"
+
+
+def test_blueprint_accepts_common_provider_aliases():
+    from tools.schemas.blueprint import Blueprint
+
+    bp = Blueprint.model_validate({
+        "pattern": "hybrid",
+        "nodes": [
+            {"id": "users", "title": "Users"},
+            {"id": "api", "name": "API Gateway"},
+        ],
+        "clusters": [{"id": "edge", "title": "Edge"}],
+        "edges": [{"source": "users", "target": "api", "label": "HTTPS"}],
+        "pillar_coverage": {
+            "security": {"addressed_by": "waf, iam"},
+            "reliability": "multi az",
+            "performance_efficiency": ["cdn", "cache"],
+        },
+    })
+
+    assert [node.label for node in bp.nodes] == ["Users", "API Gateway"]
+    assert bp.clusters[0].label == "Edge"
+    assert bp.edges[0].from_ == "users"
+    assert bp.edges[0].to == "api"
+    assert bp.pillar_coverage is not None
+    assert bp.pillar_coverage.security.addressed_by == ["waf", "iam"]
+    assert bp.pillar_coverage.reliability.addressed_by == ["multi az"]
+    assert bp.pillar_coverage.performance_efficiency.addressed_by == ["cdn", "cache"]

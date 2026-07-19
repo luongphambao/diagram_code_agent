@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .coercion import CoercingModel
 from .process import ProcessBlueprint
@@ -15,8 +15,15 @@ class WAFPillar(CoercingModel):
     addressed_by: list[str] = Field(default_factory=list, description="node IDs or key_decision labels addressing this pillar")
     gaps: list[str] = Field(default_factory=list, description="known gaps; declare explicitly rather than leaving empty")
 
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_shorthand(cls, values):
+        if isinstance(values, (str, list)):
+            return {"addressed_by": values}
+        return values
 
-class PillarCoverage(BaseModel):
+
+class PillarCoverage(CoercingModel):
     """Well-Architected Framework 6-pillar coverage."""
     operational_excellence: WAFPillar = Field(default_factory=WAFPillar)
     security: WAFPillar = Field(default_factory=WAFPillar)
@@ -24,6 +31,11 @@ class PillarCoverage(BaseModel):
     performance_efficiency: WAFPillar = Field(default_factory=WAFPillar)
     cost_optimization: WAFPillar = Field(default_factory=WAFPillar)
     sustainability: WAFPillar = Field(default_factory=WAFPillar)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_shorthand(cls, values):
+        return {} if isinstance(values, (str, list)) else values
 
 
 class NFRMapping(CoercingModel):
@@ -39,6 +51,15 @@ class BPNode(BaseModel):
     tech: str = Field("", description="technology for this node")
     cluster: str = Field("", description="id of the cluster this node belongs to")
     type: str = Field("", description="service|database|queue|cache|gateway|external|lb|cdn")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_label_aliases(cls, values):
+        if isinstance(values, dict) and not values.get("label"):
+            for alias in ("title", "name"):
+                if values.get(alias):
+                    return {**values, "label": values[alias]}
+        return values
 
 
 class BPCluster(BaseModel):
@@ -61,6 +82,15 @@ class BPCluster(BaseModel):
         ),
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_label_aliases(cls, values):
+        if isinstance(values, dict) and not values.get("label"):
+            for alias in ("title", "name"):
+                if values.get(alias):
+                    return {**values, "label": values[alias]}
+        return values
+
 
 class BPEdge(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -70,6 +100,24 @@ class BPEdge(BaseModel):
     protocol: str = Field("", description="HTTP|gRPC|AMQP|TCP|WebSocket|SQL|Redis")
     flow: str = Field("", description="data|control|serving|registry|monitoring|security; empty=neutral")
     style: str = Field("", description="solid|dashed|dotted; empty=infer from flow")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_endpoint_aliases(cls, values):
+        if not isinstance(values, dict):
+            return values
+        out = dict(values)
+        if not out.get("from") and not out.get("from_"):
+            for alias in ("source", "src", "source_id", "from_id"):
+                if out.get(alias):
+                    out["from"] = out[alias]
+                    break
+        if not out.get("to"):
+            for alias in ("target", "dst", "target_id", "to_id"):
+                if out.get(alias):
+                    out["to"] = out[alias]
+                    break
+        return out
 
 
 class LegendEntry(BaseModel):
@@ -164,3 +212,29 @@ class Blueprint(CoercingModel):
             "are ignored for process diagrams."
         ),
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_key_decision_objects(cls, values):
+        if not isinstance(values, dict):
+            return values
+        decisions = values.get("key_decisions")
+        if not isinstance(decisions, list):
+            return values
+
+        def _text(item) -> str:
+            if isinstance(item, str):
+                return item
+            if not isinstance(item, dict):
+                return str(item)
+            title = str(item.get("decision") or "").strip()
+            rationale = str(item.get("rationale") or "").strip()
+            tradeoffs = item.get("tradeoffs")
+            if isinstance(tradeoffs, list):
+                tradeoffs_text = "; ".join(str(t).strip() for t in tradeoffs if str(t).strip())
+            else:
+                tradeoffs_text = str(tradeoffs or "").strip()
+            parts = [p for p in (title, rationale, f"Trade-offs: {tradeoffs_text}" if tradeoffs_text else "") if p]
+            return " — ".join(parts) if parts else "Decision"
+
+        return {**values, "key_decisions": [_text(d) for d in decisions]}

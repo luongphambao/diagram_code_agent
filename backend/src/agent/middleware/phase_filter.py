@@ -8,6 +8,8 @@ actually needs.
 
 from __future__ import annotations
 
+import json
+
 from langchain.agents.middleware import AgentMiddleware, ModelRequest
 
 # Phase-based static tool filter: send only the tools relevant to the current
@@ -19,6 +21,10 @@ _UTILITY_TOOLS = frozenset({
     "quality_summary", "compare_revisions", "add_comment", "resolve_comment",
     "query_change_impact", "propose_meeting_slots", "create_client_meeting",
     "export_to_delivery",
+})
+_DEEP_AGENT_BUILTIN_TOOLS = frozenset({
+    "ls", "read_file", "write_file", "edit_file", "glob", "grep",
+    "write_todos", "task",
 })
 _PHASE_TOOLS: dict[str, frozenset[str]] = {
     "intake": _UTILITY_TOOLS | {
@@ -101,6 +107,16 @@ def _missing_artifact_tools(workspace: "Path") -> set[str]:
     }
 
 
+def _pending_gate_tools(workspace: "Path") -> set[str]:
+    """Tool names needed to revise or resume a gate already shown to the user."""
+    try:
+        pending = json.loads((workspace / "pending_gate.json").read_text(encoding="utf-8"))
+    except Exception:
+        return set()
+    tool = pending.get("tool")
+    return {tool} if isinstance(tool, str) and tool else set()
+
+
 class PhaseToolFilterMiddleware(AgentMiddleware):
     """Filter MAIN_TOOLS down to the phase-relevant subset each call.
 
@@ -122,9 +138,10 @@ class PhaseToolFilterMiddleware(AgentMiddleware):
         # Keep a foundational artifact's producing tool available even past its normal
         # phase — never let "most-advanced phase wins" permanently lock out backfilling
         # a step that got skipped (see _missing_artifact_tools).
-        allowed = allowed | _missing_artifact_tools(workspace)
+        allowed = allowed | _missing_artifact_tools(workspace) | _pending_gate_tools(workspace)
         # Always keep built-ins (filesystem tools, task, write_todos) which don't
         # appear in _PHASE_TOOLS but are always injected by deepagents.
+        allowed = allowed | _DEEP_AGENT_BUILTIN_TOOLS
         return [t for t in tools if _tool_name(t) in allowed or not _tool_name(t)]
 
     async def awrap_model_call(self, request: ModelRequest, handler):

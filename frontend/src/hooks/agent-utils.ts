@@ -131,7 +131,11 @@ export interface Blueprint {
   diagram_title?: string;
   pattern: string;
   pattern_rationale?: string;
-  key_decisions?: string[];
+  key_decisions?: Array<string | {
+    decision?: string;
+    rationale?: string;
+    tradeoffs?: string[] | string;
+  }>;
   nodes: Array<{ id: string; label: string; tech?: string; cluster?: string; type?: string }>;
   clusters: Array<{ id: string; label: string; tier?: string }>;
   edges: Array<{ from: string; to: string; label?: string; protocol?: string }>;
