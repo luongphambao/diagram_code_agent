@@ -86,7 +86,7 @@ def _reset_revision_count() -> None:
         _REVISION_COUNT_FILE.unlink()
 
 
-def clear_stage_markers() -> None:
+def clear_stage_markers(*, preserve_wbs: bool = False) -> None:
     """Reset the staged-flow markers at the start of a fresh run.
 
     These are the per-thread JSON markers and stores (resolved against the current
@@ -94,12 +94,11 @@ def clear_stage_markers() -> None:
     separately by the render pipeline.
     """
     ws = current_workspace()
-    for f in (
+    files = [
         _ARCH_ANALYSIS_FILE, _BRIEF_FILE, _TECHSTACK_FILE, _BLUEPRINT_FILE,
         _CRITIQUE_FILE, _REVISION_COUNT_FILE, _TOOL_SUMMARY_FILE,
         _ICON_SEARCH_BUDGET_FILE, _NODE_SEARCH_BUDGET_FILE, _RENDER_SPEC_FILE,
         _ICON_PLAN_FILE, _WEB_SEARCH_BUDGET_FILE, ws / REPORT_EVIDENCE_NAME,
-        ws / "wbs_skeleton.json", ws / "wbs.json", ws / "wbs_filled.xlsx",
         ws / "solution_model.json", ws / "trace_links.json",
         ws / "evidence_log.json",
         ws / "pending_gate.json", ws / "tech_stack_draft.json",
@@ -108,7 +107,12 @@ def clear_stage_markers() -> None:
         ws / "quality_snapshot.json", ws / "compliance_pack.json",
         ws / "delivery_export_preview.json",
         ws / "current_state_model.json", ws / "drift_report.json",
-    ):
+    ]
+    if not preserve_wbs:
+        files.extend([
+            ws / "wbs_skeleton.json", ws / "wbs.json", ws / "wbs_filled.xlsx",
+        ])
+    for f in files:
         if f.exists():
             f.unlink()
     _reset_round_budgets()

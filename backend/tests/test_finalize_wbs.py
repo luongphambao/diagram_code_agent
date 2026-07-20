@@ -10,6 +10,7 @@ from wbs_tools import (
     WBS_PLANNER_TOOLS,
     add_wbs_items,
     draft_wbs_skeleton,
+    export_wbs_excel,
     finalize_wbs,
     LeafIn,
     PhaseMeta,
@@ -63,6 +64,14 @@ def test_finalize_wbs_guards_when_no_items(tmp_path, monkeypatch):
     _bind(monkeypatch, tmp_path / "ws2")
     out = finalize_wbs.func()
     assert "add_wbs_items first" in out
+
+
+def test_export_wbs_excel_missing_plan_tells_agent_to_continue(tmp_path, monkeypatch):
+    _bind(monkeypatch, tmp_path / "ws_export_missing")
+    out = export_wbs_excel.func()
+    assert "Continue the WBS planning pipeline" in out
+    assert "wbs_planner" in out
+    assert "blocking error" in out
 
 
 def test_draft_skeleton_resets_stale_different_project(tmp_path, monkeypatch):

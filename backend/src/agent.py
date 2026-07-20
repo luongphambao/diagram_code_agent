@@ -750,6 +750,9 @@ _UTILITY_TOOLS = frozenset({
     "query_change_impact", "propose_meeting_slots", "create_client_meeting",
     "export_to_delivery",
 })
+_WBS_DELIVERABLE_TOOLS = frozenset({
+    "propose_wbs_skeleton", "propose_wbs", "export_wbs_excel",
+})
 _PHASE_TOOLS: dict[str, frozenset[str]] = {
     "intake": _UTILITY_TOOLS | {
         "analyze_architecture_requirements", "propose_diagram_brief",
@@ -762,21 +765,20 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
         "export_adr_pack", "reality_sync", "visualize_code_structure",
         "finalize_diagram",
     },
-    "draw": _UTILITY_TOOLS | {
+    "draw": _UTILITY_TOOLS | _WBS_DELIVERABLE_TOOLS | {
         "finalize_diagram", "list_saved_diagrams", "visualize_code_structure",
         "export_adr_pack", "reality_sync",
         "generate_pdf_report", "propose_deck_plan", "generate_ppt_proposal",
         "send_email",
     },
-    "wbs": _UTILITY_TOOLS | {
-        "propose_wbs_skeleton", "propose_wbs", "export_wbs_excel",
+    "wbs": _UTILITY_TOOLS | _WBS_DELIVERABLE_TOOLS | {
         "web_research",
     },
-    "ppt": _UTILITY_TOOLS | {
+    "ppt": _UTILITY_TOOLS | _WBS_DELIVERABLE_TOOLS | {
         "propose_deck_plan", "generate_ppt_proposal",
         "send_email",
     },
-    "report": _UTILITY_TOOLS | {
+    "report": _UTILITY_TOOLS | _WBS_DELIVERABLE_TOOLS | {
         "generate_pdf_report", "send_email",
     },
 }

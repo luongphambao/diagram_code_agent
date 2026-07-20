@@ -308,6 +308,37 @@ def test_wbs_plan_ready_requires_items_and_rollup(tmp_path):
     assert _wbs_plan_ready(tmp_path) is True
 
 
+def test_wbs_solution_context_exists_for_direct_render_artifacts(tmp_path):
+    from routers.chat import _wbs_solution_context_exists
+
+    assert _wbs_solution_context_exists(tmp_path) is False
+
+    (tmp_path / "requirements.md").write_text("Project notes", encoding="utf-8")
+    assert _wbs_solution_context_exists(tmp_path) is True
+
+    (tmp_path / "requirements.md").unlink()
+    (tmp_path / "out.png").write_bytes(b"render")
+    assert _wbs_solution_context_exists(tmp_path) is True
+
+
+def test_clear_stage_markers_can_preserve_existing_wbs(monkeypatch, tmp_path):
+    _use_workspace(monkeypatch, tmp_path)
+    (tmp_path / "blueprint.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "wbs_skeleton.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "wbs.json").write_text(
+        json.dumps({"items": [{"id": "1"}], "effort_totals": {"total_mandays": 12}}),
+        encoding="utf-8",
+    )
+    (tmp_path / "wbs_filled.xlsx").write_bytes(b"xlsx")
+
+    tools.clear_stage_markers(preserve_wbs=True)
+
+    assert not (tmp_path / "blueprint.json").exists()
+    assert (tmp_path / "wbs_skeleton.json").exists()
+    assert (tmp_path / "wbs.json").exists()
+    assert (tmp_path / "wbs_filled.xlsx").exists()
+
+
 def test_wbs_preserve_no_solution_or_attachment_does_not_preserve():
     # No upstream solution yet -> nothing to preserve (genuine fresh run).
     assert server._wbs_preserve(

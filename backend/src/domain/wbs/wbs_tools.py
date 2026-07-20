@@ -948,6 +948,14 @@ def export_wbs_excel(
     """
     wbs = _read_json(_WBS_FILE)
     if not wbs or not wbs.get("phases"):
+        return (
+            "No approved WBS to export yet. Continue the WBS planning pipeline "
+            "instead of reporting a blocking error: delegate to wbs_planner to "
+            "load_solution_context, draft wbs_skeleton.json, get "
+            "propose_wbs_skeleton approval, create/finalize wbs.json, get "
+            "propose_wbs approval, then call export_wbs_excel again."
+        )
+    if not wbs or not wbs.get("phases"):
         return "No approved WBS to export — run the planning pipeline first."
     try:
         layout = wbs_excel.build_wbs_workbook(wbs, _WBS_XLSX)

@@ -131,6 +131,22 @@ def _wbs_plan_ready(workspace) -> bool:
     return bool(items) and total_mandays > 0
 
 
+def _wbs_solution_context_exists(workspace) -> bool:
+    """Return True when there is enough upstream context to plan a WBS."""
+    return any(
+        (workspace / filename).exists()
+        for filename in (
+            "blueprint.json",
+            "tech_stack.json",
+            "diagram_brief.json",
+            "requirements.md",
+            "layout_plan.json",
+            "out.drawio",
+            "out.png",
+        )
+    )
+
+
 async def _restore_workspace_from_db(pool, thread_id: str, workspace) -> None:
     """Write stage JSON files back to disk if they are missing but present in DB state.
 
@@ -269,18 +285,16 @@ async def agui_endpoint(request: Request):
                 # FIRST WBS request (wbs.json not yet written) fell through to clear_stage_markers()
                 # and deleted the brief/tech_stack/blueprint that load_solution_context reads,
                 # so the planner reported "No upstream artifacts found" and never started.
-                solution_exists = (
-                    (ws / "blueprint.json").exists()
-                    or (ws / "tech_stack.json").exists()
-                    or (ws / "out.png").exists()
-                )
+                solution_exists = _wbs_solution_context_exists(ws)
                 preserve_wbs_artifacts, wbs_already_planned = _wbs_preserve(
                     desc, solution_exists=solution_exists,
                     wbs_exists=_wbs_plan_ready(ws), attached=bool(attached),
                 )
                 preserve_artifacts = preserve_diagram_artifacts or preserve_wbs_artifacts
                 if not preserve_artifacts:
-                    clear_stage_markers()
+                    clear_stage_markers(
+                        preserve_wbs=(not attached and _wbs_plan_ready(ws))
+                    )
                 else:
                     if wbs_already_planned:
                         desc = (
@@ -302,6 +316,16 @@ async def agui_endpoint(request: Request):
                             "tech_stack.json, blueprint.json) already exist in the workspace — "
                             "build the WBS from them. Delegate to `wbs_planner` as usual; do NOT "
                             "re-run intake or redesign the diagram."
+                        )
+                        desc += (
+                            "\n\nIMPORTANT WBS ORDER: This is a FIRST-TIME WBS request. "
+                            "Do NOT call `export_wbs_excel()` yet if no approved `wbs.json` "
+                            "exists. Delegate to `wbs_planner` first: run "
+                            "`load_solution_context`, draft `wbs_skeleton.json`, call "
+                            "`propose_wbs_skeleton()`, then create/finalize `wbs.json`, "
+                            "call `propose_wbs()`, and only after that call "
+                            "`export_wbs_excel()`. Do NOT report this as blocked merely "
+                            "because `wbs.json` is missing before planning."
                         )
                     else:
                         artifact_instruction = (
