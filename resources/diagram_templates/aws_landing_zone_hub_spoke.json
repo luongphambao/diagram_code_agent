@@ -1,0 +1,53 @@
+{
+  "_meta": {
+    "name": "aws_landing_zone_hub_spoke",
+    "provider": "aws",
+    "layout_intent": "left_to_right_pipeline",
+    "tags": ["landing zone", "hub and spoke", "transit gateway", "multi-account", "network account", "aws organizations"],
+    "summary": "AWS Landing Zone hub-and-spoke network: a Network Account hub (Transit Gateway) connecting Ingress/Inspection/Egress VPCs and workload spoke accounts. Ported from drawio-ai-kit examples/aws/build_landingzone_hubspoke_template.mjs (scoped to the main hub-spoke page)."
+  },
+  "provider": "aws",
+  "style_preset": "refined",
+  "diagram_title": "AWS Landing Zone — Hub-and-Spoke Network",
+  "subtitle": "Network Account hub · Transit Gateway · workload spokes",
+  "backbone": ["Network Hub", "Perimeter VPCs", "Shared Services", "Workload Spokes"],
+  "clusters": [
+    { "id": "aws", "label": "AWS Organization", "zone": "cloud" },
+    { "id": "hub", "label": "Network Account (Hub)", "number": 1, "parent": "aws" },
+    { "id": "perimeter", "label": "Perimeter VPCs", "number": 2, "parent": "aws" },
+    { "id": "shared", "label": "Shared Services Account", "number": 3, "parent": "aws" },
+    { "id": "spokes", "label": "Workload Spoke Accounts", "number": 4, "parent": "aws" }
+  ],
+  "nodes": [
+    { "id": "tgw", "label": "Transit Gateway", "cluster": "hub", "type": "gateway",
+      "body": ["Central routing hub", "Cross-account attachments"] },
+    { "id": "dns", "label": "Route 53 Resolver", "cluster": "hub",
+      "body": ["Hybrid DNS forwarding"] },
+    { "id": "ingress_vpc", "label": "Ingress VPC", "cluster": "perimeter", "type": "gateway",
+      "body": ["ALB + WAF", "Public-facing entry"] },
+    { "id": "inspection_vpc", "label": "Inspection VPC", "cluster": "perimeter",
+      "body": ["Network Firewall", "East-west traffic inspection"] },
+    { "id": "egress_vpc", "label": "Egress VPC", "cluster": "perimeter", "type": "gateway",
+      "body": ["NAT Gateway", "Centralized internet egress"] },
+    { "id": "ad", "label": "Managed AD", "cluster": "shared",
+      "body": ["Directory services"] },
+    { "id": "logging", "label": "Central Logging", "cluster": "shared",
+      "body": ["CloudTrail + Config aggregation"] },
+    { "id": "note_hub", "label": "Routing responsibility", "cluster": "hub", "kind": "note",
+      "body": ["All inter-VPC and on-prem traffic transits the hub."] },
+    { "id": "spoke_a", "label": "Workload Spoke A", "cluster": "spokes", "type": "service",
+      "body": ["Production workloads", "Private subnets only"] },
+    { "id": "spoke_b", "label": "Workload Spoke B", "cluster": "spokes", "type": "service",
+      "body": ["Staging workloads", "Private subnets only"] }
+  ],
+  "edges": [
+    { "from": "ingress_vpc", "to": "tgw", "label": "TGW attachment", "flow": "control" },
+    { "from": "inspection_vpc", "to": "tgw", "label": "TGW attachment", "flow": "control" },
+    { "from": "egress_vpc", "to": "tgw", "label": "TGW attachment", "flow": "control" },
+    { "from": "tgw", "to": "spoke_a", "label": "route table", "flow": "data" },
+    { "from": "tgw", "to": "spoke_b", "label": "route table", "flow": "data" },
+    { "from": "spoke_a", "to": "logging", "flow": "monitoring" },
+    { "from": "spoke_b", "to": "logging", "flow": "monitoring" },
+    { "from": "ad", "to": "spoke_a", "flow": "security" }
+  ]
+}

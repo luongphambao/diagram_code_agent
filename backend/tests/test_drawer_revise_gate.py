@@ -139,8 +139,8 @@ def test_middleware_wires_gate_only_when_requested():
 
 def test_submit_critique_reads_but_no_longer_increments_counter(workspace):
     """submit_critique must only READ _REVISION_COUNT_FILE now — incrementing it
-    is DrawerReviseGateMiddleware's job (see analysis_tools.py comment)."""
-    import tools.analysis_tools as analysis_tools
+    is DrawerReviseGateMiddleware's job (see tools/analysis/blueprint_tools.py comment)."""
+    from tools.analysis.blueprint_tools import submit_critique
 
     blueprint = {"nodes": [], "clusters": [], "edges": []}
     (workspace / "blueprint.json").write_text(json.dumps(blueprint), encoding="utf-8")
@@ -148,7 +148,7 @@ def test_submit_critique_reads_but_no_longer_increments_counter(workspace):
         "severity": "high", "confidence": "high", "category": "layout",
         "title": "test finding", "detail": "test",
     }
-    verdict_text = analysis_tools.submit_critique.invoke({"findings": [finding]})
+    verdict_text = submit_critique.invoke({"findings": [finding]})
     assert "VERDICT: REVISE" in verdict_text
     assert not _REVISION_COUNT_FILE.resolve().exists() or json.loads(
         _REVISION_COUNT_FILE.resolve().read_text(encoding="utf-8")

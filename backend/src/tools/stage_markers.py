@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 
 from backends import OUTPUTS_DIR, current_workspace
-from reporting import REPORT_EVIDENCE_NAME
+from domain.reporting.reporting import REPORT_EVIDENCE_NAME
 from .constants import (
     _ARCH_ANALYSIS_FILE,
     _BRIEF_FILE,
@@ -102,6 +102,8 @@ def clear_stage_markers() -> None:
         ws / "wbs_skeleton.json", ws / "wbs.json", ws / "wbs_filled.xlsx",
         ws / "solution_model.json", ws / "trace_links.json",
         ws / "evidence_log.json",
+        ws / "pending_gate.json", ws / "tech_stack_draft.json",
+        ws / "blueprint_draft.json",
         ws / "deck_plan.json", ws / "deck_qa_result.json",
         ws / "quality_snapshot.json", ws / "compliance_pack.json",
         ws / "delivery_export_preview.json",
@@ -125,6 +127,37 @@ def _stage_helpers() -> None:
 
 def _layout_audit() -> str:
     """Best-effort layout audit for the last render (advisory; "" if unavailable)."""
+    drawio = current_workspace() / "out.drawio"
+    if drawio.exists():
+        try:
+            from domain.validation.validate_drawio import validate_file, production_scorecard
+            stats = _read_json_file(current_workspace() / "out.native_stats.json", {})
+            report = validate_file(str(drawio), stats=stats)
+            scorecard = production_scorecard(report, stats)
+            metrics = report.get("layout_metrics") or {}
+            arrow = metrics.get("arrow_clarity") or {}
+            bd = scorecard.get("breakdown") or {}
+            lines = [
+                f"Production scorecard: {scorecard.get('total')}/100 "
+                f"({'PASS' if scorecard.get('pass') else 'below gate'})",
+                f"Connector readability: {bd.get('connector_readability')}/15",
+                "Arrow clarity: "
+                f"{arrow.get('arrow_clarity_score')}/100, "
+                f"visible_edges={arrow.get('visible_edge_count')}, "
+                f"bundled_edges={arrow.get('bundled_edge_count')}, "
+                f"crossings={arrow.get('edge_crossings')}, "
+                f"crossings_per_edge={arrow.get('crossings_per_edge')}, "
+                f"long_edges={arrow.get('long_edges')}, "
+                f"long_edge_ratio={arrow.get('long_edge_ratio')}, "
+                f"label_overlaps={arrow.get('edge_label_overlaps')}",
+            ]
+            if report.get("advice"):
+                lines.append("Top layout advice: " + "; ".join(report["advice"][:3]))
+            if report.get("polish"):
+                lines.append("Polish findings: " + "; ".join(report["polish"][:3]))
+            return "\n  ".join(lines)
+        except Exception:  # noqa: BLE001 — audit is advisory, never fail over it
+            pass
     dot = current_workspace() / "out.dot"
     png = current_workspace() / "out.png"
     if not dot.exists() or not png.exists():

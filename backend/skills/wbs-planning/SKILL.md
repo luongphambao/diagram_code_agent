@@ -5,10 +5,13 @@ description: How to break a software solution into a BnK-format Work Breakdown S
 
 # wbs-planning
 
-Turn an approved solution (diagram brief + tech stack + blueprint) into a BnK-format
-WBS: a hierarchy of phases → modules → features, each with a defensible effort
-estimate, plus a delivery timeline, team and milestones. The output is a live
-formula-driven `.xlsx` matching the BnK template.
+Turn an approved solution into a BnK-format WBS: a hierarchy of phases → modules
+→ features, each with a defensible effort estimate, plus a delivery timeline,
+team and milestones. Prefer the canonical staged artifacts (`diagram_brief.json`,
+`tech_stack.json`, `blueprint.json`) when present; direct-render/import flows may
+only have `requirements.md` plus rendered-diagram sidecars, and that is still a
+valid WBS starting point. The output is a live formula-driven `.xlsx` matching
+the BnK template.
 
 **Golden rule of estimation:** you only size *development* effort (BE / FE / Mobile /
 AI man-days) per feature. Business Analysis, QC and Project Management are DERIVED
@@ -18,9 +21,12 @@ internally consistent and matches how BnK actually builds these spreadsheets.
 ## The estimation pipeline (call the tools IN THIS ORDER)
 
 1. `load_solution_context()` — pull objective, functional requirements, tech layers,
-   blueprint clusters/nodes AND the benchmark effort-norms table. Your modules and
-   features must trace back to these; anchor every estimate to the norms — do not
-   invent numbers far outside the ranges without a reason.
+   blueprint clusters/nodes AND the benchmark effort-norms table. If the canonical
+   JSON files are absent, it falls back to `requirements.md` and available diagram
+   sidecars; use that digest instead of trying to `read_file` missing JSON paths.
+   Your modules and features must trace back to the returned context; anchor every
+   estimate to the norms — do not invent numbers far outside the ranges without a
+   reason.
 2. `draft_wbs_skeleton(project_info, phases)` — define the phase/module tree only
    (no effort yet). Use the 3-phase spine + module catalog below.
 3. **`propose_wbs_skeleton()` — HITL gate.** Get the STRUCTURE approved before

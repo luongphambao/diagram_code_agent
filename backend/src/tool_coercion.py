@@ -79,6 +79,32 @@ def _numeric_dict_to_list(value: dict) -> list | None:
     return None
 
 
+def _split_str_to_list(value: str) -> list[str]:
+    """Salvage a non-JSON string the model sent for a ``list[str]`` field.
+
+    Newlines and semicolons are unambiguous list delimiters — always split on them.
+    A COMMA is only a delimiter BETWEEN single tokens (tags / ref-codes like
+    "GDPR, HIPAA" or "BNK-3, BNK-4"); inside prose ("Given login, when OTP valid, then
+    redirect" / "Unit tests pass") a comma is punctuation and must NOT shred the sentence.
+    So comma-split a segment only when every resulting part is whitespace-free. This keeps
+    the tested tag case (compliance="a, b" → ["a","b"]) while no longer corrupting
+    multi-clause acceptance criteria / predecessors into per-fragment garbage.
+    """
+    text = value.strip()
+    if not text:
+        return []
+    out: list[str] = []
+    for seg in (s.strip() for s in re.split(r"[;\n]+", text)):
+        if not seg:
+            continue
+        parts = [p.strip() for p in seg.split(",")]
+        if len(parts) > 1 and all(p and " " not in p for p in parts):
+            out.extend(parts)
+        else:
+            out.append(seg)
+    return out or [text]
+
+
 def _coerce_value(value, ann):
     """Recursively coerce *value* toward annotation *ann*. Returns value unchanged
     when it already fits or when no safe coercion applies."""
@@ -107,6 +133,8 @@ def _coerce_value(value, ann):
             parsed = _maybe_json(value)
             if isinstance(parsed, (list, dict)):
                 value = parsed
+            elif item_ann is str:
+                return _split_str_to_list(value)
         if isinstance(value, dict):
             as_list = _numeric_dict_to_list(value)
             value = as_list if as_list is not None else list(value.values())
@@ -188,17 +216,51 @@ def coerce_args(args: dict, schema) -> dict:
     return args
 
 
-def compact_invocation_error(text: str) -> str | None:
+def _required_fields(schema) -> list[str] | None:
+    """Required field names for *schema* (Pydantic model class or JSON-schema dict)."""
+    if isinstance(schema, type) and issubclass(schema, BaseModel):
+        return [name for name, field in schema.model_fields.items() if field.is_required()]
+    if isinstance(schema, dict):
+        req = schema.get("required")
+        if isinstance(req, list):
+            return list(req)
+    return None
+
+
+def compact_invocation_error(text: str, schema=None, args: dict | None = None) -> str | None:
     """Rewrite the default tool-invocation error (which echoes the full kwargs
-    blob) to a short corrective message. Returns None if *text* isn't one."""
+    blob) to a short corrective message. Returns None if *text* isn't one.
+
+    When *schema* is given and EVERY required field is absent from *args* (the
+    model called the tool with empty/near-empty args rather than a shape
+    mistake), a distinct message names the missing fields and tells the model
+    to copy the values from context instead of retrying blind — this is the
+    "resolve_finding() with no args, 4 times in a row" failure mode, which the
+    generic structural-mismatch message below doesn't address.
+    """
     m = _INVOCATION_ERROR_RE.match(text)
     if not m:
         return None
+    name = m.group("name")
+
+    required = _required_fields(schema)
+    if required:
+        present = set((args or {}).keys())
+        missing = [f for f in required if f not in present]
+        if missing and len(missing) == len(required):
+            return (
+                f"Tool '{name}' was called with no usable arguments — every required "
+                f"field is missing: {', '.join(required)}. Copy the exact values from "
+                "the most recent relevant tool output above (e.g. the SF-xxxx id from "
+                "CROSS-ARTIFACT CHECK) — do not guess, invent, or retry with empty "
+                "args again. Call the tool again with every required field set."
+            )
+
     error = " ".join(m.group("error").split())
     if len(error) > _MAX_ERROR_CHARS:
         error = error[:_MAX_ERROR_CHARS] + "..."
     return (
-        f"Tool '{m.group('name')}' argument validation failed: {error}\n"
+        f"Tool '{name}' argument validation failed: {error}\n"
         "Fix ONLY the invalid fields and call the tool again. Pass lists and "
         "objects as real JSON types (e.g. [\"a\",\"b\"]), never as quoted strings."
     )
@@ -241,19 +303,24 @@ class ToolArgCoercionMiddleware(AgentMiddleware):
         return request.override(tool_call={**tc, "args": new_args})
 
     @staticmethod
-    def _compacted(result):
+    def _compacted(result, request):
         if (
             isinstance(result, ToolMessage)
             and getattr(result, "status", None) == "error"
             and isinstance(result.content, str)
         ):
-            compact = compact_invocation_error(result.content)
+            tool = request.tool
+            schema = getattr(tool, "args_schema", None) if tool is not None else None
+            args = request.tool_call.get("args")
+            compact = compact_invocation_error(result.content, schema, args)
             if compact is not None:
                 return result.model_copy(update={"content": compact})
         return result
 
     def wrap_tool_call(self, request, handler):
-        return self._compacted(handler(self._coerced_request(request)))
+        coerced = self._coerced_request(request)
+        return self._compacted(handler(coerced), coerced)
 
     async def awrap_tool_call(self, request, handler):
-        return self._compacted(await handler(self._coerced_request(request)))
+        coerced = self._coerced_request(request)
+        return self._compacted(await handler(coerced), coerced)

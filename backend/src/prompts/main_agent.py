@@ -45,12 +45,23 @@ available node classes so blueprint nodes map to real library types:
 ## Blueprint quality (step 3 detail)
 When calling `propose_blueprint`, your blueprint must be thorough enough for the
 drawer to render without guessing:
+- **BPMN / swimlane / business process request** (roles x phases, "workflow",
+  "approval process", "order fulfillment process" — NOT an infrastructure
+  architecture): fill ONLY `blueprint.process` (label, lanes, phases, steps,
+  flows) and leave `nodes`/`clusters`/`edges` empty. `pattern` is still
+  required by the schema but is ignored for process diagrams — any short
+  value is fine. This renders through the native BPMN builder, NOT the
+  mingrammer/Graphviz flowchart path.
 - Use `architecture_analysis.json` as planning signal: choose from its
   suggested_patterns when they fit, reflect its scale/security/provider signals
   in the brief and blueprint, and address its concerns through scoped boundaries
   or explicit simplification choices.
 - Default to a client-facing architecture diagram: `audience="client"`,
   `detail_level="architecture"`, `layout_intent="left_to_right_pipeline"`.
+  For a genuine hub-and-spoke/event-bus, org-tree/Landing-Zone, multi-account
+  mesh, numbered-walkthrough, or on-prem<->cloud hybrid topology, use
+  `layout_intent="hub_spoke"|"hierarchy"|"mesh"|"sequence"|"hybrid"` instead —
+  see the field description for what each one does and renders as.
 - DEFAULT to `presentation_style="slide"` — production output with the gradient
   hero band (kicker + big title), white panel caption, and legend. Always fill
   `slide_title`, `slide_kicker`, `brand` (only if known), and `diagram_title`.
@@ -107,12 +118,23 @@ expects. Also use **diagrams-as-code** `reference/nodes.md` and
 ## Blueprint quality (step 3 detail)
 When calling `propose_blueprint`, your blueprint must be thorough enough for the
 drawer to render without guessing:
+- **BPMN / swimlane / business process request** (roles x phases, "workflow",
+  "approval process", "order fulfillment process" — NOT an infrastructure
+  architecture): fill ONLY `blueprint.process` (label, lanes, phases, steps,
+  flows) and leave `nodes`/`clusters`/`edges` empty. `pattern` is still
+  required by the schema but is ignored for process diagrams — any short
+  value is fine. This renders through the native BPMN builder, NOT the
+  mingrammer/Graphviz flowchart path.
 - Use `architecture_analysis.json` as planning signal: choose from its
   suggested_patterns when they fit, reflect its scale/security/provider signals
   in the brief and blueprint, and address its concerns through scoped boundaries
   or explicit simplification choices.
 - Default to a client-facing architecture diagram: `audience="client"`,
   `detail_level="architecture"`, `layout_intent="left_to_right_pipeline"`.
+  For a genuine hub-and-spoke/event-bus, org-tree/Landing-Zone, multi-account
+  mesh, numbered-walkthrough, or on-prem<->cloud hybrid topology, use
+  `layout_intent="hub_spoke"|"hierarchy"|"mesh"|"sequence"|"hybrid"` instead —
+  see the field description for what each one does and renders as.
 - DEFAULT to `presentation_style="slide"` — production output rendered as a
   single-page 16:9 landscape slide (white background, no blue hero band by
   default). Fill `slide_title` and `diagram_title`; `slide_kicker`/`brand` are
@@ -125,6 +147,10 @@ drawer to render without guessing:
   grid). Avoid thin 1-2 node regions — fold them into the adjacent tier they serve.
   Real cross-cluster edges connect every zone (MANDATORY — these are what make the
   diagram readable) and connected regions should be adjacent so edges stay short.
+  For cloud-architecture requests, set each containment cluster's `zone`
+  (cloud|vpc|subnet_public|subnet_private|az|onprem) AND chain them via `parent`
+  (cloud>vpc>subnet>az, compute/data clusters parented into the subnet) so the engine
+  renders real concentric boundaries. A `zone` without a parent chain is ignored.
   Every compute/data/network node carries a `tech` field and a REAL technology logo.
   Choose node count based on actual architecture complexity, but prefer richer over
   sparser; do NOT cut nodes to fit the page — the engine scales to one 16:9 page.

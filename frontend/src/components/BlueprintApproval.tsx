@@ -26,6 +26,38 @@ const TIER_DOT: Record<string, string> = {
   security: "bg-red-400",
 };
 
+type KeyDecision = string | {
+  decision?: unknown;
+  rationale?: unknown;
+  tradeoffs?: unknown;
+};
+
+function textValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return "";
+}
+
+function tradeoffText(value: unknown): string {
+  if (Array.isArray(value)) return value.map(textValue).filter(Boolean).join("; ");
+  return textValue(value);
+}
+
+function normalizeDecision(decision: KeyDecision): { title: string; rationale: string; tradeoffs: string } {
+  if (typeof decision === "string") {
+    return { title: decision, rationale: "", tradeoffs: "" };
+  }
+  if (decision && typeof decision === "object") {
+    const title = textValue(decision.decision) || textValue(decision.rationale) || "Decision";
+    return {
+      title,
+      rationale: textValue(decision.rationale),
+      tradeoffs: tradeoffText(decision.tradeoffs),
+    };
+  }
+  return { title: String(decision ?? ""), rationale: "", tradeoffs: "" };
+}
+
 export default function BlueprintApproval({ interrupt, onResolve, onDecision, disabled = false }: BlueprintApprovalProps) {
   const [mode, setMode] = useState<"idle" | "feedback">("idle");
   const [modifications, setModifications] = useState("");
@@ -41,7 +73,7 @@ export default function BlueprintApproval({ interrupt, onResolve, onDecision, di
   };
   const pattern = blueprint?.pattern ?? "unknown";
   const patternRationale = blueprint?.pattern_rationale ?? "";
-  const keyDecisions = Array.isArray(blueprint?.key_decisions) ? blueprint.key_decisions : [];
+  const keyDecisions = Array.isArray(blueprint?.key_decisions) ? blueprint.key_decisions as KeyDecision[] : [];
   const nodes = Array.isArray(blueprint?.nodes) ? blueprint.nodes : [];
   const clusters = Array.isArray(blueprint?.clusters) ? blueprint.clusters : [];
   const edges = Array.isArray(blueprint?.edges) ? blueprint.edges : [];
@@ -118,12 +150,23 @@ export default function BlueprintApproval({ interrupt, onResolve, onDecision, di
             <div>
               <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-amber-400/70">Key design decisions</p>
               <ul className="flex flex-col gap-1.5">
-                {keyDecisions.map((d, i) => (
-                  <li key={i} className="flex gap-2 text-[11px] leading-relaxed text-slate-300">
-                    <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-amber-400/70" />
-                    <span>{d}</span>
-                  </li>
-                ))}
+                {keyDecisions.map((d, i) => {
+                  const item = normalizeDecision(d);
+                  return (
+                    <li key={i} className="flex gap-2 text-[11px] leading-relaxed text-slate-300">
+                      <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-amber-400/70" />
+                      <span className="min-w-0">
+                        <span>{item.title}</span>
+                        {item.rationale && item.rationale !== item.title && (
+                          <span className="block text-[10px] text-slate-500">{item.rationale}</span>
+                        )}
+                        {item.tradeoffs && (
+                          <span className="block text-[10px] text-amber-300/70">Tradeoffs: {item.tradeoffs}</span>
+                        )}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}

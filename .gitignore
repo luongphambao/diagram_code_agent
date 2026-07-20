@@ -109,3 +109,4 @@ backend/src/diagram_mcp/data/shape-index.json.gz
 # ── Local tool/external config not relevant to the repo ───────────────────────
 composio.json
 .agents/
+artifacts/

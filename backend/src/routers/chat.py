@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 
+import httpx
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
@@ -18,9 +19,9 @@ from backends import (
     reset_current_workspace,
     set_current_workspace,
 )
-from safe_path import safe_workspace_path
+from runtime.safe_path import safe_workspace_path
 from context import SessionContext
-from reporting import record_report_step
+from domain.reporting.reporting import record_report_step
 from tools import GATE_TOOL_NAMES, allowed_decisions_for, clear_stage_markers
 import session_state as ss
 from session_state import (
@@ -31,9 +32,11 @@ from session_state import (
     _is_pdf_followup,
     _is_ppt_followup,
     _is_wbs_followup,
+    _wbs_preserve,
     _label,
     _last_tool_msg,
     _last_user_text,
+    _looks_like_tool_selection_prefix,
     _pending_action_name,
     _pending_interrupt,
     _run_metrics,
@@ -44,6 +47,8 @@ from session_state import (
     _TOOL_TO_SUBAGENT,
     _tool_detail,
     _tool_output_detail,
+    _tool_selection_detail,
+    _tool_selection_tools,
 )
 
 logger = logging.getLogger("diagram-agent")
@@ -82,7 +87,7 @@ def _persist_decision_record(payload: dict, gate: str | None, approver: str,
     try:
         from datetime import datetime, timezone
 
-        from decisions import append_decision, next_seq
+        from memory.stores.decisions import append_decision, next_seq
         from session_state import decision_record_from_payload
         from tools import can_approve
 
@@ -110,6 +115,20 @@ _RESTORABLE_FILES = {
     "tech_stack":            "tech_stack.json",
     "blueprint":             "blueprint.json",
 }
+
+
+def _wbs_plan_ready(workspace) -> bool:
+    try:
+        wbs = json.loads((workspace / "wbs.json").read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    items = wbs.get("items") or []
+    totals = wbs.get("effort_totals") or {}
+    try:
+        total_mandays = float(totals.get("total_mandays") or 0)
+    except (TypeError, ValueError):
+        total_mandays = 0
+    return bool(items) and total_mandays > 0
 
 
 async def _restore_workspace_from_db(pool, thread_id: str, workspace) -> None:
@@ -172,6 +191,7 @@ async def agui_endpoint(request: Request):
     async def stream():
         _ws_token = set_current_workspace(ws)
         _upsert_snap: dict = {}
+        run_errored = False
         yield _sse({"type": "RUN_STARTED", "threadId": thread_id, "runId": run_id})
         try:
             if last_tool is not None:
@@ -193,7 +213,7 @@ async def agui_endpoint(request: Request):
                 # immutable approved revision (approved/REV-<n>.json) for audit/repro.
                 if decision.get("type") == "approve" and pending_name in GATE_TOOL_NAMES:
                     try:
-                        from csm_adapter import archive_approved_revision
+                        from memory.stores.csm_adapter import archive_approved_revision
                         archive_approved_revision(ws)
                     except Exception as exc:  # noqa: BLE001
                         logger.debug("approved-revision archive skipped: %s", exc)
@@ -225,17 +245,44 @@ async def agui_endpoint(request: Request):
                 # Fresh run.
                 from routers.upload import _attached_images, _attached_text
                 desc = _last_user_text(messages)
+                attached = _attached_text(file_ids)
+                image_blocks = _attached_images(file_ids)
                 is_pdf_followup = _is_pdf_followup(desc)
                 is_ppt_followup = _is_ppt_followup(desc)
                 is_wbs_followup = _is_wbs_followup(desc)
-                preserve_diagram_artifacts = (is_pdf_followup or is_ppt_followup) and (ws / "out.png").exists()
-                preserve_wbs_artifacts = is_wbs_followup and (ws / "wbs.json").exists()
+                if (is_pdf_followup or is_ppt_followup or is_wbs_followup) and not attached:
+                    # Restore before deciding whether a downstream follow-up can
+                    # preserve artifacts. A previous run may have wiped the
+                    # per-thread JSON files while the conversation snapshot still
+                    # has them; checking disk first would falsely classify the
+                    # request as fresh and clear the files WBS/PPT/PDF need.
+                    await _restore_workspace_from_db(request.app.state.pool, thread_id, ws)
+                # A newly attached document is fresh intake for a (possibly new) project,
+                # not a request to re-export the existing diagram/WBS — never preserve
+                # stale artifacts over it, no matter what followup phrase matched.
+                preserve_diagram_artifacts = (
+                    (is_pdf_followup or is_ppt_followup) and (ws / "out.png").exists() and not attached
+                )
+                # A WBS request is ALWAYS a downstream step from an approved solution, never a
+                # fresh project — so preserve whenever the upstream solution exists on disk,
+                # NOT only when wbs.json already exists. Requiring wbs.json here meant the very
+                # FIRST WBS request (wbs.json not yet written) fell through to clear_stage_markers()
+                # and deleted the brief/tech_stack/blueprint that load_solution_context reads,
+                # so the planner reported "No upstream artifacts found" and never started.
+                solution_exists = (
+                    (ws / "blueprint.json").exists()
+                    or (ws / "tech_stack.json").exists()
+                    or (ws / "out.png").exists()
+                )
+                preserve_wbs_artifacts, wbs_already_planned = _wbs_preserve(
+                    desc, solution_exists=solution_exists,
+                    wbs_exists=_wbs_plan_ready(ws), attached=bool(attached),
+                )
                 preserve_artifacts = preserve_diagram_artifacts or preserve_wbs_artifacts
                 if not preserve_artifacts:
                     clear_stage_markers()
                 else:
-                    await _restore_workspace_from_db(request.app.state.pool, thread_id, ws)
-                    if preserve_wbs_artifacts:
+                    if wbs_already_planned:
                         desc = (
                             (desc + "\n\n" if desc else "")
                             + "IMPORTANT: The user is asking to (re-)export/send the WBS "
@@ -243,6 +290,18 @@ async def agui_endpoint(request: Request):
                             "(wbs.json). Do NOT re-delegate to wbs_planner or redo the "
                             "skeleton/estimate gates — just call `export_wbs_excel()` "
                             "directly to regenerate the file."
+                        )
+                    elif preserve_wbs_artifacts:
+                        # First-time WBS on an existing solution: artifacts are preserved
+                        # (brief/tech_stack/blueprint kept on disk) so load_solution_context
+                        # has its inputs. Do NOT inject the re-export shortcut — let the normal
+                        # wbs_planner delegation (skeleton → estimate gates) run.
+                        desc = (
+                            (desc + "\n\n" if desc else "")
+                            + "IMPORTANT: The approved solution artifacts (diagram_brief.json, "
+                            "tech_stack.json, blueprint.json) already exist in the workspace — "
+                            "build the WBS from them. Delegate to `wbs_planner` as usual; do NOT "
+                            "re-run intake or redesign the diagram."
                         )
                     else:
                         artifact_instruction = (
@@ -262,8 +321,6 @@ async def agui_endpoint(request: Request):
                             "(`out.png`, `out.drawio`, `diagram.py`) with approved planning "
                             f"artifacts. {artifact_instruction}"
                         )
-                attached = _attached_text(file_ids)
-                image_blocks = _attached_images(file_ids)
                 req_file = ws / "requirements.md"
                 if attached:
                     ws.mkdir(parents=True, exist_ok=True)
@@ -303,10 +360,48 @@ async def agui_endpoint(request: Request):
                 )
 
             current_id: str | None = None
+            selector_candidate_id: str | None = None
+            selector_buffer = ""
+            suppressed_text_ids: set[str] = set()
             seen_starts: set[str] = set()
             seen_ends: set[str] = set()
             _pending_tasks: dict[str, dict] = {}
             _completed_delegations: list[dict] = []
+
+            def _text_events(message_id: str, delta: str) -> list[dict]:
+                nonlocal current_id
+                events: list[dict] = []
+                if message_id != current_id:
+                    if current_id is not None:
+                        events.append({"type": "TEXT_MESSAGE_END", "messageId": current_id})
+                    current_id = message_id
+                    events.append({
+                        "type": "TEXT_MESSAGE_START",
+                        "messageId": current_id,
+                        "role": "assistant",
+                    })
+                events.append({
+                    "type": "TEXT_MESSAGE_CONTENT",
+                    "messageId": current_id,
+                    "delta": delta,
+                })
+                return events
+
+            def _selector_events(message_id: str, tools: list[str]) -> list[dict]:
+                nonlocal current_id
+                events: list[dict] = []
+                if current_id is not None and current_id != message_id:
+                    events.append({"type": "TEXT_MESSAGE_END", "messageId": current_id})
+                    current_id = None
+                detail = _tool_selection_detail(tools)
+                events.append(_activity_event(
+                    "start", "tool_selector", label="Selecting tools", detail=detail
+                ))
+                events.append(_activity_event(
+                    "end", "tool_selector", label="Selecting tools", detail=detail, ok=True
+                ))
+                return events
+
             async for mode, payload in agen:
                 if mode == "messages":
                     chunk, _meta = payload
@@ -316,12 +411,47 @@ async def agui_endpoint(request: Request):
                     if not text:
                         continue
                     mid = getattr(chunk, "id", None) or "ai"
-                    if mid != current_id:
-                        if current_id is not None:
-                            yield _sse({"type": "TEXT_MESSAGE_END", "messageId": current_id})
-                        current_id = mid
-                        yield _sse({"type": "TEXT_MESSAGE_START", "messageId": current_id, "role": "assistant"})
-                    yield _sse({"type": "TEXT_MESSAGE_CONTENT", "messageId": current_id, "delta": text})
+                    if mid in suppressed_text_ids:
+                        continue
+
+                    if selector_candidate_id is not None and mid != selector_candidate_id:
+                        if selector_buffer:
+                            for event in _text_events(selector_candidate_id, selector_buffer):
+                                yield _sse(event)
+                        selector_candidate_id = None
+                        selector_buffer = ""
+
+                    if selector_candidate_id == mid:
+                        selector_buffer += text
+                        tools = _tool_selection_tools(selector_buffer)
+                        if tools is not None:
+                            suppressed_text_ids.add(mid)
+                            selector_candidate_id = None
+                            selector_buffer = ""
+                            logger.info("tool selector chose: %s", ", ".join(tools))
+                            for event in _selector_events(mid, tools):
+                                yield _sse(event)
+                            continue
+                        if _looks_like_tool_selection_prefix(selector_buffer) and len(selector_buffer) <= 4096:
+                            continue
+                        text = selector_buffer
+                        selector_candidate_id = None
+                        selector_buffer = ""
+                    elif _looks_like_tool_selection_prefix(text):
+                        selector_candidate_id = mid
+                        selector_buffer = text
+                        tools = _tool_selection_tools(selector_buffer)
+                        if tools is not None:
+                            suppressed_text_ids.add(mid)
+                            selector_candidate_id = None
+                            selector_buffer = ""
+                            logger.info("tool selector chose: %s", ", ".join(tools))
+                            for event in _selector_events(mid, tools):
+                                yield _sse(event)
+                        continue
+
+                    for event in _text_events(mid, text):
+                        yield _sse(event)
                 elif mode == "updates":
                     for _node, upd in (payload or {}).items():
                         if not isinstance(upd, dict):
@@ -380,10 +510,15 @@ async def agui_endpoint(request: Request):
                                     yield _sse({"type": "STATE_DELTA", "delta": [
                                         {"op": "add", "path": "/delegations", "value": all_delegations}
                                     ]})
-                                logger.info("← %s %s%s", name, "ok" if ok else "ERROR",
-                                            f" [{subagent}]" if subagent else "")
+                                output_detail = _tool_output_detail(m.content)
+                                if ok:
+                                    logger.info("← %s ok%s", name, f" [{subagent}]" if subagent else "")
+                                else:
+                                    logger.info("← %s ERROR%s — %s", name,
+                                                f" [{subagent}]" if subagent else "",
+                                                output_detail)
                                 yield _sse(_activity_event("end", name, ok=ok,
-                                            detail=_tool_output_detail(m.content), subagent=subagent))
+                                            detail=output_detail, subagent=subagent))
                                 if name in {"generate_pdf_report", "generate_ppt_proposal"} and ok:
                                     artifact_delta = [
                                         {"op": "add", "path": f"/{k}", "value": v}
@@ -428,6 +563,9 @@ async def agui_endpoint(request: Request):
                                 record.pop("current_label", None)
                                 record.pop("current_detail", None)
                                 break
+            if selector_candidate_id is not None and selector_buffer:
+                for event in _text_events(selector_candidate_id, selector_buffer):
+                    yield _sse(event)
             if current_id is not None:
                 yield _sse({"type": "TEXT_MESSAGE_END", "messageId": current_id})
 
@@ -493,6 +631,7 @@ async def agui_endpoint(request: Request):
 
         except GraphRecursionError as exc:
             logger.exception("agent run hit the graph recursion limit: %s", exc)
+            run_errored = True
             yield _sse({
                 "type": "RUN_ERROR",
                 "message": (
@@ -503,8 +642,24 @@ async def agui_endpoint(request: Request):
                 ),
                 "code": "recursion_limit",
             })
+        except (httpx.TimeoutException, TimeoutError) as exc:
+            # Covers the raw transport read timeout (httpx.ReadTimeout) and the
+            # vendored langchain_openai StreamChunkTimeoutError (subclass of
+            # TimeoutError) — the model connection went quiet mid-stream.
+            logger.warning("agent run timed out mid-stream: %r", exc)
+            run_errored = True
+            yield _sse({
+                "type": "RUN_ERROR",
+                "message": (
+                    "The model connection timed out while generating a response "
+                    "(the endpoint went quiet). Partial artifacts, if any, are saved "
+                    "in the workspace — please resend your message to continue."
+                ),
+                "code": "model_timeout",
+            })
         except Exception as exc:  # noqa: BLE001
             logger.exception("agent run failed: %s", exc)
+            run_errored = True
             yield _sse({"type": "RUN_ERROR", "message": str(exc), "code": "internal_error"})
         finally:
             reset_current_workspace(_ws_token)
@@ -518,7 +673,9 @@ async def agui_endpoint(request: Request):
                 last_msg=_last_user_text(messages),
                 auto_name=(_last_user_text(messages) or "Untitled")[:50],
             )
-        yield _sse({"type": "RUN_FINISHED", "threadId": thread_id, "runId": run_id})
+        if not run_errored:
+            # AG-UI treats RUN_ERROR as terminal; don't also emit RUN_FINISHED.
+            yield _sse({"type": "RUN_FINISHED", "threadId": thread_id, "runId": run_id})
 
     return StreamingResponse(
         stream(),

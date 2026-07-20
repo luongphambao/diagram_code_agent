@@ -13,6 +13,16 @@ Paths are resolved relative to this repo so the project is self-contained:
   backend/agent_space/     <- AGENT_SPACE (created at runtime)
   backend/skills/          <- SKILLS_DIR (bundled procedural skills)
   resources/icons/         <- icon pack (shared, sibling of backend/)
+
+NOTE: this module stays a top-level module (not moved into runtime/) because
+the test suite monkeypatches its module-level state directly (WORKSPACE,
+MEMORIES_DIR, OUTPUTS_DIR, WORKSPACES_DIR, _current_workspace) across many
+test files, expecting the real backend functions defined HERE to read the
+patched value. A re-export-shim split (real logic in runtime/backends.py,
+shim here) breaks that: functions defined in a different module resolve
+these names via THEIR OWN module globals, not the shim's copy — see
+tests/test_workspace_isolation.py and the sibling tests that patch
+``backends._current_workspace``/``WORKSPACE``/etc. directly.
 """
 
 from __future__ import annotations
@@ -69,7 +79,7 @@ def resolve_workspace(thread_id: str | None) -> Path:
     if not thread_id or thread_id == "thread-default":
         WORKSPACE.mkdir(parents=True, exist_ok=True)
         return WORKSPACE
-    from safe_path import safe_filename
+    from runtime.safe_path import safe_filename
     ws = WORKSPACES_DIR / safe_filename(thread_id)
     ws.mkdir(parents=True, exist_ok=True)
     return ws
@@ -215,9 +225,13 @@ def make_local_backend() -> CompositeBackend:
                             (SKILL.md + reference/), fixed repo content read the
                             same way by every agent regardless of which thread's
                             workspace is currently bound. Every agent's skill path
-                            list (see agent.py's *_SKILL_PATHS) is an absolute
-                            SKILLS_DIR-rooted path, so this one route covers all of
-                            them by prefix match.
+                            list (see agent/constants.py's *_SKILL_PATHS) is an
+                            absolute SKILLS_DIR-rooted path, so this one route
+                            covers all of them by prefix match.
+      /app/workspace/    → alias of the per-thread workspace, and
+      /app/                 defensive routes for a fabricated Docker-style
+                            `/app/workspace/...` / `/app/...` prefix the model
+                            sometimes invents (see the inline note below).
       (default)           → PerThreadFilesystemBackend rooted at
                             <current thread's workspace>/ — diagram.py / out.png /
                             out.dot / out.drawio / wbs.json / etc. live here.
@@ -251,6 +265,21 @@ def make_local_backend() -> CompositeBackend:
             # why the ppt_generator subagent's reads all 404'd. Bare names (`blueprint.json`)
             # still resolve via the default route, so both forms now work per-thread.
             "/workspace/": PerThreadFilesystemBackend(
+                root_dir=str(WORKSPACE),
+                virtual_mode=True,
+            ),
+            # Defensive aliases: mimo sometimes fabricates a Docker-flavoured
+            # `/app/workspace/...` (or bare `/app/...`) prefix from its training
+            # prior — that string exists nowhere in our prompts/skills. Without a
+            # route it falls to `default` and virtual_mode nests it as
+            # `<thread-ws>/app/workspace/...`, which never exists (path_not_found).
+            # Alias both to the same per-thread workspace so a hallucinated prefix
+            # still resolves to the right file. (Same pattern as `/workspace/`.)
+            "/app/workspace/": PerThreadFilesystemBackend(
+                root_dir=str(WORKSPACE),
+                virtual_mode=True,
+            ),
+            "/app/": PerThreadFilesystemBackend(
                 root_dir=str(WORKSPACE),
                 virtual_mode=True,
             ),

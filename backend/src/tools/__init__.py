@@ -75,10 +75,12 @@ from .icon_tools import (
     _tokens,
     fetch_logo,
     resolve_icons,
+    resolve_missing_icons,
     resolve_tech_stack_icons,
     search_diagrams_nodes,
     search_drawio_shapes,
     search_icons,
+    update_icon_plan_entry,
 )
 
 # --- rendering tools ---
@@ -91,74 +93,85 @@ from .rendering_tools import (
     _shorten,
     audit_diagram_code,
     declare_poster_grid,
+    edit_drawio,
     export_drawio,
+    export_drawio_native,
     finalize_diagram,
     fit_labels,
+    inspect_render_quality,
     list_saved_diagrams,
     plan_style_sizes,
+    read_drawio,
     render_diagram,
+    upgrade_drawio,
     visualize_code_structure,
 )
 
 # --- analysis / HITL tools + Pydantic models ---
-from .analysis_tools import (
-    BPCluster,
-    BPEdge,
-    BPNode,
-    Blueprint,
-    CoercingModel,
+from .schemas.coercion import CoercingModel, _mimo_coerce_before, _wants_structural
+from .schemas.brief import DiagramBrief
+from .schemas.tech_stack import (
     CostRange,
     DataAssumptions,
-    DiagramBrief,
-    LegendEntry,
-    NFRMapping,
-    PdfReportConfig,
-    PillarCoverage,
     ProposeTechStackArgs,
-    PptProposalConfig,
     ScalingPhase,
     SolutionAssumptions,
+    TeamAssumptions,
     TechAlternative,
     TechChoice,
     TechCriteria,
     TechRisk,
-    TeamAssumptions,
     UserScaleAssumptions,
+)
+from .schemas.blueprint import (
+    BPCluster,
+    BPEdge,
+    BPNode,
+    Blueprint,
+    LegendEntry,
+    NFRMapping,
+    PillarCoverage,
     WAFPillar,
+)
+from .analysis.architecture import analyze_architecture_requirements
+from .analysis.blueprint_tools import (
     _build_render_spec,
     _detect_provider,
-    _mimo_coerce_before,
     _preseed_icon_plan,
     _req_soft_match,
     _validate_nfr_mapping,
     _validate_pillar_coverage,
     _validate_req_coverage,
-    _wants_structural,
-    add_comment,
-    analyze_architecture_requirements,
-    apply_compliance_pack,
-    compare_revisions,
+    find_diagram_template,
+    inspect_diagram,
+    propose_blueprint,
+    propose_diagram_brief,
+    propose_tech_stack,
+    submit_critique,
+)
+from .analysis.gates import compare_revisions, query_change_impact
+from .analysis.reporting_gates import (
+    PdfReportConfig,
+    PptProposalConfig,
     create_pptx,
+    generate_pdf_report,
+    generate_ppt_proposal,
+    plan_deck,
+    propose_deck_plan,
+)
+from .analysis.research import web_research
+from .analysis.findings import (
+    add_comment,
+    apply_compliance_pack,
     edit_entity,
     export_adr_pack,
     export_to_delivery,
-    generate_pdf_report,
-    generate_ppt_proposal,
-    inspect_diagram,
-    plan_deck,
-    propose_blueprint,
-    propose_deck_plan,
-    propose_diagram_brief,
-    propose_tech_stack,
-    query_change_impact,
+    quality_summary,
     reality_sync,
     record_evidence,
     resolve_comment,
     resolve_finding,
-    quality_summary,
-    submit_critique,
     waive_finding,
-    web_research,
 )
 
 # ---------------------------------------------------------------------------
@@ -171,10 +184,15 @@ DIAGRAM_TOOLS = [
     web_research,
     record_evidence,
     propose_tech_stack,
+    find_diagram_template,
     propose_blueprint,
     audit_diagram_code,
     render_diagram,
     export_drawio,
+    export_drawio_native,
+    upgrade_drawio,
+    read_drawio,
+    edit_drawio,
     list_saved_diagrams,
     search_diagrams_nodes,
     search_icons,
@@ -205,7 +223,7 @@ DIAGRAM_TOOLS = [
 
 # Late imports (same as original tools.py bottom section)
 from integrations import send_email, propose_meeting_slots, create_client_meeting  # noqa: E402
-from wbs_tools import (  # noqa: E402
+from domain.wbs.wbs_tools import (  # noqa: E402
     WBS_PLANNER_TOOLS, propose_wbs_skeleton, propose_wbs, export_wbs_excel,
 )
 
@@ -227,6 +245,7 @@ MAIN_TOOLS = [
     export_to_delivery,       # idempotent sync of WBS work items to Jira/Linear/Confluence (gate)
     reality_sync,             # diff design vs a real repo/infra source -> drift_report.json (§5.2)
     propose_tech_stack,
+    find_diagram_template,
     propose_blueprint,
     visualize_code_structure,
     list_saved_diagrams,
@@ -244,14 +263,20 @@ MAIN_TOOLS = [
 ]
 
 # Icon resolver subagent tools: node search + icon resolution (runs before drawer).
-ICON_RESOLVER_TOOLS = [search_diagrams_nodes, resolve_icons, search_icons, search_drawio_shapes, fetch_logo]
+ICON_RESOLVER_TOOLS = [
+    search_diagrams_nodes, resolve_icons, search_icons, search_drawio_shapes, fetch_logo,
+    update_icon_plan_entry, resolve_missing_icons,
+]
 
 # Drawer subagent tools: render-refine loop only. Icons are pre-resolved by
 # icon_resolver; style_plan.json/label_fits.json are pre-computed code-side by
 # propose_blueprint (write_style_and_fit_plans); the static audit runs inside
-# render_diagram as a pre-flight gate. 3 tools — fewer calls, fewer schemas,
-# and no fit_labels(edge_labels=...) stringify surface for mimo.
-DRAWER_TOOLS = [declare_poster_grid, render_diagram, export_drawio]
+# render_diagram as a pre-flight gate. export_drawio_native is the deterministic
+# DEFAULT for architecture diagrams (spec -> native engine, no Graphviz);
+# read_drawio/edit_drawio are the targeted in-place fix loop on its output.
+DRAWER_TOOLS = [declare_poster_grid, render_diagram, export_drawio,
+                export_drawio_native, upgrade_drawio, read_drawio, edit_drawio,
+                inspect_render_quality]
 
 # Critic subagent tools: read-only review of the rendered diagram.
 CRITIC_TOOLS = [inspect_diagram, submit_critique]

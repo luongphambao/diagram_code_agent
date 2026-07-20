@@ -390,6 +390,66 @@ def test_dot_to_drawio_fallback_to_b64(tmp_path, monkeypatch):
     assert "resIcon" not in xml
 
 
+def test_audit_flags_managed_service_inside_vpc(tmp_path):
+    """S3/IAM/etc. nested inside a VPC/subnet is flagged (Tier 3.1, beyond the kit)."""
+    # move S3 (at x=400 in the cloud band) into the private subnet
+    xml = _build_native_drawio().replace(
+        'parent="cloud"><mxGeometry x="400"',
+        'parent="subnet"><mxGeometry x="400"')
+    path = tmp_path / "s3invpc.drawio"
+    path.write_text(xml, encoding="utf-8")
+    advice = vd.validate_file(str(path), profile="aws_native")["advice"]
+    assert any("Managed/global service" in a and "s3" in a for a in advice)
+
+
+def test_audit_no_managed_flag_when_outside_vpc(tmp_path):
+    """S3 in the AWS Cloud band (outside the VPC) raises no managed-service advice."""
+    path = tmp_path / "clean.drawio"
+    path.write_text(_build_native_drawio(), encoding="utf-8")
+    advice = vd.validate_file(str(path), profile="aws_native")["advice"]
+    assert not any("Managed/global service" in a for a in advice)
+
+
+def _bpmn_edge(eid: str, src: str, tgt: str) -> str:
+    return (f'<mxCell id="{eid}" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" '
+            f'parent="1" source="{src}" target="{tgt}"><mxGeometry relative="1" '
+            'as="geometry"/></mxCell>')
+
+
+def _bpmn_xml() -> str:
+    cat = dc.load_catalog()
+    st = lambda n: dc.style_for_icon(cat, n)["style"]
+    cells = [
+        _cell("s", "1", st("bpmn_start_none"), 40, 40, 48, 48, "Start"),
+        _cell("g", "1", st("bpmn_gateway_exclusive"), 140, 40, 48, 48, "GW"),
+        _cell("t", "1", st("bpmn_task_user"), 240, 40, 100, 60, "Do"),
+        _cell("e", "1", st("bpmn_end_none"), 400, 40, 48, 48, "End"),
+        _bpmn_edge("x1", "s", "g"), _bpmn_edge("x2", "g", "t"),
+        _bpmn_edge("x3", "t", "e"), _bpmn_edge("x4", "e", "s"),  # end -> start: illegal
+    ]
+    return ('<mxfile><diagram name="t" id="d1">'
+            '<mxGraphModel pageWidth="600" pageHeight="300"><root>'
+            '<mxCell id="0"/><mxCell id="1" parent="0"/>'
+            + "".join(cells) + '</root></mxGraphModel></diagram></mxfile>')
+
+
+def test_audit_bpmn_semantic_checks(tmp_path):
+    """A gateway with <2 branches and an end event with an outgoing flow are flagged (Tier 3.2)."""
+    path = tmp_path / "bpmn.drawio"
+    path.write_text(_bpmn_xml(), encoding="utf-8")
+    advice = vd.validate_file(str(path))["advice"]
+    assert any("gateway" in a.lower() for a in advice)
+    assert any("end event" in a.lower() for a in advice)
+
+
+def test_audit_bpmn_skipped_for_non_bpmn(tmp_path):
+    """audit_bpmn self-gates: an AWS diagram raises no BPMN advice."""
+    path = tmp_path / "aws.drawio"
+    path.write_text(_build_native_drawio(), encoding="utf-8")
+    advice = vd.validate_file(str(path))["advice"]
+    assert not any("BPMN" in a for a in advice)
+
+
 def test_audits_on_committed_sample():
     sample = _REPO_ROOT / "out_aws_drawio.drawio"
     if not sample.exists():

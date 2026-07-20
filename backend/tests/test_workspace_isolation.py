@@ -79,7 +79,7 @@ def test_stage_marker_proxy_follows_current_workspace(tmp_path, monkeypatch):
 
 def test_store_writes_into_current_workspace(tmp_path, monkeypatch):
     """A router-side store (decision_log) lands in the bound thread's workspace."""
-    from decisions import DecisionRecord, append_decision, next_seq, read_decisions
+    from memory.stores.decisions import DecisionRecord, append_decision, next_seq, read_decisions
 
     a, b = tmp_path / "da", tmp_path / "db"
     _bind(monkeypatch, a)
@@ -222,6 +222,33 @@ def test_skills_dir_route_resolves_regardless_of_bound_thread_workspace(tmp_path
     read_result = backend.read(f"{skill_dir}/SKILL.md")
     assert read_result.error is None, read_result.error
     assert "wbs-planning" in read_result.file_data["content"]
+
+
+def test_app_workspace_prefix_aliases_to_per_thread_workspace(tmp_path, monkeypatch):
+    """Regression test: mimo sometimes fabricates a Docker-flavoured
+    `/app/workspace/...` prefix that exists nowhere in our prompts. Defensive
+    routes in make_local_backend() alias `/app/workspace/` (and bare `/app/`) to
+    the same per-thread workspace, so a hallucinated prefix still resolves to the
+    right file instead of a path_not_found under a nonexistent nested dir."""
+    ws = tmp_path / "some-thread-workspace"
+    _bind(monkeypatch, ws)
+
+    backend = backends.make_local_backend()
+    # A tool writes the file by its bare name (the normal path).
+    assert backend.write("render_spec.json", "spec-body").error is None
+    assert (ws / "render_spec.json").read_text(encoding="utf-8") == "spec-body"
+
+    # The model then reads it back via the fabricated /app/workspace/ prefix —
+    # the alias route must resolve to the exact same per-thread file.
+    via_app_ws = backend.read("/app/workspace/render_spec.json")
+    assert via_app_ws.error is None, via_app_ws.error
+    assert "spec-body" in via_app_ws.file_data["content"]
+
+    # The bare /app/ prefix aliases too (longest-prefix match keeps the two routes
+    # distinct: /app/workspace/ wins over /app/ for the nested form above).
+    via_app = backend.read("/app/render_spec.json")
+    assert via_app.error is None, via_app.error
+    assert "spec-body" in via_app.file_data["content"]
 
 
 def test_requirements_md_lands_in_per_thread_workspace(tmp_path, monkeypatch):

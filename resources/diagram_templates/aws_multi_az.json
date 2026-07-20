@@ -1,0 +1,49 @@
+{
+  "_meta": {
+    "name": "aws_multi_az",
+    "provider": "aws",
+    "layout_intent": "left_to_right_pipeline",
+    "tags": ["multi-az", "vpc", "3-tier", "high availability", "web app", "rds multi-az"],
+    "summary": "AWS Multi-AZ 3-tier web application: public ALB tier, two AZ web/app columns, and a Multi-AZ data tier. Ported from drawio-ai-kit examples/aws/build_multiaz_template.mjs."
+  },
+  "provider": "aws",
+  "style_preset": "refined",
+  "diagram_title": "AWS Multi-AZ Web Application",
+  "subtitle": "Public ALB · 2 Availability Zones · Multi-AZ data tier",
+  "backbone": ["Public Entry", "AZ-1 Compute", "AZ-2 Compute", "Data Tier"],
+  "clusters": [
+    { "id": "aws", "label": "AWS Cloud · Production VPC", "zone": "cloud" },
+    { "id": "public", "label": "Public Tier", "number": 1, "parent": "aws" },
+    { "id": "az1", "label": "Availability Zone A", "number": 2, "parent": "aws" },
+    { "id": "az2", "label": "Availability Zone B", "number": 3, "parent": "aws" },
+    { "id": "data", "label": "Data Tier", "number": 4, "parent": "aws" }
+  ],
+  "nodes": [
+    { "id": "alb", "label": "Application Load Balancer", "cluster": "public", "type": "lb",
+      "body": ["Spans both AZs", "HTTPS termination"] },
+    { "id": "web_a", "label": "Web Server A", "cluster": "az1", "type": "service",
+      "body": ["EC2 Auto Scaling", "Private subnet"] },
+    { "id": "app_a", "label": "App Server A", "cluster": "az1", "type": "service",
+      "body": ["EC2 Auto Scaling", "Private subnet"] },
+    { "id": "web_b", "label": "Web Server B", "cluster": "az2", "type": "service",
+      "body": ["EC2 Auto Scaling", "Private subnet"] },
+    { "id": "app_b", "label": "App Server B", "cluster": "az2", "type": "service",
+      "body": ["EC2 Auto Scaling", "Private subnet"] },
+    { "id": "rds", "label": "RDS Multi-AZ", "cluster": "data", "type": "database",
+      "body": ["Primary + standby replica", "Automatic failover"] },
+    { "id": "cache", "label": "ElastiCache Redis", "cluster": "data",
+      "body": ["Session cache"] },
+    { "id": "note_data", "label": "Failover responsibility", "cluster": "data", "kind": "note",
+      "body": ["RDS handles cross-AZ failover automatically."] }
+  ],
+  "edges": [
+    { "from": "alb", "to": "web_a", "label": "HTTP", "flow": "control" },
+    { "from": "alb", "to": "web_b", "label": "HTTP", "flow": "control" },
+    { "from": "web_a", "to": "app_a", "flow": "data" },
+    { "from": "web_b", "to": "app_b", "flow": "data" },
+    { "from": "app_a", "to": "rds", "label": "SQL", "flow": "data" },
+    { "from": "app_b", "to": "rds", "label": "SQL", "flow": "data" },
+    { "from": "app_a", "to": "cache", "flow": "data" },
+    { "from": "app_b", "to": "cache", "flow": "data" }
+  ]
+}

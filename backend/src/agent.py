@@ -649,7 +649,7 @@ class _StreamingSubAgentRunnable:
         return result
 
 
-DEFAULT_MODEL    = "gpt-5.4-mini"
+DEFAULT_MODEL    = "mimo-v2.5"
 DEFAULT_STYLE    = "pretty"          # "pretty" (prettygraph) or "plain" (raw diagrams)
 RECURSION_LIMIT  = 450               # max agent steps per run (used by the server)
 # Shared across main + every delegated subagent (task-tool invocations propagate
@@ -666,10 +666,10 @@ MAIN_SKILL_PATHS = [
     (SKILLS_DIR / "diagrams-as-code").as_posix(),
     (SKILLS_DIR / "pro-style").as_posix(),
 ]
-DRAWER_SKILL_PATHS = [
-    (SKILLS_DIR / "drawer" / "diagrams-as-code").as_posix(),
-    (SKILLS_DIR / "drawer" / "pro-style").as_posix(),
-]
+# Drawer and main now share a single canonical copy of these skills. The former
+# `skills/drawer/*` duplicates had silently drifted (the top-level copies went
+# stale); they were consolidated into the top-level dirs to remove the drift.
+DRAWER_SKILL_PATHS = list(MAIN_SKILL_PATHS)
 WBS_PLANNER_SKILL_PATHS = [
     (SKILLS_DIR / "wbs-planning").as_posix(),
 ]
@@ -730,7 +730,14 @@ _WARN_INPUT_TOKENS = int(os.getenv("WARN_INPUT_TOKENS", "80000"))
 # the model actually needed.
 _MAIN_TOOL_SELECTOR = os.getenv("MAIN_TOOL_SELECTOR", "1").strip().lower() not in ("0", "false", "no")
 _MAIN_TOOL_SELECTOR_ALWAYS_INCLUDE = [
-    "read_file", "ls", "glob", "grep", "task", "write_todos", "finalize_diagram",
+    "read_file", "ls", "glob", "grep", "task", "write_todos",
+    # Stage and approval gates are control-flow tools. If the selector drops one,
+    # the model can get stuck saying the required gate is unavailable.
+    "analyze_architecture_requirements", "propose_diagram_brief",
+    "propose_tech_stack", "propose_blueprint", "finalize_diagram",
+    "generate_pdf_report", "propose_deck_plan", "generate_ppt_proposal",
+    "send_email", "create_client_meeting", "propose_wbs_skeleton",
+    "propose_wbs", "export_wbs_excel", "export_to_delivery",
 ]
 
 # Phase-based static tool filter: send only the tools relevant to the current
@@ -824,6 +831,16 @@ def _missing_artifact_tools(workspace: "Path") -> set[str]:
     }
 
 
+def _pending_gate_tools(workspace: "Path") -> set[str]:
+    """Tool names needed to revise or resume a gate already shown to the user."""
+    try:
+        pending = json.loads((workspace / "pending_gate.json").read_text(encoding="utf-8"))
+    except Exception:
+        return set()
+    tool = pending.get("tool")
+    return {tool} if isinstance(tool, str) and tool else set()
+
+
 class PhaseToolFilterMiddleware(AgentMiddleware):
     """Filter MAIN_TOOLS down to the phase-relevant subset each call.
 
@@ -845,7 +862,7 @@ class PhaseToolFilterMiddleware(AgentMiddleware):
         # Keep a foundational artifact's producing tool available even past its normal
         # phase — never let "most-advanced phase wins" permanently lock out backfilling
         # a step that got skipped (see _missing_artifact_tools).
-        allowed = allowed | _missing_artifact_tools(workspace)
+        allowed = allowed | _missing_artifact_tools(workspace) | _pending_gate_tools(workspace)
         # Always keep built-ins (filesystem tools, task, write_todos) which don't
         # appear in _PHASE_TOOLS but are always injected by deepagents.
         return [t for t in tools if _tool_name(t) in allowed or not _tool_name(t)]

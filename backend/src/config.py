@@ -4,7 +4,7 @@ Usage
 -----
 from config import get_model, make_llm
 
-llm = make_llm(get_model("main", fallback="gpt-5.4-mini"))
+llm = make_llm(get_model("main", fallback="mimo-v2.5"))
 """
 
 from __future__ import annotations
@@ -13,6 +13,8 @@ import logging
 import os
 from pathlib import Path
 from typing import Any
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +53,7 @@ def reload_config() -> None:
     get_config()
 
 
-def get_model(role: str, fallback: str = "gpt-5.4-mini") -> str:
+def get_model(role: str, fallback: str = "mimo-v2.5") -> str:
     """Return the configured model name for *role*, or *fallback* if not set."""
     return get_config().get("models", {}).get(role) or fallback
 
@@ -142,17 +144,20 @@ def make_llm(model: str):
             api_key=api_key,
             max_tokens=max_tokens,
             temperature=0,
-            timeout=90,
+            timeout=300,
             max_retries=6,
         )
 
     # OpenAI or OpenAI-compatible (mimo, etc.)
     from langchain_openai import ChatOpenAI
 
+    # Keep the transport read window long for slow OpenAI-compatible endpoints.
+    # Do not pass stream_chunk_timeout here: current langchain-openai forwards
+    # unknown kwargs to the provider API payload.
     kwargs: dict[str, Any] = dict(
         model=model,
         api_key=api_key,
-        timeout=90,
+        timeout=httpx.Timeout(connect=15.0, read=600.0, write=60.0, pool=600.0),
         max_retries=6,
     )
 

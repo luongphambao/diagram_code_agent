@@ -9,6 +9,35 @@ interface WbsSkeletonApprovalProps {
   disabled?: boolean;
 }
 
+type SkeletonModule = { code?: string; name?: string };
+type SkeletonPhase = { code?: string; name?: string; modules?: SkeletonModule[] };
+
+/**
+ * Normalise the `phases` tree to a real array. The model sometimes emits it as a
+ * JSON/Python-repr string or a numeric-keyed dict; a bare `Array.isArray(...)` guard
+ * then renders NO structure at all (the "empty skeleton card" symptom). Parse strings,
+ * unwrap numeric-keyed dicts, and return [] for anything else.
+ */
+function normalizePhases(value: unknown): SkeletonPhase[] {
+  let v = value;
+  if (typeof v === "string") {
+    const s = v.trim();
+    if (!s || (s[0] !== "[" && s[0] !== "{")) return [];
+    try {
+      v = JSON.parse(s);
+    } catch {
+      try {
+        v = JSON.parse(s.replace(/'/g, '"'));
+      } catch {
+        return [];
+      }
+    }
+  }
+  if (Array.isArray(v)) return v as SkeletonPhase[];
+  if (v && typeof v === "object") return Object.values(v as Record<string, SkeletonPhase>);
+  return [];
+}
+
 export default function WbsSkeletonApproval({ interrupt, onResolve, onDecision, disabled = false }: WbsSkeletonApprovalProps) {
   const [modifications, setModifications] = useState("");
   const [decided, setDecided] = useState(false);
@@ -19,6 +48,7 @@ export default function WbsSkeletonApproval({ interrupt, onResolve, onDecision, 
     allowedDecisions.some((a: string) => a !== "approve" && a !== "reject");
 
   const { question, project_name, project_code, phases } = interrupt.data;
+  const phaseTree = normalizePhases(phases);
 
   const approve = () => {
     setDecided(true);
@@ -75,14 +105,14 @@ export default function WbsSkeletonApproval({ interrupt, onResolve, onDecision, 
           <p className="text-xs leading-relaxed text-slate-400">{question}</p>
 
           {/* Phase / module tree */}
-          {Array.isArray(phases) && phases.length > 0 && (
+          {phaseTree.length > 0 && (
             <div className="rounded-xl border border-white/8 bg-white/3 overflow-hidden">
               <p className="border-b border-white/6 px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
                 Structure
               </p>
               <div className="divide-y divide-white/5">
-                {phases.map((phase) => (
-                  <div key={phase.code}>
+                {phaseTree.map((phase, i) => (
+                  <div key={phase.code ?? i}>
                     {/* Phase row */}
                     <div className="flex items-center gap-2 border-l-2 border-teal-500/60 px-3 py-2">
                       <span className="font-mono text-[10px] text-teal-400/70">{phase.code}</span>

@@ -27,6 +27,27 @@ from .stage_markers import (
 )
 
 
+def _refresh_render_from_icon_plan(workspace: Path) -> None:
+    """Re-bake a just-updated icon_plan.json into an existing native render.
+
+    propose_blueprint's deterministic pre-render runs BEFORE the icon_resolver
+    subagent, using whatever the crude preseed search already found. If nothing
+    re-exports afterward, icon_resolver's much better resolutions are silently
+    discarded — out.drawio never reflects them, and most nodes render icon-less
+    even though icon_plan.json says FOUND. Best-effort and non-fatal: icon
+    resolution must never fail because a render happened to error.
+    """
+    spec_path = workspace / "render_spec.json"
+    if not spec_path.exists():
+        return
+    try:
+        spec = json.loads(spec_path.read_text(encoding="utf-8"))
+        from .rendering_tools import _render_native_from_spec
+        _render_native_from_spec(spec, workspace)
+    except Exception:  # noqa: BLE001 — best-effort refresh, never block the tool
+        pass
+
+
 def _icon_search_total_cap(state: dict) -> int:
     planned = state.get("planned_icons")
     if isinstance(planned, int) and planned > 0:
@@ -47,6 +68,35 @@ def _icon_key(query: str, provider: Optional[str]) -> str:
     return f"{prov}:{q}"
 
 
+def _score_icon_name(name_l: str, cat_l: str, terms: list[str], q_squished: str) -> int:
+    """Relevance score for one candidate icon against the query terms.
+
+    A hit that only matches via the PROVIDER (already filtered separately) or the
+    CATEGORY folder — never the icon's own name — is usually wrong (e.g. a bare
+    "database" query matching every icon simply filed under a "database" category,
+    regardless of what that specific icon depicts). Score name matches far higher
+    than category matches so `_search_icon_hits`' caller-side `hits[0]` usage picks
+    the actually-relevant icon, and so a purely-coincidental category match can be
+    thresholded out entirely by the caller.
+    """
+    name_squished = re.sub(r"[^a-z0-9]", "", name_l)
+    name_words = re.split(r"[-_]", name_l)
+    score = 0
+    if name_squished == q_squished:
+        score += 100
+    for t in terms:
+        if t in name_words:
+            score += 30
+        # a bare substring match on a very short term (e.g. "ai") is essentially
+        # noise — "ai" is a substring of "rails" — so require length >= 3, same
+        # guard aiicons.py's brand search already uses for its weakest rule.
+        elif len(t) >= 3 and t in name_l:
+            score += 12
+        elif t in cat_l:
+            score += 3
+    return score
+
+
 def _search_icon_hits(query: str, provider: Optional[str] = None, *, limit: int = 30) -> list[str]:
     try:
         manifest = json.loads(Path(LOCAL_MANIFEST).read_text(encoding="utf-8"))
@@ -54,20 +104,37 @@ def _search_icon_hits(query: str, provider: Optional[str] = None, *, limit: int 
         return []
 
     terms = [t for t in query.lower().replace("-", " ").replace("_", " ").split() if t]
+    if not terms:
+        return []
+    q_squished = re.sub(r"[^a-z0-9]", "", "".join(terms))
     root = Path(LOCAL_ICONS)
-    hits: list[str] = []
+    # Ranked, not raw-iteration-order: candidates are scored and sorted so the
+    # caller's blind `hits[0]` (resolve_icons/resolve_missing_icons) gets the best
+    # match, not whatever the manifest happened to enumerate first.
+    scored: list[tuple[int, str]] = []
     for prov, cats in manifest.get("providers", {}).items():
         if provider and prov.lower() != provider.lower():
             continue
         for cat, names in cats.items():
+            cat_l = cat.lower()
             for name in names:
-                hay = f"{prov} {cat} {name}".lower()
-                if all(t in hay for t in terms):
-                    sub = name if cat == "_root" else f"{cat}/{name}"
-                    hits.append(str(root / prov / f"{sub}.png"))
-                    if len(hits) >= limit:
-                        return hits
-    return hits
+                name_l = name.lower()
+                # match against category+name only — NOT provider, which is
+                # already constrained by the `provider` filter above and, as free
+                # text, would let a bare "azure"/"aws" query match every single
+                # icon in that whole provider tree.
+                if not all(t in f"{cat_l} {name_l}" for t in terms):
+                    continue
+                score = _score_icon_name(name_l, cat_l, terms, q_squished)
+                # A hit whose score comes ONLY from the category folder (no term
+                # ever touched the icon's actual name) is a coincidental match —
+                # reject it rather than return a confidently-wrong icon.
+                if score < 12:
+                    continue
+                sub = name if cat == "_root" else f"{cat}/{name}"
+                scored.append((score, str(root / prov / f"{sub}.png")))
+    scored.sort(key=lambda x: (-x[0], x[1]))
+    return [p for _, p in scored[:limit]]
 
 
 def _tokens(text: str) -> list[str]:
@@ -206,7 +273,7 @@ def _resolve_one_tech_icon(name: str) -> dict:
         )
         return {"name": name, "path": best, "icon": _icon_rel(best), "source": "bundled"}
     try:
-        from aiicons import lookup_ai_logo
+        from domain.diagram.aiicons import lookup_ai_logo
         path = lookup_ai_logo(name, str(LOCAL_ICONS))
         if path:
             return {"name": name, "path": path, "icon": _icon_rel(path), "source": "cdn"}
@@ -243,8 +310,8 @@ def _tech_layers_from_workspace(workspace: Path) -> dict[str, list[str]]:
         if not csm_path.exists():
             continue
         try:
-            from csm import SolutionModel
-            from deck_resolver import _components_by_cluster
+            from memory.stores.csm import SolutionModel
+            from domain.deck.deck_resolver import _components_by_cluster
 
             model = SolutionModel.model_validate(json.loads(csm_path.read_text(encoding="utf-8")))
             layers = {name: list(names) for name, _purpose, names in _components_by_cluster(model)}
@@ -436,6 +503,7 @@ try:
             })
         current_workspace().mkdir(parents=True, exist_ok=True)
         _ICON_PLAN_FILE.write_text(json.dumps(resolved, indent=2), encoding="utf-8")
+        _refresh_render_from_icon_plan(current_workspace())
         state.update({
             "resolved_this_round": True,
             "planned_icons": len({(i.provider.lower(), i.icon_keyword.lower()) for i in icons}),
@@ -446,6 +514,140 @@ try:
         _save_icon_search_state(state)
         _bump_tool_summary("resolve_icons", planned_icons=state["planned_icons"])
         return json.dumps(resolved, indent=2)
+
+    @tool(parse_docstring=True)
+    def update_icon_plan_entry(
+        label: str,
+        path: Optional[str] = None,
+        icon: Optional[str] = None,
+        status: str = "FOUND",
+        tried_keyword: Optional[str] = None,
+    ) -> str:
+        """Update one entry in icon_plan.json after a search_icons/fetch_logo retry.
+
+        Use this — never write_file/edit_file — to persist a NOT_FOUND retry result.
+        icon_plan.json already exists (resolve_icons wrote it), so write_file rejects
+        a blind overwrite, and edit_file's exact-string match against machine-formatted
+        JSON is brittle. This finds the entry matching `label` and updates it in place.
+
+        Args:
+            label: the node label to update — must match an existing icon_plan.json entry.
+            path: absolute icon path from search_icons/fetch_logo's result, or omit if
+                still NOT_FOUND.
+            icon: prettygraph-relative icon path (search_icons's "icon" field, or
+                fetch_logo's local cache path), or omit if still NOT_FOUND.
+            status: "FOUND" or "NOT_FOUND" — the outcome of this retry.
+            tried_keyword: the keyword just tried, recorded for the audit trail.
+        """
+        if not _ICON_PLAN_FILE.exists():
+            return json.dumps({
+                "status": "ERROR",
+                "message": "icon_plan.json does not exist yet — call resolve_icons first.",
+            }, indent=2)
+        from .stage_markers import _read_json_file
+        entries = _read_json_file(_ICON_PLAN_FILE, [])
+        match = next((e for e in entries if e.get("label") == label), None)
+        if match is None:
+            return json.dumps({
+                "status": "ERROR",
+                "message": f"No icon_plan.json entry with label={label!r}.",
+                "known_labels": [e.get("label") for e in entries],
+            }, indent=2)
+        match["status"] = status
+        match["path"] = path
+        match["icon"] = icon
+        if tried_keyword:
+            match.setdefault("tried_keywords", []).append(tried_keyword)
+        current_workspace().mkdir(parents=True, exist_ok=True)
+        _ICON_PLAN_FILE.write_text(json.dumps(entries, indent=2), encoding="utf-8")
+        _bump_tool_summary("update_icon_plan_entry")
+        return json.dumps({"status": "OK", "updated": match}, indent=2)
+
+    class MissingIconRetry(BaseModel):
+        """One NOT_FOUND icon_plan.json entry to retry, batched with the rest."""
+        label: str = Field(description="the NOT_FOUND label in icon_plan.json to retry")
+        broader_keyword: Optional[str] = Field(
+            None, description="broader search keyword to try; defaults to the label text")
+        provider: str = Field(
+            "", description="provider subtree override; defaults to the entry's existing provider")
+
+    @tool(parse_docstring=True)
+    def resolve_missing_icons(retries: list[MissingIconRetry]) -> str:
+        """Retry every NOT_FOUND icon_plan.json entry in ONE batched call.
+
+        For each entry: tries a broader icon-pack search, then falls back to a brand
+        logo lookup (same sources as `fetch_logo`), and persists every result to
+        `icon_plan.json` in a single write.
+
+        When to use: after `resolve_icons`, if any entries are still `status=NOT_FOUND`,
+        call this ONCE with every NOT_FOUND label together — do NOT call `search_icons` +
+        `update_icon_plan_entry` one node at a time; that costs two model turns per node
+        and is the #1 cause of icon_resolver context blowups. Pass an explicit
+        `broader_keyword` only when the label itself is a poor search term (e.g. a long
+        descriptive phrase); otherwise omit it and the label is used as-is.
+
+        Args:
+            retries: Every NOT_FOUND label to retry together, one `MissingIconRetry` each.
+        """
+        if not _ICON_PLAN_FILE.exists():
+            return json.dumps({
+                "status": "ERROR",
+                "message": "icon_plan.json does not exist yet — call resolve_icons first.",
+            }, indent=2)
+        from .stage_markers import _read_json_file
+        entries = _read_json_file(_ICON_PLAN_FILE, [])
+        by_label = {e.get("label"): e for e in entries}
+
+        updated: list[dict] = []
+        still_not_found: list[str] = []
+        for item in retries:
+            entry = by_label.get(item.label)
+            if entry is None:
+                updated.append({
+                    "label": item.label, "status": "ERROR",
+                    "message": "no matching icon_plan.json entry",
+                })
+                continue
+            keyword = item.broader_keyword or item.label
+            provider = item.provider or entry.get("provider") or None
+            entry.setdefault("tried_keywords", []).append(keyword)
+
+            hits = _search_icon_hits(keyword, provider, limit=5)
+            best = hits[0] if hits else None
+            if not best:
+                try:
+                    from domain.diagram.aiicons import lookup_ai_logo
+                    best = lookup_ai_logo(item.label, str(LOCAL_ICONS))
+                except Exception:  # noqa: BLE001
+                    best = None
+            if not best:
+                try:
+                    from domain.diagram.logo_fetch import get_logo
+                    fetched = get_logo(item.label, str(LOCAL_ICONS), str(current_workspace()))
+                    best = fetched if fetched and not fetched.startswith("NOT_FOUND") else None
+                except Exception:  # noqa: BLE001
+                    best = None
+
+            if best:
+                entry["status"] = "FOUND"
+                entry["path"] = best
+                entry["icon"] = _icon_rel(best)
+                updated.append({
+                    "label": item.label, "status": "FOUND",
+                    "path": best, "icon": entry["icon"],
+                })
+            else:
+                entry["status"] = "NOT_FOUND"
+                updated.append({"label": item.label, "status": "NOT_FOUND"})
+                still_not_found.append(item.label)
+
+        current_workspace().mkdir(parents=True, exist_ok=True)
+        _ICON_PLAN_FILE.write_text(json.dumps(entries, indent=2), encoding="utf-8")
+        _refresh_render_from_icon_plan(current_workspace())
+        _bump_tool_summary("resolve_missing_icons", missing_icons_retried=len(retries))
+        return json.dumps({
+            "status": "OK", "updated": updated, "still_not_found": still_not_found,
+        }, indent=2)
 
     @tool(parse_docstring=True)
     def resolve_tech_stack_icons() -> str:
@@ -522,14 +724,14 @@ try:
             name: The brand or product name to resolve, e.g. "OpenAI", "Snowflake", "Stripe".
         """
         try:
-            from aiicons import lookup_ai_logo
+            from domain.diagram.aiicons import lookup_ai_logo
             path = lookup_ai_logo(name, str(LOCAL_ICONS))
             if path:
                 return path
         except Exception:  # noqa: BLE001
             pass
         try:
-            from logo_fetch import get_logo
+            from domain.diagram.logo_fetch import get_logo
             path = get_logo(name, str(LOCAL_ICONS), str(current_workspace()))
         except Exception as exc:  # noqa: BLE001
             return f"NOT_FOUND: fetch_logo error: {exc}"
@@ -551,7 +753,7 @@ try:
             limit: Max number of matching shapes to return (default 5).
         """
         try:
-            from shapesearch import search_shapes
+            from domain.diagram.shapesearch import search_shapes
             results = search_shapes(query, limit)
             if not results:
                 return json.dumps({"status": "NOT_FOUND", "query": query,

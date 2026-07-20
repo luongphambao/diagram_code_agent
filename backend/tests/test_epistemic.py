@@ -1,7 +1,7 @@
 """Tests for the epistemic-summary surfacing (step 1.4) over a CSM."""
 
 from csm import Assumption, Constraint, Decision, Requirement, SolutionModel
-from tools.analysis_tools import _epistemic_note
+from tools.analysis.gates import _epistemic_note
 
 
 def _model() -> SolutionModel:

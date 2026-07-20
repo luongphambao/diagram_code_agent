@@ -5,8 +5,7 @@ import json
 import backends
 import session_state as server
 import tools
-import tools.analysis_tools as analysis_tools
-import reporting
+import domain.reporting.reporting as reporting
 from tools import GATE_TOOL_NAMES
 
 
@@ -146,6 +145,46 @@ def test_generate_ppt_proposal_maps_to_hitl_card():
     assert "technical_stack" in card["missing_sections"]
 
 
+def test_tech_stack_gate_persists_pending_draft(monkeypatch, tmp_path):
+    _use_workspace(monkeypatch, tmp_path)
+    args = {
+        "tech_stack": [{"layer": "compute", "choice": "GKE"}],
+        "assumptions": {"compliance": ["ISO 27001"]},
+        "estimated_total_monthly_cost_usd": {"min_usd": 1000, "max_usd": 2000},
+    }
+
+    card, step, delta = server._card_for(
+        {"action_requests": [{"name": "propose_tech_stack", "args": args}]},
+        summary="",
+    )
+
+    assert step == "awaiting_techstack"
+    assert card["type"] == "techstack_approval"
+    assert delta["tech_stack_draft"] == args
+    assert json.loads((tmp_path / "pending_gate.json").read_text(encoding="utf-8"))["tool"] == "propose_tech_stack"
+    assert json.loads((tmp_path / "tech_stack_draft.json").read_text(encoding="utf-8")) == args
+
+
+def test_blueprint_gate_persists_pending_draft(monkeypatch, tmp_path):
+    _use_workspace(monkeypatch, tmp_path)
+    blueprint = {
+        "pattern": "hybrid",
+        "nodes": [{"id": "api", "label": "API"}],
+        "edges": [{"from": "api", "to": "db"}],
+    }
+
+    card, step, delta = server._card_for(
+        {"action_requests": [{"name": "propose_blueprint", "args": {"blueprint": blueprint}}]},
+        summary="",
+    )
+
+    assert step == "awaiting_blueprint"
+    assert card["type"] == "blueprint_approval"
+    assert delta["blueprint_draft"] == blueprint
+    assert json.loads((tmp_path / "pending_gate.json").read_text(encoding="utf-8"))["tool"] == "propose_blueprint"
+    assert json.loads((tmp_path / "blueprint_draft.json").read_text(encoding="utf-8")) == blueprint
+
+
 def test_last_tool_msg_only_when_latest_message_is_tool():
     history_then_user = [
         {"role": "user", "content": "make a diagram"},
@@ -188,6 +227,119 @@ def test_wbs_followup_detection():
     assert server._is_wbs_followup("re-export the WBS excel file")
     assert server._is_wbs_followup("gửi WBS cho khách")
     assert not server._is_wbs_followup("please add redis to the diagram")
+
+
+def test_wbs_followup_detects_first_time_creation():
+    """First-time WBS asks (no wbs.json yet) must ALSO match, else chat.py wipes the
+    brief/tech_stack/blueprint that load_solution_context reads and WBS never starts."""
+    assert server._is_wbs_followup("tạo WBS cho dự án này")
+    assert server._is_wbs_followup("lập kế hoạch công việc giúp tôi")
+    assert server._is_wbs_followup("ước lượng effort cho hệ thống")
+    assert server._is_wbs_followup("estimate the work breakdown")
+    assert server._is_wbs_followup("build the WBS and estimate man-days")
+    # unrelated design edits must still NOT match (no false preserve)
+    assert not server._is_wbs_followup("please add redis to the diagram")
+    assert not server._is_wbs_followup("thêm reporting service vào kiến trúc")
+
+
+def test_wbs_gate_card_coerces_stringified_phases_and_effort():
+    """A model that emits phases / effort_by_module / effort_by_role as JSON strings must
+    still yield real list/dict card fields, else the frontend Array.isArray/entries guards
+    drop them and the WBS approval card renders empty."""
+    skeleton_card, _, _ = server._card_for(
+        {"action_requests": [{"name": "propose_wbs_skeleton", "args": {
+            "phases": '[{"code":"I","name":"SETUP","modules":[{"code":"I.A","name":"Design"}]}]',
+        }}]},
+        "",
+    )
+    assert isinstance(skeleton_card["phases"], list)
+    assert skeleton_card["phases"][0]["code"] == "I"
+
+    plan_card, _, _ = server._card_for(
+        {"action_requests": [{"name": "propose_wbs", "args": {
+            "effort_by_module": '[{"code":"II.A","name":"Web","total_md":12}]',
+            "effort_by_role": '{"BE": 10, "FE_Mobile": 8}',
+        }}]},
+        "",
+    )
+    assert isinstance(plan_card["effort_by_module"], list)
+    assert plan_card["effort_by_module"][0]["total_md"] == 12
+    assert plan_card["effort_by_role"] == {"BE": 10, "FE_Mobile": 8}
+
+
+def test_wbs_preserve_first_time_keeps_upstream_artifacts():
+    """A first-time WBS request with an upstream solution present preserves artifacts
+    (preserve=True) but is NOT already_planned — so chat.py runs the normal wbs_planner
+    delegation instead of the re-export shortcut, and never calls clear_stage_markers()."""
+    preserve, already = server._wbs_preserve(
+        "tạo WBS cho dự án", solution_exists=True, wbs_exists=False, attached=False
+    )
+    assert preserve is True
+    assert already is False
+
+
+def test_wbs_preserve_reexport_when_wbs_exists():
+    preserve, already = server._wbs_preserve(
+        "xuất lại WBS", solution_exists=True, wbs_exists=True, attached=False
+    )
+    assert preserve is True
+    assert already is True
+
+
+def test_wbs_plan_ready_requires_items_and_rollup(tmp_path):
+    from routers.chat import _wbs_plan_ready
+
+    (tmp_path / "wbs.json").write_text(
+        json.dumps({"items": [], "effort_totals": {"total_mandays": 120}}),
+        encoding="utf-8",
+    )
+    assert _wbs_plan_ready(tmp_path) is False
+
+    (tmp_path / "wbs.json").write_text(
+        json.dumps({"items": [{"id": "1.1"}], "effort_totals": {"total_mandays": 0}}),
+        encoding="utf-8",
+    )
+    assert _wbs_plan_ready(tmp_path) is False
+
+    (tmp_path / "wbs.json").write_text(
+        json.dumps({"items": [{"id": "1.1"}], "effort_totals": {"total_mandays": 12}}),
+        encoding="utf-8",
+    )
+    assert _wbs_plan_ready(tmp_path) is True
+
+
+def test_wbs_preserve_no_solution_or_attachment_does_not_preserve():
+    # No upstream solution yet -> nothing to preserve (genuine fresh run).
+    assert server._wbs_preserve(
+        "tạo WBS", solution_exists=False, wbs_exists=False, attached=False
+    ) == (False, False)
+    # A freshly attached document is new-project intake, never a WBS follow-up.
+    assert server._wbs_preserve(
+        "tạo WBS", solution_exists=True, wbs_exists=True, attached=True
+    ) == (False, False)
+    # Non-WBS message never preserves via this path.
+    assert server._wbs_preserve(
+        "add redis to the diagram", solution_exists=True, wbs_exists=True, attached=False
+    ) == (False, False)
+
+
+def test_wbs_load_solution_context_falls_back_to_requirements(monkeypatch, tmp_path):
+    _use_workspace(monkeypatch, tmp_path)
+    (tmp_path / "requirements.md").write_text(
+        "Project CLARA\n\nBrowser copilot with Planner, Navigator and Validator agents.",
+        encoding="utf-8",
+    )
+    (tmp_path / "out.png").write_bytes(b"png")
+
+    from domain.wbs.wbs_tools import load_solution_context
+
+    digest = json.loads(load_solution_context.func())
+
+    assert digest["source"] == "workspace_fallback"
+    assert digest["objective"] == "Project CLARA"
+    assert "Browser copilot" in digest["requirements_excerpt"]
+    assert "out.png" in digest["available_artifacts"]
+    assert "effort_norms" in digest
 
 
 def test_generate_pdf_report_writes_pdf(monkeypatch, tmp_path):

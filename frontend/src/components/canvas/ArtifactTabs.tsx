@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AgentState, LogEntry } from "../../hooks/useDiagramAgent";
+import { fmtMd } from "../../hooks/agent-utils";
 import ActivityRow from "./ActivityRow";
 import SubagentPanel from "../SubagentPanel";
 import QualityPanel from "./QualityPanel";
@@ -38,8 +39,27 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
   // Default to whichever artifact tab actually has content — falling back to
   // "preview" would render a broken image when no diagram was generated yet
   // (e.g. a WBS-only conversation).
-  const [tab, setTab] = useState<Tab>(tabs[0]);
+  const [tab, setTabState] = useState<Tab>(tabs[0]);
   const [lightbox, setLightbox] = useState(false);
+  // `tabs` is recomputed every render, so the mount-time `tabs[0]` snapshot goes stale
+  // when an artifact (e.g. WBS) arrives AFTER mount: the new tab shows in the bar but
+  // stays unselected, and if the active tab ever leaves `tabs` the content area renders
+  // nothing. Follow the best artifact tab until the user manually picks one, and always
+  // recover if the current tab disappears.
+  const userPicked = useRef(false);
+  const setTab = (t: Tab) => {
+    userPicked.current = true;
+    setTabState(t);
+  };
+  const tabsKey = tabs.join("|");
+  useEffect(() => {
+    if (!tabs.includes(tab)) {
+      setTabState(tabs[0]);
+    } else if (!userPicked.current && tab !== tabs[0]) {
+      setTabState(tabs[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabsKey]);
 
   const downloadPng = () => {
     if (!png_base64) return;
@@ -259,8 +279,8 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
               <div className="flex-1 space-y-5 overflow-y-auto p-6">
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { val: wbs_summary.total_mandays.toFixed(1) + " MD", cls: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" },
-                    { val: wbs_summary.total_manmonths.toFixed(1) + " MM", cls: "border-teal-500/30 bg-teal-500/10 text-teal-300" },
+                    { val: fmtMd(wbs_summary.total_mandays) + " MD", cls: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" },
+                    { val: fmtMd(wbs_summary.total_manmonths) + " MM", cls: "border-teal-500/30 bg-teal-500/10 text-teal-300" },
                     { val: wbs_summary.months + " months", cls: "border-sky-500/30 bg-sky-500/10 text-sky-300" },
                     { val: wbs_summary.weeks + " weeks", cls: "border-slate-500/30 bg-slate-500/10 text-slate-300" },
                   ].map(({ val, cls }) => (
@@ -273,7 +293,7 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
                     <div className="flex flex-wrap gap-2">
                       {Object.entries(wbs_summary.effort_by_role).map(([role, md]) => (
                         <span key={role} className="rounded border border-white/8 bg-white/5 px-2.5 py-1 text-xs text-slate-300">
-                          <span className="font-semibold text-white">{role}</span> {(md as number).toFixed(1)} MD
+                          <span className="font-semibold text-white">{role}</span> {fmtMd(md)} MD
                         </span>
                       ))}
                     </div>
@@ -288,7 +308,7 @@ export default function ArtifactTabs({ agentState, isRunning, activeSubagent, ac
                           <tr key={m.code} className="border-b border-white/5">
                             <td className="py-1.5 pr-3 font-mono text-slate-500">{m.code}</td>
                             <td className="py-1.5 pr-3 text-slate-300">{m.name}</td>
-                            <td className="py-1.5 text-right font-semibold text-emerald-300">{m.total_md.toFixed(1)} MD</td>
+                            <td className="py-1.5 text-right font-semibold text-emerald-300">{fmtMd(m.total_md)} MD</td>
                           </tr>
                         ))}
                       </tbody>

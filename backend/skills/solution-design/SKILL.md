@@ -256,6 +256,15 @@ Use these defaults in the blueprint metadata:
 - `detail_level`: `architecture`
 - `layout_intent`: `left_to_right_pipeline`
 
+Stick to `left_to_right_pipeline` / `top_down_stack` for essentially every
+diagram — they keep the diagram centered, in one direction, with edges routed
+through a single clean top-to-bottom channel. Do NOT set `layout_intent:
+"grid"`: it was tried for diagrams with many parallel domains and made edges
+noticeably messier (cross-band edges have to route around a 2-D grid instead
+of a straight column) and wastes space stretching small bands to match the
+largest one in their row. Prefer collapsing/regrouping clusters over switching
+to grid if a diagram has many top-level domains.
+
 For customer-facing diagrams, keep roughly **12-18 visible nodes**. If the
 requirements contain more than that, collapse details into capabilities:
 - `config.json`, `homography_config.json`, `roi_config.json`,
@@ -289,6 +298,39 @@ Use these canonical tier names so the drawer can map them to prettygraph kinds:
   `Configuration Management` into the service cluster, not one edge per file.
 - For pipelines, state the main path as a natural left-to-right flow, e.g.
   `External I/O -> Input Stream -> Processing Service -> Output/Monitoring`.
+
+### Refined preset (typographic — the DEFAULT)
+The refined playbook look (numbered tinted zones + folder tabs, left-logo
+cards, semantic edge legend, nested cloud/VPC boundaries) is now the DEFAULT
+for every architecture diagram — you don't set anything. Pass
+`"style_preset": "icon"` only to force the legacy icon-heavy / slide-hero look.
+Four fields are worth authoring; omit anything you don't know — the engine
+fills deterministic defaults:
+- `backbone`: 3–6 phase words for the reading spine, e.g.
+  `["Sources", "Ingress", "Processing", "Storage", "Outcomes"]`.
+- cluster `role` (`entry|core|data|ops|outcome|future`) + `number` (1..n in
+  reading order); `ops` renders as a bottom band, `outcome`/`future` as a
+  right sidebar.
+- node `body`: 2–4 lines, ≤35 chars each (version, protocol, capacity,
+  constraint — the facts worth keeping per playbook §12.5).
+- edge `flow`: `data|execution|outcome|monitoring|control|future`
+  (legacy `serving`/`registry`/`security` still map).
+
+For a reference-grade ("pro") diagram, add on nodes:
+- `hue` (blue/teal/purple/orange/green/slate) — sub-tint a card by its own
+  colour inside a differently-hued zone (e.g. an orange EBS card in a teal
+  compute zone, a purple IAM card in a slate ops band).
+- `span` = `"header"` | `"footer"` — a full-zone-width "distributor" card
+  above/below the columns (e.g. a "Stream assignment" header that fans out to
+  workers, a "Detection events & snapshots" handoff footer). `kind:"note"` +
+  `span:"footer"` makes a semantic glue note (Security boundary / Runtime
+  responsibility / Target outcome).
+- `subzone` = `{id,label,kind}` (kind `az`|`subnet`) — cards sharing one
+  subzone stack inside a dashed sub-frame, e.g. two AZ boxes
+  `us-east-1a · PRIVATE` / `us-east-1b · PRIVATE` each holding a worker + EBS.
+And on clusters: `parent` into a `zone:"cloud"`/`"vpc"` wrapper draws the
+nested AWS-Cloud / VPC boundary rects; `scope` (`external`/`public_subnet`)
+renders a corner scope pill.
 
 ### Key decisions (required — 3 to 6)
 Cover these dimensions — one concrete sentence each:

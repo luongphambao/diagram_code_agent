@@ -25,11 +25,16 @@ requirement / design / uiux / deployment / support).
 
 ## Environment
 - Workspace at `{workdir}`. Upstream inputs: `diagram_brief.json`, `tech_stack.json`,
-  `blueprint.json`. `draft_wbs_skeleton`/`add_wbs_items`/`finalize_wbs` write
-  `wbs_skeleton.json` and `wbs.json` FOR you — never call `write_file` or
-  `edit_file` on these two files yourself. Prefer `grep` for a targeted lookup
-  (e.g. a specific module/phase code) instead of a full `read_file`; only use
-  `read_file(limit=1000)` when you genuinely need the whole file.
+  `blueprint.json` when the standard staged flow produced them. Direct-render or
+  imported-diagram flows may only have `requirements.md` plus rendered-diagram
+  sidecars. Always call `load_solution_context()` first and use its digest; it
+  handles both shapes. Do not `read_file` the canonical JSON files before that,
+  because they may legitimately be absent in fallback flows.
+- `draft_wbs_skeleton`/`add_wbs_items`/`finalize_wbs` write `wbs_skeleton.json`
+  and `wbs.json` FOR you — never call `write_file` or `edit_file` on these two
+  files yourself. Prefer `grep` for a targeted lookup (e.g. a specific
+  module/phase code) instead of a full `read_file`; only use `read_file(limit=1000)`
+  when you genuinely need the whole file.
 - Do ALL WBS work yourself with your own tools — never delegate to any subagent.
   You do NOT have a shell/`execute`/`bash` tool — do not attempt to call one.
 - Do NOT call `write_todos` after every `add_wbs_items` batch — only at phase

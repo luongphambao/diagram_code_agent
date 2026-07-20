@@ -253,24 +253,52 @@ def _transform_drawio_body(xml: str, *, x: float, y: float, scale: float,
         return (f'<mxGeometry x="{gx:.0f}" y="{gy:.0f}" width="{gw:.0f}" '
                 f'height="{gh:.0f}"')
 
-    return re.sub(
+    inner = re.sub(
         r'<mxGeometry x="(-?[\d.]+)" y="(-?[\d.]+)" width="([\d.]+)" height="([\d.]+)"',
         _geo,
         inner,
     )
+
+    # Edge waypoints (baked routing) live in <mxPoint x= y=/> — scale/translate them
+    # the SAME way as vertices, else a scaled native body's routed edges point at
+    # stale coordinates (shoot off into the slide chrome). Skip named endpoints
+    # (sourcePoint/targetPoint) — those aren't used inside an embedded body's edges.
+    def _pt(mt: "re.Match[str]") -> str:
+        px = float(mt.group(1)) * scale + x
+        py = float(mt.group(2)) * scale + y
+        return f'<mxPoint x="{px:.0f}" y="{py:.0f}"'
+
+    inner = re.sub(r'<mxPoint x="(-?[\d.]+)" y="(-?[\d.]+)"(?!\s+as=)', _pt, inner)
+
+    # Cards/boxes are measured to fit their label at the ORIGINAL fontSize (see
+    # layout_engine._m_card); shrinking geometry without shrinking the baked
+    # `fontSize=` in each cell's style string leaves text at full size inside a
+    # smaller box, so it overflows and collides with neighboring cells once
+    # scale drops much below 1 (dense diagrams). Scale it in lockstep with the
+    # geometry, floored so text never becomes illegibly tiny.
+    def _font_size(mt: "re.Match[str]") -> str:
+        orig = float(mt.group(1))
+        return f"fontSize={max(7, round(orig * scale))}"
+
+    inner = re.sub(r"fontSize=(\d+(?:\.\d+)?)", _font_size, inner)
+    return inner
 
 
 def _compose_slide_drawio(body_xml: str, out_path: str, *, title: str,
                           kicker: str | None, brand: str | None,
                           diagram_title: str | None, legend, body_box: list[int],
                           panel: list[int], include_hero: bool = False,
-                          slide_h: int = SLIDE_SIZE) -> str:
+                          slide_h: int = SLIDE_SIZE,
+                          hero_h: int = SLIDE_HERO_H) -> str:
     from .drawio import _page_dims
 
     body_w, body_h = _page_dims(body_xml)
     bx, by, bw, bh = body_box
     scale = min(bw / body_w, bh / body_h) if body_w and body_h else 1.0
-    body_inner = _transform_drawio_body(body_xml, x=bx, y=by, scale=scale)
+    # centre the scaled body inside its box (else a wide/short body strands to a corner)
+    off_x = bx + max(0, (bw - body_w * scale) / 2)
+    off_y = by + max(0, (bh - body_h * scale) / 2)
+    body_inner = _transform_drawio_body(body_xml, x=off_x, y=off_y, scale=scale)
 
     cells: list[str] = [
         _drawio_rect_cell("slide_bg", 0, 0, SLIDE_SIZE, slide_h, fill="#FFFFFF"),
@@ -278,18 +306,25 @@ def _compose_slide_drawio(body_xml: str, out_path: str, *, title: str,
                           fill="#FFFFFF", stroke="#D7DEE8", rounded=1, shadow=1),
     ]
     if include_hero:
-        cells.insert(1, _drawio_rect_cell("slide_hero", 0, 0, SLIDE_SIZE, SLIDE_HERO_H,
+        cells.insert(1, _drawio_rect_cell("slide_hero", 0, 0, SLIDE_SIZE, hero_h,
                                           fill="#075985"))
     if include_hero and brand:
-        cells.append(_drawio_text_cell("slide_brand", brand, SLIDE_SIZE - 368, 44,
-                                       330, 70, size=36, color="#FFFFFF",
-                                       bold=True, align="right"))
+        cells.append(_drawio_text_cell("slide_brand", brand, SLIDE_SIZE - 368,
+                                       round(hero_h * 0.075), 330, 70,
+                                       size=min(36, round(hero_h * 0.13)),
+                                       color="#FFFFFF", bold=True, align="right"))
     if include_hero and kicker:
-        cells.append(_drawio_text_cell("slide_kicker", kicker, 244, 258, 1560, 86,
-                                       size=42, color="#F8FAFC"))
+        cells.append(_drawio_text_cell("slide_kicker", kicker, 90,
+                                       round(hero_h * 0.27), 1868,
+                                       round(hero_h * 0.16),
+                                       size=min(42, round(hero_h * 0.12)),
+                                       color="#F8FAFC"))
     if include_hero:
-        cells.append(_drawio_text_cell("slide_title", title, 90, 352, 1868, 132,
-                                       size=50, color="#FFFFFF", bold=True))
+        cells.append(_drawio_text_cell("slide_title", title, 90,
+                                       round(hero_h * 0.48), 1868,
+                                       round(hero_h * 0.40),
+                                       size=min(50, round(hero_h * 0.17)),
+                                       color="#FFFFFF", bold=True))
     cells.append(_drawio_text_cell("slide_diagram_title",
                                    diagram_title or "System Architecture",
                                    panel[0] + 30, panel[1] + 18, panel[2] - 60, 48,
@@ -329,6 +364,58 @@ def _compose_slide_drawio(body_xml: str, out_path: str, *, title: str,
     )
     Path(out_path).write_text(xml_out, encoding="utf-8")
     return xml_out
+
+
+def _slide_panel_geometry(*, include_hero: bool, has_legend: bool):
+    """Panel/body-box geometry for a native slide — the SINGLE source of truth
+    shared by slide_fit_scale() and compose_native_slide() so they never drift."""
+    hero_h = 240
+    legend_h = 118 if has_legend else 0
+    caption_area = 74
+    panel_x = SLIDE_MARGIN
+    panel_y = (hero_h + 34) if include_hero else SLIDE_MARGIN
+    panel_w = SLIDE_SIZE - SLIDE_MARGIN * 2
+    max_w = panel_w - SLIDE_PANEL_PAD * 2
+    slide_h = round(SLIDE_SIZE / SLIDE_PAGE_RATIO)
+    avail_h = max(slide_h - panel_y - SLIDE_MARGIN - caption_area
+                  - SLIDE_PANEL_PAD - legend_h, 100)
+    panel_h = caption_area + avail_h + SLIDE_PANEL_PAD + legend_h
+    return {"hero_h": hero_h, "legend_h": legend_h, "caption_area": caption_area,
+            "panel_x": panel_x, "panel_y": panel_y, "panel_w": panel_w, "max_w": max_w,
+            "slide_h": slide_h, "avail_h": avail_h, "panel_h": panel_h}
+
+
+def slide_fit_scale(body_w: float, body_h: float, *, include_hero: bool = True,
+                    has_legend: bool = True) -> float:
+    """The scale compose_native_slide would apply to fit a body into the slide
+    panel. Below ~0.72 the body is too dense for a slide (text collides) and the
+    caller should render a standalone diagram instead."""
+    if not body_w or not body_h:
+        return 1.0
+    g = _slide_panel_geometry(include_hero=include_hero, has_legend=has_legend)
+    return min(g["max_w"] / body_w, g["avail_h"] / body_h)
+
+
+def compose_native_slide(body_xml: str, out_path: str, *, title: str,
+                         kicker: str | None = None, brand: str | None = None,
+                         diagram_title: str | None = None, legend=None,
+                         include_hero: bool = True) -> str:
+    """Wrap a NATIVE-engine body .drawio in the standard slide chrome (hero band,
+    panel, caption, legend) — the drawio counterpart of render_slide for a body
+    produced WITHOUT Graphviz. Panel/body geometry mirrors ``_compose_slide_png``.
+    """
+    # Compact hero (vs the 620px Graphviz-slide hero) so the architecture body —
+    # the star of the slide — gets the bulk of the panel height instead of a thin
+    # strip under a half-slide banner. Geometry is shared with slide_fit_scale().
+    legend_items = _normal_legend(legend or [])
+    g = _slide_panel_geometry(include_hero=include_hero, has_legend=bool(legend_items))
+    body_box = [g["panel_x"] + SLIDE_PANEL_PAD, g["panel_y"] + g["caption_area"],
+                g["max_w"], g["avail_h"]]
+    panel = [g["panel_x"], g["panel_y"], g["panel_w"], g["panel_h"]]
+    return _compose_slide_drawio(
+        body_xml, out_path, title=title, kicker=kicker, brand=brand,
+        diagram_title=diagram_title, legend=legend or [], body_box=body_box,
+        panel=panel, include_hero=include_hero, slide_h=g["slide_h"], hero_h=g["hero_h"])
 
 
 def render_slide(g, out_basename: str, *, title: str,

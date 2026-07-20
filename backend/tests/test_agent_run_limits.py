@@ -24,9 +24,12 @@ def _use_workspace(monkeypatch, tmp_path: Path) -> None:
 
 
 def test_drawer_uses_drawer_skill_paths():
+    # drawer + main now share one canonical copy (the drawer/* duplicates were
+    # consolidated to remove drift) — the drawer still gets both diagram skills.
     normalized = [Path(path).as_posix() for path in DRAWER_SKILL_PATHS]
-    assert any("/drawer/pro-style" in path for path in normalized)
-    assert any("/drawer/diagrams-as-code" in path for path in normalized)
+    assert any(path.endswith("/pro-style") for path in normalized)
+    assert any(path.endswith("/diagrams-as-code") for path in normalized)
+    assert not any("/drawer/" in path for path in normalized)
 
 
 def test_search_icons_reuses_cached_result(monkeypatch, tmp_path):

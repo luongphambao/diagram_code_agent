@@ -131,7 +131,11 @@ export interface Blueprint {
   diagram_title?: string;
   pattern: string;
   pattern_rationale?: string;
-  key_decisions?: string[];
+  key_decisions?: Array<string | {
+    decision?: string;
+    rationale?: string;
+    tradeoffs?: string[] | string;
+  }>;
   nodes: Array<{ id: string; label: string; tech?: string; cluster?: string; type?: string }>;
   clusters: Array<{ id: string; label: string; tier?: string }>;
   edges: Array<{ from: string; to: string; label?: string; protocol?: string }>;
@@ -157,6 +161,17 @@ export interface WbsSummary {
   weeks: number;
   months: number;
   effort_by_module: Array<{ code: string; name: string; total_md: number }>;
+}
+
+/**
+ * Format a man-day value that MIGHT arrive as a string. Backend defaults these to 0,
+ * but a stringified number from the model would make a bare `.toFixed(1)` throw
+ * ("Cannot read properties of undefined") and crash the whole message list / WBS tab.
+ * Coerce → number, fall back to "0.0" for anything non-numeric.
+ */
+export function fmtMd(value: unknown): string {
+  const n = typeof value === "number" ? value : Number(value);
+  return (Number.isFinite(n) ? n : 0).toFixed(1);
 }
 
 // Governance read-outs surfaced in the canvas "Quality" tab (display-only).

@@ -11,8 +11,8 @@ import textwrap
 
 import pytest
 
-import validate_drawio as vd
-from solution_validator import AUTO_REPAIR_STRATEGIES
+import domain.validation.validate_drawio as vd
+from domain.validation.solution_validator import AUTO_REPAIR_STRATEGIES
 
 
 # --------------------------------------------------------------------------- #
@@ -22,6 +22,7 @@ from solution_validator import AUTO_REPAIR_STRATEGIES
 _WRAP = "<mxfile><diagram name=\"P\"><mxGraphModel><root>{}</root></mxGraphModel></diagram></mxfile>"
 _CELLS = '<mxCell id="0"/><mxCell id="1" parent="0"/>'
 _NODE = '<mxCell id="{id}" value="{label}" vertex="1" parent="1"><mxGeometry x="{x}" y="{y}" width="100" height="50" as="geometry"/></mxCell>'
+_EDGE = '<mxCell id="{id}" value="{label}" edge="1" source="{src}" target="{tgt}" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>'
 
 
 def _xml(*body_parts: str) -> str:
@@ -100,11 +101,15 @@ def test_findings_from_validation_advice_map_to_style():
     )
     result = _validate(xml)
     findings = vd.findings_from_validation(result)
-    style = [f for f in findings if f.dimension == "diagram_style"]
+    style = [f for f in findings if f.dimension == "diagram_style"
+             and f.severity == "low"]
     assert style, "5 distinct font sizes must produce a diagram_style finding"
     f = style[0]
     assert f.repair_strategy == "none"
-    assert f.severity == "low"
+    # fontSize=8 also trips the production-polish gate (medium, auto_repair).
+    polish = [f for f in findings if f.dimension == "diagram_style"
+              and f.severity == "medium"]
+    assert polish and polish[0].repair_strategy == "auto_repair"
 
 
 def test_stable_finding_id_consistent_across_runs():
@@ -137,3 +142,119 @@ def test_repair_contract_valid_for_all_findings():
         assert f.finding_id.startswith("SF-"), f"bad id: {f.finding_id}"
         assert f.repair_strategy in _VALID_REPAIR, f"invalid repair_strategy: {f.repair_strategy}"
         assert f.severity in {"low", "medium", "high", "critical"}, f"invalid severity: {f.severity}"
+
+
+# --------------------------------------------------------------------------- #
+# WS3 — layout metrics + re-weighted production scorecard
+# --------------------------------------------------------------------------- #
+
+def test_validate_xml_parity_with_validate_file():
+    import os
+    import tempfile
+    xml = _xml(
+        _NODE.format(id="n1", label="A", x=10, y=10),
+        _NODE.format(id="n2", label="B", x=200, y=10),
+        '<mxCell id="e1" edge="1" source="n1" target="n2" parent="1">'
+        '<mxGeometry relative="1" as="geometry"/></mxCell>',
+    )
+    with tempfile.NamedTemporaryFile(suffix=".drawio", delete=False, mode="w",
+                                     encoding="utf-8") as f:
+        f.write(xml)
+        tmp = f.name
+    try:
+        assert vd.validate_xml(xml) == vd.validate_file(tmp)
+    finally:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+
+
+def test_layout_metrics_present_in_report():
+    xml = _xml(
+        _NODE.format(id="n1", label="A", x=0, y=0),
+        _NODE.format(id="n2", label="B", x=200, y=0),
+    )
+    m = _validate(xml)["layout_metrics"]
+    assert m["ratio"] == 6.0  # 300w x 50h content bbox
+    assert m["icon_coverage"] == 0.0
+    assert m["edge_crossings"] == 0
+    assert m["arrow_clarity"]["arrow_clarity_score"] == 100.0
+    assert m["arrow_clarity"]["visible_edge_count"] == 0
+
+def test_arrow_clarity_penalizes_long_edges():
+    xml = _xml(
+        _NODE.format(id="n1", label="A", x=0, y=0),
+        _NODE.format(id="n2", label="B", x=1000, y=0),
+        _EDGE.format(id="e1", src="n1", tgt="n2", label="long"),
+    )
+    arrow = _validate(xml)["layout_metrics"]["arrow_clarity"]
+    assert arrow["long_edges"] == 1
+    assert arrow["long_edge_ratio"] == 1.0
+    assert arrow["arrow_clarity_score"] < 100.0
+
+def test_arrow_clarity_penalizes_crossing_edges():
+    xml = _xml(
+        _NODE.format(id="a", label="A", x=0, y=0),
+        _NODE.format(id="b", label="B", x=220, y=0),
+        _NODE.format(id="c", label="C", x=0, y=220),
+        _NODE.format(id="d", label="D", x=220, y=220),
+        _EDGE.format(id="e1", src="a", tgt="d", label="diag"),
+        _EDGE.format(id="e2", src="b", tgt="c", label="diag"),
+    )
+    arrow = _validate(xml)["layout_metrics"]["arrow_clarity"]
+    assert arrow["edge_crossings"] == 1
+    assert arrow["crossings_per_edge"] == 0.5
+    assert arrow["arrow_clarity_score"] < 100.0
+
+def test_scorecard_connector_readability_uses_arrow_clarity_score():
+    report = {"errors": [], "warnings": [], "advice": [], "polish": [],
+              "error_count": 0, "ok": True, "collision_count": 0,
+              "layout_metrics": {"ratio": 1.6, "icon_coverage": 1.0,
+                                 "arrow_clarity": {"arrow_clarity_score": 50.0}}}
+    sc = vd.production_scorecard(report, {"edges": 10})
+    assert sc["breakdown"]["connector_readability"] == 7.5
+    assert not sc["pass"]
+
+
+def test_scorecard_composition_penalizes_ultra_wide_strip():
+    report = {"errors": [], "warnings": [], "advice": [], "polish": [],
+              "error_count": 0, "ok": True, "collision_count": 0,
+              "layout_metrics": {"ratio": 3.9, "edge_crossings": 0,
+                                 "icon_coverage": 1.0}}
+    sc = vd.production_scorecard(report, {"edges": 10})
+    assert sc["breakdown"]["composition"] == 0.0
+    ok = dict(report, layout_metrics={"ratio": 1.6, "edge_crossings": 0,
+                                      "icon_coverage": 1.0})
+    assert vd.production_scorecard(ok, {"edges": 10})["breakdown"]["composition"] == 10.0
+
+
+def test_scorecard_iconography_scales_with_coverage():
+    base = {"errors": [], "warnings": [], "advice": [], "polish": [],
+            "error_count": 0, "ok": True, "collision_count": 0}
+    def icon_score(cov):
+        r = dict(base, layout_metrics={"ratio": 1.6, "edge_crossings": 0,
+                                       "icon_coverage": cov})
+        return vd.production_scorecard(r, {"edges": 10})["breakdown"]["iconography"]
+    assert icon_score(0.0) == 0.0
+    assert icon_score(0.45) == 5.0
+    assert icon_score(0.9) == 10.0
+    assert icon_score(1.0) == 10.0
+
+
+def test_scorecard_collisions_still_block_pass():
+    report = {"errors": [], "warnings": [], "advice": [], "polish": [],
+              "error_count": 0, "ok": True, "collision_count": 1,
+              "layout_metrics": {"ratio": 1.6, "edge_crossings": 0,
+                                 "icon_coverage": 1.0}}
+    sc = vd.production_scorecard(report, {"edges": 10})
+    assert not sc["pass"]
+
+
+def test_scorecard_reports_target_profile():
+    report = {"errors": [], "warnings": [], "advice": [], "polish": [],
+              "error_count": 0, "ok": True, "collision_count": 0,
+              "layout_metrics": {}}
+    sc = vd.production_scorecard(report, {})
+    assert sc["target"] == vd.PRODUCTION_TARGET
+    assert sc["target"]["ratio"] == (1.3, 1.9)

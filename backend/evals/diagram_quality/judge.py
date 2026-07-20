@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from solution_validator import AUTO_REPAIR_STRATEGIES
+from domain.validation.solution_validator import AUTO_REPAIR_STRATEGIES
 
 
 _VALID_REPAIR = AUTO_REPAIR_STRATEGIES | {"request_evidence", "human_decision", "none"}
@@ -45,6 +45,13 @@ def score_diagram_quality(findings: list[Any], case: dict) -> dict:
         "n_findings": len(findings),
         "dimensions": sorted(dims_present),
     }
+
+
+def score_production(report: dict, stats: dict | None = None) -> dict:
+    """V2 §16 production scorecard for the eval — thin wrapper over the shared
+    src implementation so the gate and the eval agree on the number."""
+    from domain.validation.validate_drawio import production_scorecard
+    return production_scorecard(report, stats)
 
 
 METRIC_KEYS = ["scores.finding_recall", "scores.repair_contract_ok"]
