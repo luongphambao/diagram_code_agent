@@ -33,6 +33,7 @@ from .followups import (
     _last_tool_msg,
     _last_user_text,
     _matches_whole_phrase,
+    _wbs_preserve,
 )
 from .normalize import (
     _ASSUMPTION_ARRAY_FIELDS,

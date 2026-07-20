@@ -32,6 +32,7 @@ from session_state import (
     _is_pdf_followup,
     _is_ppt_followup,
     _is_wbs_followup,
+    _wbs_preserve,
     _label,
     _last_tool_msg,
     _last_user_text,
@@ -241,15 +242,27 @@ async def agui_endpoint(request: Request):
                 preserve_diagram_artifacts = (
                     (is_pdf_followup or is_ppt_followup) and (ws / "out.png").exists() and not attached
                 )
-                preserve_wbs_artifacts = (
-                    is_wbs_followup and (ws / "wbs.json").exists() and not attached
+                # A WBS request is ALWAYS a downstream step from an approved solution, never a
+                # fresh project — so preserve whenever the upstream solution exists on disk,
+                # NOT only when wbs.json already exists. Requiring wbs.json here meant the very
+                # FIRST WBS request (wbs.json not yet written) fell through to clear_stage_markers()
+                # and deleted the brief/tech_stack/blueprint that load_solution_context reads,
+                # so the planner reported "No upstream artifacts found" and never started.
+                solution_exists = (
+                    (ws / "blueprint.json").exists()
+                    or (ws / "tech_stack.json").exists()
+                    or (ws / "out.png").exists()
+                )
+                preserve_wbs_artifacts, wbs_already_planned = _wbs_preserve(
+                    desc, solution_exists=solution_exists,
+                    wbs_exists=(ws / "wbs.json").exists(), attached=bool(attached),
                 )
                 preserve_artifacts = preserve_diagram_artifacts or preserve_wbs_artifacts
                 if not preserve_artifacts:
                     clear_stage_markers()
                 else:
                     await _restore_workspace_from_db(request.app.state.pool, thread_id, ws)
-                    if preserve_wbs_artifacts:
+                    if wbs_already_planned:
                         desc = (
                             (desc + "\n\n" if desc else "")
                             + "IMPORTANT: The user is asking to (re-)export/send the WBS "
@@ -257,6 +270,18 @@ async def agui_endpoint(request: Request):
                             "(wbs.json). Do NOT re-delegate to wbs_planner or redo the "
                             "skeleton/estimate gates — just call `export_wbs_excel()` "
                             "directly to regenerate the file."
+                        )
+                    elif preserve_wbs_artifacts:
+                        # First-time WBS on an existing solution: artifacts are preserved
+                        # (brief/tech_stack/blueprint kept on disk) so load_solution_context
+                        # has its inputs. Do NOT inject the re-export shortcut — let the normal
+                        # wbs_planner delegation (skeleton → estimate gates) run.
+                        desc = (
+                            (desc + "\n\n" if desc else "")
+                            + "IMPORTANT: The approved solution artifacts (diagram_brief.json, "
+                            "tech_stack.json, blueprint.json) already exist in the workspace — "
+                            "build the WBS from them. Delegate to `wbs_planner` as usual; do NOT "
+                            "re-run intake or redesign the diagram."
                         )
                     else:
                         artifact_instruction = (

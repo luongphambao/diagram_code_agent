@@ -72,8 +72,17 @@ def _is_ppt_followup(text: str) -> bool:
 
 
 def _is_wbs_followup(text: str) -> bool:
-    """Detect a follow-up asking to (re-)export/send the WBS Excel deliverable."""
+    """Detect a WBS request — either first-time creation OR re-export of the deliverable.
+
+    A WBS request is always a downstream step from an already-approved solution, never a
+    fresh project, so chat.py preserves the upstream artifacts (brief/tech_stack/blueprint)
+    instead of wiping them via clear_stage_markers(). This must therefore match BOTH the
+    re-export phrasing ("xuất lại wbs") AND first-time asks ("tạo WBS", "ước lượng effort",
+    "estimate the work breakdown") — a miss here means the very artifacts the WBS planner
+    reads get deleted before it runs.
+    """
     return _matches_whole_phrase(text, (
+        # re-export / send the existing deliverable
         "wbs",
         "excel",
         "xlsx",
@@ -86,4 +95,51 @@ def _is_wbs_followup(text: str) -> bool:
         "re-export wbs",
         "reexport wbs",
         "export wbs",
+        # first-time WBS creation / effort estimation (EN)
+        "work breakdown",
+        "work breakdown structure",
+        "estimate effort",
+        "effort estimate",
+        "effort estimation",
+        "man-day",
+        "manday",
+        "create wbs",
+        "build wbs",
+        "generate wbs",
+        # first-time WBS creation / effort estimation (VI, with + without diacritics)
+        "tạo wbs",
+        "tao wbs",
+        "lập wbs",
+        "lap wbs",
+        "ước lượng",
+        "uoc luong",
+        "phân rã công việc",
+        "phan ra cong viec",
+        "bóc tách công việc",
+        "boc tach cong viec",
+        "kế hoạch công việc",
+        "ke hoach cong viec",
     ))
+
+
+def _wbs_preserve(
+    text: str, *, solution_exists: bool, wbs_exists: bool, attached: bool
+) -> tuple[bool, bool]:
+    """Decide whether a WBS request should preserve on-disk artifacts (vs. a fresh wipe).
+
+    Returns ``(preserve, already_planned)``:
+
+    - ``preserve`` is True when the message is a WBS request AND an upstream solution
+      already exists on disk (blueprint/tech_stack/rendered diagram) AND no new document
+      was attached (a fresh attachment is new-project intake, not a WBS follow-up). When
+      True, chat.py skips ``clear_stage_markers()`` so the WBS planner still has its
+      ``diagram_brief.json`` / ``tech_stack.json`` / ``blueprint.json`` inputs to read.
+    - ``already_planned`` is True only when a full ``wbs.json`` already exists — the
+      re-export case, where chat.py tells the agent to call ``export_wbs_excel()``
+      directly instead of re-delegating to ``wbs_planner``. On a FIRST WBS request it is
+      False, so the normal skeleton → estimate delegation runs on the preserved artifacts.
+
+    Pure/side-effect-free so the preserve decision is unit-testable without the endpoint.
+    """
+    preserve = _is_wbs_followup(text) and solution_exists and not attached
+    return preserve, (preserve and wbs_exists)

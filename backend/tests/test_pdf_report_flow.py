@@ -229,6 +229,53 @@ def test_wbs_followup_detection():
     assert not server._is_wbs_followup("please add redis to the diagram")
 
 
+def test_wbs_followup_detects_first_time_creation():
+    """First-time WBS asks (no wbs.json yet) must ALSO match, else chat.py wipes the
+    brief/tech_stack/blueprint that load_solution_context reads and WBS never starts."""
+    assert server._is_wbs_followup("tạo WBS cho dự án này")
+    assert server._is_wbs_followup("lập kế hoạch công việc giúp tôi")
+    assert server._is_wbs_followup("ước lượng effort cho hệ thống")
+    assert server._is_wbs_followup("estimate the work breakdown")
+    assert server._is_wbs_followup("build the WBS and estimate man-days")
+    # unrelated design edits must still NOT match (no false preserve)
+    assert not server._is_wbs_followup("please add redis to the diagram")
+    assert not server._is_wbs_followup("thêm reporting service vào kiến trúc")
+
+
+def test_wbs_preserve_first_time_keeps_upstream_artifacts():
+    """A first-time WBS request with an upstream solution present preserves artifacts
+    (preserve=True) but is NOT already_planned — so chat.py runs the normal wbs_planner
+    delegation instead of the re-export shortcut, and never calls clear_stage_markers()."""
+    preserve, already = server._wbs_preserve(
+        "tạo WBS cho dự án", solution_exists=True, wbs_exists=False, attached=False
+    )
+    assert preserve is True
+    assert already is False
+
+
+def test_wbs_preserve_reexport_when_wbs_exists():
+    preserve, already = server._wbs_preserve(
+        "xuất lại WBS", solution_exists=True, wbs_exists=True, attached=False
+    )
+    assert preserve is True
+    assert already is True
+
+
+def test_wbs_preserve_no_solution_or_attachment_does_not_preserve():
+    # No upstream solution yet -> nothing to preserve (genuine fresh run).
+    assert server._wbs_preserve(
+        "tạo WBS", solution_exists=False, wbs_exists=False, attached=False
+    ) == (False, False)
+    # A freshly attached document is new-project intake, never a WBS follow-up.
+    assert server._wbs_preserve(
+        "tạo WBS", solution_exists=True, wbs_exists=True, attached=True
+    ) == (False, False)
+    # Non-WBS message never preserves via this path.
+    assert server._wbs_preserve(
+        "add redis to the diagram", solution_exists=True, wbs_exists=True, attached=False
+    ) == (False, False)
+
+
 def test_generate_pdf_report_writes_pdf(monkeypatch, tmp_path):
     from PIL import Image
 

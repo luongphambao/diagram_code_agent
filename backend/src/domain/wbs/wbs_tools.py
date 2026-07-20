@@ -21,6 +21,7 @@ clones the template and keeps the formulas live (see :mod:`wbs_excel`).
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Optional
 
@@ -57,6 +58,21 @@ def _write_json(path: Path, data) -> None:
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+def _norm_project_name(name: str) -> str:
+    """Normalize a project name for a robust same-project comparison.
+
+    Lowercases, strips Vietnamese/Unicode accents, drops punctuation and collapses
+    whitespace, so trivially-different spellings the model emits between draft runs
+    ("BnK Clinic", "bnk  clinic!", "BnK Clínic") compare EQUAL and do NOT trigger a
+    destructive reset. Only a genuinely different project name should clear the WBS.
+    """
+    import unicodedata
+    decomposed = unicodedata.normalize("NFKD", str(name or ""))
+    ascii_only = "".join(c for c in decomposed if not unicodedata.combining(c))
+    lowered = re.sub(r"[^a-z0-9\s]", " ", ascii_only.lower())
+    return " ".join(lowered.split())
+
+
 def _reset_if_stale_project(new_name: str) -> str:
     """Detect and clear a leftover WBS from a *different* project.
 
@@ -66,10 +82,14 @@ def _reset_if_stale_project(new_name: str) -> str:
     workspace), merging onto it silently mixes two projects' data instead of
     starting fresh. Compares by name (not project_code, which defaults to
     "BNK" for most projects and would rarely differ between real projects).
+
+    Names are compared accent/punctuation/whitespace-insensitively so a cosmetic
+    re-spelling of the SAME project between draft runs never wipes an in-progress WBS.
     """
     existing = _read_json(_WBS_FILE) or _read_json(_SKELETON_FILE)
     old_name = ((existing or {}).get("project_info") or {}).get("name", "").strip()
-    if not old_name or old_name.lower() == new_name.strip().lower():
+    old_norm, new_norm = _norm_project_name(old_name), _norm_project_name(new_name)
+    if not old_norm or not new_norm or old_norm == new_norm:
         return ""
     for f in (_SKELETON_FILE, _WBS_FILE, _WBS_XLSX):
         if f.exists():

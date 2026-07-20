@@ -47,6 +47,7 @@ from session import (  # noqa: F401 — re-exported for backward compatibility
     _last_tool_msg,
     _last_user_text,
     _looks_like_tool_selection_prefix,
+    _wbs_preserve,
     _matches_whole_phrase,
     _normalize_blueprint,
     _normalize_tech_stack,
