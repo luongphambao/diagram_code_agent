@@ -23,12 +23,13 @@ Diagram Code Agent turns plain-English system requirements into architecture dia
 
 ## Example Output
 
-Four recent end-to-end runs (diagram + editable `.drawio`, `example/*.drawio`). Names are genericized — no client/project names.
+Six recent end-to-end runs (diagram + editable `.drawio`, `example/*.drawio`). Names are genericized — no client/project names.
 
 | | |
 |---|---|
 | ![AI financial analysis & reference-check platform](example/ai-financial-analysis-reference-check.png)<br>**AI Financial Analysis, Evidence & Reference-Check Platform** — on-prem multiagent architecture with private LLM serving, vector/knowledge graph, and industry-benchmark governance.<br>[`.drawio`](example/ai-financial-analysis-reference-check.drawio) | ![Financial-statement credit recommendation](example/bctc-credit-recommendation-multiagent.png)<br>**Financial-Statement Credit Recommendation** — IDP extraction → multiagent ratio analysis → evidence-backed credit recommendation, with deterministic rule engine and cross-checking.<br>[`.drawio`](example/bctc-credit-recommendation-multiagent.drawio) |
 | ![GCP IDP + RPA finance automation](example/gcp-idp-rpa-finance-automation.png)<br>**GCP IDP + RPA Finance Automation** — end-to-end document AI and RPA orchestration on Google Cloud integrating ERP, DMS, TMS, banking, and e-invoicing systems.<br>[`.drawio`](example/gcp-idp-rpa-finance-automation.drawio) | ![Azure browser copilot + RPA orchestration](example/azure-browser-copilot-rpa-orchestration.png)<br>**Azure Browser Copilot + RPA Orchestration** — multi-agent planner/navigator/validator control plane driving a browser copilot and Power Automate RPA.<br>[`.drawio`](example/azure-browser-copilot-rpa-orchestration.drawio) |
+| ![Azure multiagent browser automation platform](example/azure-multiagent-browser-automation-platform.png)<br>**Azure Multi-Agent Browser Automation Platform** — agent orchestrator + RPA browser extension driving enterprise systems (ERP, PLM, EDI) through an AI reasoning layer.<br>[`.drawio`](example/azure-multiagent-browser-automation-platform.drawio) | ![Odoo service-booking MVP](example/odoo-service-booking-mvp.png)<br>**Odoo Enterprise Service-Booking MVP** — multi-branch booking platform (grooming/vet/pool/hotel) with payment gateway and phase-2 deferred integrations.<br>[`.drawio`](example/odoo-service-booking-mvp.drawio) |
 
 ## Tech Stack
 
