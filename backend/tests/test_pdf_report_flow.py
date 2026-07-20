@@ -414,6 +414,65 @@ def test_report_data_uses_step_results_and_section_aliases(tmp_path):
     assert data["traceability"]
 
 
+def test_report_data_falls_back_to_rendered_workspace_artifacts(tmp_path):
+    from PIL import Image
+
+    (tmp_path / "requirements.md").write_text(
+        """
+        <untrusted_document>
+        1.1 This document outlines the requirements and scope for the design,
+        development, integration, and implementation of new modules for the HIVE system.
+        2.1.1 The web-based portal should provide summary views and data extraction.
+        2.1.1 The mobile application shall allow simplified functionality for field users.
+        4.1 The system shall include audit-ready security, MFA, and operational logging.
+        </untrusted_document>
+        """,
+        encoding="utf-8",
+    )
+    (tmp_path / "layout_plan.json").write_text(
+        json.dumps({"notes": ["bundled repetitive hub edges"]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "out.native_stats.json").write_text(
+        json.dumps({"nodes": 42, "edges": 40, "bundled_edges": 26}),
+        encoding="utf-8",
+    )
+    (tmp_path / "out.drawio").write_text(
+        """
+        <mxfile compressed="false">
+          <diagram name="CAG HIVE AWS Architecture">
+            <mxGraphModel><root>
+              <mxCell id="0" />
+              <mxCell id="1" parent="0" />
+              <mxCell id="__title" value="HIVE user journeys, integrations, data and operations" vertex="1" parent="1" />
+              <mxCell id="web_users" value="Web Users&lt;br&gt;Browser / HTTPS" vertex="1" parent="1" />
+              <mxCell id="waf" value="AWS WAF&lt;br&gt;AWS WAF managed rules" vertex="1" parent="1" />
+              <mxCell id="api_gateway" value="API Gateway&lt;br&gt;Amazon API Gateway private APIs" vertex="1" parent="1" />
+              <mxCell id="odc_runtime" value="OutSystems ODC Runtime&lt;br&gt;Production capacity" vertex="1" parent="1" />
+              <mxCell id="cloudwatch" value="Operations Monitoring&lt;br&gt;Amazon CloudWatch" vertex="1" parent="1" />
+              <mxCell id="e1" value="HTTPS request" edge="1" source="web_users" target="waf" parent="1" />
+              <mxCell id="e2" value="private API" edge="1" source="waf" target="api_gateway" parent="1" />
+            </root></mxGraphModel>
+          </diagram>
+        </mxfile>
+        """,
+        encoding="utf-8",
+    )
+    Image.new("RGB", (120, 80), "white").save(tmp_path / "out.png")
+
+    data = reporting.assemble_report_data(tmp_path)
+    html = reporting.render_report_html(data)
+
+    assert data["title"] == "CAG HIVE AWS Architecture"
+    assert data["node_count"] == 42
+    assert data["edge_count"] == 40
+    assert data["brief"]["functional_requirements"]
+    assert data["analysis"]["provider_preference"] == "aws"
+    assert any(item["choice"] == "AWS WAF" for item in data["tech_items"])
+    assert data["blueprint"]["nodes"][0]["label"] == "Web Users"
+    assert "No functional requirements were captured" not in html
+    assert "No technology stack was recorded" not in html
+
 def test_report_template_escapes_user_text(tmp_path):
     from PIL import Image
 

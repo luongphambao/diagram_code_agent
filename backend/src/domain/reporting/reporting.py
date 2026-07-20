@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import base64
 import datetime as dt
+import html as html_lib
 import json
 import mimetypes
+import re
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
@@ -94,6 +97,266 @@ def _data_uri(path: Path) -> str:
     mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
     encoded = base64.b64encode(path.read_bytes()).decode("ascii")
     return f"data:{mime};base64,{encoded}"
+
+def _read_text_file(path: Path, *, limit: int = 18000) -> str:
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return ""
+    text = text.strip()
+    if len(text) > limit:
+        return text[:limit].rstrip()
+    return text
+
+def _clean_htmlish(value: Any) -> str:
+    text = str(value or "")
+    text = re.sub(r"(?i)<br\s*/?>", "\n", text)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = html_lib.unescape(text)
+    return " ".join(text.split())
+
+def _drawio_label_parts(value: Any) -> tuple[str, str]:
+    text = str(value or "")
+    text = re.sub(r"(?i)<br\s*/?>", "\n", text)
+    text = re.sub(r"</div>\s*<div[^>]*>", "\n", text, flags=re.I)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = html_lib.unescape(text)
+    lines = [" ".join(line.split()) for line in text.splitlines()]
+    lines = [line for line in lines if line]
+    if not lines:
+        cleaned = " ".join(text.split())
+        return cleaned, ""
+    return lines[0], " ".join(lines[1:])
+
+def _fallback_requirements(workspace: Path) -> dict[str, Any]:
+    raw = _read_text_file(workspace / "requirements.md")
+    if not raw:
+        return {}
+    text = raw.replace("<untrusted_document>", "").replace("</untrusted_document>", "")
+    text = re.sub(r"\bC-\d+\b", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    first_clause = re.search(r"\b1\.1\b\s+", text)
+    if first_clause:
+        text = text[first_clause.start():]
+    sentences = [
+        re.sub(r"^\d+(?:\.\d+)*\s+", "", s.strip(" ;"))
+        for s in re.split(r"(?<=[.!?])\s+", text)
+        if len(s.strip()) >= 35
+    ]
+    skip_prefixes = ("contents clause subject matter", "particular requirements")
+    objective = ""
+    for sentence in sentences:
+        low = sentence.lower()
+        if any(low.startswith(prefix) for prefix in skip_prefixes):
+            continue
+        if "this document outlines" in low or "scope for" in low:
+            objective = sentence
+            break
+    if not objective:
+        objective = next((s for s in sentences if not any(s.lower().startswith(p) for p in skip_prefixes)), "")
+
+    nfr_keywords = (
+        "security", "availability", "support", "maintenance", "testing", "acceptance",
+        "incident", "documentation", "environment", "responsive", "compatible", "audit",
+    )
+    functional_keywords = (
+        "shall", "should", "must", "support", "provide", "allow", "cover", "develop",
+        "integrat", "implement", "module", "application", "portal", "mobile",
+    )
+    functional: list[str] = []
+    non_functional: list[str] = []
+    for sentence in sentences:
+        low = sentence.lower()
+        clipped = _clip_text(sentence, 360)
+        if any(k in low for k in nfr_keywords) and clipped not in non_functional:
+            non_functional.append(clipped)
+        if any(k in low for k in functional_keywords) and clipped not in functional:
+            functional.append(clipped)
+        if len(functional) >= 10 and len(non_functional) >= 8:
+            break
+
+    return {
+        "objective": _clip_text(objective, 500),
+        "functional_requirements": functional[:10],
+        "non_functional_requirements": non_functional[:8],
+        "assumptions": ["Canonical brief was unavailable; requirements were summarized from requirements.md."],
+        "layout_constraints": ["Report assembled from rendered workspace artifacts."],
+    }
+
+def _drawio_summary(workspace: Path) -> dict[str, Any]:
+    path = workspace / "out.drawio"
+    if not path.exists():
+        return {}
+    try:
+        root = ET.fromstring(path.read_text(encoding="utf-8", errors="replace"))
+    except Exception:
+        return {}
+
+    diagram = root.find(".//diagram")
+    diagram_name = diagram.get("name", "") if diagram is not None else ""
+    labels_by_id: dict[str, str] = {}
+    components: list[dict[str, Any]] = []
+    edge_rows: list[dict[str, Any]] = []
+    excluded_prefixes = ("zone_", "bnd_", "tab_", "footer__", "note_")
+    excluded_ids = {"0", "1", "__bg", "__title", "backbone", "footer__title"}
+
+    for cell in root.iter("mxCell"):
+        cid = str(cell.get("id") or "")
+        raw_value = cell.get("value")
+        if not raw_value:
+            continue
+        label, tech = _drawio_label_parts(raw_value)
+        if not label:
+            continue
+        labels_by_id[cid] = label
+        if cell.get("vertex") != "1":
+            continue
+        if cid in excluded_ids or cid.startswith(excluded_prefixes):
+            continue
+        components.append({
+            "id": cid,
+            "label": label,
+            "tech": tech,
+            "cluster": "rendered_components",
+        })
+
+    for cell in root.iter("mxCell"):
+        if cell.get("edge") != "1":
+            continue
+        source = str(cell.get("source") or "")
+        target = str(cell.get("target") or "")
+        if not source and not target:
+            continue
+        edge_rows.append({
+            "from": labels_by_id.get(source, source),
+            "to": labels_by_id.get(target, target),
+            "label": _clean_htmlish(cell.get("value")) or "connection",
+            "protocol": "",
+        })
+
+    title = labels_by_id.get("__title") or _clean_htmlish(diagram_name)
+    return {
+        "title": title,
+        "diagram_name": _clean_htmlish(diagram_name),
+        "components": components,
+        "edges": edge_rows,
+        "labels": list(labels_by_id.values()),
+    }
+
+def _infer_analysis(
+    analysis: dict[str, Any],
+    brief: dict[str, Any],
+    drawio: dict[str, Any],
+    native_stats: dict[str, Any],
+) -> dict[str, Any]:
+    if analysis:
+        return analysis
+    labels = " ".join(drawio.get("labels") or [])
+    lower = labels.lower()
+    capabilities = []
+    for keyword, capability in (
+        ("mobile", "mobile access"),
+        ("web", "web portal"),
+        ("api", "api integration"),
+        ("auth", "authorization"),
+        ("security", "security controls"),
+        ("waf", "edge protection"),
+        ("log", "logging"),
+        ("monitor", "observability"),
+        ("cache", "caching"),
+        ("backup", "backup/archive"),
+        ("data", "data platform"),
+        ("ai", "ai/inference"),
+        ("ci/cd", "release pipeline"),
+    ):
+        if keyword in lower and capability not in capabilities:
+            capabilities.append(capability)
+    provider = "aws" if (" aws " in f" {lower} " or "amazon " in lower) else ""
+    node_count = native_stats.get("nodes") or len(drawio.get("components") or [])
+    return {
+        "application_type": "enterprise_web_mobile_platform" if "mobile" in lower and "web" in lower else "architecture_diagram",
+        "scale_level": "large" if isinstance(node_count, int) and node_count >= 25 else "",
+        "security_level": "high" if any(k in lower for k in ("waf", "kms", "security hub", "guardduty", "siem")) else "",
+        "provider_preference": provider,
+        "detected_capabilities": capabilities[:12],
+        "constraints": _as_list(brief.get("layout_constraints"))[:4],
+        "recommended_density": "detailed" if isinstance(node_count, int) and node_count >= 25 else "standard",
+    }
+
+def _infer_tech_stack(tech_stack: Any, drawio: dict[str, Any]) -> Any:
+    if _tech_items(tech_stack):
+        return tech_stack
+    labels = " ".join(drawio.get("labels") or [])
+    lower = labels.lower()
+    inferred: list[dict[str, Any]] = []
+    candidates = (
+        ("frontend", "OutSystems ODC Web/Mobile", ("outsystems", "web", "mobile")),
+        ("edge_security", "AWS WAF", ("waf",)),
+        ("api_integration", "Amazon API Gateway", ("api gateway",)),
+        ("networking", "Transit Gateway / AWS Network Firewall", ("transit gateway", "network firewall")),
+        ("identity", "Federated SSO / MFA", ("sso", "mfa", "iam")),
+        ("data", "ODC Data Store / Amazon S3", ("data store", "amazon s3", "backup archive")),
+        ("cache", "Amazon ElastiCache for Redis", ("redis", "elasticache")),
+        ("observability", "Amazon CloudWatch / SIEM", ("cloudwatch", "siem")),
+        ("security_operations", "GuardDuty / Security Hub / KMS", ("guardduty", "security hub", "kms")),
+        ("ai", "Amazon SageMaker", ("sagemaker",)),
+        ("delivery", "CI/CD + IaC approvals", ("ci/cd", "iac")),
+    )
+    for layer, choice, needles in candidates:
+        if any(needle in lower for needle in needles):
+            inferred.append({
+                "layer": layer,
+                "choice": choice,
+                "rationale": "Inferred from rendered diagram labels because tech_stack.json was not available.",
+                "alternatives": [],
+            })
+    return inferred
+
+def _merge_fallbacks(
+    workspace: Path,
+    analysis: dict[str, Any],
+    brief: dict[str, Any],
+    tech_stack: Any,
+    blueprint: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], Any, dict[str, Any], list[str]]:
+    sources: list[str] = []
+    requirements = _fallback_requirements(workspace)
+    drawio = _drawio_summary(workspace)
+    layout = read_json_file(workspace / "layout_plan.json", {}) or {}
+    native_stats = read_json_file(workspace / "out.native_stats.json", {}) or {}
+
+    if not brief and requirements:
+        brief = requirements
+        sources.append("requirements.md")
+    if not blueprint and drawio:
+        notes = _as_list(layout.get("notes")) if isinstance(layout, dict) else []
+        blueprint = {
+            "slide_title": drawio.get("diagram_name") or drawio.get("title") or "Architecture Blueprint",
+            "slide_kicker": "Client Architecture Report",
+            "diagram_title": drawio.get("title") or drawio.get("diagram_name") or "Approved Architecture Diagram",
+            "brand": "",
+            "pattern": "rendered_architecture",
+            "density": "detailed" if (native_stats.get("nodes") or 0) >= 25 else "standard",
+            "pattern_rationale": (
+                "The report was assembled from the rendered diagram artifacts because "
+                "the canonical blueprint file was not available in this workspace."
+            ),
+            "key_decisions": [str(note) for note in notes[:5]],
+            "clusters": [{"id": "rendered_components", "label": "Rendered Components", "tier": "diagram"}],
+            "nodes": drawio.get("components") or [],
+            "edges": drawio.get("edges") or [],
+        }
+        sources.append("out.drawio")
+    if not analysis:
+        analysis = _infer_analysis(analysis, brief, drawio, native_stats)
+        if analysis:
+            sources.append("out.native_stats.json/layout_plan.json")
+    inferred_tech = _infer_tech_stack(tech_stack, drawio)
+    if inferred_tech is not tech_stack:
+        tech_stack = inferred_tech
+        if inferred_tech:
+            sources.append("out.drawio tech labels")
+    return analysis, brief, tech_stack, blueprint, sources
 
 
 def _repo_root() -> Path:
@@ -435,6 +698,15 @@ def assemble_report_data(
     blueprint = read_json_file(workspace / "blueprint.json", {})
     critique = read_json_file(workspace / "critique.json", [])
     evidence = read_json_file(evidence_path(workspace), {"steps": []})
+    native_stats = read_json_file(workspace / "out.native_stats.json", {}) or {}
+
+    analysis, brief, tech_stack, blueprint, fallback_sources = _merge_fallbacks(
+        workspace,
+        analysis if isinstance(analysis, dict) else {},
+        brief if isinstance(brief, dict) else {},
+        tech_stack,
+        blueprint if isinstance(blueprint, dict) else {},
+    )
 
     diagram_path = workspace / "out.body.png"
     if not diagram_path.exists():
@@ -493,8 +765,9 @@ def assemble_report_data(
         "pattern_rationale": blueprint.get("pattern_rationale") or "",
         "evidence_steps": evidence.get("steps", []) if isinstance(evidence, dict) else [],
         "artifacts": artifacts,
-        "node_count": len(_as_list(blueprint.get("nodes"))),
-        "edge_count": len(_as_list(blueprint.get("edges"))),
+        "fallback_sources": fallback_sources,
+        "node_count": native_stats.get("nodes") or len(_as_list(blueprint.get("nodes"))),
+        "edge_count": native_stats.get("edges") or len(_as_list(blueprint.get("edges"))),
         "cluster_count": len(_as_list(blueprint.get("clusters"))),
     }
 
