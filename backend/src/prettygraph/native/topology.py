@@ -768,6 +768,9 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
     # knows one arrow stands for the whole fan-out.
     suppressed = {tuple(x) for x in plan.get("suppressed_edges", [])}
     rep_keys = {tuple(b.get("rep") or []) for b in plan.get("edge_bundles", [])}
+    rep_labels = {tuple(b.get("rep") or []): b.get("label")
+                  for b in plan.get("edge_bundles", [])
+                  if b.get("label")}
     rep_pair_count = {tuple(b.get("rep") or []): len(b.get("members") or []) + 1
                       for b in plan.get("edge_bundles", [])
                       if b.get("kind") == "pair"}
@@ -785,6 +788,8 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
             key = (s, t, label)
             if key in suppressed:
                 continue
+            if key in rep_labels:
+                label = str(rep_labels[key])
             if key in rep_pair_count:
                 n = rep_pair_count[key]
                 if f"×{n}" not in label:

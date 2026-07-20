@@ -22,6 +22,7 @@ from domain.validation.solution_validator import AUTO_REPAIR_STRATEGIES
 _WRAP = "<mxfile><diagram name=\"P\"><mxGraphModel><root>{}</root></mxGraphModel></diagram></mxfile>"
 _CELLS = '<mxCell id="0"/><mxCell id="1" parent="0"/>'
 _NODE = '<mxCell id="{id}" value="{label}" vertex="1" parent="1"><mxGeometry x="{x}" y="{y}" width="100" height="50" as="geometry"/></mxCell>'
+_EDGE = '<mxCell id="{id}" value="{label}" edge="1" source="{src}" target="{tgt}" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>'
 
 
 def _xml(*body_parts: str) -> str:
@@ -178,6 +179,42 @@ def test_layout_metrics_present_in_report():
     assert m["ratio"] == 6.0  # 300w x 50h content bbox
     assert m["icon_coverage"] == 0.0
     assert m["edge_crossings"] == 0
+    assert m["arrow_clarity"]["arrow_clarity_score"] == 100.0
+    assert m["arrow_clarity"]["visible_edge_count"] == 0
+
+def test_arrow_clarity_penalizes_long_edges():
+    xml = _xml(
+        _NODE.format(id="n1", label="A", x=0, y=0),
+        _NODE.format(id="n2", label="B", x=1000, y=0),
+        _EDGE.format(id="e1", src="n1", tgt="n2", label="long"),
+    )
+    arrow = _validate(xml)["layout_metrics"]["arrow_clarity"]
+    assert arrow["long_edges"] == 1
+    assert arrow["long_edge_ratio"] == 1.0
+    assert arrow["arrow_clarity_score"] < 100.0
+
+def test_arrow_clarity_penalizes_crossing_edges():
+    xml = _xml(
+        _NODE.format(id="a", label="A", x=0, y=0),
+        _NODE.format(id="b", label="B", x=220, y=0),
+        _NODE.format(id="c", label="C", x=0, y=220),
+        _NODE.format(id="d", label="D", x=220, y=220),
+        _EDGE.format(id="e1", src="a", tgt="d", label="diag"),
+        _EDGE.format(id="e2", src="b", tgt="c", label="diag"),
+    )
+    arrow = _validate(xml)["layout_metrics"]["arrow_clarity"]
+    assert arrow["edge_crossings"] == 1
+    assert arrow["crossings_per_edge"] == 0.5
+    assert arrow["arrow_clarity_score"] < 100.0
+
+def test_scorecard_connector_readability_uses_arrow_clarity_score():
+    report = {"errors": [], "warnings": [], "advice": [], "polish": [],
+              "error_count": 0, "ok": True, "collision_count": 0,
+              "layout_metrics": {"ratio": 1.6, "icon_coverage": 1.0,
+                                 "arrow_clarity": {"arrow_clarity_score": 50.0}}}
+    sc = vd.production_scorecard(report, {"edges": 10})
+    assert sc["breakdown"]["connector_readability"] == 7.5
+    assert not sc["pass"]
 
 
 def test_scorecard_composition_penalizes_ultra_wide_strip():

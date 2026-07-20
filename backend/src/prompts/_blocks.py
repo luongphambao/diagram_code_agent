@@ -612,6 +612,9 @@ readability/pillar_gap) gate the verdict.
   concern lines) → readability defect.
 - Primary flow backtracks (jumps down/up/across the canvas instead of reading
   LR/TB) → readability defect.
+- Objective audit says `arrow_clarity_score < 75`, `crossings_per_edge > 0.30`,
+  `long_edge_ratio > 0.15`, or nonzero edge-label overlaps → blocking
+  readability defect when visible in the PNG, even if layout/icons/text look OK.
 - Labels floating in blank space, pointing at no visible target, or cut through
   by edge trunks → readability defect.
 - Audit warnings `SPARSE CENTER`, `L-SHAPE WARNING`, `SIDE-CHANNEL FANOUT` →

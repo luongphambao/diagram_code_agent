@@ -77,17 +77,44 @@ def _wrappable_bands(plan: dict, spec: dict) -> list[str]:
     return [cid for cid, n in counts.items() if n >= 4]
 
 
+def _arrow_metrics(metrics: dict) -> dict:
+    return metrics.get("arrow_clarity") or {}
+
+
+def _arrow_poor(metrics: dict) -> bool:
+    arrow = _arrow_metrics(metrics)
+    if not arrow:
+        return False
+    return (
+        float(arrow.get("arrow_clarity_score", 100.0)) < 75.0
+        or float(arrow.get("crossings_per_edge", 0.0)) > 0.30
+        or float(arrow.get("long_edge_ratio", 0.0)) > 0.15
+        or int(arrow.get("edge_label_overlaps", 0)) > 0
+    )
+
+
 def _variants_for(plan: dict | None, spec: dict,
                   baseline_metrics: dict) -> list[tuple[str, dict | None]]:
     """Rule-gated plan variants — only build what the baseline's symptoms call
     for (each candidate costs a full engine build; typical case adds 0-2)."""
     if not plan:
         return []
+    out: list[tuple[str, dict | None]] = []
+    if _arrow_poor(baseline_metrics) and not plan.get("aggressive_bundles"):
+        try:
+            from .layout_plan import analyze_layout
+        except (ImportError, ValueError):  # pragma: no cover - import fallback
+            from prettygraph.native.layout_plan import analyze_layout  # type: ignore
+        aggressive = analyze_layout(spec, aggressive_bundles=True)
+        out.append(("aggressive-bundles", aggressive))
+        if str(spec.get("style_preset") or "").lower() == "refined":
+            v = copy.deepcopy(aggressive)
+            v["refined_zones_per_row"] = 4
+            out.append(("aggressive-bundles-zpr4", v))
     if str(spec.get("style_preset") or "").lower() == "refined":
         # The refined page template ignores band_cols — its knobs are zones
         # per main row and whether the ops shelves pack across the full
         # content width. Symptom-gate like the band variants below.
-        out: list[tuple[str, dict | None]] = []
         ratio = baseline_metrics.get("ratio")
         cur_zpr = int(plan.get("refined_zones_per_row") or 6)
         if ratio is not None and ratio > 2.1:
@@ -105,7 +132,6 @@ def _variants_for(plan: dict | None, spec: dict,
             v["refined_ops_pack"] = not plan.get("refined_ops_pack", True)
             out.append(("ops-pack-toggle", v))
         return out[:_MAX_CANDIDATES - 2]
-    out = []
     lo, hi = 1.3, 1.9
     ratio = baseline_metrics.get("ratio")
     wrappable = _wrappable_bands(plan, spec)
@@ -131,9 +157,13 @@ def _variants_for(plan: dict | None, spec: dict,
 
 def _rank_key(res: dict) -> tuple:
     sc, m = res["scorecard"], res["metrics"]
+    arrow = _arrow_metrics(m)
     ratio = m.get("ratio")
     ratio_dist = abs((ratio if ratio is not None else TARGET_RATIO) - TARGET_RATIO)
-    return (-sc["total"], m.get("edge_crossings") or 0, ratio_dist)
+    return (-sc["total"],
+            -float(arrow.get("arrow_clarity_score", 100.0)),
+            m.get("edge_crossings") or 0,
+            ratio_dist)
 
 
 def auto_repair(spec: dict, name: str, plan: dict | None) -> tuple[dict | None, dict]:
@@ -159,6 +189,10 @@ def auto_repair(spec: dict, name: str, plan: dict | None) -> tuple[dict | None, 
             "pass": res["scorecard"]["pass"],
             "ratio": res["metrics"].get("ratio"),
             "crossings": res["metrics"].get("edge_crossings"),
+            "arrow_clarity_score": _arrow_metrics(res["metrics"]).get("arrow_clarity_score"),
+            "visible_edge_count": _arrow_metrics(res["metrics"]).get("visible_edge_count"),
+            "bundled_edge_count": _arrow_metrics(res["metrics"]).get("bundled_edge_count"),
+            "crossings_per_edge": _arrow_metrics(res["metrics"]).get("crossings_per_edge"),
             "collisions": res["scorecard"].get("collisions"),
         })
         return res

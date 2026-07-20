@@ -8,9 +8,10 @@ guard that keeps every pre-plan test meaningful).
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from prettygraph.native.layout_plan import analyze_layout
-from prettygraph.native.repair import auto_repair, semantic_stats
+from prettygraph.native.repair import auto_repair, semantic_stats, _variants_for
 from prettygraph.native.topology import build_drawio_from_spec
 
 
@@ -150,6 +151,94 @@ def test_refined_support_edges_bundle_across_support_zones():
     assert ("case_api", "audit_service", "user action") in suppressed
     assert ("observability", "event_backbone", "health telemetry") in suppressed
     assert any(b["rep"][2] == "authorization gate" for b in plan["edge_bundles"])
+
+def _dense_inner_zone_spec() -> dict:
+    return {
+        "provider": "gcp",
+        "style_preset": "refined",
+        "clusters": [
+            {"id": "cloud", "label": "Google Cloud", "zone": "cloud"},
+            {"id": "ingest", "label": "Ingestion", "parent": "cloud"},
+            {"id": "app", "label": "Application Services", "parent": "cloud"},
+            {"id": "data", "label": "Data Services", "parent": "cloud"},
+        ],
+        "nodes": [
+            {"id": "in1", "label": "Input A", "cluster": "ingest"},
+            {"id": "in2", "label": "Input B", "cluster": "ingest"},
+            {"id": "api", "label": "API", "cluster": "app"},
+            {"id": "worker", "label": "Worker", "cluster": "app"},
+            {"id": "db", "label": "Database", "cluster": "data"},
+            {"id": "audit", "label": "Audit Store", "cluster": "data"},
+        ],
+        "edges": [
+            {"from": "in1", "to": "api", "label": "event", "flow": "data"},
+            {"from": "in2", "to": "worker", "label": "event", "flow": "data"},
+            {"from": "api", "to": "db", "label": "write", "flow": "data"},
+            {"from": "worker", "to": "audit", "label": "append", "flow": "registry"},
+            {"from": "api", "to": "audit", "label": "audit", "flow": "registry"},
+            {"from": "worker", "to": "db", "label": "update", "flow": "data"},
+        ],
+    }
+
+def test_aggressive_bundling_collapses_inner_zone_pairs_and_preserves_semantics():
+    spec = _dense_inner_zone_spec()
+    default_plan = analyze_layout(spec)
+    aggressive = analyze_layout(spec, aggressive_bundles=True)
+    assert len(aggressive["suppressed_edges"]) > len(default_plan["suppressed_edges"])
+    assert aggressive["aggressive_bundles"] is True
+    xml, _ = build_drawio_from_spec(spec, "Dense", plan=aggressive)
+    sem = semantic_stats(spec, xml, aggressive)
+    assert sem["node_recall"] == 1.0
+    assert sem["edge_recall"] == 1.0
+    assert sem["bundled_edges"] == len(aggressive["suppressed_edges"])
+
+def test_auto_repair_variants_include_aggressive_only_for_poor_arrows():
+    spec = _dense_inner_zone_spec()
+    plan = analyze_layout(spec)
+    bad = {"arrow_clarity": {"arrow_clarity_score": 60.0,
+                             "crossings_per_edge": 0.8,
+                             "long_edge_ratio": 0.2,
+                             "edge_label_overlaps": 0}}
+    labels = [label for label, _ in _variants_for(plan, spec, bad)]
+    assert "aggressive-bundles" in labels
+    good = {"arrow_clarity": {"arrow_clarity_score": 95.0,
+                              "crossings_per_edge": 0.0,
+                              "long_edge_ratio": 0.0,
+                              "edge_label_overlaps": 0}}
+    assert "aggressive-bundles" not in [label for label, _ in _variants_for(plan, spec, good)]
+
+def test_current_arrow_regression_gets_more_aggressive_bundling():
+    path = Path(__file__).resolve().parents[2] / "artifacts/thread-mrsw4q6c-fnwhr/render_spec.json"
+    if not path.exists():
+        return
+    from domain.validation.validate_drawio import validate_xml, production_scorecard
+    spec = json.loads(path.read_text(encoding="utf-8"))
+    spec["style_preset"] = "refined"
+    default_plan = analyze_layout(spec)
+    aggressive = analyze_layout(spec, aggressive_bundles=True)
+    default_visible = len(spec["edges"]) - len(default_plan["suppressed_edges"])
+    aggressive_visible = len(spec["edges"]) - len(aggressive["suppressed_edges"])
+    assert len(default_plan["suppressed_edges"]) == 3
+    assert len(aggressive["suppressed_edges"]) >= 27
+    assert aggressive_visible <= 18
+    assert aggressive_visible < default_visible
+
+    default_xml, default_stats = build_drawio_from_spec(spec, "Regression", plan=default_plan)
+    default_stats["semantic"] = semantic_stats(spec, default_xml, default_plan)
+    default_report = validate_xml(default_xml, stats=default_stats)
+    default_score = production_scorecard(default_report, default_stats)
+
+    aggressive_xml, aggressive_stats = build_drawio_from_spec(spec, "Regression", plan=aggressive)
+    aggressive_stats["semantic"] = semantic_stats(spec, aggressive_xml, aggressive)
+    aggressive_report = validate_xml(aggressive_xml, stats=aggressive_stats)
+    aggressive_score = production_scorecard(aggressive_report, aggressive_stats)
+
+    assert aggressive_stats["semantic"]["node_recall"] == 1.0
+    assert aggressive_stats["semantic"]["edge_recall"] == 1.0
+    assert aggressive_stats["semantic"]["bundled_edges"] == len(aggressive["suppressed_edges"])
+    assert aggressive_score["breakdown"]["connector_readability"] > (
+        default_score["breakdown"]["connector_readability"]
+    )
 
 
 def test_plan_none_is_byte_identical():

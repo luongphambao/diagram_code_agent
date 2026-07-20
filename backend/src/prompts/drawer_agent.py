@@ -159,6 +159,11 @@ batched `edit_drawio` call. Re-inspect only if the post-edit scorecard is still
 below the gate (hard budget: 2 inspections per export, code-enforced). When the
 scorecard reports PASS, or the budget is exhausted, STOP polishing and finalize,
 mentioning any residual findings in your summary.
+If the below-gate category is connector/arrow readability (arrow_clarity_score
+<75, crossings_per_edge >0.30, or multiple long edges), prefer reducing and
+bundling side-channel arrows over hand-pinning many individual connectors. The
+native auto-repair may already have tried `aggressive-bundles`; inspect the
+engineer report before spending edit budget on manual edge tweaks.
 
 ## Environment
 {env_note}

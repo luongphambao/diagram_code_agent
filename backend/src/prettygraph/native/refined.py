@@ -769,6 +769,9 @@ def build_refined(spec: dict, plan: dict | None = None):
     plan = plan or {}
     suppressed = {tuple(x) for x in plan.get("suppressed_edges", [])}
     rep_keys = {tuple(b.get("rep") or []) for b in plan.get("edge_bundles", [])}
+    rep_labels = {tuple(b.get("rep") or []): b.get("label")
+                  for b in plan.get("edge_bundles", [])
+                  if b.get("label")}
     # Zone-pair bundle representatives get a multiplicity tag ("×N") instead of
     # the hub bundles' "(all layers)" phrasing.
     rep_pair_count = {tuple(b.get("rep") or []): len(b.get("members") or []) + 1
@@ -811,6 +814,8 @@ def build_refined(spec: dict, plan: dict | None = None):
             legend_flows.append(cls)
         label = e.get("label") or ""
         is_bundle_rep = key in rep_pair_count or key in rep_keys
+        if key in rep_labels:
+            label = str(rep_labels[key])
         # Playbook §13.7: only label when the relationship isn't obvious from
         # source→target. Two cards in the SAME zone are adjacent and self-evident,
         # so drop the label — this is what declutters a dense diagram's centre

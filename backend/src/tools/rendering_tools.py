@@ -976,6 +976,7 @@ def inspect_render_quality(tool_call_id: Annotated[str, InjectedToolCallId]) -> 
         report = validate_file(str(out), stats=stats)
         sc = production_scorecard(report, stats)
         m = report.get("layout_metrics") or {}
+        arrow = m.get("arrow_clarity") or {}
         text += (f"\nProduction scorecard: {sc['total']}/100 "
                  f"({'PASS' if sc['pass'] else 'below gate — fix the worst categories'})\n"
                  + ", ".join(f"{k}={v}" for k, v in sc["breakdown"].items())
@@ -983,7 +984,12 @@ def inspect_render_quality(tool_call_id: Annotated[str, InjectedToolCallId]) -> 
                    f"crossings={m.get('edge_crossings')}, long_edges={m.get('long_edges')}, "
                    f"icon_coverage={m.get('icon_coverage')}, "
                    f"label_overlaps={m.get('edge_label_overlaps')}, "
-                   f"collisions={sc.get('collisions')}")
+                   f"collisions={sc.get('collisions')}"
+                 + f"\nArrow clarity: score={arrow.get('arrow_clarity_score')}/100, "
+                   f"visible_edges={arrow.get('visible_edge_count')}, "
+                   f"bundled_edges={arrow.get('bundled_edge_count')}, "
+                   f"crossings_per_edge={arrow.get('crossings_per_edge')}, "
+                   f"long_edge_ratio={arrow.get('long_edge_ratio')}")
         if report.get("polish"):
             text += "\nPolish findings: " + "; ".join(report["polish"][:4])
         if report.get("collisions"):

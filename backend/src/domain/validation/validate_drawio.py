@@ -980,6 +980,12 @@ PRODUCTION_TARGET = {
     "icon_coverage": 0.9,          # leaves with a real icon / all leaves
     "collisions": 0,
     "crossings_max": 3,            # geometric edge crossings
+    "arrow_clarity": {
+        "crossings_per_edge_max": 0.30,
+        "long_edge_ratio_max": 0.15,
+        "edge_label_overlaps": 0,
+        "score_min": 75,
+    },
     "title": True,
     "legend": True,
     "tinted_bands": True,
@@ -991,6 +997,7 @@ REFINED_TARGET = {
     "ratio": (1.5, 2.1),          # 1920x1080 doc sits mid-band (~1.78)
     "collisions": 0,
     "crossings_max": 3,
+    "arrow_clarity": PRODUCTION_TARGET["arrow_clarity"],
     "title": True,
     "legend": True,
     "backbone": True,
@@ -1008,6 +1015,7 @@ REFINED_TARGET = {
 BPMN_TARGET = {
     "collisions": 0,
     "crossings_max": 3,
+    "arrow_clarity": PRODUCTION_TARGET["arrow_clarity"],
 }
 
 
@@ -1199,11 +1207,47 @@ def audit_layout_metrics(xml: str, stats: dict | None = None) -> dict:
     frames = [c for c in vertices if c["id"] in has_children and "fillColor=" in c["style"]
               and not re.search(r"shape=image|resIcon=", c["style"])]
     tinted_bands = bool(frames) and not all(_WHITE_FILLS.search(c["style"]) for c in frames)
+    sem = stats.get("semantic") or {}
+    bundled_edges = int(sem.get("bundled_edges") or 0)
+    visible_edge_count = len(polys)
+    edge_count = max(
+        visible_edge_count + bundled_edges,
+        int(stats.get("edges") or 0),
+        int(sem.get("source_edges") or 0),
+    )
+    edge_denom = max(1, visible_edge_count)
+    crossings_per_edge = round(crossings / edge_denom, 3)
+    long_edge_ratio = round(long_edges / edge_denom, 3)
+    label_overlap_ratio = round(label_overlaps / edge_denom, 3)
+    # 100 means "few, short, unambiguous arrows". The thresholds mirror the
+    # scorecard target: crossings_per_edge <= .30, long_edge_ratio <= .15,
+    # and no edge labels colliding with cards. Bundled/suppressed edges do not
+    # count as semantic loss; they improve clarity by reducing visible arrows.
+    arrow_score = 100.0
+    arrow_score -= min(45.0, 40.0 * max(0.0, crossings_per_edge - 0.30))
+    arrow_score -= min(25.0, 100.0 * max(0.0, long_edge_ratio - 0.15))
+    arrow_score -= min(20.0, 12.0 * label_overlaps)
+    if edge_count and visible_edge_count > 30 and bundled_edges < max(1, int(edge_count * 0.10)):
+        arrow_score -= min(10.0, (visible_edge_count - 30) * 0.5)
+    arrow_clarity = {
+        "edge_count": edge_count,
+        "visible_edge_count": visible_edge_count,
+        "bundled_edge_count": bundled_edges,
+        "edge_crossings": crossings,
+        "crossings_per_edge": crossings_per_edge,
+        "long_edges": long_edges,
+        "long_edge_ratio": long_edge_ratio,
+        "edge_label_overlaps": label_overlaps,
+        "edge_label_overlap_ratio": label_overlap_ratio,
+        "arrow_clarity_score": round(max(0.0, min(100.0, arrow_score)), 1),
+    }
+
     metrics = {
         "ratio": ratio,
         "page_fill": page_fill,
         "fit_scale": fit_scale,
         "dense_fallback": dense_fallback,
+        "arrow_clarity": arrow_clarity,
         "edge_crossings": crossings,
         "long_edges": long_edges,
         "icon_coverage": icon_coverage,
@@ -1377,7 +1421,7 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
     crossings come from ``report["layout_metrics"]`` (audit_layout_metrics) —
     absent metrics score neutral (same blindness as before, never a false fail).
     PASS iff total >= 85 AND semantic = 100% AND relationship = 100% AND zero
-    XML errors AND zero card collisions.
+    XML errors AND zero card collisions AND arrow_clarity_score >= 75.
     """
     stats = stats or {}
     sem = stats.get("semantic") or {}
@@ -1395,10 +1439,8 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
         return sum(1 for s in items if any(k in str(s).lower() for k in kw))
 
     edge_struct_err = _hits(errs, "edge ", "source ", "target ")
-    # Geometric crossings measured on the baked XML beat router residuals
-    # (residuals only count what the router itself controlled). Normalized per
-    # edge — orthogonal diagrams always have SOME right-angle crossings; what
-    # reads as spaghetti is a high crossings-to-edges ratio.
+    # n_edges remains the denominator for legacy top-level label-overlap metrics;
+    # connector readability itself is driven by the nested arrow_clarity score.
     n_edges = max(1, int(stats.get("edges") or sem.get("source_edges") or 1))
     # Preset branch first — refined owns its routing and label placement now,
     # so it pays for defects from the first overlap instead of enjoying the
@@ -1407,18 +1449,11 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
                or bool(metrics.get("refined")))
     bpmn = str(stats.get("style_preset") or "").lower() == "bpmn"
     target = BPMN_TARGET if bpmn else (REFINED_TARGET if refined else PRODUCTION_TARGET)
-    cross_grace = 0.3 if refined else 0.5
-    if metrics.get("edge_crossings") is not None:
-        cross = int(metrics["edge_crossings"])
-        cross_pen = min(9.0, 12.0 * max(0.0, cross / n_edges - cross_grace))
-    else:
-        cross = int(stats.get("edge_cross", 0)) + int(stats.get("edge_overlaps", 0))
-        cross_pen = min(9.0, 2.0 * cross)
-    long_ratio = (metrics.get("long_edges") or 0) / n_edges
-    long_pen = min(4.0, 8.0 * max(0.0, long_ratio - 0.35))
     label_ratio = (metrics.get("edge_label_overlaps") or 0) / n_edges
     label_pen = (min(4.0, 14.0 * label_ratio) if refined
                  else min(4.0, 12.0 * max(0.0, label_ratio - 0.15)))
+    arrow = metrics.get("arrow_clarity") or {}
+    arrow_score = float(arrow.get("arrow_clarity_score", 100.0))
 
     # Composition: ratio inside the target band = full marks, linear
     # falloff outside (0 at ratio 1.0 / 2.6); dense fallback is a real miss.
@@ -1478,9 +1513,8 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
         # gateway that doesn't split/merge, a connected start/end, orphan flow
         # objects) — the structural-correctness signal a pool has instead of
         # the routing/composition checks that don't apply to it.
-        "connector_readability": (15.0 - cross_pen - long_pen
-                                  - 1.0 * min(2, _hits(advice, "crossing", "tangled",
-                                                       "detour", "long connector"))
+        "connector_readability": (15.0 * max(0.0, min(100.0, arrow_score)) / 100.0
+                                  - 1.0 * min(2, _hits(advice, "tangled", "detour"))
                                   - (3.0 * min(3, _hits(advice, "bpmn")) if bpmn else 0.0)),
         # 4. Layer clarity — tinted bands / legend (polish flags the gaps); N/A
         # for a BPMN pool (no layer bands or legend concept).
@@ -1506,7 +1540,7 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
     # hard block (good standalone renders commonly come from it) — it costs 4
     # composition points, which the engineer loop tries to win back.
     passed = bool(total >= 85.0 and node_recall >= 1.0 and edge_recall >= 1.0
-                  and err_count == 0 and collisions == 0)
+                  and err_count == 0 and collisions == 0 and arrow_score >= 75.0)
     return {"total": total, "breakdown": bd, "pass": passed, "collisions": collisions,
             "node_recall": round(node_recall, 4), "edge_recall": round(edge_recall, 4),
             "metrics": metrics, "target": target,
