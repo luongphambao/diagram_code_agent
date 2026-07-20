@@ -117,6 +117,20 @@ _RESTORABLE_FILES = {
 }
 
 
+def _wbs_plan_ready(workspace) -> bool:
+    try:
+        wbs = json.loads((workspace / "wbs.json").read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    items = wbs.get("items") or []
+    totals = wbs.get("effort_totals") or {}
+    try:
+        total_mandays = float(totals.get("total_mandays") or 0)
+    except (TypeError, ValueError):
+        total_mandays = 0
+    return bool(items) and total_mandays > 0
+
+
 async def _restore_workspace_from_db(pool, thread_id: str, workspace) -> None:
     """Write stage JSON files back to disk if they are missing but present in DB state.
 
@@ -236,6 +250,13 @@ async def agui_endpoint(request: Request):
                 is_pdf_followup = _is_pdf_followup(desc)
                 is_ppt_followup = _is_ppt_followup(desc)
                 is_wbs_followup = _is_wbs_followup(desc)
+                if (is_pdf_followup or is_ppt_followup or is_wbs_followup) and not attached:
+                    # Restore before deciding whether a downstream follow-up can
+                    # preserve artifacts. A previous run may have wiped the
+                    # per-thread JSON files while the conversation snapshot still
+                    # has them; checking disk first would falsely classify the
+                    # request as fresh and clear the files WBS/PPT/PDF need.
+                    await _restore_workspace_from_db(request.app.state.pool, thread_id, ws)
                 # A newly attached document is fresh intake for a (possibly new) project,
                 # not a request to re-export the existing diagram/WBS — never preserve
                 # stale artifacts over it, no matter what followup phrase matched.
@@ -255,13 +276,12 @@ async def agui_endpoint(request: Request):
                 )
                 preserve_wbs_artifacts, wbs_already_planned = _wbs_preserve(
                     desc, solution_exists=solution_exists,
-                    wbs_exists=(ws / "wbs.json").exists(), attached=bool(attached),
+                    wbs_exists=_wbs_plan_ready(ws), attached=bool(attached),
                 )
                 preserve_artifacts = preserve_diagram_artifacts or preserve_wbs_artifacts
                 if not preserve_artifacts:
                     clear_stage_markers()
                 else:
-                    await _restore_workspace_from_db(request.app.state.pool, thread_id, ws)
                     if wbs_already_planned:
                         desc = (
                             (desc + "\n\n" if desc else "")

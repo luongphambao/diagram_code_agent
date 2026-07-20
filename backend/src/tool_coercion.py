@@ -79,6 +79,32 @@ def _numeric_dict_to_list(value: dict) -> list | None:
     return None
 
 
+def _split_str_to_list(value: str) -> list[str]:
+    """Salvage a non-JSON string the model sent for a ``list[str]`` field.
+
+    Newlines and semicolons are unambiguous list delimiters — always split on them.
+    A COMMA is only a delimiter BETWEEN single tokens (tags / ref-codes like
+    "GDPR, HIPAA" or "BNK-3, BNK-4"); inside prose ("Given login, when OTP valid, then
+    redirect" / "Unit tests pass") a comma is punctuation and must NOT shred the sentence.
+    So comma-split a segment only when every resulting part is whitespace-free. This keeps
+    the tested tag case (compliance="a, b" → ["a","b"]) while no longer corrupting
+    multi-clause acceptance criteria / predecessors into per-fragment garbage.
+    """
+    text = value.strip()
+    if not text:
+        return []
+    out: list[str] = []
+    for seg in (s.strip() for s in re.split(r"[;\n]+", text)):
+        if not seg:
+            continue
+        parts = [p.strip() for p in seg.split(",")]
+        if len(parts) > 1 and all(p and " " not in p for p in parts):
+            out.extend(parts)
+        else:
+            out.append(seg)
+    return out or [text]
+
+
 def _coerce_value(value, ann):
     """Recursively coerce *value* toward annotation *ann*. Returns value unchanged
     when it already fits or when no safe coercion applies."""
@@ -108,8 +134,7 @@ def _coerce_value(value, ann):
             if isinstance(parsed, (list, dict)):
                 value = parsed
             elif item_ann is str:
-                parts = [p.strip() for p in re.split(r"[,;\n]+", value) if p.strip()]
-                return parts or ([value.strip()] if value.strip() else [])
+                return _split_str_to_list(value)
         if isinstance(value, dict):
             as_list = _numeric_dict_to_list(value)
             value = as_list if as_list is not None else list(value.values())

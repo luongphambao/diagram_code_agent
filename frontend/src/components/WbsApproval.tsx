@@ -58,6 +58,33 @@ function normalizeRoleMap(value: unknown): Record<string, number> {
   return out;
 }
 
+/**
+ * Normalise an array-typed card field (e.g. `effort_by_module`) to a real array.
+ * Same failure mode as `normalizeRoleMap`: the model sometimes emits it as a
+ * JSON/Python-repr string or a numeric-keyed dict, and `Array.isArray(...)` then
+ * drops the whole table so the card looks empty. Parse strings, unwrap numeric-keyed
+ * dicts, and return [] for anything else (so the UI shows nothing rather than garbage).
+ */
+function normalizeObjectList<T = Record<string, unknown>>(value: unknown): T[] {
+  let v = value;
+  if (typeof v === "string") {
+    const s = v.trim();
+    if (!s || (s[0] !== "[" && s[0] !== "{")) return [];
+    try {
+      v = JSON.parse(s);
+    } catch {
+      try {
+        v = JSON.parse(s.replace(/'/g, '"'));
+      } catch {
+        return [];
+      }
+    }
+  }
+  if (Array.isArray(v)) return v as T[];
+  if (v && typeof v === "object") return Object.values(v as Record<string, T>);
+  return [];
+}
+
 export default function WbsApproval({ interrupt, onResolve, onDecision, disabled = false }: WbsApprovalProps) {
   const [modifications, setModifications] = useState("");
   const [decided, setDecided] = useState(false);
@@ -82,6 +109,11 @@ export default function WbsApproval({ interrupt, onResolve, onDecision, disabled
   // one "Nmd" chip per character. Normalise to a plain {role: number} object; anything
   // that can't be parsed into that shape renders nothing rather than garbage.
   const roleMap = normalizeRoleMap(effort_by_role);
+  // Same defensive normalisation for the module table (string/numeric-dict → array),
+  // so a stringified `effort_by_module` no longer silently drops the whole table.
+  const moduleList = normalizeObjectList<{ code?: string; name?: string; total_md?: number | string }>(
+    effort_by_module,
+  );
 
   const approve = () => {
     setDecided(true);
@@ -167,7 +199,7 @@ export default function WbsApproval({ interrupt, onResolve, onDecision, disabled
           )}
 
           {/* Effort by module table */}
-          {Array.isArray(effort_by_module) && effort_by_module.length > 0 && (
+          {moduleList.length > 0 && (
             <div className="rounded-xl border border-white/8 bg-white/3 overflow-hidden">
               <p className="border-b border-white/6 px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
                 Effort by Module
@@ -181,8 +213,8 @@ export default function WbsApproval({ interrupt, onResolve, onDecision, disabled
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {effort_by_module.map((row) => (
-                    <tr key={row.code} className="hover:bg-white/3">
+                  {moduleList.map((row, i) => (
+                    <tr key={row.code ?? i} className="hover:bg-white/3">
                       <td className="px-3 py-1.5 font-mono text-slate-600">{row.code}</td>
                       <td className="px-2 py-1.5 text-slate-400">{row.name}</td>
                       <td className="px-3 py-1.5 text-right font-semibold text-amber-300/80">{row.total_md}</td>

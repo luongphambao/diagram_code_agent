@@ -13,6 +13,8 @@ import json
 from domain.reporting.ppt_reporting import DEFAULT_PPT_SECTIONS
 from domain.reporting.reporting import DEFAULT_REPORT_SECTIONS
 
+from tool_coercion import _maybe_json
+
 from .normalize import _coerce_assumptions, _coerce_list, _normalize_blueprint, _normalize_tech_stack
 
 _DEFAULT_TZ = "Asia/Ho_Chi_Minh"
@@ -49,6 +51,38 @@ def _persist_pending_gate(name: str, args: dict) -> None:
             )
     except Exception:
         return
+
+
+def _coerce_card_list(val) -> list:
+    """Coerce a gate-card array field to a real list for the frontend.
+
+    The model sometimes emits ``phases`` / ``effort_by_module`` as a JSON/Python-repr
+    STRING or as a numeric-keyed dict. The frontend gates them behind ``Array.isArray(...)``
+    and silently drop anything else — a stringified tree renders an EMPTY skeleton/plan card
+    (the "WBS card looks broken" symptom). Normalize here so the card always carries a list.
+    """
+    if isinstance(val, str):
+        parsed = _maybe_json(val)
+        if parsed is not None:
+            val = parsed
+    if isinstance(val, list):
+        return val
+    if isinstance(val, dict):
+        return list(val.values())
+    return []
+
+
+def _coerce_card_dict(val) -> dict:
+    """Coerce a gate-card object field (e.g. effort_by_role) to a real dict.
+
+    Mirrors _coerce_card_list for the ``{role: mandays}`` map: a stringified dict would
+    otherwise iterate per-character on the frontend. Non-dict/unparseable → empty dict.
+    """
+    if isinstance(val, str):
+        parsed = _maybe_json(val)
+        if isinstance(parsed, dict):
+            return parsed
+    return val if isinstance(val, dict) else {}
 
 
 def _pending_action_name(val) -> str | None:
@@ -201,9 +235,7 @@ def _card_for(val, summary: str):
             {},
         )
     if name == "propose_wbs_skeleton":
-        phases = args.get("phases") or []
-        if isinstance(phases, dict):
-            phases = list(phases.values())
+        phases = _coerce_card_list(args.get("phases"))
         return (
             {
                 "type": "wbs_skeleton_approval",
@@ -216,9 +248,6 @@ def _card_for(val, summary: str):
             {},
         )
     if name == "propose_wbs":
-        effort_by_module = args.get("effort_by_module") or []
-        if isinstance(effort_by_module, dict):
-            effort_by_module = list(effort_by_module.values())
         return (
             {
                 "type": "wbs_approval",
@@ -227,8 +256,8 @@ def _card_for(val, summary: str):
                 "total_manmonths": args.get("total_manmonths", 0),
                 "timeline_weeks": args.get("timeline_weeks", 0),
                 "timeline_months": args.get("timeline_months", 0),
-                "effort_by_role": args.get("effort_by_role") or {},
-                "effort_by_module": effort_by_module,
+                "effort_by_role": _coerce_card_dict(args.get("effort_by_role")),
+                "effort_by_module": _coerce_card_list(args.get("effort_by_module")),
             },
             "awaiting_wbs_approval",
             {},

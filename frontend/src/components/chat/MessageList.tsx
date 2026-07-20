@@ -2,6 +2,7 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { useAgentContext } from "../../context/AgentContext";
 import type { DecisionPayload, ResolvedGate } from "../../hooks/useDiagramAgent";
 import { downloadBase64File, openBase64InNewTab, MIME_TYPES } from "../../lib/downloadBase64";
+import { fmtMd } from "../../hooks/agent-utils";
 import TechStackApproval from "../TechStackApproval";
 import BlueprintApproval from "../BlueprintApproval";
 import DiagramFeedback from "../DiagramFeedback";
@@ -267,8 +268,8 @@ export default function MessageList() {
               {wbsPreviewOpen && wbsSummary && (
                 <div className="mt-3 space-y-3">
                   <div className="flex flex-wrap gap-2">
-                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300">{wbsSummary.total_mandays.toFixed(1)} MD</span>
-                    <span className="rounded-full border border-teal-500/30 bg-teal-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-teal-300">{wbsSummary.total_manmonths.toFixed(1)} MM</span>
+                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300">{fmtMd(wbsSummary.total_mandays)} MD</span>
+                    <span className="rounded-full border border-teal-500/30 bg-teal-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-teal-300">{fmtMd(wbsSummary.total_manmonths)} MM</span>
                     <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-sky-300">{wbsSummary.months} months</span>
                     <span className="rounded-full border border-slate-500/30 bg-slate-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-slate-300">{wbsSummary.weeks} weeks</span>
                   </div>
@@ -278,7 +279,7 @@ export default function MessageList() {
                       <div className="flex flex-wrap gap-1.5">
                         {Object.entries(wbsSummary.effort_by_role).map(([role, md]) => (
                           <span key={role} className="rounded border border-white/8 bg-white/5 px-2 py-0.5 text-[11px] text-slate-300">
-                            <span className="font-semibold text-white">{role}</span> {(md as number).toFixed(1)} MD
+                            <span className="font-semibold text-white">{role}</span> {fmtMd(md)} MD
                           </span>
                         ))}
                       </div>
@@ -293,7 +294,7 @@ export default function MessageList() {
                             <tr key={m.code} className="border-b border-white/5">
                               <td className="py-0.5 pr-2 font-mono text-slate-500">{m.code}</td>
                               <td className="py-0.5 pr-2 text-slate-300">{m.name}</td>
-                              <td className="py-0.5 text-right font-semibold text-emerald-300">{m.total_md.toFixed(1)}</td>
+                              <td className="py-0.5 text-right font-semibold text-emerald-300">{fmtMd(m.total_md)}</td>
                             </tr>
                           ))}
                         </tbody>

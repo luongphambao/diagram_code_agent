@@ -117,6 +117,27 @@ def test_none_for_bare_list_becomes_empty():
     assert coerce_args({"items": None}, Bare)["items"] == []
 
 
+def test_str_list_splits_tag_tokens_but_not_prose():
+    """Comma is a delimiter only between single tokens; inside prose it stays punctuation.
+
+    Regression: the naive re.split(r"[,;\n]+") shredded multi-clause acceptance criteria /
+    predecessors into per-fragment garbage. Tag lists (compliance, ref-codes) must still split.
+    """
+    from tool_coercion import _split_str_to_list
+
+    assert _split_str_to_list("data_sovereignty, iso27001") == ["data_sovereignty", "iso27001"]
+    assert _split_str_to_list("BNK-3, BNK-4") == ["BNK-3", "BNK-4"]
+    assert _split_str_to_list("GDPR; HIPAA") == ["GDPR", "HIPAA"]
+    # prose with internal commas is a SINGLE item
+    assert _split_str_to_list("Given login, when OTP valid, then redirect") == [
+        "Given login, when OTP valid, then redirect"
+    ]
+    # newline always separates, even prose
+    assert _split_str_to_list("Unit tests pass\nPR reviewed") == ["Unit tests pass", "PR reviewed"]
+    assert _split_str_to_list("   ") == []
+    assert _split_str_to_list("single") == ["single"]
+
+
 def test_coerce_model_values_usable_as_validator_body():
     values = coerce_model_values(_Args, {"edge_labels": '["x"]'})
     assert values["edge_labels"] == ["x"]

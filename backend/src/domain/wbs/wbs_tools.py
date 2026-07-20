@@ -53,6 +53,51 @@ def _read_json(path: Path, default=None):
         return default
 
 
+def _read_text(path: Path, limit: int = 12000) -> str:
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return ""
+    text = text.strip()
+    if len(text) > limit:
+        return text[:limit].rstrip() + "\n...[truncated]"
+    return text
+
+
+def _fallback_solution_context() -> dict[str, Any]:
+    ws = current_workspace()
+    req_text = _read_text(ws / "requirements.md")
+    layout = _read_json(ws / "layout_plan.json", {}) or {}
+    style = _read_json(ws / "style_plan.json", {}) or {}
+    native_stats = _read_json(ws / "out.native_stats.json", {}) or {}
+    fallback_files = [
+        name for name in (
+            "requirements.md", "layout_plan.json", "style_plan.json",
+            "design_tokens.json", "label_fits.json", "out.drawio", "out.png",
+            "out.native_stats.json",
+        )
+        if (ws / name).exists()
+    ]
+    if not (req_text or layout or style or native_stats or fallback_files):
+        return {}
+
+    title = ""
+    for line in req_text.splitlines():
+        cleaned = line.strip().strip("#").strip()
+        if cleaned and not cleaned.startswith("<"):
+            title = cleaned[:140]
+            break
+    return {
+        "source": "workspace_fallback",
+        "objective": title or None,
+        "requirements_excerpt": req_text,
+        "available_artifacts": fallback_files,
+        "layout_plan": layout,
+        "style_plan": style,
+        "native_stats": native_stats,
+    }
+
+
 def _write_json(path: Path, data) -> None:
     current_workspace().mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -124,13 +169,20 @@ def load_solution_context() -> str:
 
     Reads diagram_brief.json, tech_stack.json and blueprint.json from the
     workspace and returns a compact digest (objective, functional requirements,
-    application type, tech layers, blueprint clusters/nodes). Call this FIRST so
-    the modules and features you break down trace back to the approved solution.
+    application type, tech layers, blueprint clusters/nodes). If those canonical
+    artifacts are absent, falls back to requirements.md and rendered-diagram
+    sidecars so WBS can still proceed for direct-render/import flows. Call this
+    FIRST so the modules and features trace back to the best available solution
+    context.
     """
     brief = _read_json(_BRIEF_FILE, {}) or {}
     tech = _read_json(_TECHSTACK_FILE, {}) or {}
     bp = _read_json(_BLUEPRINT_FILE, {}) or {}
     if not (brief or bp):
+        fallback = _fallback_solution_context()
+        if fallback:
+            fallback["effort_norms"] = EFFORT_NORMS
+            return json.dumps(fallback, ensure_ascii=False, indent=2)
         return ("No upstream artifacts found. Get the diagram brief / blueprint "
                 "approved first (propose_diagram_brief, propose_blueprint).")
 

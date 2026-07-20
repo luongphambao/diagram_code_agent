@@ -242,6 +242,31 @@ def test_wbs_followup_detects_first_time_creation():
     assert not server._is_wbs_followup("thêm reporting service vào kiến trúc")
 
 
+def test_wbs_gate_card_coerces_stringified_phases_and_effort():
+    """A model that emits phases / effort_by_module / effort_by_role as JSON strings must
+    still yield real list/dict card fields, else the frontend Array.isArray/entries guards
+    drop them and the WBS approval card renders empty."""
+    skeleton_card, _, _ = server._card_for(
+        {"action_requests": [{"name": "propose_wbs_skeleton", "args": {
+            "phases": '[{"code":"I","name":"SETUP","modules":[{"code":"I.A","name":"Design"}]}]',
+        }}]},
+        "",
+    )
+    assert isinstance(skeleton_card["phases"], list)
+    assert skeleton_card["phases"][0]["code"] == "I"
+
+    plan_card, _, _ = server._card_for(
+        {"action_requests": [{"name": "propose_wbs", "args": {
+            "effort_by_module": '[{"code":"II.A","name":"Web","total_md":12}]',
+            "effort_by_role": '{"BE": 10, "FE_Mobile": 8}',
+        }}]},
+        "",
+    )
+    assert isinstance(plan_card["effort_by_module"], list)
+    assert plan_card["effort_by_module"][0]["total_md"] == 12
+    assert plan_card["effort_by_role"] == {"BE": 10, "FE_Mobile": 8}
+
+
 def test_wbs_preserve_first_time_keeps_upstream_artifacts():
     """A first-time WBS request with an upstream solution present preserves artifacts
     (preserve=True) but is NOT already_planned — so chat.py runs the normal wbs_planner
@@ -261,6 +286,28 @@ def test_wbs_preserve_reexport_when_wbs_exists():
     assert already is True
 
 
+def test_wbs_plan_ready_requires_items_and_rollup(tmp_path):
+    from routers.chat import _wbs_plan_ready
+
+    (tmp_path / "wbs.json").write_text(
+        json.dumps({"items": [], "effort_totals": {"total_mandays": 120}}),
+        encoding="utf-8",
+    )
+    assert _wbs_plan_ready(tmp_path) is False
+
+    (tmp_path / "wbs.json").write_text(
+        json.dumps({"items": [{"id": "1.1"}], "effort_totals": {"total_mandays": 0}}),
+        encoding="utf-8",
+    )
+    assert _wbs_plan_ready(tmp_path) is False
+
+    (tmp_path / "wbs.json").write_text(
+        json.dumps({"items": [{"id": "1.1"}], "effort_totals": {"total_mandays": 12}}),
+        encoding="utf-8",
+    )
+    assert _wbs_plan_ready(tmp_path) is True
+
+
 def test_wbs_preserve_no_solution_or_attachment_does_not_preserve():
     # No upstream solution yet -> nothing to preserve (genuine fresh run).
     assert server._wbs_preserve(
@@ -274,6 +321,25 @@ def test_wbs_preserve_no_solution_or_attachment_does_not_preserve():
     assert server._wbs_preserve(
         "add redis to the diagram", solution_exists=True, wbs_exists=True, attached=False
     ) == (False, False)
+
+
+def test_wbs_load_solution_context_falls_back_to_requirements(monkeypatch, tmp_path):
+    _use_workspace(monkeypatch, tmp_path)
+    (tmp_path / "requirements.md").write_text(
+        "Project CLARA\n\nBrowser copilot with Planner, Navigator and Validator agents.",
+        encoding="utf-8",
+    )
+    (tmp_path / "out.png").write_bytes(b"png")
+
+    from domain.wbs.wbs_tools import load_solution_context
+
+    digest = json.loads(load_solution_context.func())
+
+    assert digest["source"] == "workspace_fallback"
+    assert digest["objective"] == "Project CLARA"
+    assert "Browser copilot" in digest["requirements_excerpt"]
+    assert "out.png" in digest["available_artifacts"]
+    assert "effort_norms" in digest
 
 
 def test_generate_pdf_report_writes_pdf(monkeypatch, tmp_path):

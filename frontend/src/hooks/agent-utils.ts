@@ -163,6 +163,17 @@ export interface WbsSummary {
   effort_by_module: Array<{ code: string; name: string; total_md: number }>;
 }
 
+/**
+ * Format a man-day value that MIGHT arrive as a string. Backend defaults these to 0,
+ * but a stringified number from the model would make a bare `.toFixed(1)` throw
+ * ("Cannot read properties of undefined") and crash the whole message list / WBS tab.
+ * Coerce → number, fall back to "0.0" for anything non-numeric.
+ */
+export function fmtMd(value: unknown): string {
+  const n = typeof value === "number" ? value : Number(value);
+  return (Number.isFinite(n) ? n : 0).toFixed(1);
+}
+
 // Governance read-outs surfaced in the canvas "Quality" tab (display-only).
 export interface QualitySnapshot {
   solution_revision?: number;
