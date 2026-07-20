@@ -273,33 +273,23 @@ uv run composio add gmail
 # Opens browser — complete the Google OAuth consent and authorise the Gmail scope.
 ```
 
-4. After authorising, note the **connected account ID** that Composio creates. You can list all connections with:
+4. After authorising, find the **connected account ID** that Composio creates:
 
 ```bash
 cd backend
-uv run python - <<'EOF'
-from dotenv import load_dotenv; load_dotenv()
-import composio, os
-client = composio.Composio(api_key=os.environ["COMPOSIO_API_KEY"])
-for a in client.connected_accounts.list().items:
-    print(a.toolkit.slug, a.user_id, a.id, a.status)
-EOF
+uv run python setup_gmail_composio.py
 ```
 
-Find the row where `toolkit.slug == "gmail"` and `status == "ACTIVE"`. Copy the `id` value (format: `ca_XXXXXXXXXX`).
+Copy the Gmail connected account `id` whose status is `ACTIVE` (format: `ca_XXXXXXXXXX`). Do not use an `EXPIRED` connected account ID.
 
-5. Set that ID in [`backend/src/diagram_mcp/email_tools.py`](backend/src/diagram_mcp/email_tools.py) inside the `client.tools.execute(...)` call:
+5. Set the API key and active Gmail connected account ID in `backend/.env`:
 
-```python
-result = client.tools.execute(
-    "GMAIL_SEND_EMAIL",
-    arguments={...},
-    connected_account_id="ca_YOUR_ACCOUNT_ID",   # <-- paste here
-    version="20260612_00",
-)
+```bash
+COMPOSIO_API_KEY=ak_...
+GMAIL_CONNECTED_ACCOUNT_ID=ca_YOUR_ACTIVE_GMAIL_ACCOUNT_ID
 ```
 
-> **Toolkit version note:** Composio requires a specific toolkit version (not `"latest"`) for manual execution. The current pinned version is `20260612_00`. If you get a "Toolkit version not specified" error after a Composio update, run the snippet below to find the latest version and update the `version=` field:
+> **Toolkit version note:** Composio requires a specific toolkit version (not `"latest"`) for manual execution. The current pinned version is `20260612_00` in `backend/src/integrations/email.py`. If you get a "Toolkit version not specified" error after a Composio update, run the snippet below to find the latest version and update the `version=` field:
 >
 > ```python
 > import composio, os; from dotenv import load_dotenv; load_dotenv()
@@ -321,6 +311,7 @@ When the user asks to email the report (e.g. *"send the PDF to john@example.com"
 ```bash
 # backend/.env
 COMPOSIO_API_KEY=your_composio_api_key_here   # required for Gmail + Calendar via Composio
+GMAIL_CONNECTED_ACCOUNT_ID=ca_xxxxx           # required for Gmail send_email; must be ACTIVE in Composio
 ```
 
 ### Troubleshooting
@@ -328,8 +319,9 @@ COMPOSIO_API_KEY=your_composio_api_key_here   # required for Gmail + Calendar vi
 | Error                                                | Fix                                                                                                                           |
 | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `COMPOSIO_API_KEY environment variable is not set` | Add `COMPOSIO_API_KEY` to `backend/.env`                                                                                  |
-| `No connected account found for user ID default`   | Run `composio add gmail` and update `connected_account_id` in `email_tools.py`                                          |
-| `Toolkit version not specified`                    | Update the `version=` parameter in `email_tools.py` with the latest version from `c.toolkits.get("GMAIL").meta.version` |
+| `no Gmail connected account id`                    | Add `GMAIL_CONNECTED_ACCOUNT_ID` to `backend/.env`                                                                        |
+| `No connected account found` or `EXPIRED` account  | Reconnect Gmail in Composio, run `uv run python setup_gmail_composio.py`, then update `GMAIL_CONNECTED_ACCOUNT_ID`       |
+| `Toolkit version not specified`                    | Update the `version=` parameter in `backend/src/integrations/email.py` with the latest version from `c.toolkits.get("GMAIL").meta.version` |
 | `out.pdf not found in workspace`                   | Call `generate_pdf_report` first to produce `out.pdf` before emailing                                                     |
 
 ## LangGraph Details
@@ -571,7 +563,9 @@ LANGSMITH_API_KEY=lsv2_...
 LANGSMITH_PROJECT=diagram-agent
 
 # --- Integrations (optional) ---
-COMPOSIO_API_KEY=ak_...                  # Composio — required for Gmail email delivery and Google Calendar
+COMPOSIO_API_KEY=ak_...                  # Composio - required for Gmail email delivery and Google Calendar
+GMAIL_CONNECTED_ACCOUNT_ID=ca_...        # Composio Gmail connected account ID; must be ACTIVE
+GOOGLE_CALENDAR_CONNECTED_ACCOUNT_ID=ca_... # Composio Google Calendar connected account ID; must be ACTIVE
 
 # --- Server config (optional) ---
 DIAGRAM_AGENT_PORT=8001
