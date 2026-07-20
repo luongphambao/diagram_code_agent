@@ -232,6 +232,22 @@ On top of the diagram, the agent can turn an already-approved solution (brief + 
 - Optional sync: `export_to_delivery(system, dry_run=True)` previews (dry-run) pushing the WBS to an external delivery tool (Jira/Linear/Confluence).
 - Artifacts: `wbs_skeleton.json`, `wbs.json`, and the exported `.xlsx` workbook under the run's workspace.
 
+### Sample WBS Workbook
+
+Exported from the [AI Financial Analysis, Evidence & Reference-Check Platform](#example-output) run above ([`.xlsx`](example/ai-financial-analysis-reference-check-wbs.xlsx)). Every sheet is generated — nothing is hand-filled.
+
+**1. Effort** — effort and cost rolled up by module and role (BE/FE/Requirement/Testing/PM).
+![WBS sheet: Effort](example/wbs-sheet-1-effort.png)
+
+**2. WBS** — full work breakdown: phase → module → feature, with per-feature effort and remarks.
+![WBS sheet: WBS](example/wbs-sheet-2-wbs.png)
+
+**3. Delivery Plan** — sprint-level Gantt, resource plan, and delivery milestones.
+![WBS sheet: Delivery Plan](example/wbs-sheet-3-delivery-plan.png)
+
+**4. Master Data** — configurable effort ratios (PM/BA/QC on dev) and role rates used to derive the estimate.
+![WBS sheet: Master Data](example/wbs-sheet-4-master-data.png)
+
 ## Diagram Quality Engine
 
 Every render/export runs a deterministic, zero-LLM-token layout and repair pass before the file is written.
