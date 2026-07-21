@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field
 from backends import OUTPUTS_DIR, current_workspace
 from domain.reporting.reporting import record_artifact_inventory, record_report_step
 from runtime.sandbox.guards import _audit_add, _audit_code
-from runtime.sandbox.render_exec import run_render
+from runtime.sandbox.provider import get_sandbox_runner
 from .constants import (
     _BLUEPRINT_FILE,
     _OUT_NAMES,
@@ -121,7 +121,7 @@ def render_diagram(
     (current_workspace() / "diagram.py").write_text(code, encoding="utf-8")
 
     try:
-        proc = run_render(current_workspace(), timeout=RENDER_TIMEOUT_S)
+        proc = get_sandbox_runner().render(current_workspace(), timeout=RENDER_TIMEOUT_S)
     except subprocess.TimeoutExpired:
         return ToolMessage(
             content=f"Render #{attempt}/{RENDER_HARD_CAP} TIMED OUT after {RENDER_TIMEOUT_S}s. "

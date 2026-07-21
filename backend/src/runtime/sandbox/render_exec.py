@@ -17,6 +17,7 @@ def run_render(
     *,
     timeout: int,
     script_name: str = "diagram.py",
+    env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess:
     """Run ``script_name`` (already written into ``workspace``) with the current
     Python interpreter and capture its output.
@@ -25,6 +26,13 @@ def run_render(
     ``subprocess.TimeoutExpired`` if the process outlives *timeout*; the
     caller decides how to report that (render_diagram turns it into a
     ToolMessage instead of propagating the exception).
+
+    ``env``, if given, REPLACES the subprocess's environment entirely — pass
+    a pre-scrubbed dict (see ``runners.local_dev_runner._scrubbed_env``) to
+    keep API keys and other host secrets out of the rendered script's
+    ``os.environ``. ``None`` (the default) inherits the current process's
+    full environment, matching this function's original, pre-hardening
+    behavior — existing callers are unaffected.
     """
     return subprocess.run(
         [sys.executable, script_name],
@@ -32,4 +40,5 @@ def run_render(
         capture_output=True,
         text=True,
         timeout=timeout,
+        env=env,
     )
