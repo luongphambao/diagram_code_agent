@@ -1,6 +1,16 @@
-"""Composio-based Gmail tool for emailing workspace deliverables (PDF/PPTX/XLSX/...)."""
+"""Composio-based Gmail tool for emailing workspace deliverables (PDF/PPTX/XLSX/...).
 
-from __future__ import annotations
+Deliberately no ``from __future__ import annotations`` here: LangChain's
+``StructuredTool._injected_args_keys`` (which decides which parameters get the
+runtime/state/store injected) inspects ``inspect.signature(fn)`` WITHOUT
+resolving stringified annotations. Under postponed evaluation, `runtime:
+ToolRuntime[SessionContext]` shows up as the raw string "ToolRuntime[...]"
+instead of the real type, so it's never recognized as injected — the LLM's
+tool call then crashes with "missing 1 required positional argument:
+'runtime'" the moment this tool is actually invoked by a live agent (unit
+tests that call `.func()` directly never hit this, since they bypass
+StructuredTool entirely).
+"""
 
 import hashlib
 import mimetypes

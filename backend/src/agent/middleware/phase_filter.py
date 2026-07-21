@@ -21,6 +21,8 @@ _UTILITY_TOOLS = frozenset({
     "quality_summary", "compare_revisions", "add_comment", "resolve_comment",
     "query_change_impact", "propose_meeting_slots", "create_client_meeting",
     "export_to_delivery",
+    "list_meeting_records", "get_meeting_transcript", "get_meeting_recordings",
+    "list_meeting_participants",
 })
 _DEEP_AGENT_BUILTIN_TOOLS = frozenset({
     "ls", "read_file", "write_file", "edit_file", "glob", "grep",

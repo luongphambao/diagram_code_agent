@@ -1,7 +1,18 @@
-"""Composio-based Google Calendar tools for scheduling client meetings."""
+"""Composio-based Google Calendar tools for scheduling client meetings.
 
-from __future__ import annotations
+Deliberately no ``from __future__ import annotations`` here: LangChain's
+``StructuredTool._injected_args_keys`` (which decides which parameters get the
+runtime/state/store injected) inspects ``inspect.signature(fn)`` WITHOUT
+resolving stringified annotations. Under postponed evaluation, `runtime:
+ToolRuntime[SessionContext]` shows up as the raw string "ToolRuntime[...]"
+instead of the real type, so it's never recognized as injected — the LLM's
+tool call then crashes with "missing 1 required positional argument:
+'runtime'" the moment this tool is actually invoked by a live agent (unit
+tests that call `.func()` directly never hit this, since they bypass
+StructuredTool entirely).
+"""
 
+import json
 import os
 from datetime import datetime, timedelta
 from typing import Optional
@@ -16,6 +27,12 @@ from context import SessionContext
 
 
 _DEFAULT_TZ = "Asia/Ho_Chi_Minh"
+
+# Pin the toolkit version so a future Composio schema change can't silently
+# change these tools' request/response shape underneath us (mirrors
+# GMAIL_SEND_EMAIL's pin in email.py). Verified live via
+# client.toolkits.get("GOOGLECALENDAR").meta.version — refresh the same way.
+_TOOLKIT_VERSION = "20260623_00"
 
 
 def _get_composio_client(ctx: SessionContext | None = None):
@@ -107,6 +124,7 @@ def propose_meeting_slots(
                 "calendar_id": calendar_id,
             },
             connected_account_id=acct_id,
+            version=_TOOLKIT_VERSION,
         )
     except Exception as exc:
         return (
@@ -253,6 +271,7 @@ def create_client_meeting(
                 "create_meeting_room": add_google_meet,
             },
             connected_account_id=acct_id,
+            version=_TOOLKIT_VERSION,
         )
     except Exception as exc:
         return (
@@ -285,4 +304,32 @@ def create_client_meeting(
         parts.append(f"  Calendar link: {event_link}")
     if meet_link:
         parts.append(f"  Google Meet: {meet_link}")
+
+    try:
+        from backends import current_workspace
+
+        workspace = current_workspace()
+        workspace.mkdir(parents=True, exist_ok=True)
+        (workspace / "last_meeting.json").write_text(
+            json.dumps(
+                {
+                    "title": title,
+                    "start_datetime": start_datetime,
+                    "end_datetime": end_datetime,
+                    "timezone": timezone,
+                    "attendee_email": attendee_email,
+                    "attendee_name": attendee_name,
+                    "event_link": event_link,
+                    "meet_link": meet_link,
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+    except Exception:
+        # Best-effort — the meeting was already created; don't fail the tool
+        # over a UI-surfacing side artifact.
+        pass
+
     return "\n".join(parts)

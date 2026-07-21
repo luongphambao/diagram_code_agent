@@ -26,9 +26,11 @@ class SessionContext:
         composio_api_key: Composio API key override (falls back to ``COMPOSIO_API_KEY``).
         gmail_account_id: Composio connected Gmail account id for sending reports.
         calendar_account_id: Composio connected Google Calendar account id.
+        meet_account_id: Composio connected Google Meet account id.
     """
 
     user_email: str = ""
     composio_api_key: str = ""
     gmail_account_id: str = ""
     calendar_account_id: str = ""
+    meet_account_id: str = ""

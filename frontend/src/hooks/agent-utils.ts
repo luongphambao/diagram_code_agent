@@ -229,6 +229,17 @@ export interface ComplianceState {
   controls: ComplianceControl[];
 }
 
+export interface LastMeeting {
+  title: string;
+  start_datetime: string;
+  end_datetime: string;
+  timezone: string;
+  attendee_email: string;
+  attendee_name: string;
+  event_link: string;
+  meet_link: string;
+}
+
 export interface AgentState {
   current_step?: string;
   iteration?: number;
@@ -251,6 +262,7 @@ export interface AgentState {
   quality?: QualitySnapshot;
   drift?: DriftReport;
   compliance?: ComplianceState;
+  last_meeting?: LastMeeting;
 }
 
 export type InterruptType =

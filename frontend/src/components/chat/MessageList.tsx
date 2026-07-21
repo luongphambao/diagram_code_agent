@@ -69,14 +69,14 @@ export default function MessageList() {
     chatMessages: messages, pendingInterrupt, gateHistory, isRunning,
     agentState, activity, activeSubagent, error, resolveGate,
   } = useAgentContext();
-  const { pdf_base64: pdfBase64, pptx_base64: pptxBase64, wbs_xlsx_base64: wbsXlsxBase64, wbs_summary: wbsSummary, iteration } = agentState;
+  const { pdf_base64: pdfBase64, pptx_base64: pptxBase64, wbs_xlsx_base64: wbsXlsxBase64, wbs_summary: wbsSummary, last_meeting: lastMeeting, iteration } = agentState;
 
   const [wbsPreviewOpen, setWbsPreviewOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, error, pendingInterrupt, pdfBase64, pptxBase64, wbsXlsxBase64]);
+  }, [messages, error, pendingInterrupt, pdfBase64, pptxBase64, wbsXlsxBase64, lastMeeting]);
 
   const onResolveTechStack = (approved: boolean, modifications?: string) =>
     resolveGate({ approved, modifications: modifications?.trim() || null });
@@ -303,6 +303,39 @@ export default function MessageList() {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {lastMeeting && (
+        <div className="ml-9 max-w-[82%] rounded-2xl rounded-tl-sm border border-violet-500/20 bg-violet-950/20 px-4 py-3">
+          <div className="flex items-start gap-3">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-violet-500/15">
+              <svg className="h-4 w-4 text-violet-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="5" width="14" height="14" rx="2" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 9.5l4-2.25v9.5l-4-2.25" />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-white">Meeting scheduled: {lastMeeting.title}</p>
+              <p className="mt-1 text-xs text-slate-500">
+                {lastMeeting.attendee_name} &lt;{lastMeeting.attendee_email}&gt; · {lastMeeting.timezone}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {lastMeeting.event_link && (
+                  <a href={lastMeeting.event_link} target="_blank" rel="noreferrer"
+                    className="rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1.5 text-xs font-semibold text-violet-200 transition-colors hover:bg-violet-500/20">
+                    Open Calendar Event
+                  </a>
+                )}
+                {lastMeeting.meet_link && (
+                  <a href={lastMeeting.meet_link} target="_blank" rel="noreferrer"
+                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200 transition-colors hover:bg-white/10">
+                    Join Google Meet
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         </div>

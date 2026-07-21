@@ -324,6 +324,64 @@ GMAIL_CONNECTED_ACCOUNT_ID=ca_xxxxx           # required for Gmail send_email; m
 | `Toolkit version not specified`                    | Update the `version=` parameter in `backend/src/integrations/email.py` with the latest version from `c.toolkits.get("GMAIL").meta.version` |
 | `out.pdf not found in workspace`                   | Call `generate_pdf_report` first to produce `out.pdf` before emailing                                                     |
 
+## Meeting Scheduling (Composio Google Calendar + Google Meet)
+
+The agent can check a connected Google Calendar for free time, let the user pick a slot, and create the client meeting with an auto-generated Google Meet link — all via Composio, no shell access needed. A separate, optional set of read-only Google Meet tools can pull back the transcript/recording/participants of a past call once it's finished.
+
+### Booking flow (Google Calendar)
+
+1. Connect Google Calendar (one-time OAuth flow):
+
+```bash
+cd backend
+uv run composio add googlecalendar
+# Opens browser — complete the Google OAuth consent and authorise the Calendar scope.
+```
+
+2. Find the connected account ID the same way as Gmail (`setup_gmail_composio.py`, or `client.client.connected_accounts.list()` filtered on `toolkit.slug == "googlecalendar"` and `status == "ACTIVE"`), then set it in `backend/.env`:
+
+```bash
+GOOGLE_CALENDAR_CONNECTED_ACCOUNT_ID=ca_YOUR_ACTIVE_CALENDAR_ACCOUNT_ID
+```
+
+3. When the user asks to schedule a call with a client, the agent calls `propose_meeting_slots` (queries `GOOGLECALENDAR_FIND_FREE_SLOTS`, then pauses so the frontend shows a slot picker), then `create_client_meeting` (calls `GOOGLECALENDAR_CREATE_EVENT` with `create_meeting_room=true` — this is what generates the Google Meet link — and pauses as a HITL approval gate before the event is actually created). The confirmation card and chat both surface the resulting calendar link and Meet link.
+
+### Read-only Google Meet tools (past meetings)
+
+Google Meet is a separate Composio toolkit from Calendar and needs its own connected account:
+
+```bash
+cd backend
+uv run composio add googlemeet
+# Requires the meetings.space.created scope; readonly access to conference
+# records/transcripts/recordings/participants is granted alongside it.
+```
+
+Find the connected account ID (same lookup pattern, filtering on `toolkit.slug == "googlemeet"`) and set it in `backend/.env`:
+
+```bash
+GOOGLE_MEET_CONNECTED_ACCOUNT_ID=ca_YOUR_ACTIVE_MEET_ACCOUNT_ID
+```
+
+Once set, the agent can use, in order:
+
+- `list_meeting_records` (`GOOGLEMEET_LIST_CONFERENCE_RECORDS`) — find a finished call and get its conference record name.
+- `get_meeting_transcript` (`GOOGLEMEET_GET_TRANSCRIPTS_BY_CONFERENCE_RECORD_ID` + `GOOGLEMEET_LIST_TRANSCRIPT_ENTRIES`) — full transcript, for summarizing into requirements/WBS notes.
+- `get_meeting_recordings` (`GOOGLEMEET_GET_RECORDINGS_BY_CONFERENCE_RECORD_ID`) — Drive links to the recording, if enabled.
+- `list_meeting_participants` (`GOOGLEMEET_LIST_PARTICIPANTS`) — who actually attended.
+
+These are read-only lookups (no HITL gate). Transcript/recording data requires transcription/recording to have been turned on for that call, and a Workspace edition that supports it (Business Standard/Plus, Enterprise, Education Plus) — the tools return a plain "not available" message otherwise, they don't error.
+
+> **Toolkit version note:** like Gmail, both toolkits are pinned to a specific version (not `"latest"`) in `backend/src/integrations/calendar.py` and `backend/src/integrations/meet.py`. Refresh the same way as the Gmail note above, substituting `c.toolkits.get("GOOGLECALENDAR").meta.version` / `c.toolkits.get("GOOGLEMEET").meta.version`.
+
+### Environment Variable Summary
+
+```bash
+# backend/.env
+GOOGLE_CALENDAR_CONNECTED_ACCOUNT_ID=ca_xxxxx  # required for propose_meeting_slots / create_client_meeting
+GOOGLE_MEET_CONNECTED_ACCOUNT_ID=ca_xxxxx      # required only for the read-only Meet lookup tools
+```
+
 ## LangGraph Details
 
 Deep Agents compiles the agent into a LangGraph graph. The application uses LangGraph for streamed execution, thread-scoped checkpoints, human approval interrupts, and run resumption.

@@ -29,6 +29,16 @@ _MAIN_TOOLS_BLOCK = """\
   confidence, kind. After patching ALWAYS call `query_change_impact()`.
 - `query_change_impact()` — blast-radius report comparing current CSM to previous
   snapshot. Call immediately after any requirement change or `edit_entity` call.
+- `list_meeting_records(meeting_code="", space_name="", time_min="", time_max="")` —
+  find past Google Meet calls (e.g. a client kickoff) and get their conference
+  record name. Read-only, no gate. Use before the transcript/recording/participant
+  tools below.
+- `get_meeting_transcript(conference_record_name)` — full transcript of a finished
+  Meet call, for summarizing client discussion into requirements/WBS notes.
+- `get_meeting_recordings(conference_record_name)` — Drive links to the call's
+  recording file(s), if recording was enabled.
+- `list_meeting_participants(conference_record_name)` — who actually attended a
+  finished call.
 - `quality_summary()` — 0-100 quality score with findings/evidence/assumption breakdown.
   Writes `quality_snapshot.json`. Call after every gate or on user request.
 - `apply_compliance_pack(pack_name)` — activate a compliance control pack (available:

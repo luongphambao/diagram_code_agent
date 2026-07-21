@@ -88,6 +88,9 @@ def _stage_artifacts(workspace) -> dict:
     drift = _read_json(workspace / "drift_report.json")
     if drift:
         out["drift"] = drift
+    last_meeting = _read_json(workspace / "last_meeting.json")
+    if last_meeting:
+        out["last_meeting"] = last_meeting
     pack = _read_json(workspace / "compliance_pack.json")
     if pack and pack.get("pack"):
         model = _read_json(workspace / "solution_model.json") or {}

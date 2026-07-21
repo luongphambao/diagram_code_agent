@@ -222,7 +222,11 @@ DIAGRAM_TOOLS = [
 ]
 
 # Late imports (same as original tools.py bottom section)
-from integrations import send_email, propose_meeting_slots, create_client_meeting  # noqa: E402
+from integrations import (  # noqa: E402
+    send_email, propose_meeting_slots, create_client_meeting,
+    list_meeting_records, get_meeting_transcript, get_meeting_recordings,
+    list_meeting_participants,
+)
 from domain.wbs.wbs_tools import (  # noqa: E402
     WBS_PLANNER_TOOLS, propose_wbs_skeleton, propose_wbs, export_wbs_excel,
 )
@@ -256,6 +260,10 @@ MAIN_TOOLS = [
     send_email,
     propose_meeting_slots,    # uses internal interrupt() — NOT in GATE_TOOL_NAMES
     create_client_meeting,    # interrupt_on gate — in GATE_TOOL_NAMES
+    list_meeting_records,     # read-only: past Google Meet conference records
+    get_meeting_transcript,   # read-only: transcript of a finished Meet call
+    get_meeting_recordings,   # read-only: recording file links for a finished call
+    list_meeting_participants,  # read-only: who attended a finished call
     propose_wbs_skeleton,     # WBS structure approval gate
     propose_wbs,              # WBS plan/effort approval gate
     export_wbs_excel,         # WBS .xlsx deliverable gate
