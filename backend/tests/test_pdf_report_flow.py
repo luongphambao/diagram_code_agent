@@ -242,6 +242,40 @@ def test_wbs_followup_detects_first_time_creation():
     assert not server._is_wbs_followup("thêm reporting service vào kiến trúc")
 
 
+def test_email_followup_detection():
+    assert server._is_email_followup("send email now")
+    assert server._is_email_followup("gửi qua email cho khách")
+    assert server._is_email_followup("gui email cho khach hang")
+    assert server._is_email_followup("send this to the client please")
+    assert not server._is_email_followup("please add redis to the diagram")
+
+
+def test_email_followup_does_not_false_positive_on_bare_email_mentions():
+    """Regression test: bare "email"/"mail" are common nouns in ordinary design
+    requests ("add email verification", "email field on the login form") that
+    have nothing to do with sending mail. Matching them would wrongly redirect
+    an unrelated design edit into a send_email instruction."""
+    assert not server._is_email_followup("add email verification to the signup flow")
+    assert not server._is_email_followup("thêm trường email vào form đăng nhập")
+    assert not server._is_email_followup("add a mail queue service to the architecture")
+    assert not server._is_email_followup("integrate with gmail api for notifications")
+
+
+def test_email_followup_wins_over_wbs_and_pdf_phrasing():
+    """Regression test: "gửi file WBS qua email" / "send the report by email"
+    contain "wbs"/"report" and would otherwise be mis-classified by
+    _is_wbs_followup/_is_pdf_followup as a re-export/regenerate request. The
+    email detector must ALSO fire so chat.py's preserve_email_artifacts branch
+    (checked first) wins and the deliverable is sent, not regenerated."""
+    msg1 = "gửi file WBS qua email cho khách"
+    assert server._is_wbs_followup(msg1)
+    assert server._is_email_followup(msg1)
+
+    msg2 = "send the report by email"
+    assert server._is_pdf_followup(msg2)
+    assert server._is_email_followup(msg2)
+
+
 def test_wbs_gate_card_coerces_stringified_phases_and_effort():
     """A model that emits phases / effort_by_module / effort_by_role as JSON strings must
     still yield real list/dict card fields, else the frontend Array.isArray/entries guards

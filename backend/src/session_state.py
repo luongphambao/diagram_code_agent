@@ -40,6 +40,7 @@ from session import (  # noqa: F401 — re-exported for backward compatibility
     _compact_json,
     _decision_from_payload,
     _display_subagent,
+    _is_email_followup,
     _is_pdf_followup,
     _is_ppt_followup,
     _is_wbs_followup,

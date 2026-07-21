@@ -29,6 +29,7 @@ from session_state import (
     _card_for,
     _decision_from_payload,
     _display_subagent,
+    _is_email_followup,
     _is_pdf_followup,
     _is_ppt_followup,
     _is_wbs_followup,
@@ -266,12 +267,13 @@ async def agui_endpoint(request: Request):
                 is_pdf_followup = _is_pdf_followup(desc)
                 is_ppt_followup = _is_ppt_followup(desc)
                 is_wbs_followup = _is_wbs_followup(desc)
-                if (is_pdf_followup or is_ppt_followup or is_wbs_followup) and not attached:
+                is_email_followup = _is_email_followup(desc)
+                if (is_pdf_followup or is_ppt_followup or is_wbs_followup or is_email_followup) and not attached:
                     # Restore before deciding whether a downstream follow-up can
                     # preserve artifacts. A previous run may have wiped the
                     # per-thread JSON files while the conversation snapshot still
                     # has them; checking disk first would falsely classify the
-                    # request as fresh and clear the files WBS/PPT/PDF need.
+                    # request as fresh and clear the files WBS/PPT/PDF/email need.
                     await _restore_workspace_from_db(request.app.state.pool, thread_id, ws)
                 # A newly attached document is fresh intake for a (possibly new) project,
                 # not a request to re-export the existing diagram/WBS — never preserve
@@ -290,13 +292,34 @@ async def agui_endpoint(request: Request):
                     desc, solution_exists=solution_exists,
                     wbs_exists=_wbs_plan_ready(ws), attached=bool(attached),
                 )
-                preserve_artifacts = preserve_diagram_artifacts or preserve_wbs_artifacts
+                # A request to EMAIL a deliverable is never a regenerate/re-export request,
+                # even when the phrasing also matches "wbs"/"report" (e.g. "gửi file WBS qua
+                # email"). Preserve everything on disk unconditionally and never let the
+                # pdf/ppt/wbs branches below inject a "regenerate now" instruction — see the
+                # `preserve_email_artifacts` check ordered first in the if/elif chain.
+                preserve_email_artifacts = is_email_followup and not attached
+                preserve_artifacts = (
+                    preserve_diagram_artifacts or preserve_wbs_artifacts or preserve_email_artifacts
+                )
                 if not preserve_artifacts:
                     clear_stage_markers(
                         preserve_wbs=(not attached and _wbs_plan_ready(ws))
                     )
                 else:
-                    if wbs_already_planned:
+                    if preserve_email_artifacts:
+                        desc = (
+                            (desc + "\n\n" if desc else "")
+                            + "IMPORTANT: The user wants to SEND an already-generated "
+                            "deliverable via email. Do NOT regenerate/re-render/re-export "
+                            "anything and do NOT re-run the WBS/PDF/PPT pipeline — the "
+                            "files (out.pdf, out.pptx, wbs_filled.xlsx, out.drawio, "
+                            "out.png) already exist in the workspace. Call `send_email(...)` "
+                            "directly; leave `attachments` empty to attach whatever "
+                            "deliverables already exist, or name a specific subset. Only "
+                            "generate a deliverable first if the one requested genuinely "
+                            "does not exist yet."
+                        )
+                    elif wbs_already_planned:
                         desc = (
                             (desc + "\n\n" if desc else "")
                             + "IMPORTANT: The user is asking to (re-)export/send the WBS "

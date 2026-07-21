@@ -27,6 +27,7 @@ from .sse import (
     _tool_selection_tools,
 )
 from .followups import (
+    _is_email_followup,
     _is_pdf_followup,
     _is_ppt_followup,
     _is_wbs_followup,

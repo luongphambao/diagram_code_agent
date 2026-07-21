@@ -48,7 +48,7 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
         "send_email",
     },
     "wbs": _UTILITY_TOOLS | _WBS_DELIVERABLE_TOOLS | {
-        "web_research",
+        "web_research", "send_email",
     },
     "ppt": _UTILITY_TOOLS | _WBS_DELIVERABLE_TOOLS | {
         "propose_deck_plan", "generate_ppt_proposal",

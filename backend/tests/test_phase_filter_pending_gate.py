@@ -79,6 +79,33 @@ def test_draw_phase_keeps_wbs_deliverable_tools(monkeypatch, tmp_path):
     assert "send_email" in names
     assert "propose_tech_stack" in names  # kept for missing foundational artifact backfill
 
+def test_wbs_phase_keeps_send_email_tool(monkeypatch, tmp_path):
+    """Regression test: right after a WBS is created (wbs.json exists, but no
+    out.pdf/out.png yet), phase is inferred as "wbs". send_email must stay
+    available there, else the model has no tool to email the WBS deliverable
+    and falls back to calling export_wbs_excel() again (regenerating it)."""
+    phase_filter = _load_phase_filter_module()
+    (tmp_path / "wbs.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setitem(
+        sys.modules,
+        "backends",
+        SimpleNamespace(current_workspace=lambda: tmp_path),
+    )
+
+    tools = [
+        _Tool("propose_wbs_skeleton"),
+        _Tool("propose_wbs"),
+        _Tool("export_wbs_excel"),
+        _Tool("send_email"),
+        _Tool("web_research"),
+    ]
+
+    names = {tool.name for tool in phase_filter.PhaseToolFilterMiddleware()._filtered_tools(tools)}
+
+    assert "send_email" in names
+    assert "export_wbs_excel" in names
+
+
 def test_report_phase_keeps_wbs_reexport_tool(monkeypatch, tmp_path):
     phase_filter = _load_phase_filter_module()
     (tmp_path / "out.pdf").write_bytes(b"report")
