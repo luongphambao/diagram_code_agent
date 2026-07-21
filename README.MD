@@ -382,6 +382,12 @@ GOOGLE_CALENDAR_CONNECTED_ACCOUNT_ID=ca_xxxxx  # required for propose_meeting_sl
 GOOGLE_MEET_CONNECTED_ACCOUNT_ID=ca_xxxxx      # required only for the read-only Meet lookup tools
 ```
 
+To verify the whole Composio setup (Gmail + Calendar + Meet) actually works end-to-end,
+alongside diagram/PDF/WBS/PPT generation, run the live full-pipeline smoke test:
+`cd backend && uv run python -m evals.e2e.run_full_flow` — see `backend/evals/README.md`.
+It sends a real email and books a real calendar event/Meet, so run it deliberately,
+not on every commit.
+
 ## LangGraph Details
 
 Deep Agents compiles the agent into a LangGraph graph. The application uses LangGraph for streamed execution, thread-scoped checkpoints, human approval interrupts, and run resumption.
