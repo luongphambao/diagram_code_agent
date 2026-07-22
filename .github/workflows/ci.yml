@@ -47,10 +47,14 @@ jobs:
         run: uv run pyright . || true
         continue-on-error: true
       - name: pytest + coverage
+        # Actual coverage measured at 65% when this gate was added — 60 leaves
+        # a few points of margin so normal fluctuation doesn't flake the
+        # build, while still catching a real drop. Raise deliberately as
+        # coverage improves; don't lower it to make a red build pass.
         run: |
           uv run pytest tests/ -q \
             --cov=src --cov-report=term-missing --cov-report=xml \
-            --cov-fail-under=45
+            --cov-fail-under=60
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4
@@ -90,9 +94,13 @@ jobs:
           fetch-depth: 0
 
       - name: Gitleaks (secret scanning)
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Required if this repo lives under a GitHub organization account
+          # (free key from gitleaks.io); not needed for a personal account.
+          # Empty/unset is fine either way — only enforced when applicable.
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
       - uses: astral-sh/setup-uv@v5
       - name: pip-audit (backend dependency vulnerabilities)
@@ -127,11 +135,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Compute build metadata
+        id: meta
+        run: echo "build_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
       - name: Build backend image
         # First real build-verification of backend/Dockerfile's §1.6 hardening
         # (non-root user, pinned base digest, Playwright browsers path, health
         # check) — it could not be build-tested in the sandbox that wrote it.
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: backend/Dockerfile
@@ -140,7 +152,7 @@ jobs:
           tags: diagram-agent-backend:ci
           build-args: |
             GIT_SHA=${{ github.sha }}
-            BUILD_TIME=${{ github.event.repository.updated_at }}
+            BUILD_TIME=${{ steps.meta.outputs.build_time }}
 
       - name: Boot backend image and check /health/live
         run: |
@@ -157,7 +169,7 @@ jobs:
           docker rm -f backend-smoke
 
       - name: Trivy image scan
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: diagram-agent-backend:ci
           severity: CRITICAL,HIGH
@@ -173,6 +185,25 @@ jobs:
         with:
           name: backend-sbom
           path: backend-sbom.spdx.json
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: frontend/Dockerfile
+          push: false
+          load: true
+          tags: diagram-agent-frontend:ci
+
+      - name: Boot frontend image and check it serves
+        run: |
+          docker run -d --name frontend-smoke -p 8080:80 diagram-agent-frontend:ci
+          for i in $(seq 1 15); do
+            if curl -sf http://localhost:8080/ > /dev/null; then break; fi
+            sleep 2
+          done
+          curl -sf http://localhost:8080/ > /dev/null
+          docker rm -f frontend-smoke
 
   modal-smoke:
     # Real Modal compute + live credentials — runs only on the protected
