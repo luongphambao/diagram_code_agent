@@ -86,3 +86,13 @@ _OUT_NAMES = (
 # prettygraph package must be importable by the generated diagram.py (pretty style does
 # `from prettygraph import Pretty`). Stage the package directory into the workspace.
 _PRETTYGRAPH_PKG_DIR = Path(__file__).parent.parent / "prettygraph"
+
+# Code-interpreter tool (improvement plan §C) — same sandbox as render_diagram,
+# but a data transform is typically pure Python over an already-in-memory-sized
+# JSON/CSV file, so it should finish in seconds; the timeout is well under
+# render's 180s. Hard cap mirrors RENDER_HARD_CAP's rationale (§C's flagship
+# use case, WBS re-estimation, is a single call-then-commit — this only
+# guards against a retry loop, not normal usage).
+INTERPRETER_TIMEOUT_S = 60
+INTERPRETER_CALL_HARD_CAP = 6
+_INTERPRETER_COUNT_FILE = WorkspaceFile("interpreter_count.json")

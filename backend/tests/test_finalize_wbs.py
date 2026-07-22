@@ -22,7 +22,8 @@ from wbs_tools import (
 def _bind(monkeypatch, ws):
     ws.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(
-        backends, "_current_workspace",
+        backends,
+        "_current_workspace",
         contextvars.ContextVar("current_workspace", default=ws),
     )
 
@@ -30,19 +31,32 @@ def _bind(monkeypatch, ws):
 def _build_minimal_wbs():
     draft_wbs_skeleton.func(
         project_info=ProjectInfo(name="Demo", project_code="DMO"),
-        phases=[PhaseMeta(code="II", name="DEVELOPMENT",
-                          modules=[ModuleMeta(code="II.A", name="Web Portal")])],
+        phases=[
+            PhaseMeta(code="II", name="DEVELOPMENT", modules=[ModuleMeta(code="II.A", name="Web Portal")])
+        ],
     )
-    add_wbs_items.func(items=[
-        LeafIn(phase_code="II", module_code="II.A", name="Login", be=2, fe=2),
-        LeafIn(phase_code="II", module_code="II.A", name="Dashboard", be=3, fe=2),
-    ])
+    add_wbs_items.func(
+        items=[
+            LeafIn(phase_code="II", module_code="II.A", name="Login", be=2, fe=2),
+            LeafIn(phase_code="II", module_code="II.A", name="Dashboard", be=3, fe=2),
+        ]
+    )
 
 
 def test_planner_toolset_is_reduced_to_four():
+    # improvement plan §C added apply_wbs_reestimate (domain/wbs/wbs_tools.py)
+    # and run_python (tools/code_interpreter.py, attached in tools/__init__.py)
+    # on top of the original four — this list is imported from
+    # domain.wbs.wbs_tools directly, so it does NOT include run_python (that
+    # composition only happens in tools/__init__.py); see test_code_interpreter.py.
     names = [t.name for t in WBS_PLANNER_TOOLS]
-    assert names == ["load_solution_context", "draft_wbs_skeleton",
-                     "add_wbs_items", "finalize_wbs"]
+    assert names == [
+        "load_solution_context",
+        "draft_wbs_skeleton",
+        "add_wbs_items",
+        "finalize_wbs",
+        "apply_wbs_reestimate",
+    ]
 
 
 def test_finalize_wbs_runs_full_tail(tmp_path, monkeypatch):
@@ -80,8 +94,9 @@ def test_draft_skeleton_resets_stale_different_project(tmp_path, monkeypatch):
 
     out = draft_wbs_skeleton.func(
         project_info=ProjectInfo(name="Other Project", project_code="OTH"),
-        phases=[PhaseMeta(code="II", name="DEVELOPMENT",
-                          modules=[ModuleMeta(code="II.B", name="Mobile App")])],
+        phases=[
+            PhaseMeta(code="II", name="DEVELOPMENT", modules=[ModuleMeta(code="II.B", name="Mobile App")])
+        ],
     )
     assert "reset stale WBS files from a different project ('Demo')" in out
 
@@ -96,8 +111,9 @@ def test_draft_skeleton_same_project_does_not_reset(tmp_path, monkeypatch):
 
     out = draft_wbs_skeleton.func(
         project_info=ProjectInfo(name="Demo", project_code="DMO"),
-        phases=[PhaseMeta(code="II", name="DEVELOPMENT",
-                          modules=[ModuleMeta(code="II.A", name="Web Portal")])],
+        phases=[
+            PhaseMeta(code="II", name="DEVELOPMENT", modules=[ModuleMeta(code="II.A", name="Web Portal")])
+        ],
     )
     assert "reset stale WBS files" not in out
 
@@ -106,8 +122,7 @@ def test_draft_skeleton_ratio_scalars_override(tmp_path, monkeypatch):
     _bind(monkeypatch, tmp_path / "ws3")
     draft_wbs_skeleton.func(
         project_info=ProjectInfo(name="Demo", project_code="DMO"),
-        phases=[PhaseMeta(code="II", name="DEV",
-                          modules=[ModuleMeta(code="II.A", name="Web")])],
+        phases=[PhaseMeta(code="II", name="DEV", modules=[ModuleMeta(code="II.A", name="Web")])],
         qc_on_dev=0.2,
     )
     sk = json.loads((tmp_path / "ws3" / "wbs_skeleton.json").read_text(encoding="utf-8"))

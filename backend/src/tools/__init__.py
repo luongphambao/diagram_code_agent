@@ -237,6 +237,13 @@ from domain.wbs.wbs_tools import (  # noqa: E402
     propose_wbs,
     export_wbs_excel,
 )
+from .code_interpreter import run_python  # noqa: E402
+
+# improvement plan §C: run_python is attached to wbs_planner ONLY (not the main
+# agent, not other subagents) — its flagship use case is WBS re-estimation via
+# apply_wbs_reestimate, and scoping it to one subagent keeps its blast radius
+# narrow for this first pass rather than exposing sandboxed code-exec broadly.
+WBS_PLANNER_TOOLS = WBS_PLANNER_TOOLS + [run_python]
 
 MAIN_TOOLS = [
     analyze_architecture_requirements,

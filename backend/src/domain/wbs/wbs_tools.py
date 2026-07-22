@@ -475,6 +475,162 @@ def add_wbs_items(items: list[LeafIn]) -> str:
     return msg
 
 
+def _safe_float(v: Any) -> float:
+    try:
+        return float(v or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+class ApplyWbsReestimateArgs(_CoercingModel):
+    source_file: str = Field(
+        description="Workspace filename (written by a prior run_python call, NEVER wbs.json "
+        "itself) holding a JSON object with an 'items' list in the same shape add_wbs_items "
+        "produces — module_code/name required per item; be/fe/mobile/ai/ba/phase_type drive "
+        "re-derivation, everything else is passed through."
+    )
+
+
+@tool(args_schema=ApplyWbsReestimateArgs)
+def apply_wbs_reestimate(source_file: str) -> str:
+    """Validate + commit a code-transformed WBS, then recompute everything downstream.
+
+    Use this after run_python transforms wbs.json's items (drop a column,
+    filter a phase, scale effort, ...) into a NEW file — never call this
+    with source_file="wbs.json" itself. For every item this re-derives
+    BA/QC/PM/total/PERT from its be/fe/mobile/ai/ba/phase_type using the
+    SAME deterministic ratio model add_wbs_items uses — any qc/pm/total the
+    interpreter script itself wrote is ignored and replaced, since it may be
+    stale after an edit (e.g. zeroing fe/mobile without recomputing pm).
+    Items with an unknown module_code or missing name are skipped and
+    reported, matching add_wbs_items's own validation. On success this
+    replaces wbs.json's items and runs the SAME rollup → timeline → team →
+    milestones → validate chain finalize_wbs uses, so the committed numbers
+    are never something the interpreter script asserted on its own.
+    """
+    wbs = _read_json(_WBS_FILE)
+    if not wbs:
+        return "No existing wbs.json — draft the skeleton and add items first; this tool re-estimates an EXISTING WBS, it does not create one."
+
+    source_path = current_workspace() / source_file
+    if not source_path.exists():
+        return f"'{source_file}' does not exist in the workspace — did run_python declare it in declared_outputs?"
+    try:
+        payload = json.loads(source_path.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        return f"'{source_file}' is not valid JSON: {exc}"
+
+    raw_items = payload.get("items") if isinstance(payload, dict) else None
+    if not isinstance(raw_items, list):
+        return f"'{source_file}' must be a JSON object with an 'items' list (got {type(payload).__name__})."
+
+    # Valid module codes come from the skeleton. compute_wbs_rollup swaps
+    # wbs["phases"] for the nested export tree on its first run and moves the
+    # flat skeleton to phases_meta (see that function's own comment) — so a
+    # re-estimate on an already-finalized WBS must prefer phases_meta.
+    skeleton_phases = wbs.get("phases_meta") or wbs.get("phases") or []
+    valid_modules = {m["code"] for p in skeleton_phases for m in p.get("modules", [])}
+
+    r = Ratios(**{k: wbs["ratios"][k] for k in ("ba_on_dev", "qc_on_dev", "pm_on_total")})
+    pc = wbs.get("project_info", {}).get("project_code", "BNK")
+
+    rebuilt: list[dict] = []
+    bad_modules: list[str] = []
+    skipped_malformed = 0
+    for raw in raw_items:
+        if not isinstance(raw, dict):
+            skipped_malformed += 1
+            continue
+        module_code = str(raw.get("module_code") or "")
+        if module_code not in valid_modules:
+            bad_modules.append(module_code)
+            continue
+        name = str(raw.get("name") or "")
+        if not name:
+            skipped_malformed += 1
+            continue
+
+        be, fe, mobile, ai = (
+            _safe_float(raw.get("be")),
+            _safe_float(raw.get("fe")),
+            _safe_float(raw.get("mobile")),
+            _safe_float(raw.get("ai")),
+        )
+        ba_in = _safe_float(raw.get("ba"))
+        phase_type = str(raw.get("phase_type") or "development")
+        eff = derive_leaf_effort(
+            be=be, fe=fe, mobile=mobile, ai=ai, ba=ba_in, phase_type=phase_type, ratios=r
+        )
+
+        optimistic, likely, pessimistic = (
+            _safe_float(raw.get("optimistic")),
+            _safe_float(raw.get("likely")),
+            _safe_float(raw.get("pessimistic")),
+        )
+        pert = round((optimistic + 4 * likely + pessimistic) / 6, 4) if likely > 0 else 0.0
+        pert_p50 = pert_percentile(optimistic, likely, pessimistic, 0.0) if likely > 0 else 0.0
+        pert_p80 = pert_percentile(optimistic, likely, pessimistic, 0.842) if likely > 0 else 0.0
+
+        seq = len(rebuilt) + 1
+        rebuilt.append(
+            {
+                "seq": seq,
+                "ref_code": str(raw.get("ref_code") or make_ref_code(pc, seq)),
+                "phase_code": str(raw.get("phase_code") or ""),
+                "module_code": module_code,
+                "group": raw.get("group") or None,
+                "name": name,
+                "description": str(raw.get("description") or ""),
+                "phase_type": phase_type,
+                "remark": raw.get("remark") or None,
+                "be": eff["be"],
+                "fe": eff["fe"],
+                "mobile": eff["mobile"],
+                "ai": eff["ai"],
+                "fe_mobile": round(eff["fe"] + eff["mobile"] + eff["ai"], 4),
+                "ba": eff["ba"],
+                "qc": eff["qc"],
+                "pm": eff["pm"],
+                "total": eff["total"],
+                "optimistic": optimistic,
+                "likely": likely,
+                "pessimistic": pessimistic,
+                "pert_expected_md": pert,
+                "pert_p50_md": pert_p50,
+                "pert_p80_md": pert_p80,
+                "predecessors": [str(p).strip() for p in (raw.get("predecessors") or [])],
+                "dependencies": raw.get("dependencies") or [],
+                "owner": raw.get("owner") or None,
+                "acceptance_criteria": list(raw.get("acceptance_criteria") or []),
+            }
+        )
+
+    if not rebuilt:
+        msg = "No valid items after validation — nothing committed, wbs.json is unchanged."
+        if bad_modules:
+            msg += f" Unknown module_code(s): {sorted(set(bad_modules))}. Valid: {sorted(valid_modules)}."
+        if skipped_malformed:
+            msg += f" {skipped_malformed} item(s) missing a name or not an object."
+        return msg
+
+    wbs["items"] = rebuilt
+    _write_json(_WBS_FILE, wbs)
+
+    warnings = []
+    if bad_modules:
+        warnings.append(
+            f"WARNING: skipped {len(bad_modules)} item(s) with unknown module_code: "
+            f"{sorted(set(bad_modules))}."
+        )
+    if skipped_malformed:
+        warnings.append(
+            f"WARNING: skipped {skipped_malformed} malformed item(s) (missing name or not an object)."
+        )
+
+    header = f"Committed {len(rebuilt)} re-estimated item(s) from '{source_file}'."
+    return "\n".join([header, *warnings, finalize_wbs.func()])
+
+
 # ════════════════════════════════════════════════════════════════════════════
 # 5. compute_wbs_rollup — assemble nested tree + totals for export
 # ════════════════════════════════════════════════════════════════════════════
@@ -1125,6 +1281,10 @@ WBS_PLANNER_TOOLS = [
     draft_wbs_skeleton,
     add_wbs_items,
     finalize_wbs,
+    apply_wbs_reestimate,  # improvement plan §C: commits run_python's transformed
+    # wbs.json (see tools/code_interpreter.py; run_python itself is
+    # attached to WBS_PLANNER_TOOLS in tools/__init__.py, not here, to
+    # keep this module free of a domain->tools import).
 ]
 
 WBS_GATE_TOOLS = [propose_wbs_skeleton, propose_wbs, export_wbs_excel]
