@@ -23,6 +23,7 @@ load_dotenv()
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 from agent import build_agent, make_persistence
+from config.cors import resolve_allowed_origins
 import conversations as conv_db
 import session_state
 
@@ -74,14 +75,44 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Diagram Agent", version="3.0.0", lifespan=lifespan)
 
-_origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",") if o.strip()]
+# --- CORS (improvement plan §0.5) -------------------------------------------
+# The previous default (`ALLOWED_ORIGINS` unset -> "*") combined with
+# allow_credentials=True is an open CORS policy: any origin could read
+# authenticated responses. APP_ENV=production now fails CLOSED — it refuses
+# to start rather than silently falling back to a wildcard — so a forgotten
+# env var can never ship an open policy. Non-production keeps a small,
+# explicit local-dev default (matches docker-compose.yml's frontend origin)
+# instead of "*", so dev behavior matches prod's allowlist model.
+_APP_ENV = os.getenv("APP_ENV", "development")
+_origins = resolve_allowed_origins(_APP_ENV, os.getenv("ALLOWED_ORIGINS", ""))
+if not os.getenv("ALLOWED_ORIGINS", "").strip():
+    logger.warning(
+        "ALLOWED_ORIGINS not set — defaulting to local-dev origins %s (APP_ENV=%s). "
+        "Set ALLOWED_ORIGINS explicitly for any non-dev deployment.",
+        _origins, _APP_ENV,
+    )
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_origins or ["*"],
+    allow_origins=_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
 )
+
+
+@app.middleware("http")
+async def _security_headers(request, call_next):
+    """Baseline security headers (improvement plan §0.5) — cheap, broadly
+    applicable defenses that cost nothing for a JSON/SSE API with no
+    same-origin HTML rendering of user content."""
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    return response
+
 
 app.include_router(chat_router)
 app.include_router(upload_router)

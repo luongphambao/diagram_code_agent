@@ -23,6 +23,13 @@ TEXT_EXT = {".md", ".markdown", ".txt"}
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 SUPPORTED_EXT = PDF_EXT | DOCX_EXT | TEXT_EXT | IMAGE_EXT
 
+# Improvement plan §0.4: per-format ceilings so an unauthenticated upload
+# can't exhaust memory/CPU even after passing the size and content-sniff
+# checks in routers/upload.py — a small PDF can still declare thousands of
+# pages, and a small PNG can still declare an astronomical resolution.
+MAX_PDF_PAGES = 200
+MAX_IMAGE_PIXELS = 40_000_000  # ~40 MP
+
 
 @dataclass
 class ParsedDocument:
@@ -75,6 +82,10 @@ def _extract_pdf(path: Path) -> str:
         raise RuntimeError("pypdf not installed (pip install pypdf)") from e
 
     reader = PdfReader(str(path))
+    if len(reader.pages) > MAX_PDF_PAGES:
+        raise ValueError(
+            f"PDF has {len(reader.pages)} pages, exceeding the {MAX_PDF_PAGES}-page limit"
+        )
     pages: list[str] = []
     for i, page in enumerate(reader.pages):
         try:
@@ -99,6 +110,22 @@ _IMAGE_MIME: dict[str, str] = {
 
 def _extract_image(path: Path) -> tuple[str, str]:
     import base64
+
+    try:
+        from PIL import Image
+
+        with Image.open(path) as img:
+            img.verify()
+        with Image.open(path) as img:
+            width, height = img.size
+            if width * height > MAX_IMAGE_PIXELS:
+                raise ValueError(
+                    f"Image is {width}x{height} ({width * height} pixels), "
+                    f"exceeding the {MAX_IMAGE_PIXELS}-pixel limit"
+                )
+    except ImportError:
+        pass  # Pillow not installed — size cap in routers/upload.py still applies.
+
     mime = _IMAGE_MIME.get(path.suffix.lower(), "image/png")
     b64 = base64.standard_b64encode(path.read_bytes()).decode("ascii")
     return b64, mime
