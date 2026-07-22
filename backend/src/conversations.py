@@ -10,6 +10,7 @@ display-layer data:
 All functions accept `pool` which may be None (in-memory dev mode); in that
 case they are silently no-ops / return empty data.
 """
+
 from __future__ import annotations
 
 import json
@@ -171,9 +172,7 @@ async def delete(pool, thread_id: str) -> None:
         return
     try:
         async with pool.connection() as conn:
-            await conn.execute(
-                "DELETE FROM conversations WHERE thread_id=%s", (thread_id,)
-            )
+            await conn.execute("DELETE FROM conversations WHERE thread_id=%s", (thread_id,))
     except Exception as exc:  # noqa: BLE001
         logger.warning("delete conversation failed: %s", exc)
 
@@ -253,6 +252,7 @@ async def record_gate_outcome(
     if pool is None:
         return
     import datetime
+
     entry = {
         "gate": gate,
         "decision": decision,
@@ -286,8 +286,7 @@ async def get_history(pool, thread_id: str) -> dict | None:
         async with pool.connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
-                    "SELECT name, messages_json, state_json "
-                    "FROM conversations WHERE thread_id=%s",
+                    "SELECT name, messages_json, state_json FROM conversations WHERE thread_id=%s",
                     (thread_id,),
                 )
                 row = await cur.fetchone()

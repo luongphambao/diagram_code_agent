@@ -7,7 +7,11 @@ interface MeetingApprovalProps {
   disabled?: boolean;
 }
 
-export default function MeetingApproval({ interrupt, onResolve, disabled = false }: MeetingApprovalProps) {
+export default function MeetingApproval({
+  interrupt,
+  onResolve,
+  disabled = false,
+}: MeetingApprovalProps) {
   const [decided, setDecided] = useState(false);
   const [decision, setDecision] = useState<"approved" | "rejected" | null>(null);
 
@@ -40,7 +44,13 @@ export default function MeetingApproval({ interrupt, onResolve, disabled = false
       {/* Header */}
       <div className="flex items-center gap-2.5 border-b border-white/8 bg-white/4 px-4 py-3">
         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20">
-          <svg className="h-3.5 w-3.5 text-emerald-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            className="h-3.5 w-3.5 text-emerald-300"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
             <line x1="16" y1="2" x2="16" y2="6" />
             <line x1="8" y1="2" x2="8" y2="6" />
@@ -68,7 +78,9 @@ export default function MeetingApproval({ interrupt, onResolve, disabled = false
             {/* Title */}
             {title && (
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-300/70">Meeting</p>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-300/70">
+                  Meeting
+                </p>
                 <p className="mt-0.5 text-sm font-medium text-slate-100">{title}</p>
               </div>
             )}
@@ -76,13 +88,17 @@ export default function MeetingApproval({ interrupt, onResolve, disabled = false
             {/* Date & time */}
             {display_start && (
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-300/70">Date & Time</p>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-300/70">
+                  Date & Time
+                </p>
                 <p className="mt-0.5 text-sm text-slate-100">
                   {display_start}
                   {display_end ? ` – ${display_end}` : ""}
                 </p>
                 {duration_minutes ? (
-                  <p className="text-[11px] text-slate-500">{duration_minutes} min · {timezone}</p>
+                  <p className="text-[11px] text-slate-500">
+                    {duration_minutes} min · {timezone}
+                  </p>
                 ) : null}
               </div>
             )}
@@ -90,7 +106,9 @@ export default function MeetingApproval({ interrupt, onResolve, disabled = false
             {/* Attendee */}
             {attendee_email && (
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-300/70">Attendee</p>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-300/70">
+                  Attendee
+                </p>
                 <p className="mt-0.5 text-xs text-slate-300">
                   {attendee_name && attendee_name !== "Client" ? `${attendee_name} ` : ""}
                   <span className="text-slate-400">&lt;{attendee_email}&gt;</span>
@@ -101,7 +119,9 @@ export default function MeetingApproval({ interrupt, onResolve, disabled = false
             {/* Description */}
             {description && (
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-300/70">Agenda</p>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-300/70">
+                  Agenda
+                </p>
                 <p className="mt-0.5 text-xs leading-relaxed text-slate-400">{description}</p>
               </div>
             )}
@@ -110,16 +130,25 @@ export default function MeetingApproval({ interrupt, onResolve, disabled = false
           {/* Google Meet badge */}
           {add_google_meet && (
             <div className="flex items-center gap-2 rounded-lg border border-emerald-500/15 bg-emerald-500/8 px-3 py-2">
-              <svg className="h-3.5 w-3.5 flex-shrink-0 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                className="h-3.5 w-3.5 flex-shrink-0 text-emerald-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <polygon points="23 7 16 12 23 17 23 7" />
                 <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
               </svg>
-              <p className="text-[11px] text-emerald-300">Google Meet link will be generated and included in the invite</p>
+              <p className="text-[11px] text-emerald-300">
+                Google Meet link will be generated and included in the invite
+              </p>
             </div>
           )}
 
           <p className="text-[11px] text-slate-500">
-            A calendar invite will be sent to all attendees from your connected Google Calendar account.
+            A calendar invite will be sent to all attendees from your connected Google Calendar
+            account.
           </p>
 
           {/* Action buttons */}
@@ -129,7 +158,13 @@ export default function MeetingApproval({ interrupt, onResolve, disabled = false
               disabled={disabled}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-emerald-900/30 transition-all hover:bg-emerald-600 active:scale-98 disabled:opacity-50"
             >
-              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                className="h-3.5 w-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
               Confirm Meeting

@@ -29,31 +29,42 @@ export function useComments(threadId: string) {
         const data = await res.json();
         setComments(data.comments ?? []);
       }
-    } catch { /* offline / not ready */ }
-    finally { setLoading(false); }
+    } catch {
+      /* offline / not ready */
+    } finally {
+      setLoading(false);
+    }
   }, [threadId]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
-  const add = useCallback(async (body: string, opts?: { author?: string; role?: string; anchor_entity_id?: string }) => {
-    if (!body.trim() || !threadId) return;
-    await fetch(`${BACKEND_URL}/comments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ threadId, body, ...opts }),
-    });
-    await refresh();
-  }, [threadId, refresh]);
+  const add = useCallback(
+    async (body: string, opts?: { author?: string; role?: string; anchor_entity_id?: string }) => {
+      if (!body.trim() || !threadId) return;
+      await fetch(`${BACKEND_URL}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ threadId, body, ...opts }),
+      });
+      await refresh();
+    },
+    [threadId, refresh],
+  );
 
-  const resolve = useCallback(async (commentId: string, resolvedBy?: string) => {
-    if (!threadId) return;
-    await fetch(`${BACKEND_URL}/comments/resolve`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ threadId, commentId, resolved_by: resolvedBy ?? "" }),
-    });
-    await refresh();
-  }, [threadId, refresh]);
+  const resolve = useCallback(
+    async (commentId: string, resolvedBy?: string) => {
+      if (!threadId) return;
+      await fetch(`${BACKEND_URL}/comments/resolve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ threadId, commentId, resolved_by: resolvedBy ?? "" }),
+      });
+      await refresh();
+    },
+    [threadId, refresh],
+  );
 
   return { comments, loading, refresh, add, resolve };
 }

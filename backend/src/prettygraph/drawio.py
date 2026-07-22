@@ -44,8 +44,7 @@ def dot_to_drawio(dot_path: str, sidecar_path: str, out_path: str) -> str:
     """Lay out the .dot with Graphviz and emit a styled, editable .drawio."""
     _cat = _load_catalog() if _load_catalog else None
 
-    js = run_graphviz(["dot", "-Tjson", dot_path],
-                      capture_output=True, text=True, check=True).stdout
+    js = run_graphviz(["dot", "-Tjson", dot_path], capture_output=True, text=True, check=True).stdout
     g = json.loads(js)
     side = json.loads(Path(sidecar_path).read_text(encoding="utf-8"))
     snodes, sclusters = side.get("nodes", {}), side.get("clusters", {})
@@ -72,7 +71,7 @@ def dot_to_drawio(dot_path: str, sidecar_path: str, out_path: str) -> str:
             # Graphviz names subgraphs "cluster_<id>"; strip the FULL prefix so the
             # sidecar lookup (keyed by <id>) matches. Stripping only "cluster" left a
             # leading "_", silently losing every cluster's label, colour and group_name.
-            cid = name[len("cluster_"):] if name.startswith("cluster_") else name[len("cluster"):]
+            cid = name[len("cluster_") :] if name.startswith("cluster_") else name[len("cluster") :]
             meta = sclusters.get(cid, {})
             cx0, cy0, cx1, cy1 = (float(v) for v in o["bb"].split(","))
             gx, gy, gw, gh = cx0, H - cy1, cx1 - cx0, cy1 - cy0
@@ -111,7 +110,7 @@ def dot_to_drawio(dot_path: str, sidecar_path: str, out_path: str) -> str:
 
         # Prefer native draw.io stencil when the catalog has an entry for this icon.
         stencil_name = meta.get("stencil_name")
-        stencil_obj = (_style_for_icon(_cat, stencil_name) if _cat and stencil_name else None)
+        stencil_obj = _style_for_icon(_cat, stencil_name) if _cat and stencil_name else None
         if stencil_obj:
             sw = stencil_obj.get("width", 48)
             sh = stencil_obj.get("height", 48)
@@ -173,7 +172,8 @@ def dot_to_drawio(dot_path: str, sidecar_path: str, out_path: str) -> str:
         'connect="1" arrows="1" fold="1" page="1" pageScale="1" '
         f'pageWidth="{x1 - x0:.0f}" pageHeight="{y1 - y0:.0f}" math="0" shadow="0">'
         '<root><mxCell id="0"/><mxCell id="1" parent="0"/>'
-        + "".join(cells) + "</root></mxGraphModel></diagram></mxfile>"
+        + "".join(cells)
+        + "</root></mxGraphModel></diagram></mxfile>"
     )
     Path(out_path).write_text(xml, encoding="utf-8")
     return xml
@@ -197,13 +197,11 @@ def merge_drawios_vertical(xmls: list[str], out_path: str, gap: int = 26) -> str
         m = re.search(r"<root>(.*)</root>", xml, re.S)
         inner = m.group(1) if m else ""
         inner = re.sub(r'<mxCell id="0"/>\s*<mxCell id="1" parent="0"/>', "", inner)
-        for pfx in ('id="c', 'id="n', 'id="e',
-                    'source="c', 'source="n', 'target="c', 'target="n'):
+        for pfx in ('id="c', 'id="n', 'id="e', 'source="c', 'source="n', 'target="c', 'target="n'):
             inner = inner.replace(pfx, pfx.replace('="', f'="r{i}'))
 
         def _bump(mt: "re.Match[str]") -> str:
-            return (f'<mxGeometry x="{float(mt.group(1)) + xoff:.0f}" '
-                    f'y="{float(mt.group(2)) + yoff:.0f}"')
+            return f'<mxGeometry x="{float(mt.group(1)) + xoff:.0f}" y="{float(mt.group(2)) + yoff:.0f}"'
 
         inner = re.sub(r'<mxGeometry x="(-?[\d.]+)" y="(-?[\d.]+)"', _bump, inner)
         body.append(inner)
@@ -214,7 +212,8 @@ def merge_drawios_vertical(xmls: list[str], out_path: str, gap: int = 26) -> str
         'connect="1" arrows="1" fold="1" page="1" pageScale="1" '
         f'pageWidth="{maxw:.0f}" pageHeight="{total_h:.0f}" math="0" shadow="0">'
         '<root><mxCell id="0"/><mxCell id="1" parent="0"/>'
-        + "".join(body) + "</root></mxGraphModel></diagram></mxfile>"
+        + "".join(body)
+        + "</root></mxGraphModel></diagram></mxfile>"
     )
     Path(out_path).write_text(xml_out, encoding="utf-8")
     return xml_out

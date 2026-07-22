@@ -7,15 +7,23 @@ interface BriefApprovalProps {
   disabled?: boolean;
 }
 
-export default function BriefApproval({ interrupt, onResolve, disabled = false }: BriefApprovalProps) {
+export default function BriefApproval({
+  interrupt,
+  onResolve,
+  disabled = false,
+}: BriefApprovalProps) {
   const [mode, setMode] = useState<"idle" | "feedback">("idle");
   const [modifications, setModifications] = useState("");
   const [decided, setDecided] = useState(false);
 
   const brief = interrupt.data.brief ?? { objective: "" };
   const objective = brief.objective ?? "";
-  const functional = Array.isArray(brief.functional_requirements) ? brief.functional_requirements : [];
-  const nonFunctional = Array.isArray(brief.non_functional_requirements) ? brief.non_functional_requirements : [];
+  const functional = Array.isArray(brief.functional_requirements)
+    ? brief.functional_requirements
+    : [];
+  const nonFunctional = Array.isArray(brief.non_functional_requirements)
+    ? brief.non_functional_requirements
+    : [];
   const layout = Array.isArray(brief.layout_constraints) ? brief.layout_constraints : [];
   const assumptions = Array.isArray(brief.assumptions) ? brief.assumptions : [];
   const stakeholders = Array.isArray(brief.stakeholders) ? brief.stakeholders : [];
@@ -27,7 +35,10 @@ export default function BriefApproval({ interrupt, onResolve, disabled = false }
     brief.provider_preference ? `Provider: ${brief.provider_preference}` : null,
   ].filter((c): c is string => Boolean(c));
 
-  const approve = () => { setDecided(true); onResolve(true); };
+  const approve = () => {
+    setDecided(true);
+    onResolve(true);
+  };
   const requestChanges = () => {
     if (!modifications.trim()) return;
     setDecided(true);
@@ -56,8 +67,18 @@ export default function BriefApproval({ interrupt, onResolve, disabled = false }
       {/* Header */}
       <div className="flex items-center gap-2.5 border-b border-white/8 bg-white/4 px-4 py-3">
         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-500/20">
-          <svg className="h-3.5 w-3.5 text-teal-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          <svg
+            className="h-3.5 w-3.5 text-teal-400"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
           </svg>
         </div>
         <p className="flex-1 text-sm font-semibold text-white">Requirements Brief</p>
@@ -66,7 +87,9 @@ export default function BriefApproval({ interrupt, onResolve, disabled = false }
       {decided ? (
         <div className="px-4 py-3">
           <p className="text-xs text-slate-600">
-            {mode === "feedback" ? "Feedback sent — revising the brief..." : "Approved — recommending tech stack..."}
+            {mode === "feedback"
+              ? "Feedback sent — revising the brief..."
+              : "Approved — recommending tech stack..."}
           </p>
         </div>
       ) : mode === "idle" ? (
@@ -75,7 +98,10 @@ export default function BriefApproval({ interrupt, onResolve, disabled = false }
           {chips.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {chips.map((c) => (
-                <span key={c} className="rounded-md border border-white/8 bg-black/25 px-2 py-0.5 text-[10px] capitalize text-slate-400">
+                <span
+                  key={c}
+                  className="rounded-md border border-white/8 bg-black/25 px-2 py-0.5 text-[10px] capitalize text-slate-400"
+                >
                   {c}
                 </span>
               ))}
@@ -85,7 +111,9 @@ export default function BriefApproval({ interrupt, onResolve, disabled = false }
           {/* Objective */}
           {objective && (
             <div>
-              <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-teal-400/70">Objective</p>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-teal-400/70">
+                Objective
+              </p>
               <p className="text-[11px] leading-relaxed text-slate-300">{objective}</p>
             </div>
           )}
@@ -98,10 +126,15 @@ export default function BriefApproval({ interrupt, onResolve, disabled = false }
           {/* Stakeholders */}
           {stakeholders.length > 0 && (
             <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-teal-400/70">Stakeholders</p>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-teal-400/70">
+                Stakeholders
+              </p>
               <div className="flex flex-wrap gap-1">
                 {stakeholders.map((s, i) => (
-                  <span key={i} className="rounded-md border border-white/8 bg-black/30 px-2 py-0.5 text-[10px] text-slate-300">
+                  <span
+                    key={i}
+                    className="rounded-md border border-white/8 bg-black/30 px-2 py-0.5 text-[10px] text-slate-300"
+                  >
                     {s}
                   </span>
                 ))}
@@ -117,7 +150,13 @@ export default function BriefApproval({ interrupt, onResolve, disabled = false }
               disabled={disabled}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-teal-900/30 transition-all hover:bg-teal-600 active:scale-98 disabled:opacity-50"
             >
-              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                className="h-3.5 w-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
               Approve requirements
@@ -134,7 +173,9 @@ export default function BriefApproval({ interrupt, onResolve, disabled = false }
       ) : (
         <div className="flex flex-col gap-3 px-4 py-3">
           <div className="flex items-center gap-2">
-            <button onClick={() => setMode("idle")} className="text-slate-600 hover:text-slate-400">← Back</button>
+            <button onClick={() => setMode("idle")} className="text-slate-600 hover:text-slate-400">
+              ← Back
+            </button>
             <p className="text-xs text-slate-500">What should be changed?</p>
           </div>
           <textarea

@@ -55,21 +55,33 @@ def box(id, label="", **opts):
 def card(id, icon_name, title, sub="", **opts):
     """Rounded card node: catalog icon on the LEFT, bold title + grey sub-label.
     icon_name may be None (text-only card)."""
-    return {"kind": "card", "id": id, "icon": icon_name or None,
-            "title": title, "sub": sub, "label": title, **opts}
+    return {
+        "kind": "card",
+        "id": id,
+        "icon": icon_name or None,
+        "title": title,
+        "sub": sub,
+        "label": title,
+        **opts,
+    }
 
 
 def group(id, gname, label="", opts=None, children=None):
     opts = opts or {}
     children = children if children is not None else []
     return {
-        "kind": "group", "id": id, "gname": gname or None, "label": label,
+        "kind": "group",
+        "id": id,
+        "gname": gname or None,
+        "label": label,
         "children": children,
-        "dir": opts.get("dir", "row"), "gap": opts.get("gap", 30),
+        "dir": opts.get("dir", "row"),
+        "gap": opts.get("gap", 30),
         "pad": opts.get("pad", 24),
         "header": (opts.get("header", 36) if label else opts.get("header", 14)),
         "align": opts.get("align", "center"),
-        "fill": opts.get("fill"), "stroke": opts.get("stroke"),
+        "fill": opts.get("fill"),
+        "stroke": opts.get("stroke"),
         "fs": opts.get("fs"),
         # col only: spread children over the full inner height (stretched frames)
         "justify": opts.get("justify", False),
@@ -96,14 +108,20 @@ def phantom(id, label="", opts=None, children=None):
     opts = opts or {}
     children = children if children is not None else []
     return {
-        "kind": "phantom", "id": id, "gname": None, "label": label,
+        "kind": "phantom",
+        "id": id,
+        "gname": None,
+        "label": label,
         "children": children,
-        "dir": opts.get("dir", "row"), "gap": opts.get("gap", 30),
+        "dir": opts.get("dir", "row"),
+        "gap": opts.get("gap", 30),
         "pad": opts.get("pad", 24),
         "header": (opts.get("header", 36) if label else opts.get("header", 14)),
         "align": opts.get("align", "center"),
-        "fill": opts.get("fill"), "stroke": opts.get("stroke"),
-        "cornerIcon": opts.get("cornerIcon"), "routeGap": opts.get("routeGap", 0),
+        "fill": opts.get("fill"),
+        "stroke": opts.get("stroke"),
+        "cornerIcon": opts.get("cornerIcon"),
+        "routeGap": opts.get("routeGap", 0),
     }
 
 
@@ -112,12 +130,17 @@ def grid(id, gname, label="", opts=None, children=None):
     opts = opts or {}
     children = children if children is not None else []
     return {
-        "kind": "grid", "id": id, "gname": gname or None, "label": label,
+        "kind": "grid",
+        "id": id,
+        "gname": gname or None,
+        "label": label,
         "children": children,
-        "cols": max(1, opts.get("cols", 2)), "gap": opts.get("gap", 30),
+        "cols": max(1, opts.get("cols", 2)),
+        "gap": opts.get("gap", 30),
         "pad": opts.get("pad", 24),
         "header": (opts.get("header", 36) if label else opts.get("header", 14)),
-        "fill": opts.get("fill"), "stroke": opts.get("stroke"),
+        "fill": opts.get("fill"),
+        "stroke": opts.get("stroke"),
     }
 
 
@@ -127,14 +150,20 @@ def pool(id, label, opts=None, children=None):
     opts = opts or {}
     children = children if children is not None else []
     return {
-        "kind": "pool", "id": id, "gname": None, "label": label,
+        "kind": "pool",
+        "id": id,
+        "gname": None,
+        "label": label,
         "children": children,
-        "lanes": opts.get("lanes", []), "phases": opts.get("phases", []),
+        "lanes": opts.get("lanes", []),
+        "phases": opts.get("phases", []),
         "orientation": opts.get("orientation", "horizontal"),
-        "gap": opts.get("gap", 40), "pad": opts.get("pad", 16),
+        "gap": opts.get("gap", 40),
+        "pad": opts.get("pad", 16),
         "laneLabel": opts.get("laneLabel", 110),
         "phaseLabel": opts.get("phaseLabel", 26),
-        "fill": opts.get("fill"), "stroke": opts.get("stroke"),
+        "fill": opts.get("fill"),
+        "stroke": opts.get("stroke"),
     }
 
 
@@ -143,8 +172,7 @@ def pool(id, label, opts=None, children=None):
 # --------------------------------------------------------------------------- #
 def stage(id, i, label, children=None, opts=None):
     """Pipeline STAGE frame i (0-based) -> white fill, per-stage coloured border."""
-    o = {"dir": "col", "gap": THEME.gap_item, "fill": THEME.base,
-         "stroke": stage_stroke(i)}
+    o = {"dir": "col", "gap": THEME.gap_item, "fill": THEME.base, "stroke": stage_stroke(i)}
     o.update(opts or {})
     return group(id, None, label, o, children or [])
 
@@ -248,10 +276,8 @@ def _m_pool(n):
     n["phaseLabel"] = n["phaseLabel"] if phase_n else 0
     n["cellW"] = max([80] + [(c.get("w") or 0) for c in n["children"]])
     n["cellH"] = max([40] + [(c.get("h") or 0) for c in n["children"]]) + 14
-    content_w = (n["cols"] * n["cellW"] + n["gap"] * (n["cols"] - 1)
-                 if horiz else lane_n * n["cellW"])
-    content_h = (lane_n * n["cellH"]
-                 if horiz else n["cols"] * n["cellH"] + n["gap"] * (n["cols"] - 1))
+    content_w = n["cols"] * n["cellW"] + n["gap"] * (n["cols"] - 1) if horiz else lane_n * n["cellW"]
+    content_h = lane_n * n["cellH"] if horiz else n["cols"] * n["cellH"] + n["gap"] * (n["cols"] - 1)
     n["header"] = 34 if n["label"] else 0
     if horiz:
         n["w"] = n["pad"] * 2 + n["laneLabel"] + content_w
@@ -278,6 +304,7 @@ def _measure_container(n):
 
     if n["kind"] == "grid":
         import math
+
         rows = math.ceil(len(ch) / n["cols"]) if ch else 0
         n["cellW"] = _max(lambda c: c["w"])
         n["cellH"] = _max(lambda c: c["h"])
@@ -305,6 +332,7 @@ def _measure_container(n):
     # floor by title width: a frame is never narrower than its label.
     if n["label"]:
         import math
+
         n["w"] = max(n["w"], math.ceil(len(n["label"]) * 6.6) + p * 2)
 
 
@@ -318,23 +346,22 @@ def _p_grid(n):
         r, col = divmod(i, n["cols"])
         cell_x = inner_x + col * (n["cellW"] + n["gap"])
         cell_y = inner_top + r * (n["cellH"] + n["gap"])
-        _place(c, cell_x + (n["cellW"] - c["w"]) / 2,
-               cell_y + (n["cellH"] - c["h"]) / 2)
+        _place(c, cell_x + (n["cellW"] - c["w"]) / 2, cell_y + (n["cellH"] - c["h"]) / 2)
 
 
 def _p_pool(n):
     horiz = n["orientation"] != "vertical"
-    content_x = (n["x"] + n["pad"] + n["laneLabel"] if horiz else n["x"] + n["pad"])
-    content_y = (n["y"] + n["header"] + n["phaseLabel"] + n["pad"] if horiz
-                 else n["y"] + n["header"] + n["pad"] + n["laneLabel"])
+    content_x = n["x"] + n["pad"] + n["laneLabel"] if horiz else n["x"] + n["pad"]
+    content_y = (
+        n["y"] + n["header"] + n["phaseLabel"] + n["pad"]
+        if horiz
+        else n["y"] + n["header"] + n["pad"] + n["laneLabel"]
+    )
     for c in n["children"]:
         lane, col = c.get("lane", 0), c.get("col", 0)
-        cell_x = (content_x + col * (n["cellW"] + n["gap"]) if horiz
-                  else content_x + lane * n["cellW"])
-        cell_y = (content_y + lane * n["cellH"] if horiz
-                  else content_y + col * (n["cellH"] + n["gap"]))
-        _place(c, round(cell_x + (n["cellW"] - c["w"]) / 2),
-               round(cell_y + (n["cellH"] - c["h"]) / 2))
+        cell_x = content_x + col * (n["cellW"] + n["gap"]) if horiz else content_x + lane * n["cellW"]
+        cell_y = content_y + lane * n["cellH"] if horiz else content_y + col * (n["cellH"] + n["gap"])
+        _place(c, round(cell_x + (n["cellW"] - c["w"]) / 2), round(cell_y + (n["cellH"] - c["h"]) / 2))
 
 
 def _p_group(n):
@@ -344,8 +371,7 @@ def _p_group(n):
     inner_h = n["h"] - n["header"] - n["pad"] * 2
     eg = max(n["gap"], n.get("routeGap", 0) or 0)
     if n["dir"] == "row":
-        total_w = (sum(c["w"] for c in n["children"])
-                   + eg * max(0, len(n["children"]) - 1))
+        total_w = sum(c["w"] for c in n["children"]) + eg * max(0, len(n["children"]) - 1)
         cx = inner_x + max(0, (inner_w - total_w) / 2)
         for c in n["children"]:
             cy = inner_top if n["align"] == "top" else inner_top + (inner_h - c["h"]) / 2
@@ -369,8 +395,7 @@ def _p_group(n):
 # emit: output into the Diagram builder
 # --------------------------------------------------------------------------- #
 def _e_icon(d, n, parent):
-    d.icon(n["id"], n["name"], [round(n["x"] + (n["w"] - ICON) / 2), n["y"]],
-           parent=parent, label=n["label"])
+    d.icon(n["id"], n["name"], [round(n["x"] + (n["w"] - ICON) / 2), n["y"]], parent=parent, label=n["label"])
 
 
 def _e_box(d, n, parent):
@@ -378,22 +403,49 @@ def _e_box(d, n, parent):
         r = d._put(n["id"], parent, n["x"], n["y"], n["w"], n["h"], n["style"], n["label"])
         r["ob"] = True
         return
-    d.box(n["id"], [n["x"], n["y"]], [n["w"], n["h"]], n["label"], parent=parent,
-          fill=n.get("fill"), stroke=n.get("stroke"), round=n.get("round", False),
-          va=n.get("va", "middle"), bold=n.get("bold", False), fs=n.get("fs", 11))
+    d.box(
+        n["id"],
+        [n["x"], n["y"]],
+        [n["w"], n["h"]],
+        n["label"],
+        parent=parent,
+        fill=n.get("fill"),
+        stroke=n.get("stroke"),
+        round=n.get("round", False),
+        va=n.get("va", "middle"),
+        bold=n.get("bold", False),
+        fs=n.get("fs", 11),
+    )
 
 
 def _e_card(d, n, parent):
-    d.card(n["id"], [n["x"], n["y"]], [n["w"], n["h"]], n.get("icon"),
-           n.get("title") or "", n.get("sub") or "", parent=parent,
-           fill=n.get("fill"), stroke=n.get("stroke"), accent=n.get("accent"),
-           image_data_uri=n.get("image_data_uri"))
+    d.card(
+        n["id"],
+        [n["x"], n["y"]],
+        [n["w"], n["h"]],
+        n.get("icon"),
+        n.get("title") or "",
+        n.get("sub") or "",
+        parent=parent,
+        fill=n.get("fill"),
+        stroke=n.get("stroke"),
+        accent=n.get("accent"),
+        image_data_uri=n.get("image_data_uri"),
+    )
 
 
 def _e_group(d, n, parent):
     if n.get("gname"):
-        d.group(n["id"], n["gname"], [n["x"], n["y"]], [n["w"], n["h"]], n["label"],
-                parent=parent, fill=n.get("fill"), stroke=n.get("stroke"))
+        d.group(
+            n["id"],
+            n["gname"],
+            [n["x"], n["y"]],
+            [n["w"], n["h"]],
+            n["label"],
+            parent=parent,
+            fill=n.get("fill"),
+            stroke=n.get("stroke"),
+        )
     elif n.get("zone"):
         # Non-AWS topology boundary: tinted/transparent frame (dashed for AZ) with a
         # top-left label pill. Frame is a container (ob=False) so edges route through
@@ -401,39 +453,59 @@ def _e_group(d, n, parent):
         dash = "dashed=1;dashPattern=6 4;" if n.get("dashed") else ""
         fill = n.get("fill") or "none"
         stroke = n.get("stroke") or "#999999"
-        style = (f"rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor={fill};"
-                 f"strokeColor={stroke};{dash}verticalAlign=top;align=left;"
-                 f"spacingLeft=14;spacingTop=8;fontColor={stroke};fontStyle=1;fontSize=12;")
+        style = (
+            f"rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor={fill};"
+            f"strokeColor={stroke};{dash}verticalAlign=top;align=left;"
+            f"spacingLeft=14;spacingTop=8;fontColor={stroke};fontStyle=1;fontSize=12;"
+        )
         r = d._put(n["id"], parent, n["x"], n["y"], n["w"], n["h"], style, "", z=Z_CONTAINER)
         r["ob"] = False
         pill = n.get("pill")
         if pill:
             pw = max(40, len(str(pill)) * 7 + 22)
-            pr = d._put(f"{n['id']}__pill", n["id"], round(n["x"] + 10), round(n["y"] + 8),
-                        pw, 20,
-                        f"rounded=1;arcSize=40;whiteSpace=wrap;html=1;fillColor={stroke};"
-                        "strokeColor=none;fontColor=#FFFFFF;fontSize=11;fontStyle=1;"
-                        "align=center;verticalAlign=middle;", str(pill), z=Z_FORE)
+            pr = d._put(
+                f"{n['id']}__pill",
+                n["id"],
+                round(n["x"] + 10),
+                round(n["y"] + 8),
+                pw,
+                20,
+                f"rounded=1;arcSize=40;whiteSpace=wrap;html=1;fillColor={stroke};"
+                "strokeColor=none;fontColor=#FFFFFF;fontSize=11;fontStyle=1;"
+                "align=center;verticalAlign=middle;",
+                str(pill),
+                z=Z_FORE,
+            )
             pr["ob"] = False
     elif n.get("cornerIcon"):
         ci = 22
-        style = (f"rounded=0;whiteSpace=wrap;html=1;fillColor={n.get('fill') or '#FFFFFF'};"
-                 f"strokeColor={n.get('stroke') or '#999999'};fontColor=#1A1A1A;fontSize=12;"
-                 f"fontStyle=1;verticalAlign=top;align=left;spacingLeft={ci + 12};spacingTop=8;")
-        r = d._put(n["id"], parent, n["x"], n["y"], n["w"], n["h"], style, n["label"],
-                   z=Z_CONTAINER)
+        style = (
+            f"rounded=0;whiteSpace=wrap;html=1;fillColor={n.get('fill') or '#FFFFFF'};"
+            f"strokeColor={n.get('stroke') or '#999999'};fontColor=#1A1A1A;fontSize=12;"
+            f"fontStyle=1;verticalAlign=top;align=left;spacingLeft={ci + 12};spacingTop=8;"
+        )
+        r = d._put(n["id"], parent, n["x"], n["y"], n["w"], n["h"], style, n["label"], z=Z_CONTAINER)
         r["ob"] = False
-        d.corner_icon(f"{n['id']}__ci", n["cornerIcon"],
-                      [round(n["x"] + 8), round(n["y"] + 7)], ci, n["id"])
+        d.corner_icon(f"{n['id']}__ci", n["cornerIcon"], [round(n["x"] + 8), round(n["y"] + 7)], ci, n["id"])
     else:
         # stroke "none" = layout-only wrapper (no border) -> ob None so router ignores it.
         # Frame/band titles read top-LEFT (reference production look) so a centred
         # card in a middle column never collides with the section header.
-        d.box(n["id"], [n["x"], n["y"]], [n["w"], n["h"]], n["label"], parent=parent,
-              va="top", bold=True, fill=n.get("fill") or "#FFFFFF",
-              stroke=n.get("stroke") or "#999999", fs=n.get("fs") or 11,
-              ob=(None if n.get("stroke") == "none" else False), z=Z_CONTAINER,
-              align="left" if n.get("label") else None)
+        d.box(
+            n["id"],
+            [n["x"], n["y"]],
+            [n["w"], n["h"]],
+            n["label"],
+            parent=parent,
+            va="top",
+            bold=True,
+            fill=n.get("fill") or "#FFFFFF",
+            stroke=n.get("stroke") or "#999999",
+            fs=n.get("fs") or 11,
+            ob=(None if n.get("stroke") == "none" else False),
+            z=Z_CONTAINER,
+            align="left" if n.get("label") else None,
+        )
     for c in n["children"]:
         _emit(d, c, n["id"])
 
@@ -453,41 +525,78 @@ def _emit_pool(d, n, parent):
     lane_n = max(1, len(n["lanes"]) or 1)
     cols = n["cols"]
     phase_n = len(n["phases"])
-    content_w = (cols * n["cellW"] + n["gap"] * (cols - 1) if horiz else lane_n * n["cellW"])
-    content_h = (lane_n * n["cellH"] if horiz else cols * n["cellH"] + n["gap"] * (cols - 1))
-    content_x = (n["x"] + n["pad"] + n["laneLabel"] if horiz else n["x"] + n["pad"])
-    content_y = (n["y"] + n["header"] + n["phaseLabel"] + n["pad"] if horiz
-                 else n["y"] + n["header"] + n["pad"] + n["laneLabel"])
+    content_w = cols * n["cellW"] + n["gap"] * (cols - 1) if horiz else lane_n * n["cellW"]
+    content_h = lane_n * n["cellH"] if horiz else cols * n["cellH"] + n["gap"] * (cols - 1)
+    content_x = n["x"] + n["pad"] + n["laneLabel"] if horiz else n["x"] + n["pad"]
+    content_y = (
+        n["y"] + n["header"] + n["phaseLabel"] + n["pad"]
+        if horiz
+        else n["y"] + n["header"] + n["pad"] + n["laneLabel"]
+    )
     pool_fill = n.get("fill") or "#FFFFFF"
     pool_stroke = n.get("stroke") or "#5A6B7B"
     hair, band_alt, label_fill = "#D8E0E8", "#F5F8FB", "#EEF2F7"
 
     def _frame(fid, x, y, w, h, style, label):
-        return d._put(fid, n["id"], round(x), round(y), round(w), round(h), style, label,
-                      z=Z_CONTAINER)
+        return d._put(fid, n["id"], round(x), round(y), round(w), round(h), style, label, z=Z_CONTAINER)
 
-    d.box(n["id"], [n["x"], n["y"]], [n["w"], n["h"]], n["label"], parent=parent,
-          fill=pool_fill, stroke=pool_stroke, round=False, ob=False, va="top",
-          bold=True, fs=13, z=Z_CONTAINER)
+    d.box(
+        n["id"],
+        [n["x"], n["y"]],
+        [n["w"], n["h"]],
+        n["label"],
+        parent=parent,
+        fill=pool_fill,
+        stroke=pool_stroke,
+        round=False,
+        ob=False,
+        va="top",
+        bold=True,
+        fs=13,
+        z=Z_CONTAINER,
+    )
     for i in range(lane_n):
         if horiz:
-            _frame(f"{n['id']}__band{i}", content_x, content_y + i * n["cellH"],
-                   content_w, n["cellH"],
-                   f"rounded=0;whiteSpace=wrap;html=1;fillColor={band_alt if i % 2 else '#FFFFFF'};"
-                   f"strokeColor={hair};container=1;", "")
+            _frame(
+                f"{n['id']}__band{i}",
+                content_x,
+                content_y + i * n["cellH"],
+                content_w,
+                n["cellH"],
+                f"rounded=0;whiteSpace=wrap;html=1;fillColor={band_alt if i % 2 else '#FFFFFF'};"
+                f"strokeColor={hair};container=1;",
+                "",
+            )
         else:
-            _frame(f"{n['id']}__band{i}", n["x"] + n["pad"] + i * n["cellW"], content_y,
-                   n["cellW"], content_h,
-                   f"rounded=0;whiteSpace=wrap;html=1;fillColor={band_alt if i % 2 else '#FFFFFF'};"
-                   f"strokeColor={hair};container=1;", "")
+            _frame(
+                f"{n['id']}__band{i}",
+                n["x"] + n["pad"] + i * n["cellW"],
+                content_y,
+                n["cellW"],
+                content_h,
+                f"rounded=0;whiteSpace=wrap;html=1;fillColor={band_alt if i % 2 else '#FFFFFF'};"
+                f"strokeColor={hair};container=1;",
+                "",
+            )
         if horiz:
             lx, ly, lw, lh = n["x"] + n["pad"], content_y + i * n["cellH"], n["laneLabel"], n["cellH"]
         else:
-            lx, ly, lw, lh = n["x"] + n["pad"] + i * n["cellW"], n["y"] + n["header"] + n["pad"], n["cellW"], n["laneLabel"]
-        _frame(f"{n['id']}__lane{i}", lx, ly, lw, lh,
-               f"rounded=0;whiteSpace=wrap;html=1;fillColor={label_fill};strokeColor={hair};"
-               "verticalAlign=middle;align=center;fontStyle=1;fontSize=11;container=1;",
-               n["lanes"][i] if i < len(n["lanes"]) else "")
+            lx, ly, lw, lh = (
+                n["x"] + n["pad"] + i * n["cellW"],
+                n["y"] + n["header"] + n["pad"],
+                n["cellW"],
+                n["laneLabel"],
+            )
+        _frame(
+            f"{n['id']}__lane{i}",
+            lx,
+            ly,
+            lw,
+            lh,
+            f"rounded=0;whiteSpace=wrap;html=1;fillColor={label_fill};strokeColor={hair};"
+            "verticalAlign=middle;align=center;fontStyle=1;fontSize=11;container=1;",
+            n["lanes"][i] if i < len(n["lanes"]) else "",
+        )
     if phase_n:
         for j in range(phase_n):
             frm = (j * cols) // phase_n
@@ -501,10 +610,16 @@ def _emit_pool(d, n, parent):
                 py = content_y + frm * (n["cellH"] + n["gap"])
                 ph = (to - frm) * (n["cellH"] + n["gap"]) - (n["gap"] if last else 0)
                 px, pw = n["x"] + n["pad"] + content_w + n["gap"], n["phaseLabel"]
-            _frame(f"{n['id']}__phase{j}", px, py, pw, ph,
-                   f"rounded=0;whiteSpace=wrap;html=1;fillColor={pool_fill};strokeColor={hair};"
-                   "verticalAlign=middle;align=center;fontStyle=1;fontSize=11;container=1;",
-                   n["phases"][j] if j < len(n["phases"]) else "")
+            _frame(
+                f"{n['id']}__phase{j}",
+                px,
+                py,
+                pw,
+                ph,
+                f"rounded=0;whiteSpace=wrap;html=1;fillColor={pool_fill};strokeColor={hair};"
+                "verticalAlign=middle;align=center;fontStyle=1;fontSize=11;container=1;",
+                n["phases"][j] if j < len(n["phases"]) else "",
+            )
     for c in n["children"]:
         _emit(d, c, n["id"])
 
@@ -513,12 +628,12 @@ def _emit_pool(d, n, parent):
 # per-kind registry + dispatch
 # --------------------------------------------------------------------------- #
 _LAYOUT = {
-    "icon":    {"measure": _m_icon,            "place": None,     "emit": _e_icon},
-    "box":     {"measure": _m_box,             "place": None,     "emit": _e_box},
-    "card":    {"measure": _m_card,            "place": None,     "emit": _e_card},
-    "group":   {"measure": _measure_container, "place": _p_group, "emit": _e_group},
-    "grid":    {"measure": _measure_container, "place": _p_grid,  "emit": _e_group},
-    "pool":    {"measure": _m_pool,            "place": _p_pool,  "emit": _e_pool},
+    "icon": {"measure": _m_icon, "place": None, "emit": _e_icon},
+    "box": {"measure": _m_box, "place": None, "emit": _e_box},
+    "card": {"measure": _m_card, "place": None, "emit": _e_card},
+    "group": {"measure": _measure_container, "place": _p_group, "emit": _e_group},
+    "grid": {"measure": _measure_container, "place": _p_grid, "emit": _e_group},
+    "pool": {"measure": _m_pool, "place": _p_pool, "emit": _e_pool},
     "phantom": {"measure": _measure_container, "place": _p_group, "emit": _e_phantom},
 }
 

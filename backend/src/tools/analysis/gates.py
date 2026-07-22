@@ -35,12 +35,12 @@ def _epistemic_note(model, *, cap: int = 8) -> str:
         return ""
 
     def _ids(items, text_key):
-        return [f'{it.get("id", "?")}: {it[text_key]}' for it in items]
+        return [f"{it.get('id', '?')}: {it[text_key]}" for it in items]
 
     pending = summ.get("assumptions_needing_confirmation", [])
-    must   = [a for a in pending if a.get("tier") == "must_confirm"]
+    must = [a for a in pending if a.get("tier") == "must_confirm"]
     should = [a for a in pending if a.get("tier") == "should_confirm"]
-    nice   = [a for a in pending if a.get("tier") == "nice_to_confirm"]
+    nice = [a for a in pending if a.get("tier") == "nice_to_confirm"]
 
     asm_sections: list[tuple[str, list]] = []
     if must:
@@ -54,12 +54,12 @@ def _epistemic_note(model, *, cap: int = 8) -> str:
         ("Known facts", _ids(summ["known_facts"], "statement")),
     ]
     for tier_title, tier_items in asm_sections:
-        sections.append((tier_title + " — confirm via approve_with_assumptions",
-                         _ids(tier_items, "statement")))
+        sections.append(
+            (tier_title + " — confirm via approve_with_assumptions", _ids(tier_items, "statement"))
+        )
     sections += [
         ("Open decisions", _ids(summ["open_decisions"], "title")),
-        ("Constraints",
-         [f'{c.get("id", "?")}: {c["statement"]} [{c["kind"]}]' for c in summ["constraints"]]),
+        ("Constraints", [f"{c.get('id', '?')}: {c['statement']} [{c['kind']}]" for c in summ["constraints"]]),
     ]
     lines: list[str] = []
     for title, items in sections:
@@ -86,7 +86,7 @@ def _solution_gate_note(stage: str = "export", *, block: bool = False) -> str:
     outcomes (pass / auto-repair / human-decision), plus an epistemic summary.
     """
     try:
-        model = build_solution_model(current_workspace())   # materialize/refresh the CSM projection
+        model = build_solution_model(current_workspace())  # materialize/refresh the CSM projection
         write_trace_links(current_workspace())
         findings, _ = validate_solution(current_workspace(), block=block)
     except Exception:
@@ -95,6 +95,7 @@ def _solution_gate_note(stage: str = "export", *, block: bool = False) -> str:
     # No-op unless a pack was selected via apply_compliance_pack.
     try:
         from compliance import compliance_findings
+
         findings = list(findings) + compliance_findings(model)
     except Exception:
         pass
@@ -102,6 +103,7 @@ def _solution_gate_note(stage: str = "export", *, block: bool = False) -> str:
     # gate reflects open work only. Best-effort: a store hiccup must not break the gate.
     try:
         from memory.stores.finding_store import active_findings, upsert_findings
+
         upsert_findings(findings, revision=model.revision)
         findings = active_findings(findings)
     except Exception:
@@ -142,6 +144,7 @@ def _diagram_gate_note(*, block: bool = False) -> str:
     if not drawio_path.exists():
         return ""
     import json as _json
+
     stats = {}
     try:
         stats_path = current_workspace() / "out.native_stats.json"
@@ -165,21 +168,24 @@ def _diagram_gate_note(*, block: bool = False) -> str:
     scorecard_note = ""
     try:
         from domain.validation.validate_drawio import production_scorecard
+
         sc = production_scorecard(result, stats)
-        verdict = ("PASS" if sc["pass"]
-                   else "BELOW GATE (need >=85, semantic & relationship = 100%)")
+        verdict = "PASS" if sc["pass"] else "BELOW GATE (need >=85, semantic & relationship = 100%)"
         bd = sc.get("breakdown", {})
-        scorecard_note = (f"\n\nPRODUCTION SCORECARD: {sc['total']}/100 — {verdict} "
-                          f"(semantic {int(sc['node_recall'] * 100)}%, "
-                          f"relationship {int(sc['edge_recall'] * 100)}%, "
-                          f"composition {bd.get('composition', '?')}/10, "
-                          f"iconography {bd.get('iconography', '?')}/10).")
+        scorecard_note = (
+            f"\n\nPRODUCTION SCORECARD: {sc['total']}/100 — {verdict} "
+            f"(semantic {int(sc['node_recall'] * 100)}%, "
+            f"relationship {int(sc['edge_recall'] * 100)}%, "
+            f"composition {bd.get('composition', '?')}/10, "
+            f"iconography {bd.get('iconography', '?')}/10)."
+        )
     except Exception:
         pass
     try:
         revision = "0"
         try:
             from memory.stores.csm_adapter import build_solution_model
+
             m = build_solution_model(current_workspace())
             revision = str(m.revision)
         except Exception:
@@ -189,8 +195,7 @@ def _diagram_gate_note(*, block: bool = False) -> str:
     except Exception:
         pass
     if not findings:
-        return ("\n\nDIAGRAM LINT: PASS — no structural errors, warnings, or style advice."
-                + scorecard_note)
+        return "\n\nDIAGRAM LINT: PASS — no structural errors, warnings, or style advice." + scorecard_note
     summary = format_validation(findings, block=block)
     note = f"\n\nDIAGRAM LINT [{('blocking' if block else 'advisory')}] — {summary}"
     if block and summary.startswith("VALIDATION: BLOCK"):
@@ -236,10 +241,11 @@ def query_change_impact() -> str:
     total_added = s["entities_added"]
     total_removed = s["entities_removed"]
     total_changed = s["entities_changed"]
-    head = (f"CHANGE_IMPACT: REV {d['revision']['from']}→{d['revision']['to']} | "
-            f"+{total_added} -{total_removed} ~{total_changed} entities")
-    if not (total_added or total_removed or total_changed
-            or s["links_added"] or s["links_removed"]):
+    head = (
+        f"CHANGE_IMPACT: REV {d['revision']['from']}→{d['revision']['to']} | "
+        f"+{total_added} -{total_removed} ~{total_changed} entities"
+    )
+    if not (total_added or total_removed or total_changed or s["links_added"] or s["links_removed"]):
         return f"CHANGE_IMPACT: NONE — REV {d['revision']['from']}→{d['revision']['to']}, no entity or link changes."
 
     return "\n".join([head] + _render_model_diff_body(d))
@@ -251,8 +257,13 @@ def _render_model_diff_body(d: dict) -> list[str]:
     (vs an approved revision)."""
     lines: list[str] = []
     for label in (
-        "requirements", "constraints", "assumptions", "decisions",
-        "components", "risks", "work_items",
+        "requirements",
+        "constraints",
+        "assumptions",
+        "decisions",
+        "components",
+        "risks",
+        "work_items",
     ):
         part = d[label]
         if not (part["added"] or part["removed"] or part["changed"]):
@@ -287,8 +298,10 @@ def compare_revisions(approved_revision: int = 0) -> str:
     approved_dir = current_workspace() / "approved"
     if not approved_dir.exists():
         return "COMPARE: NONE — no approved revision yet (approve a gate first)."
-    snaps = sorted(approved_dir.glob("REV-*.json"),
-                   key=lambda p: int(p.stem.split("-")[1]) if p.stem.split("-")[1].isdigit() else 0)
+    snaps = sorted(
+        approved_dir.glob("REV-*.json"),
+        key=lambda p: int(p.stem.split("-")[1]) if p.stem.split("-")[1].isdigit() else 0,
+    )
     if not snaps:
         return "COMPARE: NONE — no approved revision snapshots found."
     if approved_revision:
@@ -310,8 +323,10 @@ def compare_revisions(approved_revision: int = 0) -> str:
     d = diff_solution_models(old, new)
     s = d["summary"]
     total = s["entities_added"] + s["entities_removed"] + s["entities_changed"]
-    head = (f"COMPARE: approved {target.stem} → current REV {d['revision']['to']} | "
-            f"+{s['entities_added']} -{s['entities_removed']} ~{s['entities_changed']} entities")
+    head = (
+        f"COMPARE: approved {target.stem} → current REV {d['revision']['to']} | "
+        f"+{s['entities_added']} -{s['entities_removed']} ~{s['entities_changed']} entities"
+    )
     if not (total or s["links_added"] or s["links_removed"]):
         return f"COMPARE: NONE — current model is unchanged from approved {target.stem}."
     return "\n".join([head] + _render_model_diff_body(d))

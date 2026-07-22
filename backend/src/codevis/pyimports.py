@@ -12,6 +12,7 @@ Programmatic usage:
   graph = build_import_graph("/path/to/project", group=True, reduce=True)
   # -> {"direction": "TB", "nodes": [...], "edges": [...]}
 """
+
 import argparse
 import ast
 import json
@@ -93,8 +94,9 @@ def _transitive_reduce(nodes: list[str], edges: list[tuple[str, str]]) -> list[t
     return [(rev[int(a)], rev[int(b)]) for a, b in re.findall(r"(\d+)\s*->\s*(\d+)", out)]
 
 
-def build_import_graph(project_dir: str, direction: str = "TB",
-                       group: bool = False, reduce: bool = True) -> dict:
+def build_import_graph(
+    project_dir: str, direction: str = "TB", group: bool = False, reduce: bool = True
+) -> dict:
     """Build a module import graph for a Python project.
 
     Returns a dict with 'direction', 'nodes', 'edges' suitable for autolayout
@@ -102,15 +104,18 @@ def build_import_graph(project_dir: str, direction: str = "TB",
     """
     modules, base = discover(project_dir)
     if not modules:
-        return {"direction": direction, "nodes": [], "edges": [],
-                "error": f"no .py modules found under {project_dir}"}
-    edges = sorted({(name, t) for name, path in modules.items()
-                    for t in _edges_of(name, path, modules)})
+        return {
+            "direction": direction,
+            "nodes": [],
+            "edges": [],
+            "error": f"no .py modules found under {project_dir}",
+        }
+    edges = sorted({(name, t) for name, path in modules.items() for t in _edges_of(name, path, modules)})
     raw_count = len(edges)
     if reduce:
         edges = _transitive_reduce(list(modules), edges)
     strip = base + "." if base else ""
-    label = lambda m: m[len(strip):] if strip and m.startswith(strip) else m
+    label = lambda m: m[len(strip) :] if strip and m.startswith(strip) else m
 
     def node(m: str) -> dict:
         d: dict = {"id": m, "label": label(m)}

@@ -1,8 +1,7 @@
 /** Pure utilities and shared types for the diagram agent hooks. */
 
 export const BACKEND_URL =
-  (import.meta.env.VITE_BACKEND_URL as string | undefined) ??
-  "http://localhost:8001";
+  (import.meta.env.VITE_BACKEND_URL as string | undefined) ?? "http://localhost:8001";
 
 // ---- Shared domain types ---- //
 
@@ -131,11 +130,14 @@ export interface Blueprint {
   diagram_title?: string;
   pattern: string;
   pattern_rationale?: string;
-  key_decisions?: Array<string | {
-    decision?: string;
-    rationale?: string;
-    tradeoffs?: string[] | string;
-  }>;
+  key_decisions?: Array<
+    | string
+    | {
+        decision?: string;
+        rationale?: string;
+        tradeoffs?: string[] | string;
+      }
+  >;
   nodes: Array<{ id: string; label: string; tech?: string; cluster?: string; type?: string }>;
   clusters: Array<{ id: string; label: string; tier?: string }>;
   edges: Array<{ from: string; to: string; label?: string; protocol?: string }>;
@@ -198,7 +200,11 @@ export interface QualitySnapshot {
   model_calls?: number;
 }
 
-export interface DriftEntry { id: string; name: string; kind: string }
+export interface DriftEntry {
+  id: string;
+  name: string;
+  kind: string;
+}
 
 export interface DriftReport {
   summary?: {
@@ -319,14 +325,14 @@ export interface PendingInterrupt {
     description?: string;
     add_google_meet?: boolean;
     timezone?: string;
-    phases?: Array<{code: string; name: string; modules?: Array<{code: string; name: string}>}>;
+    phases?: Array<{ code: string; name: string; modules?: Array<{ code: string; name: string }> }>;
     project_code?: string;
     total_mandays?: number;
     total_manmonths?: number;
     timeline_weeks?: number;
     timeline_months?: number;
     effort_by_role?: Record<string, number>;
-    effort_by_module?: Array<{code: string; name: string; total_md: number}>;
+    effort_by_module?: Array<{ code: string; name: string; total_md: number }>;
     // Delivery export gate (export_to_delivery).
     system?: string;
     dry_run?: boolean;
@@ -418,9 +424,15 @@ export function saveGateHistory(threadId: string, history: ResolvedGate[]): void
     } else {
       localStorage.setItem(GATE_HISTORY_PREFIX + threadId, JSON.stringify(history));
     }
-  } catch { /* storage unavailable/full — history stays in-memory for the session */ }
+  } catch {
+    /* storage unavailable/full — history stays in-memory for the session */
+  }
 }
 
 export function clearGateHistory(threadId: string): void {
-  try { localStorage.removeItem(GATE_HISTORY_PREFIX + threadId); } catch { /* ignore */ }
+  try {
+    localStorage.removeItem(GATE_HISTORY_PREFIX + threadId);
+  } catch {
+    /* ignore */
+  }
 }

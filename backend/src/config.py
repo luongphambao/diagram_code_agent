@@ -84,17 +84,18 @@ def get_system_prompt_prefix(model: str) -> str:
 # Override via environment variables of the same name.
 # ---------------------------------------------------------------------------
 
+
 def _budget_cents(stage: str, default: int) -> int:
     """Return the advisory budget in USD cents for *stage*."""
     return int(os.getenv(f"STAGE_BUDGET_USDCENT_{stage.upper()}", default))
 
 
 STAGE_BUDGETS_USDCENT: dict[str, int] = {
-    "intake":     _budget_cents("INTAKE",     50),   # $0.50
-    "blueprint":  _budget_cents("BLUEPRINT",  100),  # $1.00
-    "wbs":        _budget_cents("WBS",        100),  # $1.00
-    "ppt":        _budget_cents("PPT",        100),  # $1.00
-    "research":   _budget_cents("RESEARCH",   50),   # $0.50
+    "intake": _budget_cents("INTAKE", 50),  # $0.50
+    "blueprint": _budget_cents("BLUEPRINT", 100),  # $1.00
+    "wbs": _budget_cents("WBS", 100),  # $1.00
+    "ppt": _budget_cents("PPT", 100),  # $1.00
+    "research": _budget_cents("RESEARCH", 50),  # $0.50
 }
 
 
@@ -132,7 +133,9 @@ def make_llm(model: str):
     if not api_key:
         logger.warning(
             "API key env var %r is not set (required for model %r / provider %r)",
-            api_key_env, model, provider_name,
+            api_key_env,
+            model,
+            provider_name,
         )
 
     if provider_name == "anthropic":

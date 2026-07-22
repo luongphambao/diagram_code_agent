@@ -37,8 +37,13 @@ def build_subagent_specs(
     """
     return [
         _icon_resolver_spec(workdir=workdir, icons_root=icons_root, manifest=manifest),
-        _drawer_spec(workdir=workdir, icons_root=icons_root, manifest=manifest,
-                    style=style, use_vision_relay=drawer_vision_relay),
+        _drawer_spec(
+            workdir=workdir,
+            icons_root=icons_root,
+            manifest=manifest,
+            style=style,
+            use_vision_relay=drawer_vision_relay,
+        ),
         _critic_spec(style=style, use_vision_relay=drawer_vision_relay),
         _wbs_planner_spec(workdir=workdir),
         _ppt_generator_spec(workdir=workdir),

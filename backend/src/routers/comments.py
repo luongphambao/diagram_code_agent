@@ -45,7 +45,8 @@ class _CommentResolve(BaseModel):
 
 @router.get("")
 async def list_comments(
-    request: Request, threadId: str = "thread-default",
+    request: Request,
+    threadId: str = "thread-default",
     identity: Identity = Depends(require_identity),
 ):
     await check_owner(request.app.state.pool, threadId, identity.email)
@@ -55,7 +56,8 @@ async def list_comments(
 
 @router.post("")
 async def create_comment(
-    body: _CommentCreate, request: Request,
+    body: _CommentCreate,
+    request: Request,
     identity: Identity = Depends(require_identity),
 ):
     if not body.body.strip():
@@ -76,7 +78,8 @@ async def create_comment(
 
 @router.post("/resolve")
 async def resolve(
-    body: _CommentResolve, request: Request,
+    body: _CommentResolve,
+    request: Request,
     identity: Identity = Depends(require_identity),
 ):
     await check_owner(request.app.state.pool, body.threadId, identity.email)

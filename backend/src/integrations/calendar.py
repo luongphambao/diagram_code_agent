@@ -39,9 +39,7 @@ def _get_composio_client(ctx: SessionContext | None = None):
     try:
         import composio  # type: ignore[import]
     except ImportError:
-        raise RuntimeError(
-            "composio package is not installed. Run: pip install composio-langchain"
-        )
+        raise RuntimeError("composio package is not installed. Run: pip install composio-langchain")
     api_key = (ctx.composio_api_key if ctx else "") or os.environ.get("COMPOSIO_API_KEY", "")
     if not api_key:
         raise RuntimeError("No Composio API key in session context or COMPOSIO_API_KEY env.")
@@ -49,7 +47,9 @@ def _get_composio_client(ctx: SessionContext | None = None):
 
 
 def _calendar_account_id(ctx: SessionContext | None = None) -> str:
-    acct = (ctx.calendar_account_id if ctx else "") or os.environ.get("GOOGLE_CALENDAR_CONNECTED_ACCOUNT_ID", "")
+    acct = (ctx.calendar_account_id if ctx else "") or os.environ.get(
+        "GOOGLE_CALENDAR_CONNECTED_ACCOUNT_ID", ""
+    )
     if not acct:
         raise RuntimeError(
             "GOOGLE_CALENDAR_CONNECTED_ACCOUNT_ID is not set. "
@@ -157,8 +157,7 @@ def propose_meeting_slots(
             )
         except ValueError:
             continue
-        if (sd.hour, sd.minute) >= (wh_start_h, wh_start_m) and \
-           (sd.hour, sd.minute) < (wh_end_h, wh_end_m):
+        if (sd.hour, sd.minute) >= (wh_start_h, wh_start_m) and (sd.hour, sd.minute) < (wh_end_h, wh_end_m):
             slots.append(_fmt_slot(sd, ed))
         if len(slots) >= 8:
             break
@@ -169,21 +168,21 @@ def propose_meeting_slots(
             for hour in fallback_hours:
                 if len(slots) >= 6:
                     break
-                sd = (now + timedelta(days=day_offset)).replace(
-                    hour=hour, minute=0, second=0, microsecond=0
-                )
+                sd = (now + timedelta(days=day_offset)).replace(hour=hour, minute=0, second=0, microsecond=0)
                 if sd.weekday() < 5:
                     slots.append(_fmt_slot(sd, sd + timedelta(minutes=duration_minutes)))
             if len(slots) >= 6:
                 break
 
-    response = interrupt({
-        "type": "slot_picker",
-        "slots": slots,
-        "duration_minutes": duration_minutes,
-        "timezone": timezone,
-        "context": context,
-    })
+    response = interrupt(
+        {
+            "type": "slot_picker",
+            "slots": slots,
+            "duration_minutes": duration_minutes,
+            "timezone": timezone,
+            "context": context,
+        }
+    )
 
     decisions = response.get("decisions", [{}]) if isinstance(response, dict) else [{}]
     d = decisions[0] if decisions else {}
@@ -288,13 +287,13 @@ def create_client_meeting(
     if isinstance(raw, dict):
         event_link = raw.get("htmlLink") or raw.get("event_link") or raw.get("link") or ""
         conf = raw.get("conferenceData") or {}
-        for ep in (conf.get("entryPoints") or []):
+        for ep in conf.get("entryPoints") or []:
             if ep.get("entryPointType") == "video":
                 meet_link = ep.get("uri", "")
                 break
 
     parts = [
-        f"Meeting scheduled: \"{title}\"",
+        f'Meeting scheduled: "{title}"',
         f"  Date: {start_dt.strftime('%A, %d %b %Y')}",
         f"  Time: {start_dt.strftime('%H:%M')} – {end_dt.strftime('%H:%M')} ({timezone})",
         f"  Duration: {duration_min} min",

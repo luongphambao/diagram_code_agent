@@ -24,9 +24,10 @@ SNAPSHOT_NAME = "quality_snapshot.json"
 class DeckMetrics:
     """Deck-specific quality signals derived from deck_plan.json / deck_qa_result.json /
     deck_visual_audit.json.  All fields are None when the deck artefact is absent."""
+
     storyboard_revision: int = 0
     slide_count: int = 0
-    trace_coverage_pct: float = 0.0      # slides with source_refs / total
+    trace_coverage_pct: float = 0.0  # slides with source_refs / total
     structure_score: Optional[int] = None
     structure_grade: Optional[str] = None
     open_findings: int = 0
@@ -135,16 +136,14 @@ def _compute_score(snap: QualitySnapshot) -> tuple[float, dict[str, float]]:
 
     # Findings penalty — open only (waived/resolved are settled)
     high = sum(
-        1 for dim_counts in [snap.findings_by_severity]
-        for sev, cnt in dim_counts.items() if sev == "high"
+        1
+        for dim_counts in [snap.findings_by_severity]
+        for sev, cnt in dim_counts.items()
+        if sev == "high"
         for _ in range(cnt)
     )
-    medium = sum(
-        cnt for sev, cnt in snap.findings_by_severity.items() if sev == "medium"
-    )
-    low = sum(
-        cnt for sev, cnt in snap.findings_by_severity.items() if sev in ("low", "info")
-    )
+    medium = sum(cnt for sev, cnt in snap.findings_by_severity.items() if sev == "medium")
+    low = sum(cnt for sev, cnt in snap.findings_by_severity.items() if sev in ("low", "info"))
     # Recount from raw severity counts of OPEN findings (findings_by_severity
     # already only covers open findings via build_quality_snapshot filter)
     penalty_findings = -(high * 5 + medium * 3 + low * 1)
@@ -209,7 +208,8 @@ def build_quality_snapshot(workspace: Path) -> QualitySnapshot:
             evd_ids_per_req.append(set())
         evd_id_to_supports: dict[str, list[str]] = {
             e["id"]: e.get("supports_entity_ids", [])
-            for e in evidence_raw if isinstance(e, dict) and e.get("id")
+            for e in evidence_raw
+            if isinstance(e, dict) and e.get("id")
         }
         req_ids = {r["id"] for r in reqs if isinstance(r, dict) and r.get("id")}
         covered_req_ids: set[str] = set()
@@ -233,9 +233,7 @@ def build_quality_snapshot(workspace: Path) -> QualitySnapshot:
                 snap.assumptions_pending += 1
             tier = a.get("confidence_tier", "should_confirm")
             snap.assumptions_by_tier[tier] = snap.assumptions_by_tier.get(tier, 0) + 1
-        snap.assumption_confirmation_pct = _pct(
-            snap.assumptions_confirmed, snap.total_assumptions
-        )
+        snap.assumption_confirmation_pct = _pct(snap.assumptions_confirmed, snap.total_assumptions)
 
         # risks
         snap.total_risks = len(risks_raw)
@@ -304,25 +302,18 @@ def build_quality_snapshot(workspace: Path) -> QualitySnapshot:
         snap.deck_storyboard_revision = deck_plan_raw.get("revision", 0)
         snap.deck_slide_count = len(slides)
         grounded = sum(1 for s in slides if s.get("source_refs"))
-        snap.deck_trace_coverage_pct = (
-            round(100.0 * grounded / len(slides), 1) if slides else 0.0
-        )
+        snap.deck_trace_coverage_pct = round(100.0 * grounded / len(slides), 1) if slides else 0.0
 
     deck_qa_raw = _read_json(ws / "deck_qa_result.json")
     if deck_qa_raw:
         snap.deck_structure_score = deck_qa_raw.get("structural_score")
         snap.deck_structure_grade = deck_qa_raw.get("structural_grade")
         qa_findings = deck_qa_raw.get("findings", [])
-        open_qa = [
-            f for f in qa_findings
-            if isinstance(f, dict) and f.get("status", "open") == "open"
-        ]
+        open_qa = [f for f in qa_findings if isinstance(f, dict) and f.get("status", "open") == "open"]
         snap.deck_open_findings = len(open_qa)
         for f in open_qa:
             dim = f.get("dimension", "unknown")
-            snap.deck_open_findings_by_dim[dim] = (
-                snap.deck_open_findings_by_dim.get(dim, 0) + 1
-            )
+            snap.deck_open_findings_by_dim[dim] = snap.deck_open_findings_by_dim.get(dim, 0) + 1
 
     visual_raw = _read_json(ws / "deck_visual_audit.json")
     if visual_raw:
@@ -383,9 +374,9 @@ def format_snapshot(snap: QualitySnapshot) -> str:
 
     # Findings
     if snap.total_findings:
-        open_detail = ", ".join(
-            f"{sev}:{cnt}" for sev, cnt in sorted(snap.findings_by_severity.items())
-        ) or "none"
+        open_detail = (
+            ", ".join(f"{sev}:{cnt}" for sev, cnt in sorted(snap.findings_by_severity.items())) or "none"
+        )
         lines.append(
             f"  Findings: {snap.total_findings} total "
             f"({snap.findings_open} open [{open_detail}], "
@@ -399,10 +390,7 @@ def format_snapshot(snap: QualitySnapshot) -> str:
 
     # Assumptions
     if snap.total_assumptions:
-        tier_str = " | ".join(
-            f"{t.replace('_confirm', '')}:{c}"
-            for t, c in snap.assumptions_by_tier.items()
-        )
+        tier_str = " | ".join(f"{t.replace('_confirm', '')}:{c}" for t, c in snap.assumptions_by_tier.items())
         must_pending = snap.assumptions_by_tier.get("must_confirm", 0)
         must_flag = f" ⚠ {must_pending} must-confirm still pending" if must_pending else ""
         lines.append(
@@ -432,8 +420,7 @@ def format_snapshot(snap: QualitySnapshot) -> str:
     # Cost / spend-to-quality (§4.10)
     if snap.total_tokens:
         stage_str = " | ".join(
-            f"{stage}:{tok:,}"
-            for stage, tok in sorted(snap.tokens_by_stage.items(), key=lambda kv: -kv[1])
+            f"{stage}:{tok:,}" for stage, tok in sorted(snap.tokens_by_stage.items(), key=lambda kv: -kv[1])
         )
         lines.append(
             f"  Cost: {snap.total_tokens:,} tokens over {snap.model_calls} model call(s) "
@@ -451,7 +438,8 @@ def format_snapshot(snap: QualitySnapshot) -> str:
     if snap.deck_slide_count:
         deck_struct = (
             f", struct {snap.deck_structure_score}/100 [{snap.deck_structure_grade}]"
-            if snap.deck_structure_score is not None else ""
+            if snap.deck_structure_score is not None
+            else ""
         )
         lines.append(
             f"  Deck    : rev {snap.deck_storyboard_revision}, "
@@ -464,8 +452,7 @@ def format_snapshot(snap: QualitySnapshot) -> str:
         if snap.deck_visual_passed is not None:
             vis_icon = "✅" if snap.deck_visual_passed else "⚠"
             lines.append(
-                f"    Visual audit: {vis_icon} "
-                f"HIGH:{snap.deck_visual_high} MED:{snap.deck_visual_medium}"
+                f"    Visual audit: {vis_icon} HIGH:{snap.deck_visual_high} MED:{snap.deck_visual_medium}"
             )
 
     return "\n".join(lines)

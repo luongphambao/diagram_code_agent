@@ -38,9 +38,30 @@ def _slug(name: str) -> str:
 
 
 _STOP = {
-    "and", "the", "of", "for", "a", "an", "service", "services", "server",
-    "platform", "api", "system", "studio", "cloud", "app", "tool", "tools",
-    "engine", "node", "core", "edge", "device", "data", "model",
+    "and",
+    "the",
+    "of",
+    "for",
+    "a",
+    "an",
+    "service",
+    "services",
+    "server",
+    "platform",
+    "api",
+    "system",
+    "studio",
+    "cloud",
+    "app",
+    "tool",
+    "tools",
+    "engine",
+    "node",
+    "core",
+    "edge",
+    "device",
+    "data",
+    "model",
 }
 
 
@@ -92,9 +113,7 @@ def search_pack(query: str, icons_root: str, limit: int = 8) -> list[str]:
 
 def _download(url: str) -> bytes | None:
     try:
-        return urllib.request.urlopen(
-            urllib.request.Request(url, headers=_UA), timeout=15
-        ).read()
+        return urllib.request.urlopen(urllib.request.Request(url, headers=_UA), timeout=15).read()
     except Exception:  # noqa: BLE001
         return None
 
@@ -126,9 +145,7 @@ def _from_favicon(name: str, out_png: Path) -> bool:
     """Last resort: site favicon (square PNG) via a guessed domain."""
     slug_nodash = _slug(name).replace("-", "")
     for domain in (f"{slug_nodash}.com", f"{slug_nodash}.ai", f"{slug_nodash}.io", f"{slug_nodash}.org"):
-        data = _download(
-            f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
-        )
+        data = _download(f"https://www.google.com/s2/favicons?domain={domain}&sz=128")
         if data and _valid_png(data)[0]:
             out_png.write_bytes(data)
             return True

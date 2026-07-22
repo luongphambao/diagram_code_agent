@@ -148,11 +148,19 @@ def expand_tokens(tokens: list[str]) -> list[str]:
 
 def _score_entry(entry: dict, q_tokens: list[str], q_raw: str) -> int:
     name = _norm(entry.get("name"))
-    haystack = _norm(" ".join(str(x) for x in [
-        entry.get("name", ""), entry.get("label", ""), entry.get("category", ""),
-        entry.get("tags", ""), *(entry.get("aliases") or []),
-        *(entry.get("keywords") or []),
-    ]))
+    haystack = _norm(
+        " ".join(
+            str(x)
+            for x in [
+                entry.get("name", ""),
+                entry.get("label", ""),
+                entry.get("category", ""),
+                entry.get("tags", ""),
+                *(entry.get("aliases") or []),
+                *(entry.get("keywords") or []),
+            ]
+        )
+    )
     score = 0
     if name == q_raw:
         score += 100
@@ -181,16 +189,19 @@ def _color_for(cat: Catalog, entry: dict) -> str:
     return entry.get("color") or cat.category_colors.get(entry.get("category"), "#232F3E")
 
 
-def style_for_icon(cat: Catalog, name: str, width: int | None = None,
-                   height: int | None = None) -> dict | None:
+def style_for_icon(
+    cat: Catalog, name: str, width: int | None = None, height: int | None = None
+) -> dict | None:
     """Full draw.io style for a resource icon (verbatim from the catalog)."""
     entry = cat.by_name.get(name)
     if not entry:
         return None
     if entry.get("style"):
-        return {"style": entry["style"],
-                "width": width or entry.get("w", 48),
-                "height": height or entry.get("h", 48)}
+        return {
+            "style": entry["style"],
+            "width": width or entry.get("w", 48),
+            "height": height or entry.get("h", 48),
+        }
     color = _color_for(cat, entry)
     style = (
         f"sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor={color};"
@@ -240,8 +251,9 @@ def _decorate(cat: Catalog, entry: dict, score: int | None = None) -> dict:
     return out
 
 
-def search_icon(cat: Catalog, query: str, category: str | None = None,
-                limit: int = 8, kind: str | None = None) -> list[dict]:
+def search_icon(
+    cat: Catalog, query: str, category: str | None = None, limit: int = 8, kind: str | None = None
+) -> list[dict]:
     """Search for an icon/group by keyword; returns ranked decorated entries.
 
     BPMN stencils (bpmn_*) are excluded from generic search — "gateway"/"task"/

@@ -51,9 +51,7 @@ async def _stream_to_disk(file: UploadFile, dest: Path) -> None:
 
 
 @router.post("/upload")
-async def upload(
-    file: UploadFile = File(...), identity: Identity = Depends(require_identity)
-):
+async def upload(file: UploadFile = File(...), identity: Identity = Depends(require_identity)):
     # §0.6: require *some* server-resolved identity so /upload isn't a fully
     # anonymous write surface — no per-upload ownership is enforced here (a
     # file_id is only useful to the caller that receives it back in this same
@@ -129,12 +127,14 @@ def _attached_images(file_ids: list[str]) -> list[dict]:
                 mime = meta.get("mime", "image/png")
                 fname = meta.get("filename", "reference")
                 if b64:
-                    blocks.append({
-                        "type": "image_url",
-                        "text": "[image]",  # mimo requires a non-empty text on every content block
-                        "image_url": {"url": f"data:{mime};base64,{b64}"},
-                        "filename": fname,
-                    })
+                    blocks.append(
+                        {
+                            "type": "image_url",
+                            "text": "[image]",  # mimo requires a non-empty text on every content block
+                            "image_url": {"url": f"data:{mime};base64,{b64}"},
+                            "filename": fname,
+                        }
+                    )
             except Exception:  # noqa: BLE001
                 pass
     return blocks

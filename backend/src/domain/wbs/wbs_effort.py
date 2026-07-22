@@ -54,12 +54,12 @@ RATE_CARD_WORKDAYS_PER_MONTH = 20.0
 # (BE/FE_Mobile/BA/QC/PM); "Developer" is the blended BE+FE_Mobile rate the WBS Excel
 # template's single "Developer" Master Data row expects (see wbs_excel._write_master_data_rate_card).
 DEFAULT_RATE_CARD_USD_PER_MONTH: dict[str, float] = {
-    "PM": 4000.0,          # project manager / lead — senior end of the band
-    "BE": 3200.0,          # backend dev — mid-senior
-    "FE_Mobile": 2800.0,   # frontend/mobile dev — mid
-    "BA": 2600.0,          # business analyst
-    "QC": 2200.0,          # QC/tester — junior-mid
-    "Developer": 3000.0,   # blended BE/FE rate — for the template's single "Developer" row
+    "PM": 4000.0,  # project manager / lead — senior end of the band
+    "BE": 3200.0,  # backend dev — mid-senior
+    "FE_Mobile": 2800.0,  # frontend/mobile dev — mid
+    "BA": 2600.0,  # business analyst
+    "QC": 2200.0,  # QC/tester — junior-mid
+    "Developer": 3000.0,  # blended BE/FE rate — for the template's single "Developer" row
 }
 
 
@@ -67,8 +67,8 @@ DEFAULT_RATE_CARD_USD_PER_MONTH: dict[str, float] = {
 class Ratios:
     """Overhead ratios mirrored from the workbook's ``4. Master Data`` sheet."""
 
-    ba_on_dev: float = 0.10   # Master Data C5
-    qc_on_dev: float = 0.30   # Master Data C7
+    ba_on_dev: float = 0.10  # Master Data C5
+    qc_on_dev: float = 0.30  # Master Data C7
     pm_on_total: float = 0.10  # Master Data C4 (applied to dev+ba+qc)
 
 
@@ -99,8 +99,11 @@ def derive_leaf_effort(
     is no dev). Returns a dict with be/fe/mobile/ai/ba/qc/pm/total (man-days),
     matching what the live Excel formulas recompute.
     """
-    be = float(be or 0); fe = float(fe or 0)
-    mobile = float(mobile or 0); ai = float(ai or 0); ba_in = float(ba or 0)
+    be = float(be or 0)
+    fe = float(fe or 0)
+    mobile = float(mobile or 0)
+    ai = float(ai or 0)
+    ba_in = float(ba or 0)
     dev = be + fe + mobile + ai
     pt = (phase_type or "development").lower()
 
@@ -125,9 +128,14 @@ def derive_leaf_effort(
 
     total = dev + ba_v + qc_v + pm_v
     return {
-        "be": _round(be), "fe": _round(fe), "mobile": _round(mobile),
-        "ai": _round(ai), "ba": _round(ba_v), "qc": _round(qc_v),
-        "pm": _round(pm_v), "total": _round(total),
+        "be": _round(be),
+        "fe": _round(fe),
+        "mobile": _round(mobile),
+        "ai": _round(ai),
+        "ba": _round(ba_v),
+        "qc": _round(qc_v),
+        "pm": _round(pm_v),
+        "total": _round(total),
     }
 
 
@@ -267,8 +275,9 @@ def critical_path(items: list[dict]) -> dict:
     """
     nodes = [it for it in items if it.get("ref_code")]
     by_ref = {it["ref_code"]: it for it in nodes}
-    dur = {r: (float(it.get("pert_expected_md") or 0) or float(it.get("total") or 0))
-           for r, it in by_ref.items()}
+    dur = {
+        r: (float(it.get("pert_expected_md") or 0) or float(it.get("total") or 0)) for r, it in by_ref.items()
+    }
 
     # preds[r] = list of (pred_ref, lag_days, relationship) triples.
     # succs[r] = list of successor ref_codes.
@@ -289,21 +298,33 @@ def critical_path(items: list[dict]) -> dict:
                     edges.append((p_ref, lag, rel))
         else:
             # backwards compat: plain predecessors list → FS, lag=0
-            for p in (it.get("predecessors") or []):
+            for p in it.get("predecessors") or []:
                 p = str(p).strip()
                 if p in by_ref and p != r:
                     edges.append((p, 0.0, "FS"))
         preds[r] = edges
         indeg[r] = len(edges)
-        for (p, *_) in edges:
+        for p, *_ in edges:
             succs[p].append(r)
 
     def _bare(reason_no_path: bool) -> dict:
-        out = [{"ref_code": r, "early_start": None, "early_finish": None,
-                "late_start": None, "late_finish": None, "float_md": None,
-                "critical": False} for r in by_ref]
-        return {"project_duration_md": _round(max(dur.values(), default=0.0)),
-                "critical_path_ref_codes": [], "items": out}
+        out = [
+            {
+                "ref_code": r,
+                "early_start": None,
+                "early_finish": None,
+                "late_start": None,
+                "late_finish": None,
+                "float_md": None,
+                "critical": False,
+            }
+            for r in by_ref
+        ]
+        return {
+            "project_duration_md": _round(max(dur.values(), default=0.0)),
+            "critical_path_ref_codes": [],
+            "items": out,
+        }
 
     # Kahn topological order.
     queue = [r for r in by_ref if indeg[r] == 0]
@@ -323,7 +344,7 @@ def critical_path(items: list[dict]) -> dict:
     es: dict[str, float] = {r: 0.0 for r in by_ref}
     ef: dict[str, float] = {r: 0.0 for r in by_ref}
     for r in topo:
-        for (p, lag, rel) in preds[r]:
+        for p, lag, rel in preds[r]:
             if rel == "FS":
                 es[r] = max(es[r], ef[p] + lag)
             elif rel == "SS":
@@ -342,7 +363,7 @@ def critical_path(items: list[dict]) -> dict:
         lf_cand = project_ef
         ls_cand = project_ef - dur[r]
         for j in succs[r]:
-            for (p, lag, rel) in preds[j]:
+            for p, lag, rel in preds[j]:
                 if p != r:
                     continue
                 if rel == "FS":
@@ -361,21 +382,24 @@ def critical_path(items: list[dict]) -> dict:
         r = it["ref_code"]
         isolated = not preds[r] and not succs[r]
         flt = None if isolated else _round(ls[r] - es[r])
-        is_crit = (flt is not None and flt <= 0.001)
+        is_crit = flt is not None and flt <= 0.001
         if is_crit:
             crit.append(r)
-        out.append({
-            "ref_code": r,
-            "early_start": _round(es[r]), "early_finish": _round(ef[r]),
-            "late_start": _round(ls[r]), "late_finish": _round(lf[r]),
-            "float_md": flt, "critical": is_crit,
-        })
-    return {"project_duration_md": _round(project_ef),
-            "critical_path_ref_codes": crit, "items": out}
+        out.append(
+            {
+                "ref_code": r,
+                "early_start": _round(es[r]),
+                "early_finish": _round(ef[r]),
+                "late_start": _round(ls[r]),
+                "late_finish": _round(lf[r]),
+                "float_md": flt,
+                "critical": is_crit,
+            }
+        )
+    return {"project_duration_md": _round(project_ef), "critical_path_ref_codes": crit, "items": out}
 
 
-def assign_sprints(items: list[dict], peak_dev_fte: float,
-                   weeks_per_sprint: int = 2) -> None:
+def assign_sprints(items: list[dict], peak_dev_fte: float, weeks_per_sprint: int = 2) -> None:
     """Set ``assigned_sprint`` on each item in-place based on its CPM Early Start.
 
     Converts Early Start (man-days) to a calendar week using ``peak_dev_fte`` and
@@ -384,6 +408,7 @@ def assign_sprints(items: list[dict], peak_dev_fte: float,
     Sprint numbering starts at 1.
     """
     import math
+
     fte = max(0.5, float(peak_dev_fte or 1.0))
     for it in items:
         raw_es = it.get("early_start")
@@ -404,8 +429,7 @@ def delivery_grid(duration_weeks: int) -> dict:
     weeks = max(1, int(duration_weeks))
     sprints = (weeks + 1) // 2
     months = (weeks + 3) // 4
-    return {"weeks": weeks, "sprints": sprints, "months": months,
-            "weeks_per_month": 4, "weeks_per_sprint": 2}
+    return {"weeks": weeks, "sprints": sprints, "months": months, "weeks_per_month": 4, "weeks_per_sprint": 2}
 
 
 def level_resources(
@@ -430,8 +454,7 @@ def level_resources(
     ``{sprint, role, demand_md, capacity_md, overflow_md}`` dicts.
     """
     cap_per_sprint: dict[str, float] = {
-        pool: float(fte) * weeks_per_sprint * MANDAYS_PER_WEEK
-        for pool, fte in role_fte.items()
+        pool: float(fte) * weeks_per_sprint * MANDAYS_PER_WEEK for pool, fte in role_fte.items()
     }
 
     by_sprint: dict[int, dict[str, float]] = {}
@@ -441,11 +464,13 @@ def level_resources(
             continue
         sprint = int(sprint)
         # Collapse BE + FE/Mobile variants into dev pool.
-        dev_md = (float(it.get("be", 0) or 0)
-                  + float(it.get("fe_mobile", 0) or 0)
-                  + float(it.get("fe", 0) or 0)
-                  + float(it.get("mobile", 0) or 0)
-                  + float(it.get("ai", 0) or 0))
+        dev_md = (
+            float(it.get("be", 0) or 0)
+            + float(it.get("fe_mobile", 0) or 0)
+            + float(it.get("fe", 0) or 0)
+            + float(it.get("mobile", 0) or 0)
+            + float(it.get("ai", 0) or 0)
+        )
         pool_md: dict[str, float] = {
             "dev": dev_md,
             "ba": float(it.get("ba", 0) or 0),
@@ -461,13 +486,15 @@ def level_resources(
         for pool, cap in cap_per_sprint.items():
             demand = by_sprint[sprint].get(pool, 0.0)
             if demand > cap + tolerance:
-                overloads.append({
-                    "sprint": sprint,
-                    "role": pool,
-                    "demand_md": _round(demand),
-                    "capacity_md": _round(cap),
-                    "overflow_md": _round(demand - cap),
-                })
+                overloads.append(
+                    {
+                        "sprint": sprint,
+                        "role": pool,
+                        "demand_md": _round(demand),
+                        "capacity_md": _round(cap),
+                        "overflow_md": _round(demand - cap),
+                    }
+                )
 
     peak_util: dict[str, float | None] = {}
     for pool, cap in cap_per_sprint.items():

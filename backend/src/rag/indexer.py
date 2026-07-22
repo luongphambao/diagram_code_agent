@@ -203,12 +203,7 @@ def _build_in_memory_store(embeddings):
     from wbs_normalizer import load_all_projects, project_to_documents
 
     projects, _ = load_all_projects()
-    docs = [
-        d
-        for p in projects
-        for d in project_to_documents(p)
-        if d["metadata"]["granularity"] == "project"
-    ]
+    docs = [d for p in projects for d in project_to_documents(p) if d["metadata"]["granularity"] == "project"]
 
     if not docs:
         return FAISS.from_texts(["placeholder"], embeddings)

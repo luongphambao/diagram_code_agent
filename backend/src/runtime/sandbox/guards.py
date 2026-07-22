@@ -13,12 +13,14 @@ import re
 
 
 def _audit_add(findings: list[dict], severity: str, rule: str, detail: str, suggestion: str) -> None:
-    findings.append({
-        "severity": severity,
-        "rule": rule,
-        "detail": detail,
-        "suggestion": suggestion,
-    })
+    findings.append(
+        {
+            "severity": severity,
+            "rule": rule,
+            "detail": detail,
+            "suggestion": suggestion,
+        }
+    )
 
 
 def _audit_code(code: str) -> dict:
@@ -33,56 +35,85 @@ def _audit_code(code: str) -> dict:
     pretty = "Pretty(" in code or "render_slide(" in code
 
     if raw_diagram:
-        if "filename=\"out\"" not in code and "filename='out'" not in code and "filename=\"/workspace/out\"" not in code and "filename='/workspace/out'" not in code:
+        if (
+            'filename="out"' not in code
+            and "filename='out'" not in code
+            and 'filename="/workspace/out"' not in code
+            and "filename='/workspace/out'" not in code
+        ):
             _audit_add(
-                findings, "high", "output_filename",
-                "Raw Diagram(...) code does not visibly set filename=\"out\".",
-                "Use Diagram(..., filename=\"out\", outformat=[\"png\", \"dot\"], show=False).",
+                findings,
+                "high",
+                "output_filename",
+                'Raw Diagram(...) code does not visibly set filename="out".',
+                'Use Diagram(..., filename="out", outformat=["png", "dot"], show=False).',
             )
         if "outformat" not in code:
             _audit_add(
-                findings, "high", "output_format",
+                findings,
+                "high",
+                "output_format",
                 "Raw Diagram(...) code does not set outformat.",
-                "Set outformat=[\"png\", \"dot\"] so PNG and DOT are produced for draw.io export.",
+                'Set outformat=["png", "dot"] so PNG and DOT are produced for draw.io export.',
             )
         if "show=False" not in code:
             _audit_add(
-                findings, "medium", "show_false",
+                findings,
+                "medium",
+                "show_false",
                 "Raw Diagram(...) code does not visibly set show=False.",
                 "Use show=False to avoid opening a viewer during automated rendering.",
             )
 
-    if pretty and not re.search(r"\.render\(\s*[\"'](?:/workspace/)?out[\"']", code) and "render_slide(" not in code:
+    if (
+        pretty
+        and not re.search(r"\.render\(\s*[\"'](?:/workspace/)?out[\"']", code)
+        and "render_slide(" not in code
+    ):
         _audit_add(
-            findings, "high", "pretty_output",
+            findings,
+            "high",
+            "pretty_output",
             "Pretty code does not visibly render to out.",
-            "End diagram-only scripts with g.render(\"out\") or slide scripts with render_slide(g, \"out\", ...).",
+            'End diagram-only scripts with g.render("out") or slide scripts with render_slide(g, "out", ...).',
         )
 
-    if re.search(r"graph_attr\s*=.*fontsize", code, re.DOTALL) and "edge_attr" not in code and "node_attr" not in code:
+    if (
+        re.search(r"graph_attr\s*=.*fontsize", code, re.DOTALL)
+        and "edge_attr" not in code
+        and "node_attr" not in code
+    ):
         _audit_add(
-            findings, "medium", "font_defaults",
+            findings,
+            "medium",
+            "font_defaults",
             "fontsize appears only in graph_attr; that does not reliably size all node/edge labels.",
             "Use node_attr for node label defaults, edge_attr for edge label defaults, or Edge(fontsize=...) for an explicit edge.",
         )
 
     if "xlabel=" in code:
         _audit_add(
-            findings, "medium", "floating_xlabel",
+            findings,
+            "medium",
+            "floating_xlabel",
             "Edge(xlabel=...) can float in open space and detach visually from the arrow.",
             "Prefer short Edge(label=...), taillabel/headlabel for endpoint labels, or move/stack clusters so the edge is short.",
         )
 
     if re.search(r"\b(pos|x|y)\s*=", code):
         _audit_add(
-            findings, "medium", "manual_positioning",
+            findings,
+            "medium",
+            "manual_positioning",
             "Manual pos/x/y-style positioning is present; Graphviz dot usually ignores fixed positions.",
             "Control layout through direction, declaration order, same_rank, invisible spine edges, minlen, and simpler clusters.",
         )
 
     if re.search(r"Cluster\([^)]*graph_attr\s*=[^)]*orientation", code, re.DOTALL) or "orientation" in code:
         _audit_add(
-            findings, "low", "cluster_orientation",
+            findings,
+            "low",
+            "cluster_orientation",
             "Cluster orientation hints are present; cluster-local ordering is often not dependable in diagrams/Graphviz.",
             "Use main graph direction, declaration order, same_rank/invisible edges, or collapse repeated nodes.",
         )
@@ -94,7 +125,9 @@ def _audit_code(code: str) -> dict:
             stop = nums[1] if len(nums) > 1 else nums[0]
             if abs(stop - start) >= 6:
                 _audit_add(
-                    findings, "medium", "large_replicas",
+                    findings,
+                    "medium",
+                    "large_replicas",
                     f"Loop {match.group(0)} may create many similar nodes, which often produces unstable cluster ordering.",
                     "Collapse replicas into one node labeled with the count, or show at most two representatives plus an ellipsis.",
                 )
@@ -105,24 +138,28 @@ def _audit_code(code: str) -> dict:
         flat = " ".join(label.split())
         if len(flat) > 28 or "\n" in label:
             _audit_add(
-                findings, "low", "long_edge_label",
+                findings,
+                "low",
+                "long_edge_label",
                 f"Long edge label detected: {flat[:60]}",
                 "Keep edge labels short, ideally 1-4 words; move detail into node sublabels or a legend.",
             )
             break
 
-    if re.search(r"unhealthy|not healthy|failed|down", code, re.IGNORECASE) and not re.search(r"color\s*=\s*[\"']#?(?:d|c|e|f|red)", code, re.IGNORECASE):
+    if re.search(r"unhealthy|not healthy|failed|down", code, re.IGNORECASE) and not re.search(
+        r"color\s*=\s*[\"']#?(?:d|c|e|f|red)", code, re.IGNORECASE
+    ):
         _audit_add(
-            findings, "low", "health_status",
+            findings,
+            "low",
+            "health_status",
             "Health/status language appears without an obvious red/error visual encoding.",
             "Show degraded status with a red/dashed edge, a small status node, or a red security/alert concern rather than trying to mutate built-in node borders.",
         )
 
     is_slide = "render_slide(" in code
     cluster_count = code.count("g.cluster(")
-    is_poster = "flow_layout=False" in code or (
-        "density='poster'" in code or 'density="poster"' in code
-    )
+    is_poster = "flow_layout=False" in code or ("density='poster'" in code or 'density="poster"' in code)
     has_link = "g.link(" in code
     has_cross_cluster_edge = has_link  # any edge could be cross-cluster; we check below
 
@@ -136,7 +173,9 @@ def _audit_code(code: str) -> dict:
 
             if not has_invis_spine:
                 _audit_add(
-                    findings, "high", "poster_missing_spine",
+                    findings,
+                    "high",
+                    "poster_missing_spine",
                     f"Poster mode ({cluster_count} clusters) has no grid structure — "
                     "planes will sprawl and the layout will be sparse.",
                     "Pack each region: g.grid_cluster(region_id, cols=2 or 3) after its "
@@ -144,7 +183,9 @@ def _audit_code(code: str) -> dict:
                 )
             if "grid_cluster(" not in code and "poster_grid(" in code:
                 _audit_add(
-                    findings, "medium", "poster_uses_legacy_grid",
+                    findings,
+                    "medium",
+                    "poster_uses_legacy_grid",
                     "Poster uses g.poster_grid (single-column ranks) instead of dense "
                     "in-plane grids — the diagram will read sparse, not like the reference.",
                     "Replace poster_grid with one g.grid_cluster(region_id, cols=N) per "
@@ -154,7 +195,9 @@ def _audit_code(code: str) -> dict:
             # Flow mode (default): require cross-cluster edges for visible connections.
             if not has_link:
                 _audit_add(
-                    findings, "high", "flow_missing_edges",
+                    findings,
+                    "high",
+                    "flow_missing_edges",
                     f"Flow mode ({cluster_count} clusters) has no g.link() calls — "
                     "clusters will be disconnected islands with no visible flow.",
                     "Add real cross-cluster g.link() edges for the primary data flow. "
@@ -163,7 +206,9 @@ def _audit_code(code: str) -> dict:
                 )
             elif cluster_count >= 4 and code.count("g.link(") < cluster_count - 1:
                 _audit_add(
-                    findings, "medium", "flow_few_cross_cluster_edges",
+                    findings,
+                    "medium",
+                    "flow_few_cross_cluster_edges",
                     f"Flow mode has {code.count('g.link(')} edges for {cluster_count} "
                     "clusters — many zones may appear disconnected.",
                     "Add cross-cluster g.link() edges to connect every zone to the "
@@ -172,7 +217,9 @@ def _audit_code(code: str) -> dict:
 
         if not has_numbered:
             _audit_add(
-                findings, "high", "missing_cluster_numbers",
+                findings,
+                "high",
+                "missing_cluster_numbers",
                 f"Diagram with {cluster_count} clusters has no number= arguments.",
                 "Add number=1, number=2, ... to every top-level g.cluster() call.",
             )

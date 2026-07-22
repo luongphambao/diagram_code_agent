@@ -24,7 +24,11 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
       - name: Sync deps
-        run: uv sync --frozen || uv sync
+        # improvement plan §1.3: `|| uv sync` silently re-resolved a stale/out-of-sync
+        # lockfile instead of failing CI — the exact gap that let pytest/ruff/pyright
+        # go undeclared in uv.lock for a while (see pyproject.toml's dev tooling note).
+        # A stale lockfile must fail the build, not quietly drift.
+        run: uv sync --frozen
       - name: Unit tests
         run: uv run python -m pytest tests/ -q
       - name: Eval regression gate

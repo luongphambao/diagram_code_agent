@@ -17,6 +17,7 @@ Programmatic usage:
   path = lookup_ai_logo("claude", "/workspace/_logos")  # -> PNG path or None
   results = search_ai_brands("openai")                  # -> list of match dicts
 """
+
 import argparse
 import base64
 import json
@@ -28,8 +29,9 @@ from pathlib import Path
 
 # parents[0]=domain/diagram, [1]=domain, [2]=src — data lives at src/data/.
 MANIFEST = str(Path(__file__).resolve().parents[2] / "data" / "lobe-icons.json")
-_DRAWIO_STYLE = ("shape=image;html=1;imageAspect=0;aspect=fixed;"
-                 "verticalLabelPosition=bottom;verticalAlign=top;image=")
+_DRAWIO_STYLE = (
+    "shape=image;html=1;imageAspect=0;aspect=fixed;verticalLabelPosition=bottom;verticalAlign=top;image="
+)
 _VARIANT = re.compile(r"-(color|text)$")
 
 # Common RAG/LLM data stores that lobe-icons lacks — simple-icons (CC0) fallback.
@@ -133,9 +135,11 @@ def _search_supplement(query: str) -> str | None:
 
 
 def _pick_variant(base: str, variants: set[str], prefer: str) -> str | None:
-    order = {"color": ["-color", "", "-text"],
-             "mono":  ["", "-color", "-text"],
-             "text":  ["-text", "-color", ""]}[prefer]
+    order = {
+        "color": ["-color", "", "-text"],
+        "mono": ["", "-color", "-text"],
+        "text": ["-text", "-color", ""],
+    }[prefer]
     for suffix in order:
         cand = base + suffix
         if cand in variants:
@@ -157,6 +161,7 @@ def _svg_to_png(svg: bytes, size: int = 256) -> bytes | None:
     svg = svg.replace(b'height="1em"', f'height="{size}"'.encode())
     try:
         import cairosvg
+
         return cairosvg.svg2png(bytestring=svg, output_width=size, output_height=size)
     except Exception:  # noqa: BLE001
         return None
@@ -175,20 +180,19 @@ def search_ai_brands(query: str, limit: int = 8, variant: str = "color") -> list
             if file is None:
                 continue
             url = f"{cdn}{file}.svg"
-            results.append({"brand": base, "file": file, "url": url,
-                            "style": _DRAWIO_STYLE + url})
+            results.append({"brand": base, "file": file, "url": url, "style": _DRAWIO_STYLE + url})
     else:
         brand = _search_supplement(query)
         if brand:
             slug = _SUPPLEMENT[brand]
             url = _SIMPLEICONS_CDN + slug
-            results.append({"brand": brand, "file": f"simpleicons:{slug}",
-                            "url": url, "style": _DRAWIO_STYLE + url})
+            results.append(
+                {"brand": brand, "file": f"simpleicons:{slug}", "url": url, "style": _DRAWIO_STYLE + url}
+            )
     return results
 
 
-def lookup_ai_logo(name: str, icons_cache_dir: str, size: int = 256,
-                   variant: str = "color") -> str | None:
+def lookup_ai_logo(name: str, icons_cache_dir: str, size: int = 256, variant: str = "color") -> str | None:
     """Resolve an AI/LLM brand to a cached PNG path.
 
     Downloads the SVG from CDN and converts to PNG using cairosvg.
@@ -219,13 +223,16 @@ def lookup_ai_logo(name: str, icons_cache_dir: str, size: int = 256,
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Find AI/LLM brand logos as draw.io styles (lobe-icons via CDN).")
+    ap = argparse.ArgumentParser(
+        description="Find AI/LLM brand logos as draw.io styles (lobe-icons via CDN)."
+    )
     ap.add_argument("query", nargs="?", help='brand name, e.g. "openai" or "claude"')
     ap.add_argument("--limit", type=int, default=8)
     ap.add_argument("--variant", choices=["color", "mono", "text"], default="color")
     ap.add_argument("--size", type=int, default=48)
-    ap.add_argument("--embed", action="store_true",
-                    help="inline the SVG as a data URI (fetches it now; portable)")
+    ap.add_argument(
+        "--embed", action="store_true", help="inline the SVG as a data URI (fetches it now; portable)"
+    )
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--list", action="store_true", help="list all brand names and exit")
     args = ap.parse_args()
@@ -260,8 +267,9 @@ def main() -> None:
                 image = "data:image/svg+xml," + base64.b64encode(svg).decode()
             else:
                 image = url
-            results.append({"brand": base, "file": file, "w": args.size, "h": args.size,
-                            "style": _DRAWIO_STYLE + image})
+            results.append(
+                {"brand": base, "file": file, "w": args.size, "h": args.size, "style": _DRAWIO_STYLE + image}
+            )
     else:
         brand = _search_supplement(args.query)
         if brand:
@@ -272,8 +280,15 @@ def main() -> None:
                 svg = _download_svg(url)
                 if svg:
                     image = "data:image/svg+xml," + base64.b64encode(svg).decode()
-            results.append({"brand": brand, "file": f"simpleicons:{slug}",
-                            "w": args.size, "h": args.size, "style": _DRAWIO_STYLE + image})
+            results.append(
+                {
+                    "brand": brand,
+                    "file": f"simpleicons:{slug}",
+                    "w": args.size,
+                    "h": args.size,
+                    "style": _DRAWIO_STYLE + image,
+                }
+            )
 
     if not results:
         sys.exit(f"no logo for {args.query!r}")

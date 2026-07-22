@@ -21,10 +21,19 @@ _GATEWAY_TYPES = ("exclusive", "parallel", "inclusive", "event")
 
 class ProcessStep(CoercingModel):
     id: str = Field(description="unique snake_case id")
-    kind: Literal["start", "intermediate", "end", "gateway", "task", "user_task",
-                  "service_task", "manual_task", "script_task",
-                  "business_rule_task", "sub_process"] = Field(
-        description="BPMN flow-object kind — maps 1:1 to a prettygraph.native.bpmn creator")
+    kind: Literal[
+        "start",
+        "intermediate",
+        "end",
+        "gateway",
+        "task",
+        "user_task",
+        "service_task",
+        "manual_task",
+        "script_task",
+        "business_rule_task",
+        "sub_process",
+    ] = Field(description="BPMN flow-object kind — maps 1:1 to a prettygraph.native.bpmn creator")
     type: str = Field(
         "",
         description=(
@@ -45,12 +54,15 @@ class ProcessFlow(CoercingModel):
     to: str = Field(description="target step id")
     label: str = Field("", description="flow label, e.g. a condition or message name")
     kind: Literal["sequence", "message"] = Field(
-        "sequence", description="sequence (solid, within-pool control flow) or "
-                                "message (dashed, cross-pool/cross-lane communication)")
+        "sequence",
+        description="sequence (solid, within-pool control flow) or "
+        "message (dashed, cross-pool/cross-lane communication)",
+    )
 
 
 class ProcessBlueprint(CoercingModel):
     """A BPMN 2.0 Tier-1 swimlane process: pool -> lanes (rows) x phases (columns)."""
+
     label: str = Field("", description="pool title")
     lanes: list[str] = Field(default_factory=list, description="lane (role/swimlane) labels, top to bottom")
     phases: list[str] = Field(default_factory=list, description="optional milestone/phase column headers")

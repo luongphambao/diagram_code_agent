@@ -31,8 +31,7 @@ def _web_search_budget_report(state: dict) -> dict:
     """Per-category used/cap snapshot + total remaining, for tool responses."""
     by_cat = state.get("by_category") or {}
     categories = {
-        cat: {"used": int(by_cat.get(cat, 0)), "cap": cap,
-              "remaining": max(0, cap - int(by_cat.get(cat, 0)))}
+        cat: {"used": int(by_cat.get(cat, 0)), "cap": cap, "remaining": max(0, cap - int(by_cat.get(cat, 0)))}
         for cat, cap in WEB_SEARCH_CATEGORY_CAPS.items()
     }
     total_used = int(state.get("calls", 0))
@@ -79,42 +78,51 @@ def web_research(query: str, topic: str = "tech_stack") -> str:
     # Total session budget exhausted.
     if calls >= WEB_SEARCH_SESSION_CAP:
         _bump_tool_summary("web_research_budget_exhausted")
-        return json.dumps({
-            "status": "BUDGET_EXHAUSTED",
-            "query": query,
-            "budget": _web_search_budget_report(state),
-            "instruction": (
-                "No web searches remain this session. Proceed with existing knowledge "
-                "and results already gathered; flag any unverified pricing/version as an "
-                "assumption in assumptions.confirm_with_customer."
-            ),
-        }, indent=2)
+        return json.dumps(
+            {
+                "status": "BUDGET_EXHAUSTED",
+                "query": query,
+                "budget": _web_search_budget_report(state),
+                "instruction": (
+                    "No web searches remain this session. Proceed with existing knowledge "
+                    "and results already gathered; flag any unverified pricing/version as an "
+                    "assumption in assumptions.confirm_with_customer."
+                ),
+            },
+            indent=2,
+        )
 
     # This category's sub-budget is spent, but the session still has room elsewhere.
     if cat_used >= cat_cap:
         report = _web_search_budget_report(state)
         open_cats = [c for c, info in report["by_category"].items() if info["remaining"] > 0]
         _bump_tool_summary("web_research_category_exhausted")
-        return json.dumps({
-            "status": "CATEGORY_EXHAUSTED",
-            "query": query,
-            "category": category,
-            "budget": report,
-            "instruction": (
-                f"The '{category}' sub-budget ({cat_cap}) is spent. The session still has "
-                f"searches left in: {open_cats or 'none'}. Re-issue with a topic from that "
-                "list ONLY if the question genuinely belongs to that stage; otherwise "
-                "proceed with existing knowledge."
-            ),
-        }, indent=2)
+        return json.dumps(
+            {
+                "status": "CATEGORY_EXHAUSTED",
+                "query": query,
+                "category": category,
+                "budget": report,
+                "instruction": (
+                    f"The '{category}' sub-budget ({cat_cap}) is spent. The session still has "
+                    f"searches left in: {open_cats or 'none'}. Re-issue with a topic from that "
+                    "list ONLY if the question genuinely belongs to that stage; otherwise "
+                    "proceed with existing knowledge."
+                ),
+            },
+            indent=2,
+        )
 
     api_key = os.getenv("TAVILY_API_KEY")
     if not api_key:
         _bump_tool_summary("web_research_no_key")
-        return json.dumps({
-            "status": "NO_API_KEY",
-            "instruction": "TAVILY_API_KEY not set; skip web research and proceed.",
-        }, indent=2)
+        return json.dumps(
+            {
+                "status": "NO_API_KEY",
+                "instruction": "TAVILY_API_KEY not set; skip web research and proceed.",
+            },
+            indent=2,
+        )
 
     # Reserve the call (total + per-category) BEFORE the network request.
     state["calls"] = calls + 1
@@ -142,13 +150,16 @@ def web_research(query: str, topic: str = "tech_stack") -> str:
         data = resp.json()
     except Exception as exc:  # noqa: BLE001
         _bump_tool_summary("web_research_error")
-        return json.dumps({
-            "status": "ERROR",
-            "query": query,
-            "error": str(exc)[:300],
-            "budget": _web_search_budget_report(state),
-            "instruction": "Search failed (still counted). Proceed with existing knowledge.",
-        }, indent=2)
+        return json.dumps(
+            {
+                "status": "ERROR",
+                "query": query,
+                "error": str(exc)[:300],
+                "budget": _web_search_budget_report(state),
+                "instruction": "Search failed (still counted). Proceed with existing knowledge.",
+            },
+            indent=2,
+        )
 
     sources = [
         {
@@ -160,19 +171,22 @@ def web_research(query: str, topic: str = "tech_stack") -> str:
     ]
     _bump_tool_summary("web_research", web_search_calls=state["calls"])
     report = _web_search_budget_report(state)
-    return json.dumps({
-        "status": "OK",
-        "query": query,
-        "category": category,
-        "answer": (data.get("answer", "") or "")[:1600],
-        "sources": sources,
-        "budget": report,
-        "instruction": (
-            "Cite specific numbers/versions from answer/sources in the relevant "
-            "artifact, AND when the claim is client-facing (pricing/version/"
-            "compliance/reference-architecture) commit it with record_evidence "
-            "(pass source_url + supports_entity_ids). Remaining — "
-            f"total: {report['total_remaining']}, this stage ('{category}'): "
-            f"{report['by_category'][category]['remaining']}."
-        ),
-    }, indent=2)
+    return json.dumps(
+        {
+            "status": "OK",
+            "query": query,
+            "category": category,
+            "answer": (data.get("answer", "") or "")[:1600],
+            "sources": sources,
+            "budget": report,
+            "instruction": (
+                "Cite specific numbers/versions from answer/sources in the relevant "
+                "artifact, AND when the claim is client-facing (pricing/version/"
+                "compliance/reference-architecture) commit it with record_evidence "
+                "(pass source_url + supports_entity_ids). Remaining — "
+                f"total: {report['total_remaining']}, this stage ('{category}'): "
+                f"{report['by_category'][category]['remaining']}."
+            ),
+        },
+        indent=2,
+    )

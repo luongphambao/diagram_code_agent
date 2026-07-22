@@ -34,13 +34,16 @@ def semantic_stats(spec: dict, xml: str, plan: dict | None = None) -> dict:
     suppressed leave the expectation set.
     """
     from domain.validation.validate_drawio import check_semantic_preservation
+
     sup = {tuple(x) for x in (plan or {}).get("suppressed_edges", [])}
     edges = spec.get("edges", [])
-    kept_pairs = {(e.get("from"), e.get("to")) for e in edges
-                  if (e.get("from"), e.get("to"), e.get("label") or "") not in sup}
+    kept_pairs = {
+        (e.get("from"), e.get("to"))
+        for e in edges
+        if (e.get("from"), e.get("to"), e.get("label") or "") not in sup
+    }
     src_nodes = [n.get("id") for n in spec.get("nodes", [])]
-    src_edges = [(e.get("from"), e.get("to")) for e in edges
-                 if (e.get("from"), e.get("to")) in kept_pairs]
+    src_edges = [(e.get("from"), e.get("to")) for e in edges if (e.get("from"), e.get("to")) in kept_pairs]
     _, sem = check_semantic_preservation(src_nodes, src_edges, xml)
     if sup:
         sem["bundled_edges"] = len(sup)
@@ -49,6 +52,7 @@ def semantic_stats(spec: dict, xml: str, plan: dict | None = None) -> dict:
 
 def _score_candidate(spec: dict, name: str, plan: dict | None) -> dict:
     from domain.validation.validate_drawio import validate_xml, production_scorecard
+
     xml, stats = build_drawio_from_spec(spec, name, flat=False, plan=plan)
     stats["semantic"] = semantic_stats(spec, xml, plan)
     report = validate_xml(xml, stats=stats)
@@ -93,8 +97,7 @@ def _arrow_poor(metrics: dict) -> bool:
     )
 
 
-def _variants_for(plan: dict | None, spec: dict,
-                  baseline_metrics: dict) -> list[tuple[str, dict | None]]:
+def _variants_for(plan: dict | None, spec: dict, baseline_metrics: dict) -> list[tuple[str, dict | None]]:
     """Rule-gated plan variants — only build what the baseline's symptoms call
     for (each candidate costs a full engine build; typical case adds 0-2)."""
     if not plan:
@@ -131,7 +134,7 @@ def _variants_for(plan: dict | None, spec: dict,
             v = copy.deepcopy(plan)
             v["refined_ops_pack"] = not plan.get("refined_ops_pack", True)
             out.append(("ops-pack-toggle", v))
-        return out[:_MAX_CANDIDATES - 2]
+        return out[: _MAX_CANDIDATES - 2]
     lo, hi = 1.3, 1.9
     ratio = baseline_metrics.get("ratio")
     wrappable = _wrappable_bands(plan, spec)
@@ -152,7 +155,7 @@ def _variants_for(plan: dict | None, spec: dict,
         v["band_cols"] = {c: max(2, n - 1) for c, n in plan["band_cols"].items()}
         if v["band_cols"] != plan.get("band_cols"):
             out.append(("fewer-cols", v))
-    return out[:_MAX_CANDIDATES - 2]
+    return out[: _MAX_CANDIDATES - 2]
 
 
 def _rank_key(res: dict) -> tuple:
@@ -160,10 +163,12 @@ def _rank_key(res: dict) -> tuple:
     arrow = _arrow_metrics(m)
     ratio = m.get("ratio")
     ratio_dist = abs((ratio if ratio is not None else TARGET_RATIO) - TARGET_RATIO)
-    return (-sc["total"],
-            -float(arrow.get("arrow_clarity_score", 100.0)),
-            m.get("edge_crossings") or 0,
-            ratio_dist)
+    return (
+        -sc["total"],
+        -float(arrow.get("arrow_clarity_score", 100.0)),
+        m.get("edge_crossings") or 0,
+        ratio_dist,
+    )
 
 
 def auto_repair(spec: dict, name: str, plan: dict | None) -> tuple[dict | None, dict]:
@@ -183,18 +188,20 @@ def auto_repair(spec: dict, name: str, plan: dict | None) -> tuple[dict | None, 
             iterations.append({"candidate": label, "error": str(exc)[:200]})
             return None
         results.append((label, cand, res))
-        iterations.append({
-            "candidate": label,
-            "score": res["scorecard"]["total"],
-            "pass": res["scorecard"]["pass"],
-            "ratio": res["metrics"].get("ratio"),
-            "crossings": res["metrics"].get("edge_crossings"),
-            "arrow_clarity_score": _arrow_metrics(res["metrics"]).get("arrow_clarity_score"),
-            "visible_edge_count": _arrow_metrics(res["metrics"]).get("visible_edge_count"),
-            "bundled_edge_count": _arrow_metrics(res["metrics"]).get("bundled_edge_count"),
-            "crossings_per_edge": _arrow_metrics(res["metrics"]).get("crossings_per_edge"),
-            "collisions": res["scorecard"].get("collisions"),
-        })
+        iterations.append(
+            {
+                "candidate": label,
+                "score": res["scorecard"]["total"],
+                "pass": res["scorecard"]["pass"],
+                "ratio": res["metrics"].get("ratio"),
+                "crossings": res["metrics"].get("edge_crossings"),
+                "arrow_clarity_score": _arrow_metrics(res["metrics"]).get("arrow_clarity_score"),
+                "visible_edge_count": _arrow_metrics(res["metrics"]).get("visible_edge_count"),
+                "bundled_edge_count": _arrow_metrics(res["metrics"]).get("bundled_edge_count"),
+                "crossings_per_edge": _arrow_metrics(res["metrics"]).get("crossings_per_edge"),
+                "collisions": res["scorecard"].get("collisions"),
+            }
+        )
         return res
 
     baseline = _try("planned", plan)
@@ -202,16 +209,17 @@ def auto_repair(spec: dict, name: str, plan: dict | None) -> tuple[dict | None, 
     if baseline and not baseline["scorecard"]["pass"]:
         if plan is not None:
             _try("unplanned", None)
-        for label, cand in _variants_for(plan, spec, baseline["metrics"]
-                                         | {"collisions": baseline["scorecard"]["collisions"]}):
+        for label, cand in _variants_for(
+            plan, spec, baseline["metrics"] | {"collisions": baseline["scorecard"]["collisions"]}
+        ):
             if len(results) >= _MAX_CANDIDATES:
                 break
             _try(label, cand)
     if not results:
-        return plan, {"iterations": iterations, "chosen": "planned",
-                      "final_score": None}
+        return plan, {"iterations": iterations, "chosen": "planned", "final_score": None}
     label, best_plan, best = min(results, key=lambda r: _rank_key(r[2]))
     from domain.validation.validate_drawio import PRODUCTION_TARGET
+
     report = {
         "iterations": iterations,
         "chosen": label,

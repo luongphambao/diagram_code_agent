@@ -27,11 +27,11 @@ class CommentRecord(BaseModel):
     """One review comment anchored to a CSM entity id (or artifact region)."""
 
     id: str
-    anchor_entity_id: str = ""        # e.g. "REQ-3", "COMP-api_gw", "SLIDE-7"; "" = general
+    anchor_entity_id: str = ""  # e.g. "REQ-3", "COMP-api_gw", "SLIDE-7"; "" = general
     author: str = ""
-    role: str = ""                    # architect / pm / reviewer / client / ...
+    role: str = ""  # architect / pm / reviewer / client / ...
     body: str = ""
-    timestamp: str = ""               # ISO 8601; injected by the caller
+    timestamp: str = ""  # ISO 8601; injected by the caller
     resolved: bool = False
     resolved_by: str = ""
     resolved_at: str = ""
@@ -59,9 +59,11 @@ def new_comment_record(
 
 # --- store -------------------------------------------------------------------
 
+
 def _log_path(workspace: Optional[Path]) -> Path:
     if workspace is None:
         from backends import current_workspace
+
         workspace = current_workspace()
     return Path(workspace) / COMMENT_LOG_NAME
 

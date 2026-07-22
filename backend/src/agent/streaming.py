@@ -35,9 +35,7 @@ class _StreamingSubAgentRunnable:
         self._name = name
 
     def with_config(self, config=None, **kwargs):
-        return _StreamingSubAgentRunnable(
-            self._runnable.with_config(config or {}, **kwargs), self._name
-        )
+        return _StreamingSubAgentRunnable(self._runnable.with_config(config or {}, **kwargs), self._name)
 
     async def ainvoke(self, state, config=None, **kwargs):
         # Capture the outer stream writer once, before entering the inner astream.
@@ -59,31 +57,34 @@ class _StreamingSubAgentRunnable:
                             continue
                         for msg in upd.get("messages", []) or []:
                             if isinstance(msg, AIMessage):
-                                for tc in (msg.tool_calls or []):
-                                    writer({
-                                        "subagent": self._name,
-                                        "phase": "start",
-                                        "tool": tc.get("name", "tool"),
-                                        "detail": _compact_tool_args(tc.get("args")),
-                                    })
+                                for tc in msg.tool_calls or []:
+                                    writer(
+                                        {
+                                            "subagent": self._name,
+                                            "phase": "start",
+                                            "tool": tc.get("name", "tool"),
+                                            "detail": _compact_tool_args(tc.get("args")),
+                                        }
+                                    )
                             elif isinstance(msg, LCToolMessage):
-                                writer({
-                                    "subagent": self._name,
-                                    "phase": "end",
-                                    "tool": getattr(msg, "name", "tool"),
-                                    "ok": getattr(msg, "status", None) != "error",
-                                    "detail": _compact_tool_output(getattr(msg, "content", "")),
-                                })
+                                writer(
+                                    {
+                                        "subagent": self._name,
+                                        "phase": "end",
+                                        "tool": getattr(msg, "name", "tool"),
+                                        "ok": getattr(msg, "status", None) != "error",
+                                        "detail": _compact_tool_output(getattr(msg, "content", "")),
+                                    }
+                                )
         except Exception:
             # Streaming failed (version mismatch, wrong context, etc.) — fall back
             # to a plain invoke so the task still completes.
             logger.warning(
-                "subagent %s streaming failed, falling back to ainvoke", self._name,
+                "subagent %s streaming failed, falling back to ainvoke",
+                self._name,
                 exc_info=True,
             )
-            return self._flag_call_limit_stop(
-                await self._runnable.ainvoke(state, config, **kwargs) or {}
-            )
+            return self._flag_call_limit_stop(await self._runnable.ainvoke(state, config, **kwargs) or {})
 
         return self._flag_call_limit_stop(final_values or {})
 

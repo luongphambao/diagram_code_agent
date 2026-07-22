@@ -16,8 +16,8 @@ from pptx.enum.text import PP_ALIGN, MSO_AUTO_SIZE, MSO_ANCHOR
 from pptx.util import Inches, Pt
 
 # --- BnK brand palette (Calibri + corporate blue, from template style guide) ---
-BNK_BLUE = RGBColor(0x1F, 0x4E, 0x78)   # primary corporate blue (header rows, dividers)
-BNK_CYAN = RGBColor(0x00, 0x9F, 0xDF)   # secondary accent
+BNK_BLUE = RGBColor(0x1F, 0x4E, 0x78)  # primary corporate blue (header rows, dividers)
+BNK_CYAN = RGBColor(0x00, 0x9F, 0xDF)  # secondary accent
 BNK_LIGHT = RGBColor(0xE9, 0xF0, 0xF7)  # light tint for alternating table rows
 BNK_ACCENT = RGBColor(0xC0, 0x3A, 0x2B)  # red accent (required/important)
 BNK_WHITE = RGBColor(0xFF, 0xFF, 0xFF)
@@ -69,33 +69,37 @@ SECTION_ALIASES = {
 
 # Layout names below MUST match the actual layout names inside the BnK template
 # (verified via python-pptx). Note the double space in the separator layout name.
-VALID_LAYOUTS = frozenset({
-    "Cover-01",
-    "Head Page",
-    "Head-01",
-    "Detail-01",
-    "Overview-01",
-    "Empty",
-    "BnK",
-    "C2 -  Separator/ Dark",
-})
+VALID_LAYOUTS = frozenset(
+    {
+        "Cover-01",
+        "Head Page",
+        "Head-01",
+        "Detail-01",
+        "Overview-01",
+        "Empty",
+        "BnK",
+        "C2 -  Separator/ Dark",
+    }
+)
 
 # Closing/separator layouts that are appended via _append_thank_you, never rendered inline.
 CLOSING_LAYOUTS = frozenset({"BnK", "C2 -  Separator/ Dark"})
 
 # Structured content blocks an outline slide may carry (in addition to plain bullets).
-VALID_BLOCKS = frozenset({
-    "bullets",
-    "tech_stack_table",
-    "func_nfr",
-    "sdlc",
-    "delivery_effort",
-    "pricing",
-    "milestones",
-    "team",
-    "gantt",  # rendered via _gantt_slide; not yet dispatched from _render_block's
-              # legacy outline path — see deck_resolver._b_master_plan for the params shape.
-})
+VALID_BLOCKS = frozenset(
+    {
+        "bullets",
+        "tech_stack_table",
+        "func_nfr",
+        "sdlc",
+        "delivery_effort",
+        "pricing",
+        "milestones",
+        "team",
+        "gantt",  # rendered via _gantt_slide; not yet dispatched from _render_block's
+        # legacy outline path — see deck_resolver._b_master_plan for the params shape.
+    }
+)
 
 OUTLINE_TARGET_MIN = 20
 OUTLINE_TARGET_MAX = 30
@@ -213,8 +217,21 @@ def normalize_ppt_sections(sections: list[str] | None) -> tuple[list[str], list[
     return out or DEFAULT_PPT_SECTIONS.copy(), unrecognized
 
 
-_ROMAN = [(1000,"M"),(900,"CM"),(500,"D"),(400,"CD"),(100,"C"),(90,"XC"),
-          (50,"L"),(40,"XL"),(10,"X"),(9,"IX"),(5,"V"),(4,"IV"),(1,"I")]
+_ROMAN = [
+    (1000, "M"),
+    (900, "CM"),
+    (500, "D"),
+    (400, "CD"),
+    (100, "C"),
+    (90, "XC"),
+    (50, "L"),
+    (40, "XL"),
+    (10, "X"),
+    (9, "IX"),
+    (5, "V"),
+    (4, "IV"),
+    (1, "I"),
+]
 
 
 def _roman(n: int) -> str:
@@ -380,7 +397,9 @@ def _image_fit(slide, image_path: Path, x: float, y: float, w: float, h: float) 
         final_w = h * img_ratio
     left = x + (w - final_w) / 2
     top = y + (h - final_h) / 2
-    slide.shapes.add_picture(str(image_path), Inches(left), Inches(top), width=Inches(final_w), height=Inches(final_h))
+    slide.shapes.add_picture(
+        str(image_path), Inches(left), Inches(top), width=Inches(final_w), height=Inches(final_h)
+    )
 
 
 def _clone_slide(prs: Presentation, source_index: int):
@@ -453,7 +472,9 @@ _CONTENT_W = 12.1
 _CONTENT_H = 5.35
 
 
-def _style_cell(cell, text: str, *, fill: RGBColor, color: RGBColor, bold: bool, size: int, align=PP_ALIGN.LEFT) -> None:
+def _style_cell(
+    cell, text: str, *, fill: RGBColor, color: RGBColor, bold: bool, size: int, align=PP_ALIGN.LEFT
+) -> None:
     cell.fill.solid()
     cell.fill.fore_color.rgb = fill
     cell.vertical_anchor = MSO_ANCHOR.MIDDLE
@@ -520,14 +541,24 @@ def _table_slide(prs: Presentation, title: str, headers, rows, slide_no: int, **
 
 
 # Top-level tech_stack scalar keys that _tech_items may surface as bogus "layers".
-_TECH_META_KEYS = frozenset({
-    "estimated_total_monthly_cost_usd", "assumptions", "scaling_roadmap", "notes", "summary",
-})
+_TECH_META_KEYS = frozenset(
+    {
+        "estimated_total_monthly_cost_usd",
+        "assumptions",
+        "scaling_roadmap",
+        "notes",
+        "summary",
+    }
+)
 
 
-def _tech_stack_table_slide(prs: Presentation, report: dict[str, Any], slide_no: int,
-                            title: str = "PROPOSED SOLUTION | Technical Stack",
-                            workspace: Path | None = None):
+def _tech_stack_table_slide(
+    prs: Presentation,
+    report: dict[str, Any],
+    slide_no: int,
+    title: str = "PROPOSED SOLUTION | Technical Stack",
+    workspace: Path | None = None,
+):
     # Prefer a logo-per-technology layout when resolve_tech_stack_icons has run.
     if workspace is not None:
         tech_icons = read_json_file(workspace / "tech_icons.json", {})
@@ -544,13 +575,18 @@ def _tech_stack_table_slide(prs: Presentation, report: dict[str, Any], slide_no:
     if not rows:
         rows = [["Frontend", "TBD", ""], ["Backend", "TBD", ""], ["Database", "TBD", ""]]
     return _table_slide(
-        prs, title, ["Layer", "Technology", "Description"], rows, slide_no,
+        prs,
+        title,
+        ["Layer", "Technology", "Description"],
+        rows,
+        slide_no,
         col_widths=[2.4, 3.2, 6.5],
     )
 
 
-def _tech_stack_icon_slide(prs: Presentation, tech_icons: dict, slide_no: int,
-                           title: str = "PROPOSED SOLUTION | Technical Stack"):
+def _tech_stack_icon_slide(
+    prs: Presentation, tech_icons: dict, slide_no: int, title: str = "PROPOSED SOLUTION | Technical Stack"
+):
     """Technical Stack slide with a logo per technology, grouped by layer.
 
     ``tech_icons`` is the tech_icons.json produced by resolve_tech_stack_icons:
@@ -585,8 +621,9 @@ def _tech_stack_icon_slide(prs: Presentation, tech_icons: dict, slide_no: int,
             path = it.get("path")
             if path and Path(path).exists():
                 try:
-                    slide.shapes.add_picture(path, Inches(x), Inches(y + (row_h - icon_sz) / 2),
-                                             height=Inches(icon_sz))
+                    slide.shapes.add_picture(
+                        path, Inches(x), Inches(y + (row_h - icon_sz) / 2), height=Inches(icon_sz)
+                    )
                 except Exception:  # noqa: BLE001
                     pass
             lbl = slide.shapes.add_textbox(Inches(x), Inches(y + row_h - 0.2), Inches(1.4), Inches(0.2))
@@ -602,7 +639,9 @@ def _tech_stack_icon_slide(prs: Presentation, tech_icons: dict, slide_no: int,
     return slide
 
 
-def _functional_nfr_slide(prs: Presentation, report: dict[str, Any], slide_no: int, title: str = "PROPOSED SOLUTION | Requirements"):
+def _functional_nfr_slide(
+    prs: Presentation, report: dict[str, Any], slide_no: int, title: str = "PROPOSED SOLUTION | Requirements"
+):
     brief = report.get("brief") or {}
     func = _as_list(brief.get("functional_requirements"))[:8]
     nfr = _as_list(brief.get("non_functional_requirements"))[:8]
@@ -610,12 +649,26 @@ def _functional_nfr_slide(prs: Presentation, report: dict[str, Any], slide_no: i
     _add_title(slide, title)
     half_w = (_CONTENT_W - 0.4) / 2
     _add_table(
-        slide, ["Functional Requirements"], [[r] for r in func] or [["To be confirmed"]],
-        x=_CONTENT_X, y=_CONTENT_Y, w=half_w, h=_CONTENT_H, header_size=13, body_size=11,
+        slide,
+        ["Functional Requirements"],
+        [[r] for r in func] or [["To be confirmed"]],
+        x=_CONTENT_X,
+        y=_CONTENT_Y,
+        w=half_w,
+        h=_CONTENT_H,
+        header_size=13,
+        body_size=11,
     )
     _add_table(
-        slide, ["Non-Functional Requirements"], [[r] for r in nfr] or [["To be confirmed"]],
-        x=_CONTENT_X + half_w + 0.4, y=_CONTENT_Y, w=half_w, h=_CONTENT_H, header_size=13, body_size=11,
+        slide,
+        ["Non-Functional Requirements"],
+        [[r] for r in nfr] or [["To be confirmed"]],
+        x=_CONTENT_X + half_w + 0.4,
+        y=_CONTENT_Y,
+        w=half_w,
+        h=_CONTENT_H,
+        header_size=13,
+        body_size=11,
     )
     _add_footer(slide, slide_no)
     return slide
@@ -631,15 +684,27 @@ _SDLC_DEFAULT = [
 ]
 
 
-def _sdlc_scope_slide(prs: Presentation, report: dict[str, Any], workspace: Path, slide_no: int, title: str = "SCOPE OF WORK | SDLC Phases"):
+def _sdlc_scope_slide(
+    prs: Presentation,
+    report: dict[str, Any],
+    workspace: Path,
+    slide_no: int,
+    title: str = "SCOPE OF WORK | SDLC Phases",
+):
     rows = [[p, d, dl] for (p, d, dl) in _SDLC_DEFAULT]
     return _table_slide(
-        prs, title, ["Phase", "Activities", "Deliverables"], rows, slide_no,
+        prs,
+        title,
+        ["Phase", "Activities", "Deliverables"],
+        rows,
+        slide_no,
         col_widths=[2.2, 6.4, 3.5],
     )
 
 
-def _delivery_effort_slide(prs: Presentation, workspace: Path, slide_no: int, title: str = "PROJECT DELIVERY | Estimated Effort"):
+def _delivery_effort_slide(
+    prs: Presentation, workspace: Path, slide_no: int, title: str = "PROJECT DELIVERY | Estimated Effort"
+):
     wbs = read_json_file(workspace / "wbs.json", {})
     headers = ["Code", "Module", "Effort (MD)"]
     rows: list[list[Any]] = []
@@ -653,7 +718,12 @@ def _delivery_effort_slide(prs: Presentation, workspace: Path, slide_no: int, ti
     if not rows:
         rows = [["", "Effort will be finalized after WBS approval.", ""]]
     return _table_slide(
-        prs, title, headers, rows, slide_no, col_widths=[1.6, 7.5, 3.0],
+        prs,
+        title,
+        headers,
+        rows,
+        slide_no,
+        col_widths=[1.6, 7.5, 3.0],
     )
 
 
@@ -666,7 +736,12 @@ def _pricing_slide(prs: Presentation, report: dict[str, Any], slide_no: int, tit
         total = report.get("capex_total") or sum(r["cost"] for r in capex_rows)
         rows.append(["Total (NET, excluding taxes/VAT)", f"${int(total):,}"])
         return _table_slide(
-            prs, title, ["Module", "Cost (USD)"], rows, slide_no, col_widths=[8.5, 3.6],
+            prs,
+            title,
+            ["Module", "Cost (USD)"],
+            rows,
+            slide_no,
+            col_widths=[8.5, 3.6],
         )
     total = report.get("tech_total_cost")
     rows = []
@@ -678,7 +753,12 @@ def _pricing_slide(prs: Presentation, report: dict[str, Any], slide_no: int, tit
         rows.append([f"{layer}: {choice}".strip(": "), "—"])
     rows.append(["Total (NET, excluding taxes/VAT)", f"{total} USD" if total else "XXX USD"])
     return _table_slide(
-        prs, title, ["Cost Item", "Amount"], rows, slide_no, col_widths=[8.5, 3.6],
+        prs,
+        title,
+        ["Cost Item", "Amount"],
+        rows,
+        slide_no,
+        col_widths=[8.5, 3.6],
     )
 
 
@@ -693,12 +773,19 @@ _DEFAULT_MILESTONES = [
 def _payment_milestones_slide(prs: Presentation, slide_no: int, title: str = "PRICING | Payment Milestones"):
     rows = [[n, name, pct] for (n, name, pct) in _DEFAULT_MILESTONES]
     return _table_slide(
-        prs, title, ["#", "Milestone", "Payment"], rows, slide_no, col_widths=[1.0, 8.6, 2.5],
+        prs,
+        title,
+        ["#", "Milestone", "Payment"],
+        rows,
+        slide_no,
+        col_widths=[1.0, 8.6, 2.5],
     )
 
 
 def _gantt_slide(
-    prs: Presentation, params: dict[str, Any], slide_no: int,
+    prs: Presentation,
+    params: dict[str, Any],
+    slide_no: int,
     title: str = "PROJECT DELIVERY | Master Plan & Milestones",
 ):
     """The Master Plan Gantt — same schedule as the WBS Excel '3. Delivery Plan' sheet
@@ -743,24 +830,45 @@ def _gantt_slide(
 
     _style_cell(table.cell(0, 0), "Module", fill=BNK_BLUE, color=BNK_WHITE, bold=True, size=10)
     for i in range(n_cols):
-        _style_cell(table.cell(0, i + 1), label(i), fill=BNK_BLUE, color=BNK_WHITE, bold=True,
-                    size=7, align=PP_ALIGN.CENTER)
+        _style_cell(
+            table.cell(0, i + 1),
+            label(i),
+            fill=BNK_BLUE,
+            color=BNK_WHITE,
+            bold=True,
+            size=7,
+            align=PP_ALIGN.CENTER,
+        )
 
     for r, m in enumerate(rows[:16], start=1):
-        _style_cell(table.cell(r, 0), f"{m.get('code', '')} {m.get('name', '')}".strip(),
-                   fill=BNK_WHITE, color=BNK_TEXT, bold=False, size=9)
+        _style_cell(
+            table.cell(r, 0),
+            f"{m.get('code', '')} {m.get('name', '')}".strip(),
+            fill=BNK_WHITE,
+            color=BNK_TEXT,
+            bold=False,
+            size=9,
+        )
         start_col = max(0, (int(m.get("start_week", 1)) - 1) // weeks_per_col)
         end_col = min(n_cols - 1, (int(m.get("end_week", 1)) - 1) // weeks_per_col)
         for i in range(n_cols):
             active = start_col <= i <= end_col
-            _style_cell(table.cell(r, i + 1), "", fill=BNK_CYAN if active else BNK_WHITE,
-                       color=BNK_WHITE, bold=False, size=1)
+            _style_cell(
+                table.cell(r, i + 1),
+                "",
+                fill=BNK_CYAN if active else BNK_WHITE,
+                color=BNK_WHITE,
+                bold=False,
+                size=1,
+            )
 
     _add_footer(slide, slide_no)
     return slide
 
 
-def _team_slide(prs: Presentation, report: dict[str, Any], slide_no: int, title: str = "PROJECT DELIVERY | Team Structure"):
+def _team_slide(
+    prs: Presentation, report: dict[str, Any], slide_no: int, title: str = "PROJECT DELIVERY | Team Structure"
+):
     rows = [
         ["Technical Lead", "Technical Lead"],
         ["Business Analyst", "Developer(s)"],
@@ -768,7 +876,12 @@ def _team_slide(prs: Presentation, report: dict[str, Any], slide_no: int, title:
         ["", "Project Manager"],
     ]
     return _table_slide(
-        prs, title, ["Client Team", "BnK Delivery Team"], rows, slide_no, col_widths=[6.0, 6.1],
+        prs,
+        title,
+        ["Client Team", "BnK Delivery Team"],
+        rows,
+        slide_no,
+        col_widths=[6.0, 6.1],
     )
 
 
@@ -797,7 +910,9 @@ def _delivery_bullets(workspace: Path) -> list[str]:
     ]
     for module in _as_list(wbs.get("effort_by_module"))[:5]:
         if isinstance(module, dict):
-            bullets.append(f"{module.get('code', '')} {module.get('name', 'Module')}: {module.get('total_md', 0)} MD.")
+            bullets.append(
+                f"{module.get('code', '')} {module.get('name', 'Module')}: {module.get('total_md', 0)} MD."
+            )
     return bullets
 
 
@@ -873,19 +988,12 @@ def _build_outline_context(report: dict[str, Any], workspace: Path) -> str:
         totals = wbs.get("effort_totals") or {}
         timeline = wbs.get("timeline") or {}
         lines.append("\nWBS_SUMMARY:")
-        lines.append(
-            f"  Total: {totals.get('total_mandays', 0)} MD"
-            f" / {totals.get('total_manmonths', 0)} MM"
-        )
-        lines.append(
-            f"  Timeline: {timeline.get('weeks', 0)} weeks"
-            f" / {timeline.get('months', 0)} months"
-        )
+        lines.append(f"  Total: {totals.get('total_mandays', 0)} MD / {totals.get('total_manmonths', 0)} MM")
+        lines.append(f"  Timeline: {timeline.get('weeks', 0)} weeks / {timeline.get('months', 0)} months")
         for mod in _as_list(wbs.get("effort_by_module"))[:6]:
             if isinstance(mod, dict):
                 lines.append(
-                    f"  - {mod.get('code', '')} {mod.get('name', 'Module')}:"
-                    f" {mod.get('total_md', 0)} MD"
+                    f"  - {mod.get('code', '')} {mod.get('name', 'Module')}: {mod.get('total_md', 0)} MD"
                 )
     else:
         lines.append("\nWBS_SUMMARY: Not yet available.")
@@ -909,9 +1017,7 @@ def _parse_outline(raw_text: str) -> list[dict[str, Any]] | None:
 
     result = (
         _try(text)
-        or (lambda m: _try(m.group(1)) if m else None)(
-            re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", text)
-        )
+        or (lambda m: _try(m.group(1)) if m else None)(re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", text))
         or (
             (lambda s, e: _try(text[s : e + 1]) if s != -1 and e > s else None)(
                 text.find("["), text.rfind("]")
@@ -929,11 +1035,7 @@ def _parse_outline(raw_text: str) -> list[dict[str, Any]] | None:
         layout = str(item.get("layout") or "Detail-01")
         if layout not in VALID_LAYOUTS:
             layout = "Detail-01"
-        bullets = [
-            _clip(b, 200)
-            for b in _as_list(item.get("bullets") or [])[:7]
-            if str(b or "").strip()
-        ]
+        bullets = [_clip(b, 200) for b in _as_list(item.get("bullets") or [])[:7] if str(b or "").strip()]
         block = str(item.get("block") or "bullets")
         if block not in VALID_BLOCKS:
             block = "bullets"
@@ -972,11 +1074,7 @@ def _generate_slide_outline(
     sections_note = (
         ""
         if set(sections) == set(DEFAULT_PPT_SECTIONS)
-        else (
-            f"\nNOTE: Only include slides relevant to these sections: "
-            + ", ".join(sections)
-            + "."
-        )
+        else (f"\nNOTE: Only include slides relevant to these sections: " + ", ".join(sections) + ".")
     )
     user_msg = (
         f"Here is the project data for the proposal:\n\n{context}{sections_note}\n\n"
@@ -984,9 +1082,7 @@ def _generate_slide_outline(
     )
 
     try:
-        response = llm.invoke(
-            [SystemMessage(content=_OUTLINE_SYSTEM_PROMPT), HumanMessage(content=user_msg)]
-        )
+        response = llm.invoke([SystemMessage(content=_OUTLINE_SYSTEM_PROMPT), HumanMessage(content=user_msg)])
         raw = response.content if hasattr(response, "content") else str(response)
         return _parse_outline(raw)
     except Exception:
@@ -1050,8 +1146,9 @@ def _render_block(
 ) -> None:
     """Render a structured (table-based) BnK slide from a block type."""
     if block == "tech_stack_table":
-        _tech_stack_table_slide(prs, report, slide_no, title or "PROPOSED SOLUTION | Technical Stack",
-                                workspace=workspace)
+        _tech_stack_table_slide(
+            prs, report, slide_no, title or "PROPOSED SOLUTION | Technical Stack", workspace=workspace
+        )
     elif block == "func_nfr":
         _functional_nfr_slide(prs, report, slide_no, title or "PROPOSED SOLUTION | Requirements")
     elif block == "sdlc":
@@ -1059,8 +1156,12 @@ def _render_block(
     elif block == "delivery_effort":
         _delivery_effort_slide(prs, workspace, slide_no, title or "PROJECT DELIVERY | Estimated Effort")
     elif block == "gantt":
-        _gantt_slide(prs, _gantt_params_from_wbs(workspace), slide_no,
-                     title or "PROJECT DELIVERY | Master Plan & Milestones")
+        _gantt_slide(
+            prs,
+            _gantt_params_from_wbs(workspace),
+            slide_no,
+            title or "PROJECT DELIVERY | Master Plan & Milestones",
+        )
     elif block == "pricing":
         _pricing_slide(prs, report, slide_no, title or "PRICING | CAPEX")
     elif block == "milestones":
@@ -1093,15 +1194,28 @@ def _gantt_params_from_wbs(workspace: Path) -> dict[str, Any]:
     try:
         from domain.wbs.wbs_effort import delivery_grid
         from domain.wbs.wbs_excel import _module_schedule
+
         weeks = int((wbs.get("timeline") or {}).get("weeks") or 16)
         grid = delivery_grid(weeks)
-        rows = [
-            {"code": m["code"], "name": m["name"],
-             "start_week": m["start_week"], "end_week": m["end_week"]}
-            for m in _module_schedule(wbs, grid["weeks"])
-        ] if wbs.get("phases") else []
-        return {"weeks": grid["weeks"], "months": grid["months"],
-                "sprints": grid["sprints"], "gantt_rows": rows}
+        rows = (
+            [
+                {
+                    "code": m["code"],
+                    "name": m["name"],
+                    "start_week": m["start_week"],
+                    "end_week": m["end_week"],
+                }
+                for m in _module_schedule(wbs, grid["weeks"])
+            ]
+            if wbs.get("phases")
+            else []
+        )
+        return {
+            "weeks": grid["weeks"],
+            "months": grid["months"],
+            "sprints": grid["sprints"],
+            "gantt_rows": rows,
+        }
     except Exception:  # noqa: BLE001 — never let a schedule glitch break the deck
         return {"weeks": 0, "months": 0, "sprints": 0, "gantt_rows": []}
 
@@ -1157,15 +1271,20 @@ def _enrich_report_from_csm(report: dict[str, Any], workspace: Path) -> dict[str
     if model is not None:
         if not report.get("tech_items"):
             from domain.deck.deck_resolver import _components_by_cluster
+
             report["tech_items"] = [
                 {"layer": name, "choice": ", ".join(names[:8]), "rationale": purpose}
                 for name, purpose, names in _components_by_cluster(model)
             ]
         brief = dict(report.get("brief") or {})
         if not brief.get("functional_requirements"):
-            brief["functional_requirements"] = [r.statement for r in model.requirements if r.kind == "functional"]
+            brief["functional_requirements"] = [
+                r.statement for r in model.requirements if r.kind == "functional"
+            ]
         if not brief.get("non_functional_requirements"):
-            brief["non_functional_requirements"] = [r.statement for r in model.requirements if r.kind == "nfr"]
+            brief["non_functional_requirements"] = [
+                r.statement for r in model.requirements if r.kind == "nfr"
+            ]
         report["brief"] = brief
         blueprint = dict(report.get("blueprint") or {})
         if not blueprint.get("key_decisions"):
@@ -1175,7 +1294,8 @@ def _enrich_report_from_csm(report: dict[str, Any], workspace: Path) -> dict[str
             biz = [r.statement for r in model.requirements if r.kind == "business"]
             obj = brief.get("objective") or meta.get("kicker") or ""
             report["executive_points"] = ([obj] if obj else []) + (
-                biz[:5] or [r.statement for r in model.requirements[:5]])
+                biz[:5] or [r.statement for r in model.requirements[:5]]
+            )
         if not report.get("risks"):
             report["risks"] = [
                 {"type": "Risk", "detail": r.statement, "recommendation": r.mitigation or ""}
@@ -1187,6 +1307,7 @@ def _enrich_report_from_csm(report: dict[str, Any], workspace: Path) -> dict[str
     if wbs.get("effort_by_module") and not report.get("capex_rows"):
         try:
             from domain.wbs.wbs_effort import DEFAULT_RATE_CARD_USD_PER_MONTH, rate_per_manday
+
             rate = totals.get("rate_card_usd_per_month") or DEFAULT_RATE_CARD_USD_PER_MONTH
             rows = []
             for m in wbs["effort_by_module"]:
@@ -1194,8 +1315,9 @@ def _enrich_report_from_csm(report: dict[str, Any], workspace: Path) -> dict[str
                     float(b or 0) * rate_per_manday(rate.get(role, 0))
                     for role, b in (m.get("breakdown") or {}).items()
                 )
-                rows.append({"module": f"{m.get('code', '')} {m.get('name', '')}".strip(),
-                             "cost": round(cost)})
+                rows.append(
+                    {"module": f"{m.get('code', '')} {m.get('name', '')}".strip(), "cost": round(cost)}
+                )
             report["capex_rows"] = rows
             report["capex_total"] = totals.get("total_cost_usd") or round(sum(r["cost"] for r in rows), 2)
         except Exception:  # noqa: BLE001
@@ -1233,8 +1355,7 @@ def generate_ppt_proposal_file(
     # Save thank-you slide XML before clearing to avoid dangling refs after _clear_slides().
     thank_you_idx = len(prs.slides) - 1 if prs.slides else -1
     thank_you_elements = (
-        [deepcopy(s.element) for s in prs.slides[thank_you_idx].shapes]
-        if thank_you_idx >= 0 else []
+        [deepcopy(s.element) for s in prs.slides[thank_you_idx].shapes] if thank_you_idx >= 0 else []
     )
     _clear_slides(prs)
 
@@ -1247,12 +1368,12 @@ def generate_ppt_proposal_file(
     deck_revision: int | None = None
     try:
         from domain.deck.deck import load_deck_plan
+
         plan = load_deck_plan(workspace)
         if plan and plan.slides:
             deck_revision = plan.revision
             outline = [
-                s.model_dump() for s in plan.slides
-                if (s.section in sections or s.section in ("", "cover"))
+                s.model_dump() for s in plan.slides if (s.section in sections or s.section in ("", "cover"))
             ]
             outline_source = "deck_plan"
     except Exception as exc:  # noqa: BLE001 — a bad plan must not block rendering
@@ -1303,7 +1424,11 @@ def generate_ppt_proposal_file(
             _detail_slide(
                 prs,
                 "PROPOSED SOLUTION | Overview",
-                [report.get("business_value"), report.get("technical_value"), report.get("pattern_rationale")],
+                [
+                    report.get("business_value"),
+                    report.get("technical_value"),
+                    report.get("pattern_rationale"),
+                ],
                 slide_no,
             )
             slide_no += 1
@@ -1319,7 +1444,12 @@ def generate_ppt_proposal_file(
             _tech_stack_table_slide(prs, report, slide_no)
             slide_no += 1
         if "key_decisions" in sections:
-            _detail_slide(prs, "PROPOSED SOLUTION | Key Decisions", _as_list(report["blueprint"].get("key_decisions")), slide_no)
+            _detail_slide(
+                prs,
+                "PROPOSED SOLUTION | Key Decisions",
+                _as_list(report["blueprint"].get("key_decisions")),
+                slide_no,
+            )
             slide_no += 1
         if "delivery_plan" in sections:
             sec += 1
@@ -1360,13 +1490,13 @@ def generate_ppt_proposal_file(
     record_report_step(
         workspace,
         "generate_ppt_proposal",
-        summary=(
-            f"Generated editable BnK PowerPoint proposal: {slide_count} slides"
-            f" ({outline_source})."
-        ),
-        data={"sections": rendered_sections, "slide_count": slide_count,
-              "artifacts": artifacts, "outline_source": outline_source,
-              "deck_plan_revision": deck_revision},
+        summary=(f"Generated editable BnK PowerPoint proposal: {slide_count} slides ({outline_source})."),
+        data={
+            "sections": rendered_sections,
+            "slide_count": slide_count,
+            "artifacts": artifacts,
+            "outline_source": outline_source,
+            "deck_plan_revision": deck_revision,
+        },
     )
     return pptx_path, rendered_sections, unrecognized
-

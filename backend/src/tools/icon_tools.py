@@ -43,6 +43,7 @@ def _refresh_render_from_icon_plan(workspace: Path) -> None:
     try:
         spec = json.loads(spec_path.read_text(encoding="utf-8"))
         from .rendering_tools import _render_native_from_spec
+
         _render_native_from_spec(spec, workspace)
     except Exception:  # noqa: BLE001 — best-effort refresh, never block the tool
         pass
@@ -179,13 +180,15 @@ def _node_search_hits(query: str, provider: str = "", category: str = "", *, lim
                     score += 8
                 if category_filter and category_filter == str(cat).lower():
                     score += 5
-                scored.append({
-                    "provider": prov,
-                    "category": cat,
-                    "class_name": class_name,
-                    "import_path": f"diagrams.{prov}.{cat}.{class_name}",
-                    "score": score,
-                })
+                scored.append(
+                    {
+                        "provider": prov,
+                        "category": cat,
+                        "class_name": class_name,
+                        "import_path": f"diagrams.{prov}.{cat}.{class_name}",
+                        "score": score,
+                    }
+                )
     scored.sort(key=lambda item: (-item["score"], item["provider"], item["category"], item["class_name"]))
     return scored[: max(1, min(limit, 50))]
 
@@ -193,12 +196,34 @@ def _node_search_hits(query: str, provider: str = "", category: str = "", *, lim
 # Generic descriptor words stripped from a "choice" segment before treating what's
 # left as a distinct technology name — e.g. "TypeScript SPA" -> "TypeScript", but
 # "PostgreSQL RDS" is kept whole (RDS is a real AWS product, not filler).
-_TECH_GENERIC_WORDS = frozenset({
-    "spa", "app", "application", "service", "services", "cluster", "instance",
-    "server", "framework", "engine", "platform", "system", "managed",
-    "serverless", "microservice", "microservices", "database", "db", "api",
-    "gateway", "layer", "tier", "component", "module",
-})
+_TECH_GENERIC_WORDS = frozenset(
+    {
+        "spa",
+        "app",
+        "application",
+        "service",
+        "services",
+        "cluster",
+        "instance",
+        "server",
+        "framework",
+        "engine",
+        "platform",
+        "system",
+        "managed",
+        "serverless",
+        "microservice",
+        "microservices",
+        "database",
+        "db",
+        "api",
+        "gateway",
+        "layer",
+        "tier",
+        "component",
+        "module",
+    }
+)
 
 
 def _split_tech_names(choice: str) -> list[str]:
@@ -230,8 +255,12 @@ def _squish_tech(s: str) -> str:
 # don't always match it (e.g. the icon is "k8s.png", not "kubernetes.png"). Tried in
 # addition to the literal name, not instead of it.
 _TECH_ALIASES: dict[str, str] = {
-    "kubernetes": "k8s", "postgres": "postgresql", "mongo": "mongodb",
-    "js": "javascript", "ts": "typescript", "node": "nodejs",
+    "kubernetes": "k8s",
+    "postgres": "postgresql",
+    "mongo": "mongodb",
+    "js": "javascript",
+    "ts": "typescript",
+    "node": "nodejs",
 }
 
 
@@ -274,6 +303,7 @@ def _resolve_one_tech_icon(name: str) -> dict:
         return {"name": name, "path": best, "icon": _icon_rel(best), "source": "bundled"}
     try:
         from domain.diagram.aiicons import lookup_ai_logo
+
         path = lookup_ai_logo(name, str(LOCAL_ICONS))
         if path:
             return {"name": name, "path": path, "icon": _icon_rel(path), "source": "cdn"}
@@ -383,8 +413,7 @@ try:
                 "Use one returned icon path. If NOT_FOUND, try at most one broader "
                 "different keyword, then omit icon= or fetch_logo for a brand."
                 if hits
-                else "Try at most one broader different keyword, then omit icon= "
-                     "or fetch_logo for a brand."
+                else "Try at most one broader different keyword, then omit icon= or fetch_logo for a brand."
             ),
         }
         cache[key] = result
@@ -393,8 +422,13 @@ try:
         return json.dumps(result, indent=2)
 
     @tool(parse_docstring=True)
-    def search_diagrams_nodes(query: str = "", provider: str = "", category: str = "",
-                              limit: int = 10, queries: Optional[list[str]] = None) -> str:
+    def search_diagrams_nodes(
+        query: str = "",
+        provider: str = "",
+        category: str = "",
+        limit: int = 10,
+        queries: Optional[list[str]] = None,
+    ) -> str:
         """Search built-in `diagrams` node classes using the local node catalog.
 
         Returns verified import paths from `resources/node_catalog.json`. Use
@@ -419,33 +453,35 @@ try:
             _save_node_search_state(state)
             _bump_tool_summary("search_diagrams_nodes_batch")
             return json.dumps(
-                {q: _node_search_hits(q, provider, category, limit=limit) for q in queries},
-                indent=2)
+                {q: _node_search_hits(q, provider, category, limit=limit) for q in queries}, indent=2
+            )
         single_calls = int(state.get("single_calls", 0)) + 1
         state["single_calls"] = single_calls
         _save_node_search_state(state)
         _bump_tool_summary("search_diagrams_nodes_single", node_single_searches=single_calls)
         if single_calls > NODE_SINGLE_SEARCH_HARD_CAP:
-            return json.dumps({
-                "status": "BUDGET_EXHAUSTED",
-                "query": query,
-                "instruction": (
-                    "Stop one-by-one node searches. Batch remaining terms with "
-                    "queries=[...] or use already returned imports."
-                ),
-                "single_calls": single_calls,
-                "single_call_cap": NODE_SINGLE_SEARCH_HARD_CAP,
-            }, indent=2)
+            return json.dumps(
+                {
+                    "status": "BUDGET_EXHAUSTED",
+                    "query": query,
+                    "instruction": (
+                        "Stop one-by-one node searches. Batch remaining terms with "
+                        "queries=[...] or use already returned imports."
+                    ),
+                    "single_calls": single_calls,
+                    "single_call_cap": NODE_SINGLE_SEARCH_HARD_CAP,
+                },
+                indent=2,
+            )
         hits = _node_search_hits(query, provider, category, limit=limit)
         payload: dict = {"status": "OK", "query": query, "hits": hits}
         if single_calls > NODE_SINGLE_SEARCH_WARN:
-            payload["warning"] = (
-                "Too many single node searches. Batch remaining terms with queries=[...]."
-            )
+            payload["warning"] = "Too many single node searches. Batch remaining terms with queries=[...]."
         return json.dumps(payload, indent=2)
 
     class IconRequest(BaseModel):
         """One planned icon lookup for batch resolution."""
+
         label: str = Field(description="visible node/component label")
         provider: str = Field("", description="provider subtree, e.g. aws|azure|gcp|onprem|programming|saas")
         icon_keyword: str = Field(description="short filename-style search term, e.g. redis|run|sql|pubsub")
@@ -469,16 +505,20 @@ try:
         state = _icon_search_state()
         if state.get("resolved_this_round") and _ICON_PLAN_FILE.exists():
             from .stage_markers import _read_json_file
+
             cached = _read_json_file(_ICON_PLAN_FILE, [])
             _bump_tool_summary("resolve_icons_cached")
-            return json.dumps({
-                "status": "ALREADY_RESOLVED_THIS_ROUND",
-                "instruction": (
-                    "Reuse icon_plan.json. Use search_icons only for new NOT_FOUND "
-                    "items with a different keyword."
-                ),
-                "icons": cached,
-            }, indent=2)
+            return json.dumps(
+                {
+                    "status": "ALREADY_RESOLVED_THIS_ROUND",
+                    "instruction": (
+                        "Reuse icon_plan.json. Use search_icons only for new NOT_FOUND "
+                        "items with a different keyword."
+                    ),
+                    "icons": cached,
+                },
+                indent=2,
+            )
 
         root = Path(LOCAL_ICONS)
         resolved: list[dict] = []
@@ -491,26 +531,30 @@ try:
                     rel = str(Path(best).relative_to(root)).replace("\\", "/")
                 except Exception:
                     rel = best
-            resolved.append({
-                "label": item.label,
-                "provider": item.provider,
-                "icon_keyword": item.icon_keyword,
-                "status": "FOUND" if best else "NOT_FOUND",
-                "path": best or None,
-                "icon": rel or None,
-                "alternatives": hits[1:5],
-                "tried_keywords": [item.icon_keyword],
-            })
+            resolved.append(
+                {
+                    "label": item.label,
+                    "provider": item.provider,
+                    "icon_keyword": item.icon_keyword,
+                    "status": "FOUND" if best else "NOT_FOUND",
+                    "path": best or None,
+                    "icon": rel or None,
+                    "alternatives": hits[1:5],
+                    "tried_keywords": [item.icon_keyword],
+                }
+            )
         current_workspace().mkdir(parents=True, exist_ok=True)
         _ICON_PLAN_FILE.write_text(json.dumps(resolved, indent=2), encoding="utf-8")
         _refresh_render_from_icon_plan(current_workspace())
-        state.update({
-            "resolved_this_round": True,
-            "planned_icons": len({(i.provider.lower(), i.icon_keyword.lower()) for i in icons}),
-            "total_calls": 0,
-            "counts": {},
-            "cache": {},
-        })
+        state.update(
+            {
+                "resolved_this_round": True,
+                "planned_icons": len({(i.provider.lower(), i.icon_keyword.lower()) for i in icons}),
+                "total_calls": 0,
+                "counts": {},
+                "cache": {},
+            }
+        )
         _save_icon_search_state(state)
         _bump_tool_summary("resolve_icons", planned_icons=state["planned_icons"])
         return json.dumps(resolved, indent=2)
@@ -540,19 +584,26 @@ try:
             tried_keyword: the keyword just tried, recorded for the audit trail.
         """
         if not _ICON_PLAN_FILE.exists():
-            return json.dumps({
-                "status": "ERROR",
-                "message": "icon_plan.json does not exist yet — call resolve_icons first.",
-            }, indent=2)
+            return json.dumps(
+                {
+                    "status": "ERROR",
+                    "message": "icon_plan.json does not exist yet — call resolve_icons first.",
+                },
+                indent=2,
+            )
         from .stage_markers import _read_json_file
+
         entries = _read_json_file(_ICON_PLAN_FILE, [])
         match = next((e for e in entries if e.get("label") == label), None)
         if match is None:
-            return json.dumps({
-                "status": "ERROR",
-                "message": f"No icon_plan.json entry with label={label!r}.",
-                "known_labels": [e.get("label") for e in entries],
-            }, indent=2)
+            return json.dumps(
+                {
+                    "status": "ERROR",
+                    "message": f"No icon_plan.json entry with label={label!r}.",
+                    "known_labels": [e.get("label") for e in entries],
+                },
+                indent=2,
+            )
         match["status"] = status
         match["path"] = path
         match["icon"] = icon
@@ -565,11 +616,14 @@ try:
 
     class MissingIconRetry(BaseModel):
         """One NOT_FOUND icon_plan.json entry to retry, batched with the rest."""
+
         label: str = Field(description="the NOT_FOUND label in icon_plan.json to retry")
         broader_keyword: Optional[str] = Field(
-            None, description="broader search keyword to try; defaults to the label text")
+            None, description="broader search keyword to try; defaults to the label text"
+        )
         provider: str = Field(
-            "", description="provider subtree override; defaults to the entry's existing provider")
+            "", description="provider subtree override; defaults to the entry's existing provider"
+        )
 
     @tool(parse_docstring=True)
     def resolve_missing_icons(retries: list[MissingIconRetry]) -> str:
@@ -590,11 +644,15 @@ try:
             retries: Every NOT_FOUND label to retry together, one `MissingIconRetry` each.
         """
         if not _ICON_PLAN_FILE.exists():
-            return json.dumps({
-                "status": "ERROR",
-                "message": "icon_plan.json does not exist yet — call resolve_icons first.",
-            }, indent=2)
+            return json.dumps(
+                {
+                    "status": "ERROR",
+                    "message": "icon_plan.json does not exist yet — call resolve_icons first.",
+                },
+                indent=2,
+            )
         from .stage_markers import _read_json_file
+
         entries = _read_json_file(_ICON_PLAN_FILE, [])
         by_label = {e.get("label"): e for e in entries}
 
@@ -603,10 +661,13 @@ try:
         for item in retries:
             entry = by_label.get(item.label)
             if entry is None:
-                updated.append({
-                    "label": item.label, "status": "ERROR",
-                    "message": "no matching icon_plan.json entry",
-                })
+                updated.append(
+                    {
+                        "label": item.label,
+                        "status": "ERROR",
+                        "message": "no matching icon_plan.json entry",
+                    }
+                )
                 continue
             keyword = item.broader_keyword or item.label
             provider = item.provider or entry.get("provider") or None
@@ -617,12 +678,14 @@ try:
             if not best:
                 try:
                     from domain.diagram.aiicons import lookup_ai_logo
+
                     best = lookup_ai_logo(item.label, str(LOCAL_ICONS))
                 except Exception:  # noqa: BLE001
                     best = None
             if not best:
                 try:
                     from domain.diagram.logo_fetch import get_logo
+
                     fetched = get_logo(item.label, str(LOCAL_ICONS), str(current_workspace()))
                     best = fetched if fetched and not fetched.startswith("NOT_FOUND") else None
                 except Exception:  # noqa: BLE001
@@ -632,10 +695,14 @@ try:
                 entry["status"] = "FOUND"
                 entry["path"] = best
                 entry["icon"] = _icon_rel(best)
-                updated.append({
-                    "label": item.label, "status": "FOUND",
-                    "path": best, "icon": entry["icon"],
-                })
+                updated.append(
+                    {
+                        "label": item.label,
+                        "status": "FOUND",
+                        "path": best,
+                        "icon": entry["icon"],
+                    }
+                )
             else:
                 entry["status"] = "NOT_FOUND"
                 updated.append({"label": item.label, "status": "NOT_FOUND"})
@@ -645,9 +712,14 @@ try:
         _ICON_PLAN_FILE.write_text(json.dumps(entries, indent=2), encoding="utf-8")
         _refresh_render_from_icon_plan(current_workspace())
         _bump_tool_summary("resolve_missing_icons", missing_icons_retried=len(retries))
-        return json.dumps({
-            "status": "OK", "updated": updated, "still_not_found": still_not_found,
-        }, indent=2)
+        return json.dumps(
+            {
+                "status": "OK",
+                "updated": updated,
+                "still_not_found": still_not_found,
+            },
+            indent=2,
+        )
 
     @tool(parse_docstring=True)
     def resolve_tech_stack_icons() -> str:
@@ -673,13 +745,16 @@ try:
         workspace = current_workspace()
         layers = _tech_layers_from_workspace(workspace)
         if not layers:
-            return json.dumps({
-                "status": "NO_TECH_STACK",
-                "instruction": (
-                    "No tech_stack.json and no CSM component data found. Call "
-                    "propose_tech_stack (or analyze_architecture_requirements) first."
-                ),
-            }, indent=2)
+            return json.dumps(
+                {
+                    "status": "NO_TECH_STACK",
+                    "instruction": (
+                        "No tech_stack.json and no CSM component data found. Call "
+                        "propose_tech_stack (or analyze_architecture_requirements) first."
+                    ),
+                },
+                indent=2,
+            )
 
         result: dict[str, list[dict]] = {}
         seen: dict[str, dict] = {}  # de-dup identical names across layers — one fetch each
@@ -700,12 +775,18 @@ try:
         found = sum(1 for icons in result.values() for i in icons if i["path"])
         total = sum(len(icons) for icons in result.values())
         _bump_tool_summary("resolve_tech_stack_icons", tech_icons_found=found, tech_icons_total=total)
-        return json.dumps({
-            "status": "OK", "layers": list(result.keys()),
-            "found": found, "total": total,
-            "path": "tech_icons.json",
-            "icons": result,
-        }, indent=2, ensure_ascii=False)
+        return json.dumps(
+            {
+                "status": "OK",
+                "layers": list(result.keys()),
+                "found": found,
+                "total": total,
+                "path": "tech_icons.json",
+                "icons": result,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
 
     @tool(parse_docstring=True)
     def fetch_logo(name: str) -> str:
@@ -725,6 +806,7 @@ try:
         """
         try:
             from domain.diagram.aiicons import lookup_ai_logo
+
             path = lookup_ai_logo(name, str(LOCAL_ICONS))
             if path:
                 return path
@@ -732,6 +814,7 @@ try:
             pass
         try:
             from domain.diagram.logo_fetch import get_logo
+
             path = get_logo(name, str(LOCAL_ICONS), str(current_workspace()))
         except Exception as exc:  # noqa: BLE001
             return f"NOT_FOUND: fetch_logo error: {exc}"
@@ -754,10 +837,17 @@ try:
         """
         try:
             from domain.diagram.shapesearch import search_shapes
+
             results = search_shapes(query, limit)
             if not results:
-                return json.dumps({"status": "NOT_FOUND", "query": query,
-                                   "hint": "Try broader keywords or check spelling."}, indent=2)
+                return json.dumps(
+                    {
+                        "status": "NOT_FOUND",
+                        "query": query,
+                        "hint": "Try broader keywords or check spelling.",
+                    },
+                    indent=2,
+                )
             return json.dumps({"status": "OK", "query": query, "results": results}, indent=2)
         except Exception as exc:  # noqa: BLE001
             return f"search_drawio_shapes error: {exc}"

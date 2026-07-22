@@ -24,9 +24,7 @@ class _ConvRename(BaseModel):
 
 
 @router.get("")
-async def list_conversations(
-    request: Request, identity: Identity = Depends(require_identity)
-):
+async def list_conversations(request: Request, identity: Identity = Depends(require_identity)):
     return await conv_db.list_all(request.app.state.pool, identity.email)
 
 
@@ -40,7 +38,9 @@ async def create_conversation(
 
 @router.patch("/{thread_id}")
 async def rename_conversation(
-    thread_id: str, body: _ConvRename, request: Request,
+    thread_id: str,
+    body: _ConvRename,
+    request: Request,
     identity: Identity = Depends(require_identity),
 ):
     await check_owner(request.app.state.pool, thread_id, identity.email)

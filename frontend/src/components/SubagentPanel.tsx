@@ -78,10 +78,7 @@ const COLORS: Record<
 
 // ── Indicator roles (always visible chips at top) ─────────────────────────────
 
-const INDICATOR_ROLES: ReadonlyArray<{ key: string }> = [
-  { key: "drawer" },
-  { key: "critic" },
-];
+const INDICATOR_ROLES: ReadonlyArray<{ key: string }> = [{ key: "drawer" }, { key: "critic" }];
 
 // ── Tool chip (compact mono pill) ─────────────────────────────────────────────
 
@@ -148,7 +145,12 @@ function DelegationCard({ d, index, toolLogs }: DelegationCardProps) {
   const visibleTools = dedupedTools.slice(0, MAX_TOOL_CHIPS);
   const hiddenCount = dedupedTools.length - visibleTools.length;
   const detailLogs = toolLogs
-    .filter((l) => (l.type === "tool_start" || l.type === "tool_end") && l.tool && (l.input || l.output || l.error))
+    .filter(
+      (l) =>
+        (l.type === "tool_start" || l.type === "tool_end") &&
+        l.tool &&
+        (l.input || l.output || l.error),
+    )
     .slice(-MAX_TOOL_DETAILS);
 
   return (
@@ -158,9 +160,7 @@ function DelegationCard({ d, index, toolLogs }: DelegationCardProps) {
         <div
           className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg ${c.numBg}`}
         >
-          <span className={`text-[12px] font-bold font-mono ${c.numText}`}>
-            #{index + 1}
-          </span>
+          <span className={`text-[12px] font-bold font-mono ${c.numText}`}>#{index + 1}</span>
         </div>
 
         {/* Main content */}
@@ -185,9 +185,7 @@ function DelegationCard({ d, index, toolLogs }: DelegationCardProps) {
               {d.current_tool ? (
                 <>
                   <span className="font-mono">{d.current_tool}</span>
-                  {d.current_label && (
-                    <span className="text-slate-600">— {d.current_label}</span>
-                  )}
+                  {d.current_label && <span className="text-slate-600">— {d.current_label}</span>}
                   {d.current_detail && (
                     <span className="truncate text-slate-500">: {d.current_detail}</span>
                   )}
@@ -218,14 +216,24 @@ function DelegationCard({ d, index, toolLogs }: DelegationCardProps) {
             <div className="space-y-1 rounded-lg border border-white/6 bg-black/10 p-2">
               {detailLogs.map((l, i) => (
                 <div key={`${l.tool}-${i}`} className="flex gap-2 text-[10.5px] leading-snug">
-                  <span className={l.error ? "text-red-500" : l.type === "tool_end" ? "text-emerald-500" : "text-amber-500"}>
+                  <span
+                    className={
+                      l.error
+                        ? "text-red-500"
+                        : l.type === "tool_end"
+                          ? "text-emerald-500"
+                          : "text-amber-500"
+                    }
+                  >
                     {l.error ? "error" : l.type === "tool_end" ? "done" : "run"}
                   </span>
                   <span className="shrink-0 font-mono text-slate-600">{l.tool}</span>
                   {l.elapsed_s !== undefined && (
                     <span className="shrink-0 text-slate-700">{l.elapsed_s}s</span>
                   )}
-                  <span className="min-w-0 truncate text-slate-400">{l.error || l.output || l.input}</span>
+                  <span className="min-w-0 truncate text-slate-400">
+                    {l.error || l.output || l.input}
+                  </span>
                 </div>
               ))}
             </div>
@@ -236,9 +244,7 @@ function DelegationCard({ d, index, toolLogs }: DelegationCardProps) {
             <div className="pt-0.5">
               <div className="rounded-lg border border-white/8 bg-white/4 p-2.5">
                 <p className="text-[11.5px] leading-relaxed text-slate-500 whitespace-pre-wrap">
-                  {expanded || !resultLong
-                    ? d.result
-                    : d.result!.slice(0, RESULT_PREVIEW) + "…"}
+                  {expanded || !resultLong ? d.result : d.result!.slice(0, RESULT_PREVIEW) + "…"}
                 </p>
               </div>
               {resultLong && (
@@ -276,9 +282,7 @@ const MAX_ORCHESTRATOR_CHIPS = 6;
 function OrchestratorSection({ isRunning, activity, mainLogs }: OrchestratorSectionProps) {
   // Show recent main-agent tool calls (not subagent ones), newest last.
   // Deduplicate consecutive identical tool names for readability (same as DelegationCard).
-  const toolNames = mainLogs
-    .filter((l) => l.type === "tool_start" && l.tool)
-    .map((l) => l.tool!);
+  const toolNames = mainLogs.filter((l) => l.type === "tool_start" && l.tool).map((l) => l.tool!);
   const dedupedTools = toolNames.reduce<string[]>((acc, t) => {
     if (acc.length === 0 || acc[acc.length - 1] !== t) acc.push(t);
     return acc;
@@ -290,9 +294,7 @@ function OrchestratorSection({ isRunning, activity, mainLogs }: OrchestratorSect
       {/* Header */}
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2.5">
-          <span className="text-[13px] font-semibold text-slate-200">
-            🤖 Orchestrator
-          </span>
+          <span className="text-[13px] font-semibold text-slate-200">🤖 Orchestrator</span>
           {isRunning ? (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-300 text-[10px] font-semibold uppercase tracking-[0.1em]">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
@@ -353,19 +355,12 @@ export default function SubagentPanel({
   // Split logs: main orchestrator vs per-subagent
   const mainLogs = logs.filter((l) => !l.subagent);
   const logsBySubagent = (subagentKey: string) =>
-    logs.filter(
-      (l) => l.subagent?.toLowerCase() === subagentKey.toLowerCase()
-    );
+    logs.filter((l) => l.subagent?.toLowerCase() === subagentKey.toLowerCase());
 
   return (
     <div className="w-full bg-surface-panel border border-white/8 rounded-2xl overflow-hidden">
-
       {/* ── Orchestrator section ────────────────────────────────────────────── */}
-      <OrchestratorSection
-        isRunning={isRunning}
-        activity={activity}
-        mainLogs={mainLogs}
-      />
+      <OrchestratorSection isRunning={isRunning} activity={activity} mainLogs={mainLogs} />
 
       {/* ── Indicator chips row ─────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 px-5 py-2.5 border-b border-white/8 bg-surface-panel">
@@ -376,8 +371,7 @@ export default function SubagentPanel({
           const m = metaFor(key);
           const c = COLORS[m.color];
           const fired = calledKeys.has(key);
-          const isActive =
-            activeSubagent?.toLowerCase() === key && isRunning;
+          const isActive = activeSubagent?.toLowerCase() === key && isRunning;
           return (
             <span
               key={key}
@@ -385,9 +379,7 @@ export default function SubagentPanel({
                 fired ? "opacity-100" : "opacity-35"
               }`}
             >
-              {isActive && (
-                <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-              )}
+              {isActive && <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />}
               <span>{m.icon}</span>
               <span>{m.label}</span>
             </span>
@@ -398,17 +390,10 @@ export default function SubagentPanel({
       {/* ── Delegation list ─────────────────────────────────────────────────── */}
       <div className="p-4 space-y-2">
         {safeDelegations.length === 0 ? (
-          <p className="text-sm text-slate-700 italic py-2 px-1">
-            Waiting for delegation…
-          </p>
+          <p className="text-sm text-slate-700 italic py-2 px-1">Waiting for delegation…</p>
         ) : (
           safeDelegations.map((d, i) => (
-            <DelegationCard
-              key={d.id || i}
-              d={d}
-              index={i}
-              toolLogs={logsBySubagent(d.subagent)}
-            />
+            <DelegationCard key={d.id || i} d={d} index={i} toolLogs={logsBySubagent(d.subagent)} />
           ))
         )}
       </div>

@@ -187,8 +187,8 @@ class SendEmailConfig(BaseModel):
     attachments: list[str] = Field(
         default_factory=list,
         description=(
-            "Workspace filenames to attach, e.g. [\"out.pptx\"] to send only the "
-            "slide deck, or [\"out.pdf\", \"wbs_filled.xlsx\"] for a specific "
+            'Workspace filenames to attach, e.g. ["out.pptx"] to send only the '
+            'slide deck, or ["out.pdf", "wbs_filled.xlsx"] for a specific '
             "combination. Leave empty to auto-attach whatever known deliverables "
             f"exist in the workspace ({', '.join(_KNOWN_DELIVERABLES)})."
         ),
@@ -254,10 +254,7 @@ def send_email(
     try:
         import composio  # type: ignore[import]
     except ImportError:
-        return (
-            "ERROR: composio package is not installed. "
-            "Run: pip install composio-langchain"
-        )
+        return "ERROR: composio package is not installed. Run: pip install composio-langchain"
 
     api_key = ctx.composio_api_key or os.environ.get("COMPOSIO_API_KEY", "")
     if not api_key:
@@ -286,10 +283,7 @@ def send_email(
     try:
         client = composio.Composio(api_key=api_key)
     except Exception as exc:
-        return (
-            f"ERROR: Composio client initialisation failed: {exc}. "
-            "Check that COMPOSIO_API_KEY is valid."
-        )
+        return f"ERROR: Composio client initialisation failed: {exc}. Check that COMPOSIO_API_KEY is valid."
 
     attachments_payload = []
     for filename, mimetype, file_bytes in files_to_attach:
@@ -300,11 +294,13 @@ def send_email(
                 f"ERROR: Failed to upload {filename} to Composio storage: {exc}. "
                 "Check your network connection and COMPOSIO_API_KEY."
             )
-        attachments_payload.append({
-            "name": filename,
-            "mimetype": mimetype,
-            "s3key": s3_key,
-        })
+        attachments_payload.append(
+            {
+                "name": filename,
+                "mimetype": mimetype,
+                "s3key": s3_key,
+            }
+        )
 
     try:
         result = client.tools.execute(
@@ -331,6 +327,6 @@ def send_email(
     attached_names = ", ".join(f"{name} ({len(data):,} bytes)" for name, _, data in files_to_attach)
     return (
         f"Email sent successfully to {recipient_email}. "
-        f"Subject: \"{final_subject}\". "
+        f'Subject: "{final_subject}". '
         f"Attached: {attached_names}."
     )

@@ -18,6 +18,7 @@ def _read_json(path: Path):
 def _artifacts(workspace) -> dict:
     """Read the diagram artifacts currently in the workspace (if any)."""
     import base64
+
     out: dict = {}
     png = workspace / "out.png"
     if png.exists():

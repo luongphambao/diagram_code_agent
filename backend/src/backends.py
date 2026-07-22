@@ -34,13 +34,13 @@ from pathlib import Path
 from deepagents.backends import CompositeBackend, FilesystemBackend
 
 # backend/src/backends.py -> parents[1] == backend/
-_BACKEND_ROOT  = Path(__file__).resolve().parents[1]
-_REPO_ROOT     = _BACKEND_ROOT.parent
+_BACKEND_ROOT = Path(__file__).resolve().parents[1]
+_REPO_ROOT = _BACKEND_ROOT.parent
 
-AGENT_SPACE    = _BACKEND_ROOT / "agent_space"
-WORKSPACE      = AGENT_SPACE / "workspace"
-MEMORIES_DIR   = AGENT_SPACE / "memories"
-OUTPUTS_DIR    = AGENT_SPACE / "outputs"
+AGENT_SPACE = _BACKEND_ROOT / "agent_space"
+WORKSPACE = AGENT_SPACE / "workspace"
+MEMORIES_DIR = AGENT_SPACE / "memories"
+OUTPUTS_DIR = AGENT_SPACE / "outputs"
 
 # Per-thread workspace isolation (§4.10 multi-tenancy).
 #
@@ -80,6 +80,7 @@ def resolve_workspace(thread_id: str | None) -> Path:
         WORKSPACE.mkdir(parents=True, exist_ok=True)
         return WORKSPACE
     from runtime.safe_path import safe_filename
+
     ws = WORKSPACES_DIR / safe_filename(thread_id)
     ws.mkdir(parents=True, exist_ok=True)
     return ws
@@ -178,11 +179,11 @@ class PerThreadFilesystemBackend(FilesystemBackend):
 
 
 # Procedural skills bundled with the repo (loaded by the deep agent).
-SKILLS_DIR     = _BACKEND_ROOT / "skills"
+SKILLS_DIR = _BACKEND_ROOT / "skills"
 
 # Icon assets gathered under resources/ (for local execution without Modal).
-_RESOURCES     = _REPO_ROOT / "resources"
-LOCAL_ICONS    = str(_RESOURCES / "icons")
+_RESOURCES = _REPO_ROOT / "resources"
+LOCAL_ICONS = str(_RESOURCES / "icons")
 LOCAL_MANIFEST = str(_RESOURCES / "icons_manifest.json")
 LOCAL_NODE_CATALOG = str(_RESOURCES / "node_catalog.json")
 

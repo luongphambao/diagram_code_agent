@@ -88,7 +88,9 @@ def push_issue(creds: dict, payload: dict, *, action: str, external_id: str = ""
         body = _prepare_fields(creds, payload, is_create=False)
         resp = httpx.put(
             f"{creds['base_url']}/rest/api/3/issue/{external_id}",
-            json=body, auth=auth, timeout=JIRA_TIMEOUT_S,
+            json=body,
+            auth=auth,
+            timeout=JIRA_TIMEOUT_S,
         )
         resp.raise_for_status()
         return external_id
@@ -96,7 +98,9 @@ def push_issue(creds: dict, payload: dict, *, action: str, external_id: str = ""
     body = _prepare_fields(creds, payload, is_create=True)
     resp = httpx.post(
         f"{creds['base_url']}/rest/api/3/issue",
-        json=body, auth=auth, timeout=JIRA_TIMEOUT_S,
+        json=body,
+        auth=auth,
+        timeout=JIRA_TIMEOUT_S,
     )
     resp.raise_for_status()
     return resp.json()["key"]

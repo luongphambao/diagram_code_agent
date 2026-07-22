@@ -12,8 +12,13 @@ from .process import ProcessBlueprint
 
 class WAFPillar(CoercingModel):
     """Coverage of one AWS Well-Architected Framework pillar in the blueprint."""
-    addressed_by: list[str] = Field(default_factory=list, description="node IDs or key_decision labels addressing this pillar")
-    gaps: list[str] = Field(default_factory=list, description="known gaps; declare explicitly rather than leaving empty")
+
+    addressed_by: list[str] = Field(
+        default_factory=list, description="node IDs or key_decision labels addressing this pillar"
+    )
+    gaps: list[str] = Field(
+        default_factory=list, description="known gaps; declare explicitly rather than leaving empty"
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -25,6 +30,7 @@ class WAFPillar(CoercingModel):
 
 class PillarCoverage(CoercingModel):
     """Well-Architected Framework 6-pillar coverage."""
+
     operational_excellence: WAFPillar = Field(default_factory=WAFPillar)
     security: WAFPillar = Field(default_factory=WAFPillar)
     reliability: WAFPillar = Field(default_factory=WAFPillar)
@@ -40,9 +46,12 @@ class PillarCoverage(CoercingModel):
 
 class NFRMapping(CoercingModel):
     """Maps one non-functional requirement to the mechanism(s) and nodes that satisfy it."""
+
     nfr: str = Field(description="the NFR text, ideally measurable: e.g. '99.9% uptime SLA'")
     mechanism: str = Field(description="how this NFR is addressed: e.g. 'Multi-AZ RDS + ALB health checks'")
-    node_ids: list[str] = Field(default_factory=list, description="blueprint node IDs implementing this mechanism")
+    node_ids: list[str] = Field(
+        default_factory=list, description="blueprint node IDs implementing this mechanism"
+    )
 
 
 class BPNode(BaseModel):
@@ -67,7 +76,9 @@ class BPCluster(BaseModel):
     label: str = Field(description="tier / group name")
     tier: str = Field("", description="frontend|backend|data|infra|external|security")
     parent: str = Field("", description="id of parent cluster for nesting; empty for top-level zones")
-    accent: str = Field("", description="zone color: blue|cyan|teal|violet|indigo|green|amber|rose|slate; empty=auto")
+    accent: str = Field(
+        "", description="zone color: blue|cyan|teal|violet|indigo|green|amber|rose|slate; empty=auto"
+    )
     number: Optional[int] = Field(None, description="step badge number (1,2,3…); null to skip")
     zone: str = Field(
         "",
@@ -122,17 +133,21 @@ class BPEdge(BaseModel):
 
 class LegendEntry(BaseModel):
     """One row of the diagram legend mapping a flow category to a human label."""
+
     label: str = Field(description="human-readable name, e.g. 'Data & Training Flow'")
     flow: str = Field(
         "",
         description="the matching BPEdge.flow key (data|control|serving|registry|"
-                    "monitoring|security) — its color/style is taken from that flow",
+        "monitoring|security) — its color/style is taken from that flow",
     )
 
 
 class Blueprint(CoercingModel):
     """A structured architecture blueprint."""
-    audience: str = Field("client", description="client|engineer; default client for customer-facing diagrams")
+
+    audience: str = Field(
+        "client", description="client|engineer; default client for customer-facing diagrams"
+    )
     detail_level: str = Field("architecture", description="architecture|engineering|code")
     layout_intent: str = Field(
         "left_to_right_pipeline",
@@ -186,12 +201,27 @@ class Blueprint(CoercingModel):
         description="caption above the architecture panel inside a slide",
     )
     pattern: str = Field(description="microservices|monolith|serverless|event-driven|hybrid")
-    pattern_rationale: str = Field("", description="2-3 sentences: why this architecture pattern fits these requirements")
-    key_decisions: list[str] = Field(default_factory=list, description="3-6 design decisions & trade-offs (data flow, scaling, HA, security, storage, integration), one sentence each")
-    c4_level: Literal["context", "container"] = Field("container", description="container (default, full components) or context (5-8 nodes, boundaries+actors only)")
-    pillar_coverage: Optional[PillarCoverage] = Field(default=None, description="WAF 6-pillar coverage: addressed_by node IDs + known gaps per pillar")
-    nfr_mapping: list[NFRMapping] = Field(default_factory=list, description="each NFR mapped to mechanism and node_ids; use measurable NFRs (SLA%, latency ms)")
-    legend: list[LegendEntry] = Field(default_factory=list, description="legend rows per flow category; empty=auto-derive from edges")
+    pattern_rationale: str = Field(
+        "", description="2-3 sentences: why this architecture pattern fits these requirements"
+    )
+    key_decisions: list[str] = Field(
+        default_factory=list,
+        description="3-6 design decisions & trade-offs (data flow, scaling, HA, security, storage, integration), one sentence each",
+    )
+    c4_level: Literal["context", "container"] = Field(
+        "container",
+        description="container (default, full components) or context (5-8 nodes, boundaries+actors only)",
+    )
+    pillar_coverage: Optional[PillarCoverage] = Field(
+        default=None, description="WAF 6-pillar coverage: addressed_by node IDs + known gaps per pillar"
+    )
+    nfr_mapping: list[NFRMapping] = Field(
+        default_factory=list,
+        description="each NFR mapped to mechanism and node_ids; use measurable NFRs (SLA%, latency ms)",
+    )
+    legend: list[LegendEntry] = Field(
+        default_factory=list, description="legend rows per flow category; empty=auto-derive from edges"
+    )
     hub: str = Field(
         "",
         description=(
@@ -234,7 +264,9 @@ class Blueprint(CoercingModel):
                 tradeoffs_text = "; ".join(str(t).strip() for t in tradeoffs if str(t).strip())
             else:
                 tradeoffs_text = str(tradeoffs or "").strip()
-            parts = [p for p in (title, rationale, f"Trade-offs: {tradeoffs_text}" if tradeoffs_text else "") if p]
+            parts = [
+                p for p in (title, rationale, f"Trade-offs: {tradeoffs_text}" if tradeoffs_text else "") if p
+            ]
             return " — ".join(parts) if parts else "Decision"
 
         return {**values, "key_decisions": [_text(d) for d in decisions]}

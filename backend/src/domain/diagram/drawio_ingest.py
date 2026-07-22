@@ -102,8 +102,12 @@ def _geo(cell: ET.Element) -> dict | None:
     if g is None:
         return None
     try:
-        return {"x": float(g.get("x", "0")), "y": float(g.get("y", "0")),
-                "w": float(g.get("width", "0")), "h": float(g.get("height", "0"))}
+        return {
+            "x": float(g.get("x", "0")),
+            "y": float(g.get("y", "0")),
+            "w": float(g.get("width", "0")),
+            "h": float(g.get("height", "0")),
+        }
     except ValueError:
         return None
 
@@ -123,19 +127,26 @@ def extract_inventory(path: str) -> dict:
             cid = c.get("id")
             if not cid or cid in ("0", "1"):
                 continue
-            cells.append({
-                "id": cid, "parent": c.get("parent"),
-                "vertex": c.get("vertex") == "1", "edge": c.get("edge") == "1",
-                "source": c.get("source"), "target": c.get("target"),
-                "value": c.get("value") or "", "style": c.get("style") or "",
-                "geo": _geo(c),
-            })
+            cells.append(
+                {
+                    "id": cid,
+                    "parent": c.get("parent"),
+                    "vertex": c.get("vertex") == "1",
+                    "edge": c.get("edge") == "1",
+                    "source": c.get("source"),
+                    "target": c.get("target"),
+                    "value": c.get("value") or "",
+                    "style": c.get("style") or "",
+                    "geo": _geo(c),
+                }
+            )
     by_id = {c["id"]: c for c in cells}
     has_children = {c["parent"] for c in cells if c["parent"]}
 
     def _is_container(c: dict) -> bool:
         return (c["vertex"] and c["id"] in has_children) or bool(
-            re.search(r"container=1|group;|shape=.*group|swimlane", c["style"]))
+            re.search(r"container=1|group;|shape=.*group|swimlane", c["style"])
+        )
 
     def _abs(c: dict) -> dict:
         x, y, guard = 0.0, 0.0, 0
@@ -163,12 +174,14 @@ def extract_inventory(path: str) -> dict:
 
     def _center_in(inner: dict, outer: dict) -> bool:
         cx, cy = inner["x"] + inner["w"] / 2, inner["y"] + inner["h"] / 2
-        return (outer["x"] <= cx <= outer["x"] + outer["w"]
-                and outer["y"] <= cy <= outer["y"] + outer["h"])
+        return outer["x"] <= cx <= outer["x"] + outer["w"] and outer["y"] <= cy <= outer["y"] + outer["h"]
 
-    _ZONE_HINT = re.compile(r"\bvpc\b|\bvnet\b|availability|\baz\b"
-                            r"|\bus-(east|west)-\d[a-f]?\b|\baws\b|\bazure\b"
-                            r"|\bgcp\b|\bcloud\b|on[- ]?prem", re.I)
+    _ZONE_HINT = re.compile(
+        r"\bvpc\b|\bvnet\b|availability|\baz\b"
+        r"|\bus-(east|west)-\d[a-f]?\b|\baws\b|\bazure\b"
+        r"|\bgcp\b|\bcloud\b|on[- ]?prem",
+        re.I,
+    )
 
     # Clusters = container vertices; nodes = leaf vertices with a label or icon.
     clusters, nodes, edges = [], [], []
@@ -177,8 +190,9 @@ def extract_inventory(path: str) -> dict:
             continue
         if c["vertex"] and _is_container(c):
             label, _ = _split_label(c["value"])
-            clusters.append({"id": c["id"], "label": label or c["id"],
-                             "_style": c["style"], "_pid": c.get("parent")})
+            clusters.append(
+                {"id": c["id"], "label": label or c["id"], "_style": c["style"], "_pid": c.get("parent")}
+            )
     cluster_ids = {cl["id"] for cl in clusters}
 
     # SPATIAL containment inference (playbook §4): flat files (ChatGPT-style,
@@ -186,11 +200,9 @@ def extract_inventory(path: str) -> dict:
     # rect drawn behind ≥2 substantial vertices IS a section/zone even though
     # nothing is XML-nested inside it. Without this, a flat source ingests as
     # one giant loose-node pile.
-    vert_cells = [c for c in cells if c["vertex"] and c["geo"]
-                  and not _is_decor(c["id"])]
+    vert_cells = [c for c in cells if c["vertex"] and c["geo"] and not _is_decor(c["id"])]
     boxes = {c["id"]: _box(c) for c in vert_cells}
-    substantial = [c for c in vert_cells
-                   if boxes[c["id"]]["w"] * boxes[c["id"]]["h"] >= 2000]
+    substantial = [c for c in vert_cells if boxes[c["id"]]["w"] * boxes[c["id"]]["h"] >= 2000]
     unlabeled_cands: list[dict] = []
     for c in vert_cells:
         if c["id"] in cluster_ids or _is_container(c):
@@ -198,14 +210,17 @@ def extract_inventory(path: str) -> dict:
         b = boxes[c["id"]]
         if b["w"] * b["h"] < 25000:
             continue
-        contained = [o for o in substantial
-                     if o["id"] != c["id"] and _center_in(boxes[o["id"]], b)
-                     and boxes[o["id"]]["w"] * boxes[o["id"]]["h"] < b["w"] * b["h"] * 0.8]
+        contained = [
+            o
+            for o in substantial
+            if o["id"] != c["id"]
+            and _center_in(boxes[o["id"]], b)
+            and boxes[o["id"]]["w"] * boxes[o["id"]]["h"] < b["w"] * b["h"] * 0.8
+        ]
         if not contained:
             continue
         label, _ = _split_label(c["value"])
-        cl = {"id": c["id"], "label": label,
-              "_style": c["style"], "_pid": c.get("parent"), "_spatial": True}
+        cl = {"id": c["id"], "label": label, "_style": c["style"], "_pid": c.get("parent"), "_spatial": True}
         clusters.append(cl)
         cluster_ids.add(c["id"])
         if not label:
@@ -214,15 +229,23 @@ def extract_inventory(path: str) -> dict:
     # (the "VPC" chip pattern). A pill goes to the candidate whose top edge is
     # CLOSEST — several nested boundaries can share the same top strip.
     if unlabeled_cands:
-        pills = [p for p in vert_cells
-                 if p["id"] not in cluster_ids and p["geo"]["h"] <= 32
-                 and p["geo"]["w"] * p["geo"]["h"] <= 8000
-                 and _split_label(p["value"])[0]]
+        pills = [
+            p
+            for p in vert_cells
+            if p["id"] not in cluster_ids
+            and p["geo"]["h"] <= 32
+            and p["geo"]["w"] * p["geo"]["h"] <= 8000
+            and _split_label(p["value"])[0]
+        ]
         for p in pills:
             pb = boxes[p["id"]]
-            near = [cl for cl in unlabeled_cands if not cl["label"]
-                    and _center_in(pb, boxes[cl["id"]])
-                    and abs(pb["y"] - boxes[cl["id"]]["y"]) <= 30]
+            near = [
+                cl
+                for cl in unlabeled_cands
+                if not cl["label"]
+                and _center_in(pb, boxes[cl["id"]])
+                and abs(pb["y"] - boxes[cl["id"]]["y"]) <= 30
+            ]
             if near:
                 best = min(near, key=lambda cl: abs(pb["y"] - boxes[cl["id"]]["y"]))
                 best["label"] = _split_label(p["value"])[0]
@@ -245,9 +268,12 @@ def extract_inventory(path: str) -> dict:
             ob = cl_boxes.get(other["id"])
             if other["id"] == cl["id"] or not ob or not b:
                 continue
-            if (ob["x"] <= b["x"] + 2 and ob["y"] <= b["y"] + 2
-                    and ob["x"] + ob["w"] >= b["x"] + b["w"] - 2
-                    and ob["y"] + ob["h"] >= b["y"] + b["h"] - 2):
+            if (
+                ob["x"] <= b["x"] + 2
+                and ob["y"] <= b["y"] + 2
+                and ob["x"] + ob["w"] >= b["x"] + b["w"] - 2
+                and ob["y"] + ob["h"] >= b["y"] + b["h"] - 2
+            ):
                 if best is None or ob["w"] * ob["h"] < best[1]:
                     best = (other["id"], ob["w"] * ob["h"])
         if best:
@@ -255,10 +281,12 @@ def extract_inventory(path: str) -> dict:
     # Original container nesting + topology-zone guess ("_"-prefixed: consumed
     # only by the refined upgrade path; the icon path must keep seeing today's
     # flat cluster list, or upgrades would flip into topology nesting mode).
-    _ZONE_RX = [("vpc", re.compile(r"\bvpc\b|\bvnet\b", re.I)),
-                ("az", re.compile(r"availability|\baz\b|\bus-(east|west)-\d[a-f]\b", re.I)),
-                ("onprem", re.compile(r"on[- ]?prem|data ?cent", re.I)),
-                ("cloud", re.compile(r"\baws\b|\bazure\b|\bgcp\b|\bcloud\b", re.I))]
+    _ZONE_RX = [
+        ("vpc", re.compile(r"\bvpc\b|\bvnet\b", re.I)),
+        ("az", re.compile(r"availability|\baz\b|\bus-(east|west)-\d[a-f]\b", re.I)),
+        ("onprem", re.compile(r"on[- ]?prem|data ?cent", re.I)),
+        ("cloud", re.compile(r"\baws\b|\bazure\b|\bgcp\b|\bcloud\b", re.I)),
+    ]
     for cl in clusters:
         pid, guard = cl.pop("_pid", None), 0
         while pid and pid not in cluster_ids and guard < 20:
@@ -278,12 +306,10 @@ def extract_inventory(path: str) -> dict:
             linked.update(x for x in (c["source"], c["target"]) if x)
 
     title_guess = ""
-    page_w = max((boxes[c["id"]]["x"] + boxes[c["id"]]["w"]
-                  for c in vert_cells), default=0)
+    page_w = max((boxes[c["id"]]["x"] + boxes[c["id"]]["w"] for c in vert_cells), default=0)
     raw_nodes: list[dict] = []
     for c in cells:
-        if (not c["vertex"] or _is_container(c) or _is_decor(c["id"])
-                or c["id"] in cluster_ids):
+        if not c["vertex"] or _is_container(c) or _is_decor(c["id"]) or c["id"] in cluster_ids:
             continue
         icon = extract_image_uri(c["style"])
         title, sub = _split_label(c["value"])
@@ -311,15 +337,25 @@ def extract_inventory(path: str) -> dict:
                         best = (cl["id"], cb["w"] * cb["h"])
             parent = best[0] if best else None
         pos = _abs(c)
-        raw_nodes.append({"id": c["id"], "title": title or c["id"], "sub": sub,
-                          "cluster": parent, "icon": icon,
-                          "_labeled": bool(title or sub), "_box": b,
-                          "_x": pos["x"], "_y": pos["y"]})
+        raw_nodes.append(
+            {
+                "id": c["id"],
+                "title": title or c["id"],
+                "sub": sub,
+                "cluster": parent,
+                "icon": icon,
+                "_labeled": bool(title or sub),
+                "_box": b,
+                "_x": pos["x"],
+                "_y": pos["y"],
+            }
+        )
 
     # Chrome filtering + icon merging (flat real-world files carry title boxes,
     # legend swatches, metadata cards and loose icon glyphs as ordinary cells):
-    legendish = {cl["id"] for cl in clusters
-                 if str(cl["label"]).strip().lower() in ("legend", "metadata", "notes")}
+    legendish = {
+        cl["id"] for cl in clusters if str(cl["label"]).strip().lower() in ("legend", "metadata", "notes")
+    }
     labeled = [n for n in raw_nodes if n["_labeled"] and n["_box"]]
     for n in raw_nodes:
         b, area = n["_box"], 0.0
@@ -331,21 +367,27 @@ def extract_inventory(path: str) -> dict:
             keep = False  # legend/metadata internals
         elif not n["_labeled"]:
             # unlabeled icon glyph: merge into the labeled card it sits on, else drop
-            host = next((h for h in labeled if h["id"] != n["id"] and not h["icon"]
-                         and b and _center_in(b, h["_box"])), None)
+            host = next(
+                (
+                    h
+                    for h in labeled
+                    if h["id"] != n["id"] and not h["icon"] and b and _center_in(b, h["_box"])
+                ),
+                None,
+            )
             if host is not None and n["icon"]:
                 host["icon"] = n["icon"]
             keep = False
-        elif (not title_guess and b and b["y"] < 100 and page_w
-              and b["w"] >= 0.4 * page_w):
+        elif not title_guess and b and b["y"] < 100 and page_w and b["w"] >= 0.4 * page_w:
             title_guess = (n["title"] + (f" — {n['sub']}" if n["sub"] else "")).strip()
             keep = False  # the diagram's own title box, not a component
         elif area and area < 3000:
             keep = False  # badges / label pills ("T4", "VPC") without edges
         elif str(n["title"]).strip().lower() in ("legend", "metadata", "notes"):
             keep = False
-        elif re.search(r"designed by|project\s*:|author\s*:|version\s*:|date\s*:",
-                       f"{n['title']} {n['sub']}", re.I):
+        elif re.search(
+            r"designed by|project\s*:|author\s*:|version\s*:|date\s*:", f"{n['title']} {n['sub']}", re.I
+        ):
             keep = False  # metadata card (author/date/version), not a component
         else:
             keep = True
@@ -357,8 +399,7 @@ def extract_inventory(path: str) -> dict:
     for c in cells:
         if c["edge"] and c["source"] and c["target"]:
             label, _ = _split_label(c["value"])
-            edges.append({"id": c["id"], "source": c["source"],
-                          "target": c["target"], "label": label})
+            edges.append({"id": c["id"], "source": c["source"], "target": c["target"], "label": label})
 
     node_ids = {n["id"] for n in nodes}
     edges = [e for e in edges if e["source"] in node_ids and e["target"] in node_ids]
@@ -374,8 +415,7 @@ def extract_inventory(path: str) -> dict:
         if m:
             cl["number"] = int(m.group(1))
             cl["label"] = m.group(2).strip()
-    return {"title": title_guess, "provider": "generic", "clusters": clusters,
-            "nodes": nodes, "edges": edges}
+    return {"title": title_guess, "provider": "generic", "clusters": clusters, "nodes": nodes, "edges": edges}
 
 
 def _wrap_body(text: str, width: int = 32, max_lines: int = 3) -> list[str]:
@@ -396,9 +436,9 @@ def _wrap_body(text: str, width: int = 32, max_lines: int = 3) -> list[str]:
     return lines
 
 
-def inventory_to_render_spec(inv: dict, *, provider: str | None = None,
-                             title: str | None = None,
-                             style_preset: str = "") -> dict:
+def inventory_to_render_spec(
+    inv: dict, *, provider: str | None = None, title: str | None = None, style_preset: str = ""
+) -> dict:
     """Map an inventory to a render_spec the native engine can rebuild, preserving
     original ids and reusing embedded icons (V2 §2.2 rebuild-geometry-not-semantic).
 
@@ -421,14 +461,21 @@ def inventory_to_render_spec(inv: dict, *, provider: str | None = None,
                 keep.add(pid)
                 clusters.append(by_id[pid])
                 pid = by_id[pid].get("_parent")
-        clusters = [{k: v for k, v in cl.items() if not k.startswith("_")}
-                    | ({"parent": cl["_parent"]} if cl.get("_parent") else {})
-                    | ({"zone": cl["_zone"]} if cl.get("_zone") else {})
-                    for cl in clusters]
+        clusters = [
+            {k: v for k, v in cl.items() if not k.startswith("_")}
+            | ({"parent": cl["_parent"]} if cl.get("_parent") else {})
+            | ({"zone": cl["_zone"]} if cl.get("_zone") else {})
+            for cl in clusters
+        ]
     nodes = []
     for n in inv["nodes"]:
-        node = {"id": n["id"], "label": n["title"], "tech": n.get("sub") or "",
-                "cluster": n.get("cluster"), "icon_data_uri": n.get("icon")}
+        node = {
+            "id": n["id"],
+            "label": n["title"],
+            "tech": n.get("sub") or "",
+            "cluster": n.get("cluster"),
+            "icon_data_uri": n.get("icon"),
+        }
         if refined and n.get("sub"):
             node["body"] = _wrap_body(n["sub"])
         nodes.append(node)
@@ -438,8 +485,9 @@ def inventory_to_render_spec(inv: dict, *, provider: str | None = None,
         "diagram_title": title or inv.get("title") or "Upgraded Architecture",
         "clusters": clusters,
         "nodes": nodes,
-        "edges": [{"from": e["source"], "to": e["target"],
-                   "label": e.get("label") or ""} for e in inv["edges"]],
+        "edges": [
+            {"from": e["source"], "to": e["target"], "label": e.get("label") or ""} for e in inv["edges"]
+        ],
     }
     if refined:
         spec["style_preset"] = "refined"

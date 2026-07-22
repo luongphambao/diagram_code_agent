@@ -59,8 +59,14 @@ logger = logging.getLogger("diagram-agent")
 router = APIRouter()
 
 
-def _activity_event(phase: str, tool: str, label: str = "", detail: str = "",
-                    subagent: str | None = None, ok: bool | None = None) -> dict:
+def _activity_event(
+    phase: str,
+    tool: str,
+    label: str = "",
+    detail: str = "",
+    subagent: str | None = None,
+    ok: bool | None = None,
+) -> dict:
     """Build a tool/subagent progress event as an AG-UI CUSTOM envelope.
 
     AG-UI's EventType enum has no bare "ACTIVITY" type (only ACTIVITY_SNAPSHOT /
@@ -76,8 +82,7 @@ def _activity_event(phase: str, tool: str, label: str = "", detail: str = "",
     return {"type": "CUSTOM", "name": "activity", "value": value}
 
 
-def _persist_decision_record(payload: dict, gate: str | None, approver: str,
-                             approver_role: str = "") -> None:
+def _persist_decision_record(payload: dict, gate: str | None, approver: str, approver_role: str = "") -> None:
     """Append a HITL v2 DecisionRecord to the workspace log (no-op for plain
     approve/reject or on any failure — must never break the resume).
 
@@ -95,11 +100,14 @@ def _persist_decision_record(payload: dict, gate: str | None, approver: str,
         from tools import can_approve
 
         if approver_role and not can_approve(approver_role, gate):
-            logger.warning("role %r is not permitted to approve gate %s (recorded anyway)",
-                           approver_role, gate)
+            logger.warning(
+                "role %r is not permitted to approve gate %s (recorded anyway)", approver_role, gate
+            )
         from backends import current_workspace
+
         rec = decision_record_from_payload(
-            payload, gate,
+            payload,
+            gate,
             seq=next_seq(current_workspace()),
             approver=approver,
             timestamp=datetime.now(timezone.utc).isoformat(),
@@ -107,16 +115,18 @@ def _persist_decision_record(payload: dict, gate: str | None, approver: str,
         if rec is not None:
             rec.approver_role = approver_role
             append_decision(rec, current_workspace())
-            logger.info("persisted decision %s (%s) at %s by role=%s",
-                        rec.id, rec.action, gate, approver_role or "-")
+            logger.info(
+                "persisted decision %s (%s) at %s by role=%s", rec.id, rec.action, gate, approver_role or "-"
+            )
     except Exception as exc:  # noqa: BLE001
         logger.warning("failed to persist decision record: %s", exc)
 
+
 _RESTORABLE_FILES = {
     "architecture_analysis": "architecture_analysis.json",
-    "diagram_brief":         "diagram_brief.json",
-    "tech_stack":            "tech_stack.json",
-    "blueprint":             "blueprint.json",
+    "diagram_brief": "diagram_brief.json",
+    "tech_stack": "tech_stack.json",
+    "blueprint": "blueprint.json",
 }
 
 
@@ -159,6 +169,7 @@ async def _restore_workspace_from_db(pool, thread_id: str, workspace) -> None:
     thread, we recover them from the snapshot saved in conversations.state_json.
     """
     from pathlib import Path
+
     ws = Path(workspace)
     missing = [k for k, f in _RESTORABLE_FILES.items() if not (ws / f).exists()]
     if not missing:
@@ -179,9 +190,7 @@ async def _restore_workspace_from_db(pool, thread_id: str, workspace) -> None:
 
 
 @router.post("/agui")
-async def agui_endpoint(
-    request: Request, identity: Identity = Depends(require_identity)
-):
+async def agui_endpoint(request: Request, identity: Identity = Depends(require_identity)):
     body = await request.json()
     thread_id = body.get("threadId", "thread-default")
     run_id = body.get("runId", "run-1")
@@ -232,18 +241,21 @@ async def agui_endpoint(
                     payload = {}
                 pending_name = _pending_action_name(await _pending_interrupt(config))
                 decision = _decision_from_payload(payload, pending_name)
-                logger.info("resume %s → %s (action=%s)", pending_name, decision["type"],
-                            payload.get("action"))
+                logger.info(
+                    "resume %s → %s (action=%s)", pending_name, decision["type"], payload.get("action")
+                )
                 # HITL v2: persist a structured decision record for trade-off actions
                 # (accept_risk, approve_with_assumptions, request_evidence, ...). It is
                 # projected into the CSM on the next build_solution_model.
-                _persist_decision_record(payload, pending_name, session_ctx.user_email,
-                                         approver_role=identity.role)
+                _persist_decision_record(
+                    payload, pending_name, session_ctx.user_email, approver_role=identity.role
+                )
                 # §4.10: on a gate approval, snapshot the signed-off solution model as an
                 # immutable approved revision (approved/REV-<n>.json) for audit/repro.
                 if decision.get("type") == "approve" and pending_name in GATE_TOOL_NAMES:
                     try:
                         from memory.stores.csm_adapter import archive_approved_revision
+
                         archive_approved_revision(ws)
                     except Exception as exc:  # noqa: BLE001
                         logger.debug("approved-revision archive skipped: %s", exc)
@@ -257,7 +269,11 @@ async def agui_endpoint(
                             f"User {'approved' if decision['type'] == 'approve' else 'rejected'} {pending_name}."
                             + (f" Feedback: {note}" if note else "")
                         ),
-                        data={"gate": pending_name, "decision": decision["type"], "note": str(note) if note else ""},
+                        data={
+                            "gate": pending_name,
+                            "decision": decision["type"],
+                            "note": str(note) if note else "",
+                        },
                     )
                     await conv_db.record_gate_outcome(
                         request.app.state.pool,
@@ -267,13 +283,15 @@ async def agui_endpoint(
                         note=str(note) if note else "",
                     )
                 agen = ss.AGENT.astream(
-                    Command(resume={"decisions": [decision]}), config,
+                    Command(resume={"decisions": [decision]}),
+                    config,
                     context=session_ctx,
                     stream_mode=["messages", "updates", "custom"],
                 )
             else:
                 # Fresh run.
                 from routers.upload import _attached_images, _attached_text
+
                 desc = _last_user_text(messages)
                 attached = _attached_text(file_ids)
                 image_blocks = _attached_images(file_ids)
@@ -281,7 +299,9 @@ async def agui_endpoint(
                 is_ppt_followup = _is_ppt_followup(desc)
                 is_wbs_followup = _is_wbs_followup(desc)
                 is_email_followup = _is_email_followup(desc)
-                if (is_pdf_followup or is_ppt_followup or is_wbs_followup or is_email_followup) and not attached:
+                if (
+                    is_pdf_followup or is_ppt_followup or is_wbs_followup or is_email_followup
+                ) and not attached:
                     # Restore before deciding whether a downstream follow-up can
                     # preserve artifacts. A previous run may have wiped the
                     # per-thread JSON files while the conversation snapshot still
@@ -302,8 +322,10 @@ async def agui_endpoint(
                 # so the planner reported "No upstream artifacts found" and never started.
                 solution_exists = _wbs_solution_context_exists(ws)
                 preserve_wbs_artifacts, wbs_already_planned = _wbs_preserve(
-                    desc, solution_exists=solution_exists,
-                    wbs_exists=_wbs_plan_ready(ws), attached=bool(attached),
+                    desc,
+                    solution_exists=solution_exists,
+                    wbs_exists=_wbs_plan_ready(ws),
+                    attached=bool(attached),
                 )
                 # A request to EMAIL a deliverable is never a regenerate/re-export request,
                 # even when the phrasing also matches "wbs"/"report" (e.g. "gửi file WBS qua
@@ -315,9 +337,7 @@ async def agui_endpoint(
                     preserve_diagram_artifacts or preserve_wbs_artifacts or preserve_email_artifacts
                 )
                 if not preserve_artifacts:
-                    clear_stage_markers(
-                        preserve_wbs=(not attached and _wbs_plan_ready(ws))
-                    )
+                    clear_stage_markers(preserve_wbs=(not attached and _wbs_plan_ready(ws)))
                 else:
                     if preserve_email_artifacts:
                         desc = (
@@ -369,8 +389,8 @@ async def agui_endpoint(
                             "redesign or re-render the diagram. Call `generate_ppt_proposal({})` "
                             "now so the PPT approval gate is shown, then complete after `out.pptx` "
                             "is created."
-                            if is_ppt_followup and not is_pdf_followup else
-                            "The user is asking for a PDF/report/document. Do NOT "
+                            if is_ppt_followup and not is_pdf_followup
+                            else "The user is asking for a PDF/report/document. Do NOT "
                             "redesign or re-render the diagram. Call `generate_pdf_report({})` "
                             "now so the PDF approval gate is shown, then complete after `out.pdf` "
                             "is created."
@@ -403,18 +423,19 @@ async def agui_endpoint(
                         "and layout shown as a guide when proposing the blueprint; "
                         "the critic may compare the final render against them."
                     )
-                    content: list | str = (
-                        [{"type": "text", "text": (desc or "") + img_note}]
-                        + image_blocks
-                    )
+                    content: list | str = [{"type": "text", "text": (desc or "") + img_note}] + image_blocks
                 else:
                     content = desc
 
-                logger.info("new run: %r%s%s", (desc or "")[:120],
-                            " (+docs→requirements.md)" if attached else "",
-                            f" (+{len(image_blocks)} ref-image(s))" if image_blocks else "")
+                logger.info(
+                    "new run: %r%s%s",
+                    (desc or "")[:120],
+                    " (+docs→requirements.md)" if attached else "",
+                    f" (+{len(image_blocks)} ref-image(s))" if image_blocks else "",
+                )
                 agen = ss.AGENT.astream(
-                    {"messages": [HumanMessage(content=content)]}, config,
+                    {"messages": [HumanMessage(content=content)]},
+                    config,
                     context=session_ctx,
                     stream_mode=["messages", "updates", "custom"],
                 )
@@ -435,16 +456,20 @@ async def agui_endpoint(
                     if current_id is not None:
                         events.append({"type": "TEXT_MESSAGE_END", "messageId": current_id})
                     current_id = message_id
-                    events.append({
-                        "type": "TEXT_MESSAGE_START",
+                    events.append(
+                        {
+                            "type": "TEXT_MESSAGE_START",
+                            "messageId": current_id,
+                            "role": "assistant",
+                        }
+                    )
+                events.append(
+                    {
+                        "type": "TEXT_MESSAGE_CONTENT",
                         "messageId": current_id,
-                        "role": "assistant",
-                    })
-                events.append({
-                    "type": "TEXT_MESSAGE_CONTENT",
-                    "messageId": current_id,
-                    "delta": delta,
-                })
+                        "delta": delta,
+                    }
+                )
                 return events
 
             def _selector_events(message_id: str, tools: list[str]) -> list[dict]:
@@ -454,12 +479,12 @@ async def agui_endpoint(
                     events.append({"type": "TEXT_MESSAGE_END", "messageId": current_id})
                     current_id = None
                 detail = _tool_selection_detail(tools)
-                events.append(_activity_event(
-                    "start", "tool_selector", label="Selecting tools", detail=detail
-                ))
-                events.append(_activity_event(
-                    "end", "tool_selector", label="Selecting tools", detail=detail, ok=True
-                ))
+                events.append(
+                    _activity_event("start", "tool_selector", label="Selecting tools", detail=detail)
+                )
+                events.append(
+                    _activity_event("end", "tool_selector", label="Selecting tools", detail=detail, ok=True)
+                )
                 return events
 
             async for mode, payload in agen:
@@ -492,7 +517,10 @@ async def agui_endpoint(
                             for event in _selector_events(mid, tools):
                                 yield _sse(event)
                             continue
-                        if _looks_like_tool_selection_prefix(selector_buffer) and len(selector_buffer) <= 4096:
+                        if (
+                            _looks_like_tool_selection_prefix(selector_buffer)
+                            and len(selector_buffer) <= 4096
+                        ):
                             continue
                         text = selector_buffer
                         selector_candidate_id = None
@@ -521,7 +549,7 @@ async def agui_endpoint(
                             msgs_raw = getattr(msgs_raw, "value", None) or []
                         for m in msgs_raw:
                             if isinstance(m, AIMessage):
-                                for tc in (m.tool_calls or []):
+                                for tc in m.tool_calls or []:
                                     tcid = tc.get("id") or ""
                                     if tcid in seen_starts:
                                         continue
@@ -531,26 +559,68 @@ async def agui_endpoint(
                                     detail = _tool_detail(name, args)
                                     subagent = _TOOL_TO_SUBAGENT.get(name)
                                     if name == "task":
-                                        sa_name = args.get("subagent_type") or args.get("subagent") or args.get("name") or "unknown"
-                                        sa_desc = args.get("description") or args.get("instruction") or args.get("prompt") or ""
-                                        record = {"id": tcid, "subagent": sa_name, "description": sa_desc,
-                                                  "status": "running", "result": None,
-                                                  "current_detail": detail}
+                                        sa_name = (
+                                            args.get("subagent_type")
+                                            or args.get("subagent")
+                                            or args.get("name")
+                                            or "unknown"
+                                        )
+                                        sa_desc = (
+                                            args.get("description")
+                                            or args.get("instruction")
+                                            or args.get("prompt")
+                                            or ""
+                                        )
+                                        record = {
+                                            "id": tcid,
+                                            "subagent": sa_name,
+                                            "description": sa_desc,
+                                            "status": "running",
+                                            "result": None,
+                                            "current_detail": detail,
+                                        }
                                         _pending_tasks[tcid] = record
                                         logger.info("→ delegate to %s: %s", sa_name, sa_desc[:80])
-                                        yield _sse(_activity_event("start", name,
-                                                    label=f"Delegating to {_display_subagent(sa_name)}",
-                                                    subagent=sa_name, detail=detail))
-                                        all_delegations = _completed_delegations + list(_pending_tasks.values())
-                                        yield _sse({"type": "STATE_DELTA", "delta": [
-                                            {"op": "add", "path": "/delegations", "value": all_delegations}
-                                        ]})
+                                        yield _sse(
+                                            _activity_event(
+                                                "start",
+                                                name,
+                                                label=f"Delegating to {_display_subagent(sa_name)}",
+                                                subagent=sa_name,
+                                                detail=detail,
+                                            )
+                                        )
+                                        all_delegations = _completed_delegations + list(
+                                            _pending_tasks.values()
+                                        )
+                                        yield _sse(
+                                            {
+                                                "type": "STATE_DELTA",
+                                                "delta": [
+                                                    {
+                                                        "op": "add",
+                                                        "path": "/delegations",
+                                                        "value": all_delegations,
+                                                    }
+                                                ],
+                                            }
+                                        )
                                     else:
-                                        logger.info("→ %s%s%s", _label(name),
-                                                    f" [{subagent}]" if subagent else "",
-                                                    f" — {detail}" if detail else "")
-                                        yield _sse(_activity_event("start", name, label=_label(name),
-                                                    detail=detail, subagent=subagent))
+                                        logger.info(
+                                            "→ %s%s%s",
+                                            _label(name),
+                                            f" [{subagent}]" if subagent else "",
+                                            f" — {detail}" if detail else "",
+                                        )
+                                        yield _sse(
+                                            _activity_event(
+                                                "start",
+                                                name,
+                                                label=_label(name),
+                                                detail=detail,
+                                                subagent=subagent,
+                                            )
+                                        )
                             elif isinstance(m, ToolMessage):
                                 tcid = getattr(m, "tool_call_id", "") or ""
                                 if tcid in seen_ends:
@@ -563,28 +633,49 @@ async def agui_endpoint(
                                     result_text = _text_of(m.content)
                                     record = _pending_tasks.pop(tcid)
                                     record["status"] = "completed" if ok else "error"
-                                    record["result"] = (result_text[:500] + "…") if len(result_text) > 500 else result_text
+                                    record["result"] = (
+                                        (result_text[:500] + "…") if len(result_text) > 500 else result_text
+                                    )
                                     _completed_delegations.append(record)
-                                    logger.info("← delegate %s done (%s)", record["subagent"], record["status"])
+                                    logger.info(
+                                        "← delegate %s done (%s)", record["subagent"], record["status"]
+                                    )
                                     all_delegations = _completed_delegations + list(_pending_tasks.values())
-                                    yield _sse({"type": "STATE_DELTA", "delta": [
-                                        {"op": "add", "path": "/delegations", "value": all_delegations}
-                                    ]})
+                                    yield _sse(
+                                        {
+                                            "type": "STATE_DELTA",
+                                            "delta": [
+                                                {
+                                                    "op": "add",
+                                                    "path": "/delegations",
+                                                    "value": all_delegations,
+                                                }
+                                            ],
+                                        }
+                                    )
                                 output_detail = _tool_output_detail(m.content)
                                 if ok:
                                     logger.info("← %s ok%s", name, f" [{subagent}]" if subagent else "")
                                 else:
-                                    logger.info("← %s ERROR%s — %s", name,
-                                                f" [{subagent}]" if subagent else "",
-                                                output_detail)
-                                yield _sse(_activity_event("end", name, ok=ok,
-                                            detail=output_detail, subagent=subagent))
+                                    logger.info(
+                                        "← %s ERROR%s — %s",
+                                        name,
+                                        f" [{subagent}]" if subagent else "",
+                                        output_detail,
+                                    )
+                                yield _sse(
+                                    _activity_event(
+                                        "end", name, ok=ok, detail=output_detail, subagent=subagent
+                                    )
+                                )
                                 if name in {"generate_pdf_report", "generate_ppt_proposal"} and ok:
                                     artifact_delta = [
                                         {"op": "add", "path": f"/{k}", "value": v}
                                         for k, v in _artifacts(ws).items()
                                     ]
-                                    artifact_delta.append({"op": "add", "path": "/current_step", "value": "done"})
+                                    artifact_delta.append(
+                                        {"op": "add", "path": "/current_step", "value": "done"}
+                                    )
                                     yield _sse({"type": "STATE_DELTA", "delta": artifact_delta})
                                 if name == "export_wbs_excel" and ok:
                                     artifact_delta = [
@@ -601,20 +692,42 @@ async def agui_endpoint(
                     ok = payload.get("ok", True)
                     detail = payload.get("detail", "")
                     label = _label(tool)
-                    logger.info("  [%s] %s %s%s", sa_name, "→" if phase == "start" else "←", label,
-                                f" — {detail}" if detail else "")
-                    yield _sse(_activity_event(phase, tool, label=label, detail=detail,
-                                subagent=sa_name, ok=(ok if phase == "end" else None)))
+                    logger.info(
+                        "  [%s] %s %s%s",
+                        sa_name,
+                        "→" if phase == "start" else "←",
+                        label,
+                        f" — {detail}" if detail else "",
+                    )
+                    yield _sse(
+                        _activity_event(
+                            phase,
+                            tool,
+                            label=label,
+                            detail=detail,
+                            subagent=sa_name,
+                            ok=(ok if phase == "end" else None),
+                        )
+                    )
                     if phase == "start":
                         for _tcid, record in _pending_tasks.items():
                             if record.get("subagent") == sa_name:
                                 record["current_tool"] = tool
                                 record["current_label"] = label
                                 record["current_detail"] = detail
-                                yield _sse({"type": "STATE_DELTA", "delta": [
-                                    {"op": "add", "path": "/delegations",
-                                     "value": _completed_delegations + list(_pending_tasks.values())}
-                                ]})
+                                yield _sse(
+                                    {
+                                        "type": "STATE_DELTA",
+                                        "delta": [
+                                            {
+                                                "op": "add",
+                                                "path": "/delegations",
+                                                "value": _completed_delegations
+                                                + list(_pending_tasks.values()),
+                                            }
+                                        ],
+                                    }
+                                )
                                 break
                     elif phase == "end":
                         for record in _pending_tasks.values():
@@ -658,8 +771,13 @@ async def agui_endpoint(
                         request.app.state.pool,
                         thread_id=thread_id,
                         messages=messages,
-                        state={"current_step": step, **_stage_artifacts(ws), **delta,
-                               **_artifacts(ws), "run_metrics": run_met},
+                        state={
+                            "current_step": step,
+                            **_stage_artifacts(ws),
+                            **delta,
+                            **_artifacts(ws),
+                            "run_metrics": run_met,
+                        },
                         last_msg=_last_user_text(messages),
                         auto_name=(_last_user_text(messages) or "Untitled")[:50],
                         owner_email=identity.email,
@@ -674,8 +792,7 @@ async def agui_endpoint(
             png = ws / "out.png"
             if png.exists():
                 logger.info("run finished — diagram ready")
-                snapshot = {"current_step": "done", "summary": summary, "logs": logs,
-                            "run_metrics": run_met}
+                snapshot = {"current_step": "done", "summary": summary, "logs": logs, "run_metrics": run_met}
                 snapshot.update(_stage_artifacts(ws))
                 snapshot.update(_artifacts(ws))
                 if all_delegations:
@@ -693,31 +810,35 @@ async def agui_endpoint(
         except GraphRecursionError as exc:
             logger.exception("agent run hit the graph recursion limit: %s", exc)
             run_errored = True
-            yield _sse({
-                "type": "RUN_ERROR",
-                "message": (
-                    "The run hit its overall step safety limit "
-                    f"(recursion_limit={RECURSION_LIMIT}) and was stopped. Partial "
-                    "artifacts are saved in the workspace — send a follow-up "
-                    "message to continue from where it stopped."
-                ),
-                "code": "recursion_limit",
-            })
+            yield _sse(
+                {
+                    "type": "RUN_ERROR",
+                    "message": (
+                        "The run hit its overall step safety limit "
+                        f"(recursion_limit={RECURSION_LIMIT}) and was stopped. Partial "
+                        "artifacts are saved in the workspace — send a follow-up "
+                        "message to continue from where it stopped."
+                    ),
+                    "code": "recursion_limit",
+                }
+            )
         except (httpx.TimeoutException, TimeoutError) as exc:
             # Covers the raw transport read timeout (httpx.ReadTimeout) and the
             # vendored langchain_openai StreamChunkTimeoutError (subclass of
             # TimeoutError) — the model connection went quiet mid-stream.
             logger.warning("agent run timed out mid-stream: %r", exc)
             run_errored = True
-            yield _sse({
-                "type": "RUN_ERROR",
-                "message": (
-                    "The model connection timed out while generating a response "
-                    "(the endpoint went quiet). Partial artifacts, if any, are saved "
-                    "in the workspace — please resend your message to continue."
-                ),
-                "code": "model_timeout",
-            })
+            yield _sse(
+                {
+                    "type": "RUN_ERROR",
+                    "message": (
+                        "The model connection timed out while generating a response "
+                        "(the endpoint went quiet). Partial artifacts, if any, are saved "
+                        "in the workspace — please resend your message to continue."
+                    ),
+                    "code": "model_timeout",
+                }
+            )
         except Exception as exc:  # noqa: BLE001
             logger.exception("agent run failed: %s", exc)
             run_errored = True

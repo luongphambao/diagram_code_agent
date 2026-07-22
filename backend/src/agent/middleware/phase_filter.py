@@ -9,6 +9,7 @@ actually needs.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from langchain.agents.middleware import AgentMiddleware, ModelRequest
 
@@ -16,48 +17,99 @@ from langchain.agents.middleware import AgentMiddleware, ModelRequest
 # stage instead of all 34 MAIN_TOOLS every call. Phase is inferred from the most
 # advanced workspace file present. Falls back to all tools if undetermined.
 # Utility tools (evidence, findings, comments, quality) appear in every phase.
-_UTILITY_TOOLS = frozenset({
-    "record_evidence", "waive_finding", "resolve_finding", "edit_entity",
-    "quality_summary", "compare_revisions", "add_comment", "resolve_comment",
-    "query_change_impact", "propose_meeting_slots", "create_client_meeting",
-    "export_to_delivery",
-    "list_meeting_records", "get_meeting_transcript", "get_meeting_recordings",
-    "list_meeting_participants",
-})
-_DEEP_AGENT_BUILTIN_TOOLS = frozenset({
-    "ls", "read_file", "write_file", "edit_file", "glob", "grep",
-    "write_todos", "task",
-})
-_WBS_DELIVERABLE_TOOLS = frozenset({
-    "propose_wbs_skeleton", "propose_wbs", "export_wbs_excel",
-})
+_UTILITY_TOOLS = frozenset(
+    {
+        "record_evidence",
+        "waive_finding",
+        "resolve_finding",
+        "edit_entity",
+        "quality_summary",
+        "compare_revisions",
+        "add_comment",
+        "resolve_comment",
+        "query_change_impact",
+        "propose_meeting_slots",
+        "create_client_meeting",
+        "export_to_delivery",
+        "list_meeting_records",
+        "get_meeting_transcript",
+        "get_meeting_recordings",
+        "list_meeting_participants",
+    }
+)
+_DEEP_AGENT_BUILTIN_TOOLS = frozenset(
+    {
+        "ls",
+        "read_file",
+        "write_file",
+        "edit_file",
+        "glob",
+        "grep",
+        "write_todos",
+        "task",
+    }
+)
+_WBS_DELIVERABLE_TOOLS = frozenset(
+    {
+        "propose_wbs_skeleton",
+        "propose_wbs",
+        "export_wbs_excel",
+    }
+)
 _PHASE_TOOLS: dict[str, frozenset[str]] = {
-    "intake": _UTILITY_TOOLS | {
-        "analyze_architecture_requirements", "propose_diagram_brief",
-        "web_research", "apply_compliance_pack", "reality_sync",
-        "propose_tech_stack", "propose_blueprint",
+    "intake": _UTILITY_TOOLS
+    | {
+        "analyze_architecture_requirements",
+        "propose_diagram_brief",
+        "web_research",
+        "apply_compliance_pack",
+        "reality_sync",
+        "propose_tech_stack",
+        "propose_blueprint",
     },
-    "blueprint": _UTILITY_TOOLS | {
-        "propose_tech_stack", "propose_blueprint", "web_research",
-        "propose_diagram_brief", "apply_compliance_pack",
-        "export_adr_pack", "reality_sync", "visualize_code_structure",
+    "blueprint": _UTILITY_TOOLS
+    | {
+        "propose_tech_stack",
+        "propose_blueprint",
+        "web_research",
+        "propose_diagram_brief",
+        "apply_compliance_pack",
+        "export_adr_pack",
+        "reality_sync",
+        "visualize_code_structure",
         "finalize_diagram",
     },
-    "draw": _UTILITY_TOOLS | _WBS_DELIVERABLE_TOOLS | {
-        "finalize_diagram", "list_saved_diagrams", "visualize_code_structure",
-        "export_adr_pack", "reality_sync",
-        "generate_pdf_report", "propose_deck_plan", "generate_ppt_proposal",
+    "draw": _UTILITY_TOOLS
+    | _WBS_DELIVERABLE_TOOLS
+    | {
+        "finalize_diagram",
+        "list_saved_diagrams",
+        "visualize_code_structure",
+        "export_adr_pack",
+        "reality_sync",
+        "generate_pdf_report",
+        "propose_deck_plan",
+        "generate_ppt_proposal",
         "send_email",
     },
-    "wbs": _UTILITY_TOOLS | _WBS_DELIVERABLE_TOOLS | {
-        "web_research", "send_email",
-    },
-    "ppt": _UTILITY_TOOLS | _WBS_DELIVERABLE_TOOLS | {
-        "propose_deck_plan", "generate_ppt_proposal",
+    "wbs": _UTILITY_TOOLS
+    | _WBS_DELIVERABLE_TOOLS
+    | {
+        "web_research",
         "send_email",
     },
-    "report": _UTILITY_TOOLS | _WBS_DELIVERABLE_TOOLS | {
-        "generate_pdf_report", "send_email",
+    "ppt": _UTILITY_TOOLS
+    | _WBS_DELIVERABLE_TOOLS
+    | {
+        "propose_deck_plan",
+        "generate_ppt_proposal",
+        "send_email",
+    },
+    "report": _UTILITY_TOOLS
+    | _WBS_DELIVERABLE_TOOLS
+    | {
+        "generate_pdf_report",
+        "send_email",
     },
 }
 
@@ -132,6 +184,7 @@ class PhaseToolFilterMiddleware(AgentMiddleware):
     def _filtered_tools(self, tools):
         try:
             from backends import current_workspace
+
             workspace = current_workspace()
             phase = _detect_phase(workspace)
         except Exception:
@@ -168,6 +221,7 @@ def _strip_phase_spans(text: str, phase: str | None) -> str:
     """
     global _PHASE_SPAN_RE
     import re
+
     if _PHASE_SPAN_RE is None:
         _PHASE_SPAN_RE = re.compile(r"\[\[PHASE ([a-z_,\s]+)\]\]\n?(.*?)\[\[/PHASE\]\]\n?", re.DOTALL)
 
@@ -198,6 +252,7 @@ class PhasePromptFilterMiddleware(AgentMiddleware):
     def _current_phase() -> str | None:
         try:
             from backends import current_workspace
+
             return _detect_phase(current_workspace())
         except Exception:
             return None

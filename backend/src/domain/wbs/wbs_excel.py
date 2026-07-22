@@ -59,8 +59,8 @@ C_BE, C_FEMOB, C_RA, C_TEST, C_PM, C_REMARK = 7, 8, 9, 10, 11, 12
 # written only when a project supplies them — left untouched otherwise. They sit AFTER
 # the template's columns (B..L) so the Effort sheet's VLOOKUP range ($B$5:$L$) is unaffected.
 C_OPT, C_LIK, C_PES = 13, 14, 15
-C_P50, C_P80 = 16, 17   # risk-adjusted percentiles (WBS v2)
-C_DOD = 18              # Definition-of-Done / acceptance criteria
+C_P50, C_P80 = 16, 17  # risk-adjusted percentiles (WBS v2)
+C_DOD = 18  # Definition-of-Done / acceptance criteria
 
 # Master Data cell refs the template formulas point at.
 MD = "'4. Master Data'"
@@ -124,7 +124,7 @@ def _build_wbs_sheet(ws: Worksheet, wbs: dict, snap: dict) -> dict:
     title = (pi.get("name") or "OUR SOLUTION").upper()
     ws.cell(3, 2).value = f"WBS OF {title}"
 
-    module_rows: dict[str, int] = {}   # "I.A" -> excel row
+    module_rows: dict[str, int] = {}  # "I.A" -> excel row
     phase_blocks: list[tuple[int, list[int]]] = []  # (phase_row, [module_rows])
     seq = 0
     r = 7  # row 5 header, row 6 grand total, body starts at 7
@@ -146,8 +146,13 @@ def _build_wbs_sheet(ws: Worksheet, wbs: dict, snap: dict) -> dict:
         for leaf in group.get("items", [])
     )
     if has_pert:
-        for col, label in ((C_OPT, "Optimistic (O)"), (C_LIK, "Most-likely (M)"),
-                           (C_PES, "Pessimistic (P)"), (C_P50, "P50 (md)"), (C_P80, "P80 (md)")):
+        for col, label in (
+            (C_OPT, "Optimistic (O)"),
+            (C_LIK, "Most-likely (M)"),
+            (C_PES, "Pessimistic (P)"),
+            (C_P50, "P50 (md)"),
+            (C_P80, "P80 (md)"),
+        ):
             ws.cell(5, col).value = label
     if has_dod:
         ws.cell(5, C_DOD).value = "Definition of Done"
@@ -157,7 +162,7 @@ def _build_wbs_sheet(ws: Worksheet, wbs: dict, snap: dict) -> dict:
         _apply_style(ws, r, "phase", snap)
         ws.cell(r, 1).value = phase.get("code")
         ws.cell(r, C_NUM).value = phase.get("code")
-        ws.cell(r, C_REF).value = phase.get("name")   # non-leaf name lives in col C
+        ws.cell(r, C_REF).value = phase.get("name")  # non-leaf name lives in col C
         r += 1
         mod_rows_this_phase: list[int] = []
 
@@ -168,7 +173,7 @@ def _build_wbs_sheet(ws: Worksheet, wbs: dict, snap: dict) -> dict:
             _apply_style(ws, r, "module", snap)
             ws.cell(r, 1).value = (module.get("code", "") or "").split(".")[-1]
             ws.cell(r, C_NUM).value = module.get("code")
-            ws.cell(r, C_REF).value = module.get("name")   # non-leaf name in col C
+            ws.cell(r, C_REF).value = module.get("name")  # non-leaf name in col C
             r += 1
             leaf_first = r
 
@@ -179,7 +184,7 @@ def _build_wbs_sheet(ws: Worksheet, wbs: dict, snap: dict) -> dict:
                     grp_idx += 1
                     _apply_style(ws, r, "group", snap)
                     ws.cell(r, 1).value = grp_idx
-                    ws.cell(r, C_REF).value = gname        # non-leaf name in col C
+                    ws.cell(r, C_REF).value = gname  # non-leaf name in col C
                     r += 1
                 for leaf in group.get("items", []):
                     seq += 1
@@ -209,8 +214,7 @@ def _build_wbs_sheet(ws: Worksheet, wbs: dict, snap: dict) -> dict:
             # that halts Excel's calc chain and blanks every downstream TOTAL. Guard it.
             leaf_last = r - 1
             has_leaves = leaf_last >= leaf_first
-            for col, letter in ((C_BE, "G"), (C_FEMOB, "H"), (C_RA, "I"),
-                                (C_TEST, "J"), (C_PM, "K")):
+            for col, letter in ((C_BE, "G"), (C_FEMOB, "H"), (C_RA, "I"), (C_TEST, "J"), (C_PM, "K")):
                 ws.cell(module_row, col).value = (
                     f"=SUM({letter}{leaf_first}:{letter}{leaf_last})" if has_leaves else 0
                 )
@@ -221,8 +225,7 @@ def _build_wbs_sheet(ws: Worksheet, wbs: dict, snap: dict) -> dict:
             r += 1
 
         # phase roll-up sums only its module-header rows (avoids the /2 quirk)
-        for col, letter in ((C_BE, "G"), (C_FEMOB, "H"), (C_RA, "I"),
-                            (C_TEST, "J"), (C_PM, "K")):
+        for col, letter in ((C_BE, "G"), (C_FEMOB, "H"), (C_RA, "I"), (C_TEST, "J"), (C_PM, "K")):
             refs = ",".join(f"{letter}{m}" for m in mod_rows_this_phase)
             ws.cell(phase_row, col).value = f"=SUM({refs})" if refs else 0
         ws.cell(phase_row, C_TOTAL).value = f"=SUM(G{phase_row}:K{phase_row})"
@@ -230,14 +233,17 @@ def _build_wbs_sheet(ws: Worksheet, wbs: dict, snap: dict) -> dict:
 
     # grand-total row 6 = sum of phase rows
     phase_rows = [pr for pr, _ in phase_blocks]
-    for col, letter in ((C_BE, "G"), (C_FEMOB, "H"), (C_RA, "I"),
-                        (C_TEST, "J"), (C_PM, "K")):
+    for col, letter in ((C_BE, "G"), (C_FEMOB, "H"), (C_RA, "I"), (C_TEST, "J"), (C_PM, "K")):
         refs = ",".join(f"{letter}{p}" for p in phase_rows)
         ws.cell(6, col).value = f"=SUM({refs})" if refs else 0
     ws.cell(6, C_TOTAL).value = "=SUM(G6:K6)"
 
-    return {"module_rows": module_rows, "phase_rows": phase_rows,
-            "phase_blocks": phase_blocks, "last_row": r - 1}
+    return {
+        "module_rows": module_rows,
+        "phase_rows": phase_rows,
+        "phase_blocks": phase_blocks,
+        "last_row": r - 1,
+    }
 
 
 def _write_leaf_effort(ws: Worksheet, r: int, leaf: dict, phase_type: str) -> None:
@@ -301,8 +307,9 @@ def _build_effort_sheet(wb, wbs: dict, wbs_last_row: int) -> None:
     r = 6
     phase_rows: list[int] = []
     for phase in wbs.get("phases", []):
-        for code, kind in ([(phase.get("code"), "phase")]
-                           + [(m.get("code"), "module") for m in phase.get("modules", [])]):
+        for code, kind in [(phase.get("code"), "phase")] + [
+            (m.get("code"), "module") for m in phase.get("modules", [])
+        ]:
             st = phase_st if kind == "phase" else mod_st
             for c, s in st.items():
                 ws.cell(r, c)._style = copy(s)
@@ -325,16 +332,42 @@ def _build_effort_sheet(wb, wbs: dict, wbs_last_row: int) -> None:
         ws.cell(r, c)._style = copy(s)
     ws.cell(r, 3).value = "TOTAL"
     refs = ",".join(str(p) for p in phase_rows)
-    for col, letter in ((4, "D"), (5, "E"), (6, "F"), (7, "G"), (8, "H"), (9, "I"),
-                        (10, "J"), (11, "K"), (12, "L"), (13, "M"), (14, "N"), (15, "O")):
-        ws.cell(r, col).value = f"=SUM({','.join(letter+str(p) for p in phase_rows)})" if refs else 0
+    for col, letter in (
+        (4, "D"),
+        (5, "E"),
+        (6, "F"),
+        (7, "G"),
+        (8, "H"),
+        (9, "I"),
+        (10, "J"),
+        (11, "K"),
+        (12, "L"),
+        (13, "M"),
+        (14, "N"),
+        (15, "O"),
+    ):
+        ws.cell(r, col).value = f"=SUM({','.join(letter + str(p) for p in phase_rows)})" if refs else 0
     # Delete leftover template rows below the TOTAL row.
     if ws.max_row > r:
         ws.delete_rows(r + 1, ws.max_row - r)
 
 
-_MONTH_ORD = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th",
-              "10th", "11th", "12th", "13th", "14th"]
+_MONTH_ORD = [
+    "1st",
+    "2nd",
+    "3rd",
+    "4th",
+    "5th",
+    "6th",
+    "7th",
+    "8th",
+    "9th",
+    "10th",
+    "11th",
+    "12th",
+    "13th",
+    "14th",
+]
 _BNK_MILESTONES = [
     ("Contract signoff", "Contract Signoff"),
     ("Requirement Confirmation/Signoff", "BRD"),
@@ -342,8 +375,15 @@ _BNK_MILESTONES = [
     ("Completion of UAT", "Source code + User Guide + Technical Specification"),
     ("Completion of Post-Launch Support", "Final delivery package + maintenance log"),
 ]
-_DEFAULT_RESOURCES = ["Project Manager", "Technical Lead", "Developer",
-                      "Business Analyst", "Quality Controller", "Designer", "Devops"]
+_DEFAULT_RESOURCES = [
+    "Project Manager",
+    "Technical Lead",
+    "Developer",
+    "Business Analyst",
+    "Quality Controller",
+    "Designer",
+    "Devops",
+]
 
 
 def _module_schedule(wbs: dict, weeks: int) -> list[dict]:
@@ -360,9 +400,15 @@ def _module_schedule(wbs: dict, weeks: int) -> list[dict]:
             for g in m.get("groups", []):
                 for it in g.get("items", []):
                     eff += float(it.get("total", 0) or 0)
-            mods.append({"code": m.get("code"), "name": m.get("name"),
-                         "effort": eff, "start_week": m.get("start_week"),
-                         "end_week": m.get("end_week")})
+            mods.append(
+                {
+                    "code": m.get("code"),
+                    "name": m.get("name"),
+                    "effort": eff,
+                    "start_week": m.get("start_week"),
+                    "end_week": m.get("end_week"),
+                }
+            )
     total = sum(m["effort"] for m in mods) or 1.0
     cum = 0.0
     for m in mods:
@@ -417,15 +463,18 @@ def _build_delivery_sheet(wb, wbs: dict, wbs_last_row: int) -> dict:
     whitebold = Font(bold=True, color="FFFFFFFF")
 
     FIRST = 6  # first week column (F)
-    ws.cell(1, 2).value = "Master Plan"; ws.cell(1, 2).font = Font(bold=True, size=14)
+    ws.cell(1, 2).value = "Master Plan"
+    ws.cell(1, 2).font = Font(bold=True, size=14)
 
     # row 3 = months (merge 4 cols), row 4 = sprints (merge 2 cols), row 5 = weeks
     for mi in range(grid["months"]):
         c0 = FIRST + mi * 4
         ws.merge_cells(start_row=3, start_column=c0, end_row=3, end_column=c0 + 3)
         mc = ws.cell(3, c0)
-        mc.value = f"{_MONTH_ORD[mi] if mi < len(_MONTH_ORD) else str(mi+1)+'th'} Month"
-        mc.fill = month_fill; mc.font = bold; mc.alignment = center
+        mc.value = f"{_MONTH_ORD[mi] if mi < len(_MONTH_ORD) else str(mi + 1) + 'th'} Month"
+        mc.fill = month_fill
+        mc.font = bold
+        mc.alignment = center
         for c in range(c0, c0 + 4):
             ws.cell(3, c).fill = month_fill
             ws.cell(3, c).border = month_border
@@ -433,17 +482,27 @@ def _build_delivery_sheet(wb, wbs: dict, wbs_last_row: int) -> dict:
         c0 = FIRST + si * 2
         ws.merge_cells(start_row=4, start_column=c0, end_row=4, end_column=c0 + 1)
         sc = ws.cell(4, c0)
-        sc.value = f"Sprint {si+1}"; sc.fill = sprint_fill; sc.font = bold; sc.alignment = center
+        sc.value = f"Sprint {si + 1}"
+        sc.fill = sprint_fill
+        sc.font = bold
+        sc.alignment = center
         for c in range(c0, c0 + 2):
             ws.cell(4, c).fill = sprint_fill
             ws.cell(4, c).border = border
     for hc, lbl in ((2, "#"), (3, "Module"), (4, "Start"), (5, "End")):
-        cell = ws.cell(5, hc); cell.value = lbl; cell.fill = head_fill
-        cell.font = whitebold; cell.alignment = center; cell.border = border
+        cell = ws.cell(5, hc)
+        cell.value = lbl
+        cell.fill = head_fill
+        cell.font = whitebold
+        cell.alignment = center
+        cell.border = border
     for wi in range(weeks):
         cell = ws.cell(5, FIRST + wi)
-        cell.value = f"W{wi+1}"; cell.fill = head_fill; cell.font = whitebold
-        cell.alignment = center; cell.border = border
+        cell.value = f"W{wi + 1}"
+        cell.fill = head_fill
+        cell.font = whitebold
+        cell.alignment = center
+        cell.border = border
         ws.column_dimensions[get_column_letter(FIRST + wi)].width = 4.5
 
     # module rows with Gantt bars
@@ -459,18 +518,21 @@ def _build_delivery_sheet(wb, wbs: dict, wbs_last_row: int) -> dict:
             ws.cell(r, c).border = border
         for wk in range(m["start_week"], m["end_week"] + 1):
             bar = ws.cell(r, FIRST + wk - 1)
-            bar.fill = bar_fill; bar.border = border
+            bar.fill = bar_fill
+            bar.border = border
         r += 1
     last_module_row = r - 1
 
     # resource planning
     r += 1
-    ws.cell(r, 3).value = "Resource Planning"; ws.cell(r, 3).font = bold
+    ws.cell(r, 3).value = "Resource Planning"
+    ws.cell(r, 3).font = bold
     r += 1
     for i, role in enumerate(_DEFAULT_RESOURCES, 1):
         ws.cell(r, 2).value = i
         ws.cell(r, 3).value = role
-        ws.cell(r, 4).value = "TBD"; ws.cell(r, 5).value = "TBD"
+        ws.cell(r, 4).value = "TBD"
+        ws.cell(r, 5).value = "TBD"
         r += 1
 
     # milestones
@@ -483,14 +545,15 @@ def _build_delivery_sheet(wb, wbs: dict, wbs_last_row: int) -> dict:
     r += 1
     hdr = ["#", "Deliverables Milestone", "Start", "End", "Deliverables"]
     for c, lbl in zip(range(2, 7), hdr):
-        cell = ws.cell(r, c); cell.value = lbl; cell.fill = head_fill
-        cell.font = whitebold; cell.border = border
+        cell = ws.cell(r, c)
+        cell.value = lbl
+        cell.fill = head_fill
+        cell.font = whitebold
+        cell.border = border
     ws.merge_cells(start_row=r, start_column=6, end_row=r, end_column=DELIV_LAST)
     ws.cell(r, 6).alignment = center
     r += 1
-    milestones = wbs.get("milestones") or [
-        {"name": n, "deliverables": [d]} for n, d in _BNK_MILESTONES
-    ]
+    milestones = wbs.get("milestones") or [{"name": n, "deliverables": [d]} for n, d in _BNK_MILESTONES]
     for i, ms in enumerate(milestones, 1):
         ws.cell(r, 2).value = i
         ws.cell(r, 3).value = ms.get("name")
@@ -506,8 +569,13 @@ def _build_delivery_sheet(wb, wbs: dict, wbs_last_row: int) -> dict:
         ws.row_dimensions[r].height = 30
         r += 1
 
-    return {"weeks": weeks, "months": grid["months"], "sprints": grid["sprints"],
-            "module_rows": last_module_row - 5, "schedule": sched}
+    return {
+        "weeks": weeks,
+        "months": grid["months"],
+        "sprints": grid["sprints"],
+        "module_rows": last_module_row - 5,
+        "schedule": sched,
+    }
 
 
 def _write_master_data_ratios(wb, ratios: dict) -> None:
@@ -518,9 +586,9 @@ def _write_master_data_ratios(wb, ratios: dict) -> None:
     Writing the cells keeps the live workbook and the propose summary consistent.
     """
     md = wb["4. Master Data"]
-    md["C4"].value = float(ratios.get("pm_on_total", 0.10))   # PM, on (dev+ba+qc)
-    md["C5"].value = float(ratios.get("ba_on_dev", 0.10))     # BA, on dev
-    md["C7"].value = float(ratios.get("qc_on_dev", 0.30))     # QC, on dev
+    md["C4"].value = float(ratios.get("pm_on_total", 0.10))  # PM, on (dev+ba+qc)
+    md["C5"].value = float(ratios.get("ba_on_dev", 0.10))  # BA, on dev
+    md["C7"].value = float(ratios.get("qc_on_dev", 0.30))  # QC, on dev
 
 
 def _write_master_data_rate_card(wb, rate_card: dict[str, float] | None = None) -> None:
@@ -536,10 +604,10 @@ def _write_master_data_rate_card(wb, rate_card: dict[str, float] | None = None) 
 
     rc = rate_card or DEFAULT_RATE_CARD_USD_PER_MONTH
     md = wb["4. Master Data"]
-    md["C11"].value = rate_per_manday(rc.get("PM", 0))          # PM
-    md["C12"].value = rate_per_manday(rc.get("BA", 0))           # BA
-    md["C13"].value = rate_per_manday(rc.get("Developer", 0))   # Developer (BE + FE/Mobile)
-    md["C14"].value = rate_per_manday(rc.get("QC", 0))           # QC
+    md["C11"].value = rate_per_manday(rc.get("PM", 0))  # PM
+    md["C12"].value = rate_per_manday(rc.get("BA", 0))  # BA
+    md["C13"].value = rate_per_manday(rc.get("Developer", 0))  # Developer (BE + FE/Mobile)
+    md["C14"].value = rate_per_manday(rc.get("QC", 0))  # QC
 
 
 # The 5 canonical sheets the deliverable keeps; the template also ships auxiliary
@@ -563,8 +631,7 @@ def _add_logo(wb, logo_path: str | Path | None = None) -> None:
     wb["0. How to use"].add_image(img, "A1")
 
 
-def build_wbs_workbook(wbs: dict, out_path: str | Path,
-                       template_path: str | Path | None = None) -> dict:
+def build_wbs_workbook(wbs: dict, out_path: str | Path, template_path: str | Path | None = None) -> dict:
     """Clone the template and fill it from ``wbs``. Returns layout metadata."""
     wb = load_workbook(template_path or DEFAULT_TEMPLATE, data_only=False)
     for name in list(wb.sheetnames):

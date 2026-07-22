@@ -16,8 +16,14 @@ def _coerce_list(val) -> list:
     return []
 
 
-_BRIEF_ARRAY_FIELDS = ("analysis_signals", "stakeholders", "functional_requirements",
-                       "non_functional_requirements", "layout_constraints", "assumptions")
+_BRIEF_ARRAY_FIELDS = (
+    "analysis_signals",
+    "stakeholders",
+    "functional_requirements",
+    "non_functional_requirements",
+    "layout_constraints",
+    "assumptions",
+)
 
 
 def _coerce_brief(d) -> dict:
@@ -43,6 +49,7 @@ def _coerce_assumptions(a):
     result["monthly_budget_range_usd"] = _normalize_cost_range(result.get("monthly_budget_range_usd"))
     return result
 
+
 def _normalize_cost_range(value):
     if isinstance(value, bool):
         return value
@@ -51,6 +58,7 @@ def _normalize_cost_range(value):
         return {"min_usd": n, "max_usd": n}
     if isinstance(value, str):
         import re
+
         text = value.strip()
         if not text:
             return None
@@ -79,9 +87,19 @@ def _normalize_blueprint(bp) -> dict:
     if not isinstance(bp, dict):
         return bp or {}
     result = dict(bp)
-    _ARRAY_FIELDS = ("nodes", "clusters", "edges", "key_decisions", "nfr_mapping",
-                     "analysis_signals", "stakeholders", "functional_requirements",
-                     "non_functional_requirements", "layout_constraints", "assumptions")
+    _ARRAY_FIELDS = (
+        "nodes",
+        "clusters",
+        "edges",
+        "key_decisions",
+        "nfr_mapping",
+        "analysis_signals",
+        "stakeholders",
+        "functional_requirements",
+        "non_functional_requirements",
+        "layout_constraints",
+        "assumptions",
+    )
     for field in _ARRAY_FIELDS:
         val = result.get(field)
         if isinstance(val, dict):
@@ -97,8 +115,17 @@ def _normalize_tech_stack(ts) -> dict:
     Tolerates list-of-layer-dicts, flat dict-by-layer, and the wrapped
     {layers: {...}, assumptions: ...} shape stored in the workspace.
     """
-    _LAYER_FIELDS = ("choice", "rationale", "cost_tier", "decision_criteria", "alternatives",
-                     "estimated_monthly_cost_usd", "capacity_sizing", "performance_target", "risks")
+    _LAYER_FIELDS = (
+        "choice",
+        "rationale",
+        "cost_tier",
+        "decision_criteria",
+        "alternatives",
+        "estimated_monthly_cost_usd",
+        "capacity_sizing",
+        "performance_target",
+        "risks",
+    )
     out: dict = {}
     if isinstance(ts, dict) and "layers" in ts:
         ts = ts["layers"]
@@ -108,7 +135,9 @@ def _normalize_tech_stack(ts) -> dict:
                 layer_data = {f: item.get(f) for f in _LAYER_FIELDS}
                 layer_data["alternatives"] = _coerce_list(layer_data.get("alternatives"))
                 layer_data["risks"] = _coerce_list(layer_data.get("risks"))
-                layer_data["estimated_monthly_cost_usd"] = _normalize_cost_range(layer_data.get("estimated_monthly_cost_usd"))
+                layer_data["estimated_monthly_cost_usd"] = _normalize_cost_range(
+                    layer_data.get("estimated_monthly_cost_usd")
+                )
                 out[item["layer"]] = layer_data
     elif isinstance(ts, dict):
         for layer, info in ts.items():
@@ -116,11 +145,20 @@ def _normalize_tech_stack(ts) -> dict:
                 layer_data = {f: info.get(f) for f in _LAYER_FIELDS}
                 layer_data["alternatives"] = _coerce_list(layer_data.get("alternatives"))
                 layer_data["risks"] = _coerce_list(layer_data.get("risks"))
-                layer_data["estimated_monthly_cost_usd"] = _normalize_cost_range(layer_data.get("estimated_monthly_cost_usd"))
+                layer_data["estimated_monthly_cost_usd"] = _normalize_cost_range(
+                    layer_data.get("estimated_monthly_cost_usd")
+                )
                 out[layer] = layer_data
             else:
-                out[layer] = {"choice": str(info), "rationale": "", "cost_tier": None,
-                              "decision_criteria": None, "alternatives": [],
-                              "estimated_monthly_cost_usd": None, "capacity_sizing": "",
-                              "performance_target": "", "risks": []}
+                out[layer] = {
+                    "choice": str(info),
+                    "rationale": "",
+                    "cost_tier": None,
+                    "decision_criteria": None,
+                    "alternatives": [],
+                    "estimated_monthly_cost_usd": None,
+                    "capacity_sizing": "",
+                    "performance_target": "",
+                    "risks": [],
+                }
     return out

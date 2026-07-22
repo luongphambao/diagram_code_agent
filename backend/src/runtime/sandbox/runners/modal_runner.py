@@ -49,8 +49,13 @@ _REMOTE_WORKDIR = "/workspace"
 # JSON side files a render can produce. Anything the script writes outside
 # this list never leaves the sandbox.
 _ALLOWED_OUTPUT_NAMES = (
-    "out.png", "out.body.png", "out.dot", "out.drawio",
-    "out.nodes.json", "out.slide.json", "out.native_stats.json",
+    "out.png",
+    "out.body.png",
+    "out.dot",
+    "out.drawio",
+    "out.nodes.json",
+    "out.slide.json",
+    "out.native_stats.json",
 )
 
 # Skipped when staging the local workspace into the sandbox — caches and
@@ -89,14 +94,14 @@ class ModalSandboxRunner:
         source_path = workspace / script_name
         if source_path.exists() and source_path.stat().st_size > self._limits.max_source_bytes:
             raise ValueError(
-                f"Generated source exceeds the configured limit "
-                f"({self._limits.max_source_bytes} bytes)"
+                f"Generated source exceeds the configured limit ({self._limits.max_source_bytes} bytes)"
             )
 
         app = modal.App.lookup(self._app_name, create_if_missing=True)
 
         sandbox = modal.Sandbox.create(
-            "sleep", "infinity",
+            "sleep",
+            "infinity",
             app=app,
             image=self._image,
             workdir=_REMOTE_WORKDIR,
@@ -116,7 +121,8 @@ class ModalSandboxRunner:
         try:
             self._upload_workspace(sandbox, workspace)
             proc = sandbox.exec(
-                "python", script_name,
+                "python",
+                script_name,
                 timeout=timeout,
                 workdir=_REMOTE_WORKDIR,
             )
@@ -134,8 +140,10 @@ class ModalSandboxRunner:
                 # subprocess.TimeoutExpired` catch (tools/rendering_tools.py)
                 # doesn't need a provider-specific branch.
                 raise subprocess.TimeoutExpired(
-                    cmd=["python", script_name], timeout=timeout,
-                    output=stdout, stderr=stderr,
+                    cmd=["python", script_name],
+                    timeout=timeout,
+                    output=stdout,
+                    stderr=stderr,
                 )
             self._download_artifacts(sandbox, workspace)
             return RenderResult(

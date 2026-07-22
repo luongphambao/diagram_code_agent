@@ -67,8 +67,8 @@ def run_tred(
             timeout=timeout,
         )
         return result.stdout
-    except (FileNotFoundError, subprocess.CalledProcessError,
-            subprocess.TimeoutExpired) as exc:
+    except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
         import sys
+
         sys.stderr.write(f"warning: tred unavailable or timed out ({exc})\n")
         return None

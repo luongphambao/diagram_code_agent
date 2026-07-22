@@ -36,16 +36,16 @@ Provenance = Literal["human", "deterministic", "agent"]
 # Typed relationship edges (docx §6.2). Kept as a Literal so a bad relation fails
 # validation rather than silently producing an untyped edge.
 Relation = Literal[
-    "satisfies",    # REQ -> COMP / WBS
-    "constrains",   # CON -> DEC / COMP / WBS
-    "assumes",      # ASM -> ESTIMATE / DEC
-    "supports",     # EVD -> DEC / CLAIM
-    "implements",   # WBS -> COMP / CTRL / REQ
-    "mitigates",    # CTRL / WBS -> RISK
-    "visualizes",   # DIAGRAM / SLIDE -> COMP / FLOW / DEC
-    "claims",       # SLIDE / REPORT -> DEC / EVD / REQ
-    "supersedes",   # revision N+1 -> revision N
-    "accepts",      # HUMAN_DECISION -> RISK / DEC / ASM
+    "satisfies",  # REQ -> COMP / WBS
+    "constrains",  # CON -> DEC / COMP / WBS
+    "assumes",  # ASM -> ESTIMATE / DEC
+    "supports",  # EVD -> DEC / CLAIM
+    "implements",  # WBS -> COMP / CTRL / REQ
+    "mitigates",  # CTRL / WBS -> RISK
+    "visualizes",  # DIAGRAM / SLIDE -> COMP / FLOW / DEC
+    "claims",  # SLIDE / REPORT -> DEC / EVD / REQ
+    "supersedes",  # revision N+1 -> revision N
+    "accepts",  # HUMAN_DECISION -> RISK / DEC / ASM
 ]
 
 # Stable ID prefixes, one per entity kind.
@@ -81,15 +81,18 @@ def mint_id(kind: str, key: str | int) -> str:
 
 # --- entities ----------------------------------------------------------------
 
+
 class SourceRef(BaseModel):
     """Where a fact/entity came from — a document span, the user, or a derivation."""
+
     kind: Literal["document", "user", "derived", "web"] = "derived"
-    ref: str = ""          # filename, url, or short locator
-    quote: str = ""        # optional verbatim span the entity is grounded in
+    ref: str = ""  # filename, url, or short locator
+    quote: str = ""  # optional verbatim span the entity is grounded in
 
 
 class _Entity(BaseModel):
     """Common fields every CSM entity carries."""
+
     id: str
     provenance: Provenance = "deterministic"
     source_refs: list[SourceRef] = Field(default_factory=list)
@@ -134,9 +137,10 @@ class Decision(_Entity):
 
 class Component(_Entity):
     """An architecture entity: a component, a cluster, an integration or a data flow."""
+
     name: str
     kind: Literal["component", "cluster", "integration", "data_flow"] = "component"
-    cluster: str = ""        # parent cluster id, if any
+    cluster: str = ""  # parent cluster id, if any
     purpose: str = ""
 
 
@@ -151,9 +155,9 @@ class Risk(_Entity):
 class WorkItem(_Entity):
     name: str
     effort_mandays: float = 0.0
-    parent: str = ""         # parent WBS id, for the phase/module tree
+    parent: str = ""  # parent WBS id, for the phase/module tree
     predecessors: list[str] = Field(default_factory=list)  # ref_code(s) that must finish first
-    pert_expected_md: float = 0.0   # 3-point scheduling duration; 0 when no PERT estimate
+    pert_expected_md: float = 0.0  # 3-point scheduling duration; 0 when no PERT estimate
     owner: Optional[str] = None
     definition_of_done: list[str] = Field(default_factory=list)
     assigned_sprint: Optional[int] = None
@@ -171,13 +175,12 @@ class Evidence(_Entity):
     `evidence.project_into_csm`; `supersedes_evidence_id` chains a refreshed record
     to the one it replaces without deleting the old (the log is append-only).
     """
+
     claim: str
     source_url: str = ""
-    source_type: Literal[
-        "web", "documentation", "vendor", "benchmark", "standard", "other"
-    ] = "web"
-    fetched_at: str = ""          # ISO 8601; injected by the recording tool
-    freshness_date: str = ""      # the date the source itself reflects, if known
+    source_type: Literal["web", "documentation", "vendor", "benchmark", "standard", "other"] = "web"
+    fetched_at: str = ""  # ISO 8601; injected by the recording tool
+    freshness_date: str = ""  # the date the source itself reflects, if known
     quote_or_excerpt: str = ""
     confidence: Literal["low", "medium", "high"] = "medium"
     supports_entity_ids: list[str] = Field(default_factory=list)
@@ -194,12 +197,20 @@ class Control(_Entity):
     no implementing work is an *evidence gap* the validator flags before a client claim
     like "SOC 2 ready" can ship.
     """
+
     statement: str
     kind: Literal[
-        "encryption", "authentication", "authorization", "audit_logging",
-        "data_retention", "backup_dr", "monitoring", "access_review", "other"
+        "encryption",
+        "authentication",
+        "authorization",
+        "audit_logging",
+        "data_retention",
+        "backup_dr",
+        "monitoring",
+        "access_review",
+        "other",
     ] = "other"
-    standard_ref: str = ""        # e.g. "SOC2-CC6.1", "PCI-3.4"; pack-defined locator
+    standard_ref: str = ""  # e.g. "SOC2-CC6.1", "PCI-3.4"; pack-defined locator
     status: Literal["required", "implemented", "waived"] = "required"
     implemented_by_ids: list[str] = Field(default_factory=list)  # COMP/WBS ids
     evidence_ids: list[str] = Field(default_factory=list)
@@ -215,6 +226,7 @@ class Deliverable(_Entity):
     that does not exist (docx §4.4). `quality_checks` carries the deck QA scores
     (factual/visual/coherence) for the artifact manifest.
     """
+
     kind: Literal["pptx", "pdf", "slide", "report"] = "slide"
     title: str = ""
     solution_revision: int = 0
@@ -232,11 +244,12 @@ class TraceLink(BaseModel):
 
 # --- the model ---------------------------------------------------------------
 
+
 class SolutionModel(BaseModel):
     """The canonical, ID'd solution. Artifacts are projections of / traced to this."""
 
     revision: int = 1
-    created_at: Optional[str] = None      # injected; excluded from the content hash
+    created_at: Optional[str] = None  # injected; excluded from the content hash
 
     requirements: list[Requirement] = Field(default_factory=list)
     constraints: list[Constraint] = Field(default_factory=list)
@@ -295,12 +308,10 @@ class SolutionModel(BaseModel):
         pending_asms = [a for a in self.assumptions if a.status == "pending"]
         return {
             "known_facts": [
-                {"id": r.id, "statement": r.statement}
-                for r in self.requirements if r.status == "confirmed"
+                {"id": r.id, "statement": r.statement} for r in self.requirements if r.status == "confirmed"
             ],
             "assumptions_needing_confirmation": [
-                {"id": a.id, "statement": a.statement, "owner": a.owner,
-                 "tier": a.confidence_tier}
+                {"id": a.id, "statement": a.statement, "owner": a.owner, "tier": a.confidence_tier}
                 for a in pending_asms
             ],
             "assumptions_by_tier": {
@@ -309,27 +320,26 @@ class SolutionModel(BaseModel):
                 "nice_to_confirm": sum(1 for a in pending_asms if a.confidence_tier == "nice_to_confirm"),
             },
             "open_decisions": [
-                {"id": d.id, "title": d.title}
-                for d in self.decisions if d.status in ("proposed", "deferred")
+                {"id": d.id, "title": d.title} for d in self.decisions if d.status in ("proposed", "deferred")
             ],
-            "constraints": [
-                {"id": c.id, "statement": c.statement, "kind": c.kind}
-                for c in self.constraints
-            ],
+            "constraints": [{"id": c.id, "statement": c.statement, "kind": c.kind} for c in self.constraints],
             "grounded_claims": [
-                {"id": e.id, "claim": e.claim, "source_url": e.source_url,
-                 "confidence": e.confidence}
+                {"id": e.id, "claim": e.claim, "source_url": e.source_url, "confidence": e.confidence}
                 for e in self.evidence
             ],
             "controls": [
-                {"id": c.id, "statement": c.statement, "kind": c.kind,
-                 "standard_ref": c.standard_ref, "status": c.status,
-                 "grounded": bool(c.evidence_ids)}
+                {
+                    "id": c.id,
+                    "statement": c.statement,
+                    "kind": c.kind,
+                    "standard_ref": c.standard_ref,
+                    "status": c.status,
+                    "grounded": bool(c.evidence_ids),
+                }
                 for c in self.controls
             ],
             "deliverables": [
-                {"id": d.id, "kind": d.kind, "title": d.title,
-                 "quality_checks": d.quality_checks}
+                {"id": d.id, "kind": d.kind, "title": d.title, "quality_checks": d.quality_checks}
                 for d in self.deliverables
             ],
         }

@@ -28,9 +28,28 @@ from pathlib import Path, PurePosixPath
 _DANGEROUS = re.compile(r'[<>:"|?*\x00-\x1f]')
 # Reserved Windows device names (case-insensitive stem match).
 _WIN_RESERVED = {
-    "con", "prn", "aux", "nul",
-    "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9",
-    "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+    "con",
+    "prn",
+    "aux",
+    "nul",
+    "com1",
+    "com2",
+    "com3",
+    "com4",
+    "com5",
+    "com6",
+    "com7",
+    "com8",
+    "com9",
+    "lpt1",
+    "lpt2",
+    "lpt3",
+    "lpt4",
+    "lpt5",
+    "lpt6",
+    "lpt7",
+    "lpt8",
+    "lpt9",
 }
 
 
@@ -56,7 +75,7 @@ def safe_filename(name: str | None) -> str:
     # Take the last non-empty component from each parser and pick the shorter,
     # since an attacker might submit something like "foo/../../bar\\evil".
     posix_name = PurePosixPath(name).name  # strips "/" separators
-    win_name = Path(name).name             # strips both "/" and "\" separators
+    win_name = Path(name).name  # strips both "/" and "\" separators
     # prefer the result that is shorter (more aggressively stripped)
     stem = posix_name if len(posix_name) <= len(win_name) else win_name
     # PurePosixPath("../foo").name == "foo" but Path("../foo").name == "foo" too;
@@ -104,8 +123,9 @@ def safe_workspace_path(base: Path, untrusted: str) -> Path:
     # Use os.fspath string comparison; add trailing sep so "basefoo" != "base/foo".
     base_str = str(resolved_base)
     cand_str = str(candidate)
-    if not (cand_str == base_str or cand_str.startswith(base_str + "/"
-                                                         ) or cand_str.startswith(base_str + "\\")):
+    if not (
+        cand_str == base_str or cand_str.startswith(base_str + "/") or cand_str.startswith(base_str + "\\")
+    ):
         raise ValueError(
             f"Path escape detected: {untrusted!r} resolves to {cand_str!r} "
             f"which is outside the allowed base {base_str!r}"

@@ -44,7 +44,13 @@ import type {
   WireMessage,
 } from "./agent-utils";
 
-export function useDiagramAgent({ threadId, userRole = "" }: { threadId: string; userRole?: string }) {
+export function useDiagramAgent({
+  threadId,
+  userRole = "",
+}: {
+  threadId: string;
+  userRole?: string;
+}) {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [agentState, setAgentState] = useState<AgentState>({});
   const [pendingInterrupt, setPendingInterrupt] = useState<PendingInterrupt | null>(null);
@@ -89,10 +95,7 @@ export function useDiagramAgent({ threadId, userRole = "" }: { threadId: string;
     saveGateHistory(threadId, gateHistory);
   }, [threadId, gateHistory]);
 
-  const uploadedFileIds = useCallback(
-    () => uploadedFiles.map((f) => f.file_id),
-    [uploadedFiles]
-  );
+  const uploadedFileIds = useCallback(() => uploadedFiles.map((f) => f.file_id), [uploadedFiles]);
 
   const { runAgent, abortRun } = useAgentStream({
     threadIdRef,
@@ -133,7 +136,7 @@ export function useDiagramAgent({ threadId, userRole = "" }: { threadId: string;
       wireMessagesRef.current = updated;
       await runAgent(updated);
     },
-    [runAgent]
+    [runAgent],
   );
 
   const _resolveWithPayload = useCallback(
@@ -166,7 +169,7 @@ export function useDiagramAgent({ threadId, userRole = "" }: { threadId: string;
       wireMessagesRef.current = updated;
       await runAgent(updated);
     },
-    [runAgent]
+    [runAgent],
   );
 
   // Every HITL gate (tech-stack, blueprint, WBS, exports, ...) resolves through
@@ -176,7 +179,7 @@ export function useDiagramAgent({ threadId, userRole = "" }: { threadId: string;
     async (payload: Record<string, unknown>) => {
       await _resolveWithPayload(payload);
     },
-    [_resolveWithPayload]
+    [_resolveWithPayload],
   );
 
   const uploadFile = useCallback(async (file: File) => {
@@ -198,22 +201,25 @@ export function useDiagramAgent({ threadId, userRole = "" }: { threadId: string;
 
   const clearFiles = useCallback(() => setUploadedFiles([]), []);
 
-  const restore = useCallback((
-    savedState: AgentState,
-    savedChat: ChatMessage[],
-    savedWire: WireMessage[],
-    savedGateHistory: ResolvedGate[] = [],
-  ) => {
-    setChatMessages(savedChat);
-    setAgentState(savedState);
-    wireMessagesRef.current = savedWire;
-    setPendingInterrupt(null);
-    setGateHistory(savedGateHistory);
-    setError(null);
-    setActivity(null);
-    setActiveSubagent(null);
-    setUploadedFiles([]);
-  }, []);
+  const restore = useCallback(
+    (
+      savedState: AgentState,
+      savedChat: ChatMessage[],
+      savedWire: WireMessage[],
+      savedGateHistory: ResolvedGate[] = [],
+    ) => {
+      setChatMessages(savedChat);
+      setAgentState(savedState);
+      wireMessagesRef.current = savedWire;
+      setPendingInterrupt(null);
+      setGateHistory(savedGateHistory);
+      setError(null);
+      setActivity(null);
+      setActiveSubagent(null);
+      setUploadedFiles([]);
+    },
+    [],
+  );
 
   const resetToNew = useCallback(() => {
     setChatMessages([]);

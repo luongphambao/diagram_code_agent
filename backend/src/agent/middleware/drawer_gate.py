@@ -48,8 +48,11 @@ class DrawerReviseGateMiddleware(AgentMiddleware):
         idx = None
         for i, m in enumerate(messages):
             if isinstance(m, AIMessage):
-                for tc in (m.tool_calls or []):
-                    if tc.get("name") == "task" and (tc.get("args") or {}).get("subagent_type") == subagent_type:
+                for tc in m.tool_calls or []:
+                    if (
+                        tc.get("name") == "task"
+                        and (tc.get("args") or {}).get("subagent_type") == subagent_type
+                    ):
                         idx = i
         return idx
 
@@ -89,6 +92,7 @@ class DrawerReviseGateMiddleware(AgentMiddleware):
         # dispatch is a genuine post-rejection revision round.
         from tools.constants import CRITIC_REVISION_HARD_CAP, _REVISION_COUNT_FILE
         from tools.stage_markers import _read_json_file, _write_json_file, reset_render_count
+
         count = int(_read_json_file(_REVISION_COUNT_FILE, {"count": 0}).get("count", 0))
         if count >= CRITIC_REVISION_HARD_CAP:
             return LCToolMessage(

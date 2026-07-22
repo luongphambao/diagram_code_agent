@@ -36,14 +36,19 @@ const DEFAULT_REPORT_SECTIONS = [
   "diagram",
 ];
 
-export default function PdfReportApproval({ interrupt, onResolve, onDecision, disabled = false }: PdfReportApprovalProps) {
+export default function PdfReportApproval({
+  interrupt,
+  onResolve,
+  onDecision,
+  disabled = false,
+}: PdfReportApprovalProps) {
   const [mode, setMode] = useState<"idle" | "feedback">("idle");
   const [modifications, setModifications] = useState("");
   const [decided, setDecided] = useState(false);
 
   const allowedDecisions = interrupt.data.allowed_decisions ?? [];
-  const useDecisionMenu = onDecision != null &&
-    allowedDecisions.some((a: string) => a !== "approve" && a !== "reject");
+  const useDecisionMenu =
+    onDecision != null && allowedDecisions.some((a: string) => a !== "approve" && a !== "reject");
 
   const title = interrupt.data.title?.trim() || "Architecture Blueprint";
   const subtitle = interrupt.data.subtitle?.trim() || "Architecture Report";
@@ -68,7 +73,13 @@ export default function PdfReportApproval({ interrupt, onResolve, onDecision, di
     <div className="flex w-full flex-col overflow-hidden rounded-2xl border border-cyan-500/20 bg-cyan-950/15">
       <div className="flex items-center gap-2.5 border-b border-white/8 bg-white/4 px-4 py-3">
         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-cyan-500/20">
-          <svg className="h-3.5 w-3.5 text-cyan-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            className="h-3.5 w-3.5 text-cyan-300"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" d="M7 3h7l5 5v13H7z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M14 3v5h5M9 13h8M9 17h5" />
           </svg>
@@ -82,20 +93,26 @@ export default function PdfReportApproval({ interrupt, onResolve, onDecision, di
       {decided ? (
         <div className="px-4 py-3">
           <p className="text-xs text-slate-600">
-            {mode === "feedback" ? "Feedback sent - updating report settings..." : "Approved - generating PDF..."}
+            {mode === "feedback"
+              ? "Feedback sent - updating report settings..."
+              : "Approved - generating PDF..."}
           </p>
         </div>
       ) : mode === "idle" ? (
         <div className="flex flex-col gap-3 px-4 py-4">
           <p className="text-xs leading-relaxed text-slate-400">{interrupt.data.question}</p>
           <div className="rounded-xl border border-white/8 bg-white/4 px-3 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-cyan-300/70">Title</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-cyan-300/70">
+              Title
+            </p>
             <p className="mt-1 text-sm font-semibold text-slate-100">{title}</p>
             <p className="mt-1 text-xs text-slate-500">{subtitle}</p>
             {brand && <p className="mt-1 text-xs text-slate-600">Brand: {brand}</p>}
           </div>
           <div>
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-cyan-300/70">Included Sections</p>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-cyan-300/70">
+              Included Sections
+            </p>
             <div className="flex flex-wrap gap-1.5">
               {sections.map((section) => (
                 <span
@@ -110,17 +127,22 @@ export default function PdfReportApproval({ interrupt, onResolve, onDecision, di
           {missingSections.length > 0 && (
             <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/8 px-3 py-2.5">
               <p className="text-[11px] font-semibold text-yellow-300">
-                ⚠ {missingSections.length} section{missingSections.length > 1 ? "s" : ""} will be missing from this PDF
+                ⚠ {missingSections.length} section{missingSections.length > 1 ? "s" : ""} will be
+                missing from this PDF
               </p>
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {missingSections.map((s) => (
-                  <span key={s} className="rounded border border-yellow-500/25 bg-yellow-500/10 px-1.5 py-0.5 text-[10px] text-yellow-400">
+                  <span
+                    key={s}
+                    className="rounded border border-yellow-500/25 bg-yellow-500/10 px-1.5 py-0.5 text-[10px] text-yellow-400"
+                  >
                     {SECTION_LABELS[s] ?? s}
                   </span>
                 ))}
               </div>
               <p className="mt-1.5 text-[10px] text-yellow-300/60">
-                Reject and ask the agent to call generate_pdf_report with no arguments to include all sections.
+                Reject and ask the agent to call generate_pdf_report with no arguments to include
+                all sections.
               </p>
             </div>
           )}
@@ -130,7 +152,10 @@ export default function PdfReportApproval({ interrupt, onResolve, onDecision, di
               disabled={disabled}
               approveLabel="Generate PDF"
               onApprove={approve}
-              onReject={(t) => { setDecided(true); onResolve(false, t || undefined); }}
+              onReject={(t) => {
+                setDecided(true);
+                onResolve(false, t || undefined);
+              }}
               onDecision={onDecision!}
             />
           ) : (
@@ -140,7 +165,13 @@ export default function PdfReportApproval({ interrupt, onResolve, onDecision, di
                 disabled={disabled}
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-700 px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-cyan-900/30 transition-all hover:bg-cyan-600 active:scale-98 disabled:opacity-50"
               >
-                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <svg
+                  className="h-3.5 w-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
                 Generate PDF
@@ -158,7 +189,9 @@ export default function PdfReportApproval({ interrupt, onResolve, onDecision, di
       ) : (
         <div className="flex flex-col gap-3 px-4 py-4">
           <div className="flex items-center gap-2">
-            <button onClick={() => setMode("idle")} className="text-slate-600 hover:text-slate-400">Back</button>
+            <button onClick={() => setMode("idle")} className="text-slate-600 hover:text-slate-400">
+              Back
+            </button>
             <p className="text-xs text-slate-500">What should change in the report?</p>
           </div>
           <textarea

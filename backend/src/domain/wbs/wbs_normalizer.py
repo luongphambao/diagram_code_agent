@@ -82,20 +82,22 @@ def project_to_documents(project: WbsProject) -> list[dict[str, Any]]:
         + (f" | Summary: {summary_text[:600]}" if summary_text else "")
     )
 
-    docs.append({
-        "page_content": project_text,
-        "metadata": {
-            "granularity": "project",
-            "project_code": project.project_code,
-            "name": project.name,
-            "client": project.client or "",
-            "business_domain": project.business_domain,
-            "solution_type": project.solution_type,
-            "total_mandays": project.total_mandays or 0,
-            "tech_keywords": " ".join(project.technology_stack[:20]),
-            "source_file": project.source_file or "",
-        },
-    })
+    docs.append(
+        {
+            "page_content": project_text,
+            "metadata": {
+                "granularity": "project",
+                "project_code": project.project_code,
+                "name": project.name,
+                "client": project.client or "",
+                "business_domain": project.business_domain,
+                "solution_type": project.solution_type,
+                "total_mandays": project.total_mandays or 0,
+                "tech_keywords": " ".join(project.technology_stack[:20]),
+                "source_file": project.source_file or "",
+            },
+        }
+    )
 
     # ------------------------------------------------------------------ #
     # Module-level documents                                               #
@@ -108,20 +110,22 @@ def project_to_documents(project: WbsProject) -> list[dict[str, Any]]:
             + f" | {mod.total_md} md"
             + (f" | tech: {tech_flat[:200]}" if tech_flat else "")
         )
-        docs.append({
-            "page_content": module_text,
-            "metadata": {
-                "granularity": "module",
-                "project_code": project.project_code,
-                "project_name": project.name,
-                "business_domain": project.business_domain,
-                "solution_type": project.solution_type,
-                "module_code": mod.code,
-                "module_name": mod.name,
-                "module_md": mod.total_md,
-                "source_file": project.source_file or "",
-            },
-        })
+        docs.append(
+            {
+                "page_content": module_text,
+                "metadata": {
+                    "granularity": "module",
+                    "project_code": project.project_code,
+                    "project_name": project.name,
+                    "business_domain": project.business_domain,
+                    "solution_type": project.solution_type,
+                    "module_code": mod.code,
+                    "module_name": mod.name,
+                    "module_md": mod.total_md,
+                    "source_file": project.source_file or "",
+                },
+            }
+        )
 
     # ------------------------------------------------------------------ #
     # WBS item-level documents                                             #
@@ -145,23 +149,25 @@ def project_to_documents(project: WbsProject) -> list[dict[str, Any]]:
         if item.remark:
             item_text += f" | note: {item.remark}"
 
-        docs.append({
-            "page_content": item_text,
-            "metadata": {
-                "granularity": "item",
-                "project_code": project.project_code,
-                "project_name": project.name,
-                "business_domain": project.business_domain,
-                "solution_type": project.solution_type,
-                "item_id": item.id,
-                "item_code": item.code,
-                "item_name": item.name,
-                "item_module": item.module,
-                "item_phase": item.phase,
-                "item_md": item.total_md,
-                "source_file": project.source_file or "",
-            },
-        })
+        docs.append(
+            {
+                "page_content": item_text,
+                "metadata": {
+                    "granularity": "item",
+                    "project_code": project.project_code,
+                    "project_name": project.name,
+                    "business_domain": project.business_domain,
+                    "solution_type": project.solution_type,
+                    "item_id": item.id,
+                    "item_code": item.code,
+                    "item_name": item.name,
+                    "item_module": item.module,
+                    "item_phase": item.phase,
+                    "item_md": item.total_md,
+                    "source_file": project.source_file or "",
+                },
+            }
+        )
 
     return docs
 
@@ -184,7 +190,7 @@ if __name__ == "__main__":
     data_dir_arg = args[0] if args else None
     projects, errors = load_all_projects(data_dir_arg)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Loaded:  {len(projects)} projects")
     print(f"Errors:  {len(errors)}")
     if errors:

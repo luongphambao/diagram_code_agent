@@ -1,5 +1,12 @@
 import { useState } from "react";
-import type { PendingInterrupt, TechAlternative, CostRange, ScalingPhase, TechRisk, DecisionPayload } from "../hooks/useDiagramAgent";
+import type {
+  PendingInterrupt,
+  TechAlternative,
+  CostRange,
+  ScalingPhase,
+  TechRisk,
+  DecisionPayload,
+} from "../hooks/useDiagramAgent";
 import DecisionActions from "./DecisionActions";
 
 interface TechStackApprovalProps {
@@ -10,28 +17,50 @@ interface TechStackApprovalProps {
 }
 
 const LAYER_ORDER = [
-  "frontend", "backend", "database", "auth", "infra", "monitoring",
-  "networking", "security", "cache", "queue", "cdn", "search",
-  "storage", "ci_cd", "analytics", "ai_ml", "integration",
+  "frontend",
+  "backend",
+  "database",
+  "auth",
+  "infra",
+  "monitoring",
+  "networking",
+  "security",
+  "cache",
+  "queue",
+  "cdn",
+  "search",
+  "storage",
+  "ci_cd",
+  "analytics",
+  "ai_ml",
+  "integration",
 ];
 
 function fmtUsd(r?: CostRange | null): string {
   if (!r) return "";
-  const fmt = (n: number) => n >= 1000 ? `$${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k` : `$${n}`;
+  const fmt = (n: number) =>
+    n >= 1000 ? `$${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k` : `$${n}`;
   return `${fmt(r.min_usd)}–${fmt(r.max_usd)}/mo`;
 }
 
-export default function TechStackApproval({ interrupt, onResolve, onDecision, disabled = false }: TechStackApprovalProps) {
+export default function TechStackApproval({
+  interrupt,
+  onResolve,
+  onDecision,
+  disabled = false,
+}: TechStackApprovalProps) {
   const [modifications, setModifications] = useState("");
   const [decided, setDecided] = useState(false);
 
   const allowedDecisions = interrupt.data.allowed_decisions ?? [];
-  const useDecisionMenu = onDecision != null &&
-    allowedDecisions.some((a: string) => a !== "approve" && a !== "reject");
+  const useDecisionMenu =
+    onDecision != null && allowedDecisions.some((a: string) => a !== "approve" && a !== "reject");
 
   const techStack = interrupt.data.tech_stack ?? {};
   const assumptions = interrupt.data.assumptions;
-  const scalingRoadmap = Array.isArray(interrupt.data.scaling_roadmap) ? interrupt.data.scaling_roadmap : [];
+  const scalingRoadmap = Array.isArray(interrupt.data.scaling_roadmap)
+    ? interrupt.data.scaling_roadmap
+    : [];
   const totalCost = interrupt.data.estimated_total_monthly_cost_usd;
 
   // Sort layers in preferred order
@@ -56,19 +85,24 @@ export default function TechStackApproval({ interrupt, onResolve, onDecision, di
   const assumptionChips: string[] = [];
   if (assumptions) {
     if (assumptions.project_phase) assumptionChips.push(assumptions.project_phase.toUpperCase());
-    if (assumptions.monthly_budget_range_usd) assumptionChips.push(fmtUsd(assumptions.monthly_budget_range_usd) + " budget");
-    if (assumptions.users?.mau) assumptionChips.push(`${(assumptions.users.mau / 1000).toFixed(0)}k MAU`);
-    if (assumptions.users?.peak_concurrent) assumptionChips.push(`~${assumptions.users.peak_concurrent.toLocaleString()} concurrent`);
+    if (assumptions.monthly_budget_range_usd)
+      assumptionChips.push(fmtUsd(assumptions.monthly_budget_range_usd) + " budget");
+    if (assumptions.users?.mau)
+      assumptionChips.push(`${(assumptions.users.mau / 1000).toFixed(0)}k MAU`);
+    if (assumptions.users?.peak_concurrent)
+      assumptionChips.push(`~${assumptions.users.peak_concurrent.toLocaleString()} concurrent`);
     if (assumptions.users?.peak_rps) assumptionChips.push(`~${assumptions.users.peak_rps} RPS`);
     if (assumptions.availability_target) assumptionChips.push(assumptions.availability_target);
-    if (assumptions.latency_target_p99_ms) assumptionChips.push(`p99 ≤${assumptions.latency_target_p99_ms}ms`);
+    if (assumptions.latency_target_p99_ms)
+      assumptionChips.push(`p99 ≤${assumptions.latency_target_p99_ms}ms`);
     if (assumptions.team) {
       const t = assumptions.team;
       const parts = [t.size ? `Team ${t.size}` : null, t.skill_level || null].filter(Boolean);
       if (parts.length) assumptionChips.push(parts.join(" "));
     }
     if (assumptions.primary_region) assumptionChips.push(assumptions.primary_region);
-    if (Array.isArray(assumptions.compliance) && assumptions.compliance.length) assumptionChips.push(...assumptions.compliance);
+    if (Array.isArray(assumptions.compliance) && assumptions.compliance.length)
+      assumptionChips.push(...assumptions.compliance);
   }
 
   return (
@@ -76,8 +110,18 @@ export default function TechStackApproval({ interrupt, onResolve, onDecision, di
       {/* Header */}
       <div className="flex items-center gap-2.5 border-b border-white/8 bg-white/4 px-4 py-3">
         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/20">
-          <svg className="h-3.5 w-3.5 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
+          <svg
+            className="h-3.5 w-3.5 text-blue-400"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z"
+            />
           </svg>
         </div>
         <p className="text-sm font-semibold text-white">Tech Stack Recommendation</p>
@@ -87,36 +131,48 @@ export default function TechStackApproval({ interrupt, onResolve, onDecision, di
       <p className="px-4 pt-3 text-xs leading-relaxed text-slate-400">{interrupt.data.question}</p>
       {invalidProposal && (
         <div className="mx-4 mt-3 rounded-xl border border-red-500/25 bg-red-950/20 px-3 py-2 text-[11px] leading-relaxed text-red-200">
-          This tech stack proposal is empty or malformed. Request regeneration instead of approving it.
+          This tech stack proposal is empty or malformed. Request regeneration instead of approving
+          it.
         </div>
       )}
 
       {/* Assumptions block */}
       {assumptions && (
         <div className="mx-4 mt-3 rounded-xl border border-white/8 bg-white/3 px-3 py-2.5">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">Design Assumptions</p>
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            Design Assumptions
+          </p>
           {assumptionChips.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {assumptionChips.map((chip, i) => (
-                <span key={i} className="rounded-full border border-blue-500/20 bg-blue-900/20 px-2 py-0.5 text-[10px] text-blue-300">
+                <span
+                  key={i}
+                  className="rounded-full border border-blue-500/20 bg-blue-900/20 px-2 py-0.5 text-[10px] text-blue-300"
+                >
                   {chip}
                 </span>
               ))}
             </div>
           )}
-          {Array.isArray(assumptions.confirm_with_customer) && assumptions.confirm_with_customer.length > 0 && (
-            <div className="mt-2.5">
-              <p className="mb-1 text-[10px] font-semibold text-amber-400/80">Confirm with customer</p>
-              <ul className="space-y-0.5">
-                {assumptions.confirm_with_customer.map((item, i) => (
-                  <li key={i} className="flex items-start gap-1.5 text-[10px] leading-relaxed text-amber-300/70">
-                    <span className="mt-0.5 shrink-0">•</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {Array.isArray(assumptions.confirm_with_customer) &&
+            assumptions.confirm_with_customer.length > 0 && (
+              <div className="mt-2.5">
+                <p className="mb-1 text-[10px] font-semibold text-amber-400/80">
+                  Confirm with customer
+                </p>
+                <ul className="space-y-0.5">
+                  {assumptions.confirm_with_customer.map((item, i) => (
+                    <li
+                      key={i}
+                      className="flex items-start gap-1.5 text-[10px] leading-relaxed text-amber-300/70"
+                    >
+                      <span className="mt-0.5 shrink-0">•</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
         </div>
       )}
 
@@ -128,7 +184,8 @@ export default function TechStackApproval({ interrupt, onResolve, onDecision, di
 
           // Build per-layer meta line segments
           const metaParts: string[] = [];
-          if (info.estimated_monthly_cost_usd) metaParts.push(fmtUsd(info.estimated_monthly_cost_usd));
+          if (info.estimated_monthly_cost_usd)
+            metaParts.push(fmtUsd(info.estimated_monthly_cost_usd));
           if (info.capacity_sizing) metaParts.push(info.capacity_sizing);
           if (info.performance_target) metaParts.push(info.performance_target);
 
@@ -151,13 +208,17 @@ export default function TechStackApproval({ interrupt, onResolve, onDecision, di
                     {risks.length > 0 && (
                       <span
                         className="rounded border border-amber-500/20 bg-amber-900/10 px-1.5 py-0.5 text-[9px] text-amber-400 cursor-help"
-                        title={risks.map(r => `${r.risk}${r.mitigation ? ` → ${r.mitigation}` : ""}`).join("\n")}
+                        title={risks
+                          .map((r) => `${r.risk}${r.mitigation ? ` → ${r.mitigation}` : ""}`)
+                          .join("\n")}
                       >
                         ⚠ {risks.length}
                       </span>
                     )}
                   </div>
-                  <p className="mt-1 text-[11px] leading-relaxed text-slate-500">{info.rationale}</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                    {info.rationale}
+                  </p>
                   {metaParts.length > 0 && (
                     <p className="mt-1 text-[10px] text-slate-600 leading-relaxed">
                       {metaParts.join(" · ")}
@@ -168,8 +229,10 @@ export default function TechStackApproval({ interrupt, onResolve, onDecision, di
               {Array.isArray(info.alternatives) && info.alternatives.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {info.alternatives.map((alt, i) => {
-                    const name = typeof alt === "string" ? alt : (alt as TechAlternative)?.name ?? "";
-                    const why = typeof alt === "object" ? (alt as TechAlternative)?.why_rejected : undefined;
+                    const name =
+                      typeof alt === "string" ? alt : ((alt as TechAlternative)?.name ?? "");
+                    const why =
+                      typeof alt === "object" ? (alt as TechAlternative)?.why_rejected : undefined;
                     return (
                       <span
                         key={`${name}-${i}`}
@@ -192,9 +255,10 @@ export default function TechStackApproval({ interrupt, onResolve, onDecision, di
         <div className="mx-4 mb-3 rounded-xl border border-white/8 bg-white/3 px-3 py-2.5">
           {totalCost && (
             <p className="text-[11px] font-semibold text-slate-300">
-              Estimated total:{" "}
-              <span className="text-blue-300">{fmtUsd(totalCost)}</span>
-              <span className="ml-1 text-[10px] font-normal text-slate-600">(assumption-based, infra only)</span>
+              Estimated total: <span className="text-blue-300">{fmtUsd(totalCost)}</span>
+              <span className="ml-1 text-[10px] font-normal text-slate-600">
+                (assumption-based, infra only)
+              </span>
             </p>
           )}
           {scalingRoadmap.length > 0 && (
@@ -210,7 +274,9 @@ export default function TechStackApproval({ interrupt, onResolve, onDecision, di
                       <span className="ml-2 text-slate-600">when: {phase.trigger}</span>
                     )}
                     {phase.est_monthly_cost_usd && (
-                      <span className="ml-2 text-slate-600">{fmtUsd(phase.est_monthly_cost_usd)}</span>
+                      <span className="ml-2 text-slate-600">
+                        {fmtUsd(phase.est_monthly_cost_usd)}
+                      </span>
                     )}
                     {Array.isArray(phase.changes) && phase.changes.length > 0 && (
                       <p className="mt-0.5 text-slate-600">{phase.changes.join(", ")}</p>
@@ -231,7 +297,13 @@ export default function TechStackApproval({ interrupt, onResolve, onDecision, di
         <div className="border-t border-white/8 px-4 py-3">
           {invalidProposal ? (
             <button
-              onClick={() => { setDecided(true); onResolve(false, "The tech stack proposal was empty or malformed. Regenerate it with concrete layers."); }}
+              onClick={() => {
+                setDecided(true);
+                onResolve(
+                  false,
+                  "The tech stack proposal was empty or malformed. Regenerate it with concrete layers.",
+                );
+              }}
               disabled={disabled}
               className="rounded-xl border border-red-500/25 bg-red-950/30 px-4 py-2.5 text-xs font-semibold text-red-100 transition-all hover:bg-red-900/40 disabled:opacity-50"
             >
@@ -243,7 +315,10 @@ export default function TechStackApproval({ interrupt, onResolve, onDecision, di
               disabled={disabled}
               approveLabel="Approve Stack"
               onApprove={approve}
-              onReject={(t) => { setDecided(true); onResolve(false, t || undefined); }}
+              onReject={(t) => {
+                setDecided(true);
+                onResolve(false, t || undefined);
+              }}
               onDecision={onDecision!}
             />
           )}
@@ -272,7 +347,13 @@ export default function TechStackApproval({ interrupt, onResolve, onDecision, di
               disabled={disabled || invalidProposal}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-blue-900/30 transition-all hover:bg-blue-500 active:scale-98 disabled:opacity-50"
             >
-              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                className="h-3.5 w-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
               Approve Stack

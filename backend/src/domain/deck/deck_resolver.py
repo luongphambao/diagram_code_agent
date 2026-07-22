@@ -54,12 +54,39 @@ def _components_by_cluster(model: SolutionModel) -> list[tuple[str, str, list[st
 
 
 _REGULATORY_KEYWORDS = [
-    "GDPR", "PCI-DSS", "PCI DSS", "UCP 600", "AML", "KYC", "HIPAA", "SOX", "SOC2", "SOC 2",
-    "ISO 27001", "ISO27001", "CCPA", "PDPA", "FATCA", "Basel",
+    "GDPR",
+    "PCI-DSS",
+    "PCI DSS",
+    "UCP 600",
+    "AML",
+    "KYC",
+    "HIPAA",
+    "SOX",
+    "SOC2",
+    "SOC 2",
+    "ISO 27001",
+    "ISO27001",
+    "CCPA",
+    "PDPA",
+    "FATCA",
+    "Basel",
 ]
 _GEOGRAPHY_KEYWORDS = [
-    "Singapore", "Vietnam", "Ap-southeast", "ap-southeast", "Europe", "EU ", "US ", "USA",
-    "APAC", "EMEA", "Japan", "Korea", "Indonesia", "Thailand", "Philippines",
+    "Singapore",
+    "Vietnam",
+    "Ap-southeast",
+    "ap-southeast",
+    "Europe",
+    "EU ",
+    "US ",
+    "USA",
+    "APAC",
+    "EMEA",
+    "Japan",
+    "Korea",
+    "Indonesia",
+    "Thailand",
+    "Philippines",
 ]
 
 
@@ -100,7 +127,8 @@ def _infer_client_info(model: SolutionModel, wbs: dict) -> dict[str, Any]:
     )
     regulatory = _find_keywords_present(all_statements, _REGULATORY_KEYWORDS)
     platform = [
-        s for s in [a.statement for a in model.assumptions]
+        s
+        for s in [a.statement for a in model.assumptions]
         if re.search(r"\bexisting\b.*\b(infrastructure|platform|system)\b", s, re.IGNORECASE)
     ]
 
@@ -140,7 +168,14 @@ _METHODOLOGY_DEFAULT = (
     "Agile/Scrum delivery in 2-week sprints; PM acts as Scrum Master; demo & retro each sprint."
 )
 _POST_LAUNCH_DEFAULT = [
-    "Raise ticket", "Analyze", "Propose", "Confirm", "Execute", "Deploy", "Test", "Close",
+    "Raise ticket",
+    "Analyze",
+    "Propose",
+    "Confirm",
+    "Execute",
+    "Deploy",
+    "Test",
+    "Close",
 ]
 _CHANGE_REQUEST_DEFAULT = (
     "Changes outside the agreed scope are logged, estimated, and approved as a Change Request "
@@ -153,6 +188,7 @@ _INVOICE_TERMS_DEFAULT = "BnK issues an invoice per milestone; CUSTOMER pays wit
 
 # --- per-contract param builders --------------------------------------------------------
 # Each builder: (model, wbs, narrative, meta, library) -> params dict (or {} to skip).
+
 
 def _b_cover(model, wbs, nar, meta, lib):
     return {
@@ -171,10 +207,12 @@ def _b_exec_overview(model, wbs, nar, meta, lib):
 
 def _b_goals_value(model, wbs, nar, meta, lib):
     vps = nar.get("value_props") or []
-    return {"value_props": [
-        {"title": _clip(v.get("title"), 60), "points": [_clip(p, 120) for p in v.get("points", [])]}
-        for v in vps
-    ]}
+    return {
+        "value_props": [
+            {"title": _clip(v.get("title"), 60), "points": [_clip(p, 120) for p in v.get("points", [])]}
+            for v in vps
+        ]
+    }
 
 
 def _b_success_story(model, wbs, nar, meta, lib):
@@ -257,24 +295,26 @@ def _b_master_plan(model, wbs, nar, meta, lib):
 
     if wbs.get("phases"):
         gantt_rows = [
-            {"code": m["code"], "name": m["name"],
-             "start_week": m["start_week"], "end_week": m["end_week"]}
+            {"code": m["code"], "name": m["name"], "start_week": m["start_week"], "end_week": m["end_week"]}
             for m in _module_schedule(wbs, grid["weeks"])
         ]
     else:
         gantt_rows = []
 
     return {
-        "weeks": grid["weeks"], "months": grid["months"], "sprints": grid["sprints"],
+        "weeks": grid["weeks"],
+        "months": grid["months"],
+        "sprints": grid["sprints"],
         "gantt_rows": gantt_rows,
     }
 
 
 def _b_risk(model, wbs, nar, meta, lib):
-    return {"risks": [
-        {"risk": _clip(r.statement, 90), "mitigation": _clip(r.mitigation, 90)}
-        for r in model.risks
-    ]}
+    return {
+        "risks": [
+            {"risk": _clip(r.statement, 90), "mitigation": _clip(r.mitigation, 90)} for r in model.risks
+        ]
+    }
 
 
 def _b_methodology(model, wbs, nar, meta, lib):
@@ -287,7 +327,7 @@ def _b_post_launch(model, wbs, nar, meta, lib):
 
 def _b_team(model, wbs, nar, meta, lib):
     bnk = []
-    for m in (wbs.get("team_composition") or []):
+    for m in wbs.get("team_composition") or []:
         md, hc = m.get("total_md"), m.get("est_headcount")
         if md:
             bnk.append(f"{m.get('role', 'Role')}: {md} MD" + (f" (~{hc} HC)" if hc else ""))
@@ -298,8 +338,7 @@ def _b_capex(model, wbs, nar, meta, lib):
     from wbs_effort import DEFAULT_RATE_CARD_USD_PER_MONTH, rate_per_manday
 
     totals = wbs.get("effort_totals") or {}
-    rate = meta.get("rate_card") or totals.get("rate_card_usd_per_month") \
-        or DEFAULT_RATE_CARD_USD_PER_MONTH
+    rate = meta.get("rate_card") or totals.get("rate_card_usd_per_month") or DEFAULT_RATE_CARD_USD_PER_MONTH
     # cost_by_role_usd is written by wbs_effort.rollup() for any WBS rolled up after this
     # feature landed; older wbs.json files (rolled up before) fall back to computing it here
     # from effort_by_role + the (possibly project-overridden) rate card — CAPEX is always
@@ -312,23 +351,29 @@ def _b_capex(model, wbs, nar, meta, lib):
         total = round(sum(cost_role.values()), 2)
 
     rows = []
-    for m in (wbs.get("effort_by_module") or []):
+    for m in wbs.get("effort_by_module") or []:
         md = float(m.get("total_md") or 0)
         cost = sum(
             float(b or 0) * rate_per_manday(rate.get(role, 0))
             for role, b in (m.get("breakdown") or {}).items()
         )
-        rows.append({
-            "module": f"{m.get('code', '')} {m.get('name', '')}".strip(),
-            "md": md, "cost": round(cost),
-        })
+        rows.append(
+            {
+                "module": f"{m.get('code', '')} {m.get('name', '')}".strip(),
+                "md": md,
+                "cost": round(cost),
+            }
+        )
     total_cost = f"Total Cost: {round(total):,} USD (NET)"
-    return {"total_cost": total_cost, "cost_rows": rows,
-            "net_note": "This quotation is the NET amount; tax not included."}
+    return {
+        "total_cost": total_cost,
+        "cost_rows": rows,
+        "net_note": "This quotation is the NET amount; tax not included.",
+    }
 
 
 def _b_opex(model, wbs, nar, meta, lib):
-    return {"opex_rows": nar.get("opex") or []}     # optional; needs cost estimate upstream
+    return {"opex_rows": nar.get("opex") or []}  # optional; needs cost estimate upstream
 
 
 def _b_milestones(model, wbs, nar, meta, lib):
@@ -361,7 +406,8 @@ def _b_advice(model, wbs, nar, meta, lib):
 def _b_agenda(model, wbs, nar, meta, lib):
     sections = [
         re.sub(r"^\{roman\}\.\s*", "", c.title).strip()
-        for c in SECTION_CONTENT_CONTRACTS if c.kind == "divider"
+        for c in SECTION_CONTENT_CONTRACTS
+        if c.kind == "divider"
     ]
     # de-dup while preserving order (optional dividers may repeat a section name)
     seen, out = set(), []
@@ -373,19 +419,31 @@ def _b_agenda(model, wbs, nar, meta, lib):
 
 
 _BUILDERS = {
-    "cover": _b_cover, "agenda": _b_agenda,
-    "exec_summary_overview": _b_exec_overview, "exec_summary_goals_value": _b_goals_value,
+    "cover": _b_cover,
+    "agenda": _b_agenda,
+    "exec_summary_overview": _b_exec_overview,
+    "exec_summary_goals_value": _b_goals_value,
     "success_story": _b_success_story,
-    "solution_name": _b_solution_name, "solution_overview": _b_solution_overview,
-    "solution_feature_list": _b_feature_list, "solution_tech_stack": _b_tech_stack,
+    "solution_name": _b_solution_name,
+    "solution_overview": _b_solution_overview,
+    "solution_feature_list": _b_feature_list,
+    "solution_tech_stack": _b_tech_stack,
     "solution_architecture": _b_architecture,
-    "scope_sdlc": _b_sdlc, "scope_change_request": _b_change_request,
-    "delivery_effort": _b_delivery_effort, "delivery_master_plan": _b_master_plan,
-    "delivery_risk": _b_risk, "delivery_methodology": _b_methodology,
-    "delivery_post_launch": _b_post_launch, "delivery_team": _b_team,
-    "pricing_capex": _b_capex, "pricing_opex": _b_opex, "pricing_milestones": _b_milestones,
+    "scope_sdlc": _b_sdlc,
+    "scope_change_request": _b_change_request,
+    "delivery_effort": _b_delivery_effort,
+    "delivery_master_plan": _b_master_plan,
+    "delivery_risk": _b_risk,
+    "delivery_methodology": _b_methodology,
+    "delivery_post_launch": _b_post_launch,
+    "delivery_team": _b_team,
+    "pricing_capex": _b_capex,
+    "pricing_opex": _b_opex,
+    "pricing_milestones": _b_milestones,
     "reference_screens": _b_reference,
-    "kpis": _b_kpis, "client_info": _b_client_info, "advice_phase": _b_advice,
+    "kpis": _b_kpis,
+    "client_info": _b_client_info,
+    "advice_phase": _b_advice,
 }
 
 
@@ -456,12 +514,14 @@ def available_inputs(
 
 # --- case-study library (built offline from DATA/SLIDE_IMAGES/*/analysis.md) ------------
 
+
 def pick_case_study(model: SolutionModel, library: list[dict]) -> Optional[dict]:
     """Top-1 past project by domain/tech overlap with the current CSM (None if no overlap)."""
     if not library:
         return None
     hay = " ".join(
-        [c.name for c in model.components] + [d.title for d in model.decisions]
+        [c.name for c in model.components]
+        + [d.title for d in model.decisions]
         + [r.statement for r in model.requirements]
     ).lower()
     best, best_score = None, 0

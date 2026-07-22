@@ -33,19 +33,25 @@ def _register_tuned_summarization_profiles() -> None:
             from backends import make_local_backend
             from config import make_llm
 
-            return [SummarizationMiddleware(
-                model=make_llm(model_str),
-                backend=make_local_backend(),
-                trigger=("tokens", 60_000),
-                keep=("messages", 12),
-            )]
+            return [
+                SummarizationMiddleware(
+                    model=make_llm(model_str),
+                    backend=make_local_backend(),
+                    trigger=("tokens", 60_000),
+                    keep=("messages", 12),
+                )
+            ]
+
         return factory
 
     for model_str in ("mimo-v2.5", "gpt-5.4-mini"):
-        register_harness_profile(f"openai:{model_str}", HarnessProfile(
-            excluded_middleware={"SummarizationMiddleware"},
-            extra_middleware=_tuned_summarizer(model_str),
-        ))
+        register_harness_profile(
+            f"openai:{model_str}",
+            HarnessProfile(
+                excluded_middleware={"SummarizationMiddleware"},
+                extra_middleware=_tuned_summarizer(model_str),
+            ),
+        )
 
 
 _register_tuned_summarization_profiles()
@@ -69,7 +75,11 @@ def _set_general_purpose_enabled(enabled: bool, model_strs: set[str]) -> None:
     a concurrency concern.
     """
     from deepagents import GeneralPurposeSubagentProfile, HarnessProfile, register_harness_profile
+
     for model_str in model_strs:
-        register_harness_profile(f"openai:{model_str}", HarnessProfile(
-            general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=enabled),
-        ))
+        register_harness_profile(
+            f"openai:{model_str}",
+            HarnessProfile(
+                general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=enabled),
+            ),
+        )

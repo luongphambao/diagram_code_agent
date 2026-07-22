@@ -49,8 +49,7 @@ class KeepLatestImagesEdit:
             msg = messages[idx]
             old = msg.content if isinstance(msg.content, list) else [msg.content]
             new_content = [
-                self._STRIPPED if (isinstance(b, dict) and b.get("type") == "image") else b
-                for b in old
+                self._STRIPPED if (isinstance(b, dict) and b.get("type") == "image") else b for b in old
             ]
             messages[idx] = msg.model_copy(update={"content": new_content})
 
@@ -89,14 +88,10 @@ class InjectVisionAsUserEdit:
             msg = messages[i]
             if isinstance(msg, HumanMessage):
                 c = msg.content
-                is_relay = (
-                    (isinstance(c, str) and c.startswith(self._SENTINEL))
-                    or (
-                        isinstance(c, list)
-                        and any(
-                            isinstance(b, dict) and str(b.get("text", "")).startswith(self._SENTINEL)
-                            for b in c
-                        )
+                is_relay = (isinstance(c, str) and c.startswith(self._SENTINEL)) or (
+                    isinstance(c, list)
+                    and any(
+                        isinstance(b, dict) and str(b.get("text", "")).startswith(self._SENTINEL) for b in c
                     )
                 )
                 if is_relay:
@@ -133,18 +128,21 @@ class InjectVisionAsUserEdit:
                 # URL — mimo rejects the whole request with 400 "Multimodal data
                 # is corrupted" and the agent burns retries. Skip with a note.
                 if not b64:
-                    relay_content.append({
-                        "type": "text",
-                        "text": "[image unavailable — render produced no preview; "
-                                "rely on the layout audit text]",
-                    })
+                    relay_content.append(
+                        {
+                            "type": "text",
+                            "text": "[image unavailable — render produced no preview; "
+                            "rely on the layout audit text]",
+                        }
+                    )
                     continue
                 if len(b64) > self._MAX_B64_CHARS:
-                    relay_content.append({
-                        "type": "text",
-                        "text": "[image too large to relay — rely on the layout "
-                                "audit text]",
-                    })
+                    relay_content.append(
+                        {
+                            "type": "text",
+                            "text": "[image too large to relay — rely on the layout audit text]",
+                        }
+                    )
                     continue
                 img_block: dict = {
                     "type": "image_url",
@@ -195,11 +193,13 @@ class SanitizeToolTextBlocksEdit:
                     mime = block.get("mime_type", "")
                     kind = block.get("type", "file")
                     suffix = f" ({mime})" if mime else ""
-                    new_content.append({
-                        "type": "text",
-                        "text": f"[non-text {kind}{suffix} content omitted — "
-                                "refer to the file path instead of inline content]",
-                    })
+                    new_content.append(
+                        {
+                            "type": "text",
+                            "text": f"[non-text {kind}{suffix} content omitted — "
+                            "refer to the file path instead of inline content]",
+                        }
+                    )
                     changed = True
                 else:
                     new_content.append(block)
@@ -233,22 +233,14 @@ class OffloadGateArgsEdit:
     _NOTE = "[cleared — full content persisted to disk, already applied]"
 
     def apply(self, messages: list[AnyMessage], *, count_tokens: Any) -> None:
-        resolved_ids = {
-            getattr(m, "tool_call_id", None)
-            for m in messages
-            if isinstance(m, LCToolMessage)
-        }
+        resolved_ids = {getattr(m, "tool_call_id", None) for m in messages if isinstance(m, LCToolMessage)}
         for i, msg in enumerate(messages):
             if not isinstance(msg, AIMessage) or not msg.tool_calls:
                 continue
             new_calls = []
             changed = False
             for tc in msg.tool_calls:
-                if (
-                    tc.get("name") in _OFFLOAD_GATE_TOOLS
-                    and tc.get("id") in resolved_ids
-                    and tc.get("args")
-                ):
+                if tc.get("name") in _OFFLOAD_GATE_TOOLS and tc.get("id") in resolved_ids and tc.get("args"):
                     tc = {**tc, "args": {"_offloaded": self._NOTE}}
                     changed = True
                 new_calls.append(tc)

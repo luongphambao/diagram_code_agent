@@ -30,6 +30,7 @@ COMPLIANCE_PACK_MARKER = "compliance_pack.json"
 
 # --- pack loading ------------------------------------------------------------
 
+
 def list_packs() -> list[str]:
     """Names of the packs bundled under packs/ (without the .json suffix)."""
     if not PACKS_DIR.exists():
@@ -40,6 +41,7 @@ def list_packs() -> list[str]:
 def load_pack(name: str) -> Optional[dict[str, Any]]:
     """Read a pack definition by name; None if it does not exist or is malformed."""
     from safe_path import safe_filename
+
     path = PACKS_DIR / f"{safe_filename(name)}.json"
     if not path.suffix == ".json":
         return None
@@ -51,9 +53,11 @@ def load_pack(name: str) -> Optional[dict[str, Any]]:
 
 # --- active-pack marker (per workspace) --------------------------------------
 
+
 def _marker_path(workspace: Optional[Path]) -> Path:
     if workspace is None:
         from backends import current_workspace
+
         workspace = current_workspace()
     return Path(workspace) / COMPLIANCE_PACK_MARKER
 
@@ -76,6 +80,7 @@ def get_active_pack(workspace: Optional[Path] = None) -> Optional[str]:
 
 # --- matching helpers --------------------------------------------------------
 
+
 def _entity_text(*parts: Any) -> str:
     out: list[str] = []
     for p in parts:
@@ -92,6 +97,7 @@ def _matches(text: str, keywords: list[str]) -> bool:
 
 # --- projection --------------------------------------------------------------
 
+
 def apply_pack(model: SolutionModel, pack_name: str) -> SolutionModel:
     """Mint the pack's controls into ``model`` (idempotent). Returns the same model.
 
@@ -107,18 +113,10 @@ def apply_pack(model: SolutionModel, pack_name: str) -> SolutionModel:
     existing_links = {(t.from_id, t.to_id, t.relation) for t in model.trace_links}
 
     # Build searchable corpora once.
-    work_corpus = [
-        (w.id, _entity_text(w.name, w.definition_of_done)) for w in model.work_items
-    ]
-    comp_corpus = [
-        (c.id, _entity_text(c.name, c.purpose)) for c in model.components
-    ]
-    evid_corpus = [
-        (e.id, _entity_text(e.claim, e.quote_or_excerpt)) for e in model.evidence
-    ]
-    risk_corpus = [
-        (r.id, _entity_text(r.statement, r.mitigation)) for r in model.risks
-    ]
+    work_corpus = [(w.id, _entity_text(w.name, w.definition_of_done)) for w in model.work_items]
+    comp_corpus = [(c.id, _entity_text(c.name, c.purpose)) for c in model.components]
+    evid_corpus = [(e.id, _entity_text(e.claim, e.quote_or_excerpt)) for e in model.evidence]
+    risk_corpus = [(r.id, _entity_text(r.statement, r.mitigation)) for r in model.risks]
 
     def _add_link(from_id: str, to_id: str, relation: str) -> None:
         key = (from_id, to_id, relation)
@@ -182,6 +180,7 @@ def project_into_csm(model: SolutionModel, workspace: Optional[Path] = None) -> 
 
 
 # --- gaps + findings ---------------------------------------------------------
+
 
 def evidence_gaps(model: SolutionModel) -> list[Control]:
     """Required controls that are unimplemented and/or ungrounded (no evidence)."""

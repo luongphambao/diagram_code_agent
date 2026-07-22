@@ -36,12 +36,14 @@ async def make_persistence():
     from psycopg_pool import AsyncConnectionPool
 
     pool = AsyncConnectionPool(
-        conninfo=db, max_size=20, open=False,
+        conninfo=db,
+        max_size=20,
+        open=False,
         kwargs={"autocommit": True, "prepare_threshold": 0},
     )
     await pool.open()
     checkpointer = AsyncPostgresSaver(pool)
-    await checkpointer.setup()          # idempotent: creates tables on first run
+    await checkpointer.setup()  # idempotent: creates tables on first run
     store = AsyncPostgresStore(pool)
     await store.setup()
     logger.info("Postgres session persistence ready (checkpointer + store).")

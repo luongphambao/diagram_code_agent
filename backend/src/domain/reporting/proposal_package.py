@@ -25,6 +25,7 @@ from safe_path import safe_workspace_path
 # Data models
 # ---------------------------------------------------------------------------
 
+
 class ArtifactEntry(BaseModel):
     artifact_type: Literal["diagram", "wbs", "deck", "report", "other"]
     filename: str
@@ -43,7 +44,7 @@ class ProposalManifest(BaseModel):
 
     # Deck storyboard summary
     slide_count: int = 0
-    trace_coverage_pct: float = 0.0     # slides with source_refs / total slides
+    trace_coverage_pct: float = 0.0  # slides with source_refs / total slides
     structure_score: Optional[int] = None
     structure_grade: Optional[str] = None
 
@@ -65,14 +66,15 @@ class ProposalManifest(BaseModel):
 # ---------------------------------------------------------------------------
 
 _ARTIFACT_CANDIDATES: list[tuple[str, Literal["diagram", "wbs", "deck", "report", "other"]]] = [
-    ("out.pptx",         "deck"),
-    ("out.body.png",     "diagram"),
-    ("out.png",          "diagram"),
-    ("out.drawio",       "diagram"),
-    ("wbs_output.xlsx",  "wbs"),
-    ("report.pdf",       "report"),
-    ("report.docx",      "report"),
+    ("out.pptx", "deck"),
+    ("out.body.png", "diagram"),
+    ("out.png", "diagram"),
+    ("out.drawio", "diagram"),
+    ("wbs_output.xlsx", "wbs"),
+    ("report.pdf", "report"),
+    ("report.docx", "report"),
 ]
+
 
 def _read_json(path: Path):
     try:
@@ -93,9 +95,7 @@ def build_manifest(workspace: Path, title: str = "") -> ProposalManifest:
     if not manifest.project_title:
         brief = _read_json(ws / "diagram_brief.json")
         if brief:
-            manifest.project_title = (
-                brief.get("slide_title") or brief.get("title") or title or ""
-            )
+            manifest.project_title = brief.get("slide_title") or brief.get("title") or title or ""
 
     # --- artifacts present in workspace ------------------------------------
     seen_types: set[str] = set()
@@ -106,14 +106,14 @@ def build_manifest(workspace: Path, title: str = "") -> ProposalManifest:
         if atype == "diagram" and "diagram" in seen_types:
             continue  # prefer first diagram found
         seen_types.add(atype)
-        manifest.artifacts.append(ArtifactEntry(
-            artifact_type=atype,
-            filename=filename,
-            generated_at=datetime.fromtimestamp(
-                fpath.stat().st_mtime, tz=timezone.utc
-            ).isoformat(),
-            approved=False,  # approval status is set below via decision_log
-        ))
+        manifest.artifacts.append(
+            ArtifactEntry(
+                artifact_type=atype,
+                filename=filename,
+                generated_at=datetime.fromtimestamp(fpath.stat().st_mtime, tz=timezone.utc).isoformat(),
+                approved=False,  # approval status is set below via decision_log
+            )
+        )
 
     # --- deck storyboard ----------------------------------------------------
     deck_plan_raw = _read_json(ws / "deck_plan.json")
@@ -121,9 +121,7 @@ def build_manifest(workspace: Path, title: str = "") -> ProposalManifest:
         slides = deck_plan_raw.get("slides", [])
         manifest.slide_count = len(slides)
         grounded = sum(1 for s in slides if s.get("source_refs"))
-        manifest.trace_coverage_pct = (
-            round(100.0 * grounded / len(slides), 1) if slides else 0.0
-        )
+        manifest.trace_coverage_pct = round(100.0 * grounded / len(slides), 1) if slides else 0.0
 
     # --- deck QA result -----------------------------------------------------
     deck_qa = _read_json(ws / "deck_qa_result.json")
@@ -135,9 +133,9 @@ def build_manifest(workspace: Path, title: str = "") -> ProposalManifest:
             1 for f in findings if isinstance(f, dict) and f.get("status", "open") == "open"
         )
         manifest.open_findings_high = sum(
-            1 for f in findings
-            if isinstance(f, dict) and f.get("status", "open") == "open"
-            and f.get("severity") == "high"
+            1
+            for f in findings
+            if isinstance(f, dict) and f.get("status", "open") == "open" and f.get("severity") == "high"
         )
 
     # --- visual audit -------------------------------------------------------
@@ -153,12 +151,11 @@ def build_manifest(workspace: Path, title: str = "") -> ProposalManifest:
         manifest.decisions_total = len(decisions)
         # Mark deck "approved" if any decision on the deck gate was "approve"
         approved_gates = {
-            d.get("gate") for d in (decisions or [])
+            d.get("gate")
+            for d in (decisions or [])
             if isinstance(d, dict) and d.get("action") in ("approve", "approve_with_assumptions")
         }
-        deck_approved = bool(
-            approved_gates & {"propose_deck_plan", "generate_ppt_proposal", "deck_review"}
-        )
+        deck_approved = bool(approved_gates & {"propose_deck_plan", "generate_ppt_proposal", "deck_review"})
         for art in manifest.artifacts:
             if art.artifact_type == "deck":
                 art.approved = deck_approved
@@ -169,12 +166,9 @@ def build_manifest(workspace: Path, title: str = "") -> ProposalManifest:
     # --- findings log (cross-artifact) -------------------------------------
     findings_raw = _read_json(ws / "findings_log.json")
     if findings_raw and manifest.open_findings == 0:  # don't double-count
-        findings = (
-            findings_raw.get("findings", []) if isinstance(findings_raw, dict) else findings_raw
-        )
+        findings = findings_raw.get("findings", []) if isinstance(findings_raw, dict) else findings_raw
         open_findings = [
-            f for f in (findings or [])
-            if isinstance(f, dict) and f.get("status", "open") == "open"
+            f for f in (findings or []) if isinstance(f, dict) and f.get("status", "open") == "open"
         ]
         manifest.open_findings = max(manifest.open_findings, len(open_findings))
         manifest.open_findings_high = max(
@@ -188,6 +182,7 @@ def build_manifest(workspace: Path, title: str = "") -> ProposalManifest:
 # ---------------------------------------------------------------------------
 # Exporter
 # ---------------------------------------------------------------------------
+
 
 def export_proposal_package(
     workspace: Path,
@@ -221,6 +216,7 @@ def export_proposal_package(
     # the auditable "why" with the proposal. Best-effort: never block an export.
     try:
         from adr_export import write_adr_pack
+
         adr_path, n_adr = write_adr_pack(ws)
         if n_adr or adr_path.exists():
             shutil.copy2(adr_path, safe_workspace_path(export_path, adr_path.name))
@@ -229,11 +225,13 @@ def export_proposal_package(
         pass
 
     # Record this export in the manifest
-    manifest.exports.append({
-        "exported_at": datetime.now(timezone.utc).isoformat(),
-        "export_dir": str(export_path),
-        "files": copied,
-    })
+    manifest.exports.append(
+        {
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "export_dir": str(export_path),
+            "files": copied,
+        }
+    )
 
     # Write manifest.json
     manifest_path = export_path / "manifest.json"
@@ -248,6 +246,7 @@ def export_proposal_package(
 # ---------------------------------------------------------------------------
 # Human-readable summary
 # ---------------------------------------------------------------------------
+
 
 def format_manifest(manifest: ProposalManifest) -> str:
     status_icon = "✅ FINAL" if manifest.status == "final" else "🔄 DRAFT"
@@ -270,20 +269,23 @@ def format_manifest(manifest: ProposalManifest) -> str:
         lines.append(
             f"  Deck    : {manifest.slide_count} slides, "
             f"{manifest.trace_coverage_pct}% grounded"
-            + (f", structure {manifest.structure_score}/100 [{manifest.structure_grade}]"
-               if manifest.structure_score is not None else "")
+            + (
+                f", structure {manifest.structure_score}/100 [{manifest.structure_grade}]"
+                if manifest.structure_score is not None
+                else ""
+            )
         )
 
     # Visual audit
     if manifest.visual_audit_passed is not None:
         vis_icon = "✅" if manifest.visual_audit_passed else "⚠"
-        lines.append(
-            f"  Visual  : {vis_icon} score {manifest.visual_audit_score}/100"
-        )
+        lines.append(f"  Visual  : {vis_icon} score {manifest.visual_audit_score}/100")
 
     # Findings
     if manifest.open_findings_high:
-        lines.append(f"  ⛔ {manifest.open_findings_high} HIGH finding(s) open — resolve before sending to client.")
+        lines.append(
+            f"  ⛔ {manifest.open_findings_high} HIGH finding(s) open — resolve before sending to client."
+        )
     elif manifest.open_findings:
         lines.append(f"  ⚠ {manifest.open_findings} finding(s) still open.")
     else:

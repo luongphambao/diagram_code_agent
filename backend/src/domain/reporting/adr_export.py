@@ -96,6 +96,7 @@ def write_adr_pack(workspace: Optional[Path] = None) -> tuple[Path, int]:
     """Write `adr_pack.md` into the workspace; returns (path, n_decisions)."""
     if workspace is None:
         from backends import current_workspace
+
         workspace = current_workspace()
     workspace = Path(workspace)
     md, n = render_adr_pack(workspace)

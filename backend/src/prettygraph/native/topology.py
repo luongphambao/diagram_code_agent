@@ -16,22 +16,27 @@ from __future__ import annotations
 
 import re
 
-from .layout_engine import (group, frame, grid, icon, box, card, phantom,
-                            zone_frame, render_tree, pool)
+from .layout_engine import group, frame, grid, icon, box, card, phantom, zone_frame, render_tree, pool
 from .builder import Diagram
 from .theme import THEME, stage_fill, stage_stroke
 from . import bpmn as _bpmn
 
 try:
-    from ..drawio_catalog import (load_catalog as _load_catalog,
-                                  search_icon as _search_icon, get_icon as _get_icon,
-                                  expand_tokens as _expand_tokens)
+    from ..drawio_catalog import (
+        load_catalog as _load_catalog,
+        search_icon as _search_icon,
+        get_icon as _get_icon,
+        expand_tokens as _expand_tokens,
+    )
     from ..graph_builder import _aws_group_for_label
     from ..constants import PRO_ACCENTS, FLOW_COLORS
 except (ImportError, ValueError):  # pragma: no cover - import fallback
-    from domain.diagram.drawio_catalog import (load_catalog as _load_catalog,  # type: ignore
-                                search_icon as _search_icon, get_icon as _get_icon,
-                                expand_tokens as _expand_tokens)
+    from domain.diagram.drawio_catalog import (
+        load_catalog as _load_catalog,  # type: ignore
+        search_icon as _search_icon,
+        get_icon as _get_icon,
+        expand_tokens as _expand_tokens,
+    )
     from prettygraph.graph_builder import _aws_group_for_label  # type: ignore
     from prettygraph.constants import PRO_ACCENTS, FLOW_COLORS  # type: ignore
 
@@ -63,30 +68,58 @@ _ICON_LABEL_MAX = 24
 # lower score — but only when every significant query token appears in the name.
 _ICON_SCORE_VENDOR = 28
 # Vendor / filler words that dilute a stencil search ("AWS Lambda" -> "lambda").
-_VENDOR_WORDS = {"aws", "amazon", "azure", "gcp", "google", "microsoft", "cloud",
-                 "apache", "the", "a", "for", "service", "services", "managed"}
+_VENDOR_WORDS = {
+    "aws",
+    "amazon",
+    "azure",
+    "gcp",
+    "google",
+    "microsoft",
+    "cloud",
+    "apache",
+    "the",
+    "a",
+    "for",
+    "service",
+    "services",
+    "managed",
+}
 # Role words too generic to identify a product on their own: a hit that matches
 # ONLY these is a wrong-icon risk ("Fund Management Service" must not resolve to
 # key_management_service on management+service alone).
-_GENERIC_TOKENS = {"service", "services", "management", "server", "data",
-                   "application", "system", "platform", "engine", "store",
-                   "manager", "gateway", "simple"}
+_GENERIC_TOKENS = {
+    "service",
+    "services",
+    "management",
+    "server",
+    "data",
+    "application",
+    "system",
+    "platform",
+    "engine",
+    "store",
+    "manager",
+    "gateway",
+    "simple",
+}
 
 # name prefix per provider in the merged catalog (gcp.json / azure.json packs).
-_PROVIDER_PREFIX = {"gcp": "gcp_", "google": "gcp_",
-                    "azure": "azure_", "microsoft": "azure_"}
+_PROVIDER_PREFIX = {"gcp": "gcp_", "google": "gcp_", "azure": "azure_", "microsoft": "azure_"}
 # aws4 stencils that are provider-NEUTRAL (safe inside a GCP/Azure diagram);
 # every other mxgraph.aws4 icon is AWS-branded and must not leak cross-vendor.
 _GENERIC_AWS_OK = re.compile(
     r"^(generic_|traditional_server$|corporate_data_center$|users?$|client$"
-    r"|mobile_client$|internet(_alt[12])?$|office_building$|servers?$|globe$)")
+    r"|mobile_client$|internet(_alt[12])?$|office_building$|servers?$|globe$)"
+)
 
 # Top-level clusters matching this are CROSS-CUTTING concerns: rendered as the
 # neutral grey sidebar column (the "Management, Security & CI/CD" lane) instead
 # of a tinted pipeline layer band.
 _CROSS_CUT = re.compile(
     r"security|secret|iam\b|identity|ci\s*/?\s*cd|cicd|management|observab"
-    r"|monitor|logging|governance|devops|compliance|audit", re.IGNORECASE)
+    r"|monitor|logging|governance|devops|compliance|audit",
+    re.IGNORECASE,
+)
 
 # Corner-logo for NON-AWS container frames (the "AWS look" — a framed group with a
 # logo in the corner — but the logo is swappable per provider/on-prem). Keyword in
@@ -154,8 +187,7 @@ def _clean_query(q: str, provider: str = "aws") -> str:
     drop = set(_VENDOR_WORDS)
     if _PROVIDER_PREFIX.get(provider) == "gcp_":
         drop.discard("cloud")
-    toks = [t for t in re.split(r"[^a-z0-9]+", (q or "").lower())
-            if t and t not in drop]
+    toks = [t for t in re.split(r"[^a-z0-9]+", (q or "").lower()) if t and t not in drop]
     return " ".join(toks)
 
 
@@ -175,8 +207,7 @@ def _node_provider(node: dict, default: str) -> str:
 def _sig_tokens(query: str) -> tuple[list[str], list[str]]:
     """(significant, significant-and-non-generic) query tokens, abbreviation-
     expanded so "AWS KMS" carries key/management/service like the catalog names."""
-    sig = [t for t in re.split(r"[^a-z0-9]+", query.lower())
-           if t and t not in _VENDOR_WORDS]
+    sig = [t for t in re.split(r"[^a-z0-9]+", query.lower()) if t and t not in _VENDOR_WORDS]
     sig = _expand_tokens(sig)
     return sig, [t for t in sig if t not in _GENERIC_TOKENS]
 
@@ -214,8 +245,7 @@ def _pick_hit(hits: list[dict], prefix: str | None, query: str) -> str | None:
                 break
             if h["name"].startswith(("gcp_", "azure_")):
                 continue  # the other vendor's pack (own-prefix handled above)
-            if ("mxgraph.aws4" in (h.get("style") or "")
-                    and not _GENERIC_AWS_OK.match(h["name"])):
+            if "mxgraph.aws4" in (h.get("style") or "") and not _GENERIC_AWS_OK.match(h["name"]):
                 continue  # AWS-branded stencil in a non-AWS diagram
             compact = h["name"].replace("_", "")
             hit = lambda t, _c=compact: t in _c or (len(t) >= 5 and t[:5] in _c)
@@ -254,8 +284,7 @@ def _resolve_node_icon(cat, node: dict, provider: str = "aws") -> str | None:
         # literal queries miss — expanding up front dilutes exact short names
         # ("waf") under verbose partial matches.
         expanded = " ".join(_expand_tokens(cleaned.split(" "))) if cleaned else ""
-        queries = dict.fromkeys((cleaned, raw, head,
-                                 expanded if expanded != cleaned else ""))
+        queries = dict.fromkeys((cleaned, raw, head, expanded if expanded != cleaned else ""))
         for query in queries:  # de-duped, in order
             if not query:
                 continue
@@ -312,32 +341,55 @@ def _band_tint(c: dict, i: int) -> tuple[str, str]:
 # (start/intermediate/end/gateway) pass it through; typed tasks/plain
 # task/sub_process ignore "type" (their creators take no type kwarg).
 _BPMN_CREATORS = {
-    "start": lambda s: _bpmn.start(s["id"], type=s.get("type") or "none",
-                                   lane=s.get("lane", 0), col=s.get("col", 0),
-                                   label=s.get("label", "")),
-    "intermediate": lambda s: _bpmn.intermediate(s["id"], type=s.get("type") or "message",
-                                                 lane=s.get("lane", 0), col=s.get("col", 0),
-                                                 label=s.get("label", "")),
-    "end": lambda s: _bpmn.end(s["id"], type=s.get("type") or "none",
-                               lane=s.get("lane", 0), col=s.get("col", 0),
-                               label=s.get("label", "")),
-    "gateway": lambda s: _bpmn.gateway(s["id"], type=s.get("type") or "exclusive",
-                                       lane=s.get("lane", 0), col=s.get("col", 0),
-                                       label=s.get("label", "")),
-    "task": lambda s: _bpmn.task(s["id"], lane=s.get("lane", 0), col=s.get("col", 0),
-                                 label=s.get("label", "")),
-    "user_task": lambda s: _bpmn.user_task(s["id"], lane=s.get("lane", 0), col=s.get("col", 0),
-                                           label=s.get("label", "")),
-    "service_task": lambda s: _bpmn.service_task(s["id"], lane=s.get("lane", 0), col=s.get("col", 0),
-                                                 label=s.get("label", "")),
-    "manual_task": lambda s: _bpmn.manual_task(s["id"], lane=s.get("lane", 0), col=s.get("col", 0),
-                                               label=s.get("label", "")),
-    "script_task": lambda s: _bpmn.script_task(s["id"], lane=s.get("lane", 0), col=s.get("col", 0),
-                                               label=s.get("label", "")),
+    "start": lambda s: _bpmn.start(
+        s["id"],
+        type=s.get("type") or "none",
+        lane=s.get("lane", 0),
+        col=s.get("col", 0),
+        label=s.get("label", ""),
+    ),
+    "intermediate": lambda s: _bpmn.intermediate(
+        s["id"],
+        type=s.get("type") or "message",
+        lane=s.get("lane", 0),
+        col=s.get("col", 0),
+        label=s.get("label", ""),
+    ),
+    "end": lambda s: _bpmn.end(
+        s["id"],
+        type=s.get("type") or "none",
+        lane=s.get("lane", 0),
+        col=s.get("col", 0),
+        label=s.get("label", ""),
+    ),
+    "gateway": lambda s: _bpmn.gateway(
+        s["id"],
+        type=s.get("type") or "exclusive",
+        lane=s.get("lane", 0),
+        col=s.get("col", 0),
+        label=s.get("label", ""),
+    ),
+    "task": lambda s: _bpmn.task(
+        s["id"], lane=s.get("lane", 0), col=s.get("col", 0), label=s.get("label", "")
+    ),
+    "user_task": lambda s: _bpmn.user_task(
+        s["id"], lane=s.get("lane", 0), col=s.get("col", 0), label=s.get("label", "")
+    ),
+    "service_task": lambda s: _bpmn.service_task(
+        s["id"], lane=s.get("lane", 0), col=s.get("col", 0), label=s.get("label", "")
+    ),
+    "manual_task": lambda s: _bpmn.manual_task(
+        s["id"], lane=s.get("lane", 0), col=s.get("col", 0), label=s.get("label", "")
+    ),
+    "script_task": lambda s: _bpmn.script_task(
+        s["id"], lane=s.get("lane", 0), col=s.get("col", 0), label=s.get("label", "")
+    ),
     "business_rule_task": lambda s: _bpmn.business_rule_task(
-        s["id"], lane=s.get("lane", 0), col=s.get("col", 0), label=s.get("label", "")),
-    "sub_process": lambda s: _bpmn.sub_process(s["id"], lane=s.get("lane", 0), col=s.get("col", 0),
-                                               label=s.get("label", "")),
+        s["id"], lane=s.get("lane", 0), col=s.get("col", 0), label=s.get("label", "")
+    ),
+    "sub_process": lambda s: _bpmn.sub_process(
+        s["id"], lane=s.get("lane", 0), col=s.get("col", 0), label=s.get("label", "")
+    ),
 }
 
 
@@ -355,10 +407,15 @@ def _build_bpmn_tree(spec: dict, flat: bool = False):
         if make is None:
             continue
         children.append(make(s))
-    tree = pool("pool", process.get("label") or "", {
-        "lanes": process.get("lanes") or [],
-        "phases": process.get("phases") or [],
-    }, children)
+    tree = pool(
+        "pool",
+        process.get("label") or "",
+        {
+            "lanes": process.get("lanes") or [],
+            "phases": process.get("phases") or [],
+        },
+        children,
+    )
     d = Diagram("bpmn", contract="bake", flat=flat)
     render_tree(d, tree)
     step_ids = {s["id"] for s in steps}
@@ -371,8 +428,9 @@ def _build_bpmn_tree(spec: dict, flat: bool = False):
     return d, tree
 
 
-def _build_node_element(n: dict, cat, provider: str,
-                        accent: str | None = None, size_class: str | None = None):
+def _build_node_element(
+    n: dict, cat, provider: str, accent: str | None = None, size_class: str | None = None
+):
     """Card/icon/box element for one render_spec node — the same choice logic
     build_tree's build_cluster() uses, factored out so the exotic diagram-type
     builders (hub_spoke/hierarchy/mesh — diagram_types.py) can build nodes
@@ -383,14 +441,16 @@ def _build_node_element(n: dict, cat, provider: str,
     if img:
         title, sub = _card_texts(n)
         mn, mx = _SIZE_CLASSES.get(size_class or "medium", _SIZE_CLASSES["medium"])
-        return card(n["id"], None, title, sub, accent=accent,
-                    min_w=mn, max_w=mx, image_data_uri=img)
+        return card(n["id"], None, title, sub, accent=accent, min_w=mn, max_w=mx, image_data_uri=img)
     name = _resolve_node_icon(cat, n, provider)
     label = _node_label(n)
     longest_line = max((len(ln) for ln in label.split("\n")), default=0)
-    if (provider == "aws" and name
-            and "mxgraph.aws4" in ((_get_icon(cat, name) or {}).get("style") or "")
-            and longest_line <= _ICON_LABEL_MAX):
+    if (
+        provider == "aws"
+        and name
+        and "mxgraph.aws4" in ((_get_icon(cat, name) or {}).get("style") or "")
+        and longest_line <= _ICON_LABEL_MAX
+    ):
         # AWS convention: native resourceIcon with the label below (short
         # labels only — see _ICON_LABEL_MAX; a longer label falls through
         # to the card() branch below, which wraps safely).
@@ -400,8 +460,7 @@ def _build_node_element(n: dict, cat, provider: str,
     if name or sub:
         return card(n["id"], name, title, sub, accent=accent, min_w=mn, max_w=mx)
     if name is None and provider == "aws":
-        return box(n["id"], _node_label(n), fill=THEME.base,
-                   stroke=_accent_stroke(None), fs=11)
+        return box(n["id"], _node_label(n), fill=THEME.base, stroke=_accent_stroke(None), fs=11)
     return card(n["id"], name, title, sub, accent=accent, min_w=mn, max_w=mx)
 
 
@@ -440,12 +499,16 @@ def _build_exotic_tree(spec: dict, flat: bool, intent: str):
                     degree[e["to"]] += 1
             hub_id = max(degree, key=lambda k: degree[k]) if degree else None
         spokes = [n for n in nodes if n["id"] != hub_id]
-        left, right = spokes[: len(spokes) // 2 + len(spokes) % 2], spokes[len(spokes) // 2 + len(spokes) % 2:]
+        left, right = (
+            spokes[: len(spokes) // 2 + len(spokes) % 2],
+            spokes[len(spokes) // 2 + len(spokes) % 2 :],
+        )
         left_col = phantom("__hub_left", "", {"dir": "col", "gap": 30}, [elem(n) for n in left])
         right_col = phantom("__hub_right", "", {"dir": "col", "gap": 30}, [elem(n) for n in right])
         hub_elem = elem(by_id[hub_id]) if hub_id in by_id else box("__hub", "(hub)")
-        cols = [c for c in (left_col if left else None, hub_elem,
-                            right_col if right else None) if c is not None]
+        cols = [
+            c for c in (left_col if left else None, hub_elem, right_col if right else None) if c is not None
+        ]
         root = phantom("__hub_row", "", {"dir": "row", "gap": 70}, cols)
     elif intent == "hierarchy":
         incoming = {e["to"] for e in edges}
@@ -474,15 +537,26 @@ def _build_exotic_tree(spec: dict, flat: bool, intent: str):
         levels: dict[int, list] = {}
         for n in nodes:
             levels.setdefault(level_of[n["id"]], []).append(n)
-        cols = [phantom(f"__lvl{lvl}", "", {"dir": "row", "gap": 40},
-                        [elem(n) for n in levels[lvl]])
-               for lvl in sorted(levels)]
+        cols = [
+            phantom(f"__lvl{lvl}", "", {"dir": "row", "gap": 40}, [elem(n) for n in levels[lvl]])
+            for lvl in sorted(levels)
+        ]
         root = phantom("__hierarchy", "", {"dir": "col", "gap": 60}, cols)
     else:  # mesh
         clusters = [c for c in spec.get("clusters", []) if c.get("id")]
-        peer_items = ([box(c["id"], c.get("label") or c["id"], fill=THEME.base,
-                           stroke=_accent_stroke(c.get("accent")))
-                       for c in clusters] if clusters else [elem(n) for n in nodes])
+        peer_items = (
+            [
+                box(
+                    c["id"],
+                    c.get("label") or c["id"],
+                    fill=THEME.base,
+                    stroke=_accent_stroke(c.get("accent")),
+                )
+                for c in clusters
+            ]
+            if clusters
+            else [elem(n) for n in nodes]
+        )
         n_items = max(1, len(peer_items))
         cols = 2 if n_items <= 4 else 3
         root = grid("__mesh", None, "", {"cols": cols, "gap": 50, "stroke": "none"}, peer_items)
@@ -498,8 +572,7 @@ def _build_exotic_tree(spec: dict, flat: bool, intent: str):
         s, t = e["from"], e["to"]
         if s in d.R and t in d.R:
             dash = str(e.get("style") or "").lower() == "dashed"
-            d.link(s, t, e.get("label") or "", dash=dash, rounded=rounded,
-                  stroke=_flow_color(e.get("flow")))
+            d.link(s, t, e.get("label") or "", dash=dash, rounded=rounded, stroke=_flow_color(e.get("flow")))
     return d, root
 
 
@@ -527,7 +600,8 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
         if str(spec.get("style_preset") or "").lower() == "refined":
             spec["_downgrade_note"] = (
                 f'layout_intent="{intent}" has no refined-preset layout — '
-                'rendered with style_preset="icon" instead.')
+                'rendered with style_preset="icon" instead.'
+            )
         spec["style_preset"] = "icon"
         return _build_exotic_tree(spec, flat, intent)
     if str(spec.get("style_preset") or "").lower() == "refined":
@@ -535,6 +609,7 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
         # composition — handles zones, edges and legend itself, same
         # (diagram, root) contract. flat is implied (always parent="1").
         from .refined import build_refined
+
         return build_refined(spec, plan=plan)
     cat = _load_catalog() if _load_catalog else None
     provider = str(spec.get("provider") or "aws").lower()
@@ -580,17 +655,20 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
         drop = set().union(*(_subtree_ids(cid) for cid in empty_roots))
         roots = [cid for cid in roots if cid not in drop]
         clusters = {cid: c for cid, c in clusters.items() if cid not in drop}
-        children_of = {cid: [ch for ch in kids if ch not in drop]
-                       for cid, kids in children_of.items() if cid not in drop}
+        children_of = {
+            cid: [ch for ch in kids if ch not in drop] for cid, kids in children_of.items() if cid not in drop
+        }
 
     intent = str(spec.get("layout_intent", "")).lower()
     horiz = not intent.startswith("top")
     # LAYERED mode (the production architecture look): stacked full-width tinted
     # layer bands + a grey cross-cutting sidebar. Chosen explicitly via
     # layout_intent="layered", or by default once there are 3+ top-level layers.
-    cross_roots = [cid for cid in roots
-                   if _CROSS_CUT.search(f"{clusters[cid].get('label') or ''} "
-                                        f"{clusters[cid].get('tier') or ''}")]
+    cross_roots = [
+        cid
+        for cid in roots
+        if _CROSS_CUT.search(f"{clusters[cid].get('label') or ''} {clusters[cid].get('tier') or ''}")
+    ]
     main_roots = [cid for cid in roots if cid not in cross_roots]
     plan = plan or {}
     if plan.get("band_order"):
@@ -598,6 +676,7 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
         # order), any band the plan didn't know about keeps its spec position.
         planned = [cid for cid in plan["band_order"] if cid in main_roots]
         main_roots = planned + [cid for cid in main_roots if cid not in planned]
+
     # Topology mode (Workstream 1): honour real containment nesting
     # (cloud>vpc>subnet>az) as concentric boundaries instead of flat bands — BUT
     # ONLY when a zone actually participates in a containment tree (has a zoned
@@ -607,8 +686,8 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
     # are treated as a no-op and render as today's tinted section bands.
     def _is_topology_node(cid: str) -> bool:
         c = clusters[cid]
-        return bool(c.get("zone")) and (
-            c.get("parent") in clusters or bool(children_of.get(cid)))
+        return bool(c.get("zone")) and (c.get("parent") in clusters or bool(children_of.get(cid)))
+
     has_nested_zones = any(_is_topology_node(cid) for cid in clusters)
     layered = (intent.startswith("layer") or len(main_roots) >= 3) and not has_nested_zones
 
@@ -617,14 +696,12 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
 
     def build_cluster(cid: str, depth: int = 0, band_i: int = 0, band_dir: str = "col"):
         c = clusters[cid]
-        label = c["label"] if c.get("number") is None else f'{c["number"]} · {c["label"]}'
-        sub_frames = [build_cluster(sub, depth + 1, band_dir=band_dir)
-                      for sub in children_of.get(cid, [])]
+        label = c["label"] if c.get("number") is None else f"{c['number']} · {c['label']}"
+        sub_frames = [build_cluster(sub, depth + 1, band_dir=band_dir) for sub in children_of.get(cid, [])]
         cnodes = nodes_by_cluster.get(cid, [])
         # Accent colour the member cards inherit (V2 §6.3): the band's identity
         # stroke at depth 0, the sub-frame accent when nested.
-        node_accent = (_band_tint(c, band_i)[1] if depth == 0
-                       else _accent_stroke(c.get("accent")))
+        node_accent = _band_tint(c, band_i)[1] if depth == 0 else _accent_stroke(c.get("accent"))
         items: list = []
         if cnodes:
             n_cards = len(cnodes)
@@ -656,8 +733,7 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
             # unwrapped 5-6 card row is ~2000px wide — the main driver of
             # ultra-wide strip layouts) — otherwise wrap on the usual threshold.
             forced_cols = plan.get("band_cols", {}).get(cid)
-            wants_wrap = (len(items) > wrap_at
-                          or (forced_cols and len(items) >= 4))
+            wants_wrap = len(items) > wrap_at or (forced_cols and len(items) >= 4)
             if wants_wrap and not children_of.get(cid):
                 cols = 2 if len(items) <= 8 else 3
                 if forced_cols:
@@ -667,12 +743,12 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
                 # the row-band grid's tight 22px gap has an edge label spill onto
                 # the neighbour card every time (a ~15-char label needs ~100px+).
                 grid_gap = 64 if is_sidebar else 22
-                items = [grid(f"{cid}__grid", None, "",
-                              {"cols": cols, "gap": grid_gap, "stroke": "none"}, items)]
+                items = [
+                    grid(f"{cid}__grid", None, "", {"cols": cols, "gap": grid_gap, "stroke": "none"}, items)
+                ]
         # In a horizontal layer band the flow reads left→right: direct nodes
         # first, sub-frames after; nested frames keep the frame-first order.
-        kids = (items + sub_frames) if (depth == 0 and band_dir == "row") \
-            else (sub_frames + items)
+        kids = (items + sub_frames) if (depth == 0 and band_dir == "row") else (sub_frames + items)
         # Topology boundary (Workstream 1): a cluster whose `zone` participates in a
         # real containment tree renders as a concentric nested frame styled by
         # boundary TYPE at EVERY depth — this wins over both the depth-0 band branch
@@ -683,40 +759,48 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
         zone = c.get("zone")
         if zone and _is_topology_node(cid):
             zdir = "row" if horiz else "col"
-            return zone_frame(cid, label, zone, provider, kids,
-                              opts={"dir": zdir, "gap": 24, "pad": 18})
+            return zone_frame(cid, label, zone, provider, kids, opts={"dir": zdir, "gap": 24, "pad": 18})
         gname = _aws_group_for_label(label) if provider == "aws" else None
         if gname:
             return group(cid, gname, label, {"dir": "col", "gap": 20}, kids)
         # Corner logos stay an on-prem/hybrid affordance: GCP/Azure diagrams keep
         # plain frames (no group stencils exist; the icons carry the identity).
-        logo = (_container_logo(cat, c)
-                if provider not in ("aws", "gcp", "google", "azure", "microsoft")
-                else None)
+        logo = (
+            _container_logo(cat, c)
+            if provider not in ("aws", "gcp", "google", "azure", "microsoft")
+            else None
+        )
         if depth == 0:
             # Top-level LAYER BAND: pale tint + matching stroke (Gemini/production
             # look) — the band carries the layer identity, icons carry the vendor.
             fill, stroke = _band_tint(c, band_i)
-            opts = {"dir": band_dir, "gap": 36 if band_dir == "row" else 18,
-                    "pad": 20, "fill": fill, "stroke": stroke, "fs": 13,
-                    "align": "top" if band_dir == "row" else "center",
-                    "justify": band_dir == "col"}
+            opts = {
+                "dir": band_dir,
+                "gap": 36 if band_dir == "row" else 18,
+                "pad": 20,
+                "fill": fill,
+                "stroke": stroke,
+                "fs": 13,
+                "align": "top" if band_dir == "row" else "center",
+                "justify": band_dir == "col",
+            }
             if logo:
                 opts["cornerIcon"] = logo
             return frame(cid, label.upper(), opts, kids)
         # Nested sub-frame: white card frame with an accent border. Inside a
         # horizontal band, small sub-frames flow row-wise to stay compact.
-        sub_dir = "row" if (depth == 1 and band_dir == "row" and len(kids) <= 3
-                            and not children_of.get(cid)) else "col"
-        opts = {"dir": sub_dir, "gap": 18, "fill": THEME.base,
-                "stroke": _accent_stroke(c.get("accent"))}
+        sub_dir = (
+            "row"
+            if (depth == 1 and band_dir == "row" and len(kids) <= 3 and not children_of.get(cid))
+            else "col"
+        )
+        opts = {"dir": sub_dir, "gap": 18, "fill": THEME.base, "stroke": _accent_stroke(c.get("accent"))}
         if logo:
             opts["cornerIcon"] = logo
         return frame(cid, label, opts, kids)
 
     if layered:
-        band_frames = [build_cluster(cid, 0, i, band_dir="row")
-                       for i, cid in enumerate(main_roots)]
+        band_frames = [build_cluster(cid, 0, i, band_dir="row") for i, cid in enumerate(main_roots)]
         band_frames += [build_node(n) for n in loose]
         grid_bands = intent.startswith("grid")
         if grid_bands and len(band_frames) > 1:
@@ -728,19 +812,23 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
             # 2-node security layer) gets extra whitespace around it — an accepted
             # trade-off for reusing the existing primitive instead of a bespoke
             # masonry packer.
-            bands_col = grid("__bands", None, "",
-                             {"cols": 2, "gap": _LAYER_LANE_GAP, "pad": 0, "stroke": "none"},
-                             band_frames)
+            bands_col = grid(
+                "__bands",
+                None,
+                "",
+                {"cols": 2, "gap": _LAYER_LANE_GAP, "pad": 0, "stroke": "none"},
+                band_frames,
+            )
         else:
-            bands_col = phantom("__bands", "", {"dir": "col", "gap": _LAYER_LANE_GAP, "pad": 0},
-                                band_frames)
+            bands_col = phantom("__bands", "", {"dir": "col", "gap": _LAYER_LANE_GAP, "pad": 0}, band_frames)
         if cross_roots:
-            side_frames = [build_cluster(cid, 0, i, band_dir="col")
-                           for i, cid in enumerate(cross_roots)]
-            sidebar = (side_frames[0] if len(side_frames) == 1 else
-                       phantom("__side", "", {"dir": "col", "gap": 26, "pad": 0}, side_frames))
-            root = phantom("__root", "", {"dir": "row", "gap": 90, "pad": 0},
-                           [sidebar, bands_col])
+            side_frames = [build_cluster(cid, 0, i, band_dir="col") for i, cid in enumerate(cross_roots)]
+            sidebar = (
+                side_frames[0]
+                if len(side_frames) == 1
+                else phantom("__side", "", {"dir": "col", "gap": 26, "pad": 0}, side_frames)
+            )
+            root = phantom("__root", "", {"dir": "row", "gap": 90, "pad": 0}, [sidebar, bands_col])
         else:
             root = bands_col
     else:
@@ -768,12 +856,14 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
     # knows one arrow stands for the whole fan-out.
     suppressed = {tuple(x) for x in plan.get("suppressed_edges", [])}
     rep_keys = {tuple(b.get("rep") or []) for b in plan.get("edge_bundles", [])}
-    rep_labels = {tuple(b.get("rep") or []): b.get("label")
-                  for b in plan.get("edge_bundles", [])
-                  if b.get("label")}
-    rep_pair_count = {tuple(b.get("rep") or []): len(b.get("members") or []) + 1
-                      for b in plan.get("edge_bundles", [])
-                      if b.get("kind") == "pair"}
+    rep_labels = {
+        tuple(b.get("rep") or []): b.get("label") for b in plan.get("edge_bundles", []) if b.get("label")
+    }
+    rep_pair_count = {
+        tuple(b.get("rep") or []): len(b.get("members") or []) + 1
+        for b in plan.get("edge_bundles", [])
+        if b.get("kind") == "pair"
+    }
     flows_seen: list[str] = []
     # diagram_types.py "sequence" preset (icon-preset path — the refined path
     # handles its own numbered-flow badges): number every edge in declared
@@ -803,16 +893,16 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
             fc = FLOW_COLORS.get(flow)
             if fc and flow not in flows_seen:
                 flows_seen.append(flow)
-            dash = (str(e.get("style") or "").lower() == "dashed"
-                    or bool(fc and fc[1] == "dashed"))
-            d.link(s, t, label,
-                   dash=dash, stroke=_flow_color(e.get("flow")))
+            dash = str(e.get("style") or "").lower() == "dashed" or bool(fc and fc[1] == "dashed")
+            d.link(s, t, label, dash=dash, stroke=_flow_color(e.get("flow")))
 
     # Standalone body legend: one row per flow colour actually used (the slide
     # chrome draws its own legend, so flat mode skips this).
     if not flat and len(flows_seen) >= 2:
-        entries = [(f.replace("_", " ").capitalize(), FLOW_COLORS[f][0],
-                    FLOW_COLORS[f][1] == "dashed") for f in flows_seen[:6]]
+        entries = [
+            (f.replace("_", " ").capitalize(), FLOW_COLORS[f][0], FLOW_COLORS[f][1] == "dashed")
+            for f in flows_seen[:6]
+        ]
         ly = root["y"] + root["h"] + 28
         d.legend(entries, (root["x"], ly))
         lr = d.R.get("__legend")
@@ -821,16 +911,15 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
     return d, root
 
 
-def render_spec_to_drawio(spec: dict, name: str = "Architecture",
-                          plan: dict | None = None) -> str:
+def render_spec_to_drawio(spec: dict, name: str = "Architecture", plan: dict | None = None) -> str:
     """Convenience: build from spec and return the full .drawio (mxfile) XML."""
     d, _ = build_tree(spec, plan=plan)
     return d.mxfile(name)
 
 
-def build_drawio_from_spec(spec: dict, name: str = "Architecture",
-                           flat: bool = False,
-                           plan: dict | None = None) -> tuple[str, dict]:
+def build_drawio_from_spec(
+    spec: dict, name: str = "Architecture", flat: bool = False, plan: dict | None = None
+) -> tuple[str, dict]:
     """Build a native .drawio from a render_spec and return (xml, stats).
 
     stats reports fidelity + routing quality for the caller to log: native icon /

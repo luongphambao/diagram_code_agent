@@ -101,7 +101,7 @@ async def _summary_and_logs(config: dict) -> tuple[str, list]:
         if isinstance(m, AIMessage):
             turn += 1
             logs.append({"t": 0, "type": "llm", "turn": turn})
-            for tc in (m.tool_calls or []):
+            for tc in m.tool_calls or []:
                 args = tc.get("args", {})
                 name = tc.get("name", "tool")
                 entry = {
@@ -127,7 +127,7 @@ async def _summary_and_logs(config: dict) -> tuple[str, list]:
     # "Model call limits exceeded: run limit (N/N)" — translate it so the user
     # sees an explanation instead of a cryptic internal counter.
     if summary.startswith("Model call limits exceeded"):
-        detail = summary[len("Model call limits exceeded:"):].strip()
+        detail = summary[len("Model call limits exceeded:") :].strip()
         summary = (
             "This run stopped at its safety call limit before finishing "
             f"({detail}). Partial artifacts are saved in the workspace — send a "

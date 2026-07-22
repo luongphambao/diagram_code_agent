@@ -51,3 +51,84 @@ path = "src"
 [tool.hatch.build.targets.wheel]
 include = ["src/**/*.py", "src/**/*.json", "src/**/*.xlsx", "src/**/*.png", "src/**/*.md"]
 sources = {"src" = ""}
+
+# --- Dev tooling (improvement plan §1.3) -------------------------------------
+# `uv run pytest`/`ruff`/`pyright` worked in this repo before these existed as
+# declared dependencies, from ad-hoc installs into the local .venv — a fresh
+# `uv sync --frozen` (as CI does) would NOT have installed them, silently
+# masking a broken lockfile behind the `|| uv sync` fallback CI used to have.
+# `uv add --dev` fixed the lockfile; see [dependency-groups] below (uv appends
+# that table itself — kept at the bottom of this file rather than moved, to
+# stay a clean no-op diff on top of what `uv add` wrote).
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Equivalent of manually exporting PYTHONPATH=src:src/domain/... before every
+# `pytest` invocation (see the memory note "Backend test harness") — the repo
+# imports domain modules as flat names (e.g. `import wbs_tools`) rather than
+# `domain.wbs.wbs_tools`, so every one of these directories must be on
+# sys.path directly.
+pythonpath = [
+    "src",
+    "src/domain/diagram",
+    "src/domain/deck",
+    "src/domain/reporting",
+    "src/domain/wbs",
+    "src/domain/validation",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/__pycache__/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+extend-exclude = ["agent_space", "outputs", "evals/*/results.json"]
+
+[tool.ruff.lint]
+# Deliberately narrow, bug-focused hard gate — NOT the full "ALL" ruleset or
+# even pyflakes' full F set. This is a large, pre-existing codebase with no
+# prior lint config: running the broader stylistic rule sets (pycodestyle
+# E4/E7, import sorting, unused-import F401 with 351 pre-existing hits) would
+# either block every future PR on unrelated pre-existing debt or require a
+# blind repo-wide autofix this pass didn't verify file-by-file. E9 (syntax
+# errors) and F821/F822/F823 (undefined names — real NameError-on-use bugs,
+# e.g. the `Path` forward-reference fixed in agent/middleware/phase_filter.py
+# alongside this config) are unambiguous correctness bugs regardless of house
+# style, so those are the CI-blocking set. See ci.yml's separate non-blocking
+# `ruff check` report step for the wider, unenforced rule set to tighten into
+# over time.
+select = ["E9", "F821", "F822", "F823"]
+
+[tool.pyright]
+include = ["src"]
+exclude = ["**/__pycache__", "**/agent_space", "**/outputs"]
+# Mirrors [tool.pytest.ini_options].pythonpath — without this, pyright can't
+# resolve the same flat domain imports pytest needs PYTHONPATH for for the
+# same reason (reportMissingImports on e.g. `import delivery_export`).
+extraPaths = [
+    "src",
+    "src/domain/diagram",
+    "src/domain/deck",
+    "src/domain/reporting",
+    "src/domain/wbs",
+    "src/domain/validation",
+]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.411",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.15.22",
+]

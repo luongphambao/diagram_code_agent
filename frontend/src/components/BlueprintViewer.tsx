@@ -23,7 +23,11 @@ const TIER_COLORS: Record<string, string> = {
   security: "text-red-400",
 };
 
-export default function BlueprintViewer({ blueprint, blueprintForDiagram, onGenerateDiagram }: BlueprintViewerProps) {
+export default function BlueprintViewer({
+  blueprint,
+  blueprintForDiagram,
+  onGenerateDiagram,
+}: BlueprintViewerProps) {
   const { pattern, pattern_rationale, audience, detail_level, layout_intent } = blueprint;
   const nodes = Array.isArray(blueprint.nodes) ? blueprint.nodes : [];
   const clusters = Array.isArray(blueprint.clusters) ? blueprint.clusters : [];
@@ -42,10 +46,10 @@ export default function BlueprintViewer({ blueprint, blueprintForDiagram, onGene
     (clusterMap[cid] = clusterMap[cid] ?? []).push(node);
   }
   const clusterLabels: Record<string, string> = Object.fromEntries(
-    clusters.map((c) => [c.id, c.label])
+    clusters.map((c) => [c.id, c.label]),
   );
   const clusterTiers: Record<string, string> = Object.fromEntries(
-    clusters.map((c) => [c.id, c.tier ?? "backend"])
+    clusters.map((c) => [c.id, c.tier ?? "backend"]),
   );
 
   const handleGenerate = () => {
@@ -59,7 +63,9 @@ export default function BlueprintViewer({ blueprint, blueprintForDiagram, onGene
       {/* Pattern badge + rationale */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <span className={`rounded-full border px-3 py-1 text-xs font-semibold capitalize ${patternClass}`}>
+          <span
+            className={`rounded-full border px-3 py-1 text-xs font-semibold capitalize ${patternClass}`}
+          >
             {pattern}
           </span>
           <span className="text-[11px] text-slate-600">architecture</span>
@@ -70,7 +76,10 @@ export default function BlueprintViewer({ blueprint, blueprintForDiagram, onGene
         {metadata.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {metadata.map((m) => (
-              <span key={m} className="rounded-md border border-white/8 bg-white/4 px-2 py-0.5 text-[10px] text-slate-500">
+              <span
+                key={m}
+                className="rounded-md border border-white/8 bg-white/4 px-2 py-0.5 text-[10px] text-slate-500"
+              >
                 {m}
               </span>
             ))}
@@ -80,14 +89,18 @@ export default function BlueprintViewer({ blueprint, blueprintForDiagram, onGene
 
       {/* Component clusters */}
       <div className="flex flex-col gap-3">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-700">Components</p>
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-700">
+          Components
+        </p>
         {Object.entries(clusterMap).map(([cid, cnodes]) => {
           const label = clusterLabels[cid] ?? cid;
           const tier = clusterTiers[cid] ?? "backend";
           const tierColor = TIER_COLORS[tier] ?? "text-slate-400";
           return (
             <div key={cid} className="rounded-xl border border-white/8 bg-white/4 px-3 py-2.5">
-              <p className={`mb-2 text-[10px] font-semibold uppercase tracking-widest ${tierColor}`}>
+              <p
+                className={`mb-2 text-[10px] font-semibold uppercase tracking-widest ${tierColor}`}
+              >
                 {label}
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -97,9 +110,7 @@ export default function BlueprintViewer({ blueprint, blueprintForDiagram, onGene
                     className="flex flex-col rounded-lg border border-white/8 bg-black/20 px-2.5 py-1.5"
                   >
                     <span className="text-[11px] font-medium text-slate-300">{node.label}</span>
-                    {node.tech && (
-                      <span className="text-[10px] text-slate-600">{node.tech}</span>
-                    )}
+                    {node.tech && <span className="text-[10px] text-slate-600">{node.tech}</span>}
                   </div>
                 ))}
               </div>
@@ -115,7 +126,10 @@ export default function BlueprintViewer({ blueprint, blueprintForDiagram, onGene
           { label: "Clusters", value: clusters.length },
           { label: "Flows", value: edges.length },
         ].map(({ label, value }) => (
-          <div key={label} className="rounded-xl border border-white/8 bg-white/4 px-3 py-2 text-center">
+          <div
+            key={label}
+            className="rounded-xl border border-white/8 bg-white/4 px-3 py-2 text-center"
+          >
             <p className="text-base font-bold text-amber-300">{value}</p>
             <p className="text-[10px] text-slate-600">{label}</p>
           </div>
@@ -128,7 +142,13 @@ export default function BlueprintViewer({ blueprint, blueprintForDiagram, onGene
           onClick={handleGenerate}
           className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-xs font-semibold text-white shadow-md shadow-blue-900/30 transition-all hover:bg-blue-500 active:scale-98"
         >
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            className="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <rect x="3" y="3" width="7" height="7" rx="1" />
             <rect x="14" y="3" width="7" height="7" rx="1" />
             <rect x="3" y="14" width="7" height="7" rx="1" />

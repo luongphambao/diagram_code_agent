@@ -9,7 +9,7 @@ from pydantic import BaseModel, model_validator
 
 def _wants_structural(ann) -> bool:
     """True if the annotation expects a model/list/dict (not a bare str/number)."""
-    for a in (_t.get_args(ann) or (ann,)):
+    for a in _t.get_args(ann) or (ann,):
         origin = _t.get_origin(a) or a
         if origin in (list, dict):
             return True
@@ -28,6 +28,7 @@ def _mimo_coerce_before(cls, values):
     if not isinstance(values, dict):
         return values
     from tool_coercion import coerce_model_values
+
     values = coerce_model_values(cls, values)
     for field_name in cls.model_fields:
         if field_name not in values:

@@ -28,9 +28,7 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 # python-pptx slide layout names that represent section dividers (no body expected).
-_SECTION_LAYOUTS = frozenset(
-    {"Cover-01", "Head Page", "Head-01", "BnK", "C2 -  Separator/ Dark", "Empty"}
-)
+_SECTION_LAYOUTS = frozenset({"Cover-01", "Head Page", "Head-01", "BnK", "C2 -  Separator/ Dark", "Empty"})
 
 _BNK_FONTS = frozenset({"Calibri", "Calibri Light"})
 
@@ -46,12 +44,17 @@ VISUAL_AUDIT_NAME = "deck_visual_audit.json"
 # Data models
 # ---------------------------------------------------------------------------
 
+
 class SlideIssue(BaseModel):
     slide_idx: int
     slide_title: str
     issue_type: Literal[
-        "title_too_long", "too_many_bullets", "table_overflow",
-        "tiny_font", "font_drift", "empty_body",
+        "title_too_long",
+        "too_many_bullets",
+        "table_overflow",
+        "tiny_font",
+        "font_drift",
+        "empty_body",
     ]
     severity: Literal["high", "medium", "low"]
     detail: str
@@ -65,13 +68,14 @@ class DeckVisualAuditResult(BaseModel):
     high_count: int = 0
     medium_count: int = 0
     low_count: int = 0
-    passed: bool = True          # True when no HIGH issues
-    threshold_score: int = 100   # 100 minus deductions (see _score)
+    passed: bool = True  # True when no HIGH issues
+    threshold_score: int = 100  # 100 minus deductions (see _score)
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _slide_title_text(slide) -> str:
     """Return the title placeholder text (empty string if absent)."""
@@ -129,6 +133,7 @@ def _score(issues: list[SlideIssue]) -> int:
 # Core audit
 # ---------------------------------------------------------------------------
 
+
 def audit_pptx_deterministic(pptx_path: str | Path) -> DeckVisualAuditResult:
     """Inspect every slide in *pptx_path* and return a structured audit result.
 
@@ -146,14 +151,19 @@ def audit_pptx_deterministic(pptx_path: str | Path) -> DeckVisualAuditResult:
         return DeckVisualAuditResult(
             pptx_path=str(pptx_path),
             slide_count=0,
-            issues=[SlideIssue(
-                slide_idx=0, slide_title="",
-                issue_type="title_too_long",  # sentinel
-                severity="high",
-                detail=f"Could not open PPTX: {exc}",
-                patch_hint=None,
-            )],
-            high_count=1, passed=False, threshold_score=0,
+            issues=[
+                SlideIssue(
+                    slide_idx=0,
+                    slide_title="",
+                    issue_type="title_too_long",  # sentinel
+                    severity="high",
+                    detail=f"Could not open PPTX: {exc}",
+                    patch_hint=None,
+                )
+            ],
+            high_count=1,
+            passed=False,
+            threshold_score=0,
         )
 
     slide_count = len(prs.slides)
@@ -164,29 +174,36 @@ def audit_pptx_deterministic(pptx_path: str | Path) -> DeckVisualAuditResult:
 
         # --- title_too_long -----------------------------------------------
         if title_text and len(title_text) > _MAX_TITLE_LEN:
-            issues.append(SlideIssue(
-                slide_idx=idx, slide_title=title_text,
-                issue_type="title_too_long", severity="medium",
-                detail=f"Title has {len(title_text)} chars (max {_MAX_TITLE_LEN}).",
-                patch_hint=f"Truncate to {_MAX_TITLE_LEN} chars.",
-            ))
+            issues.append(
+                SlideIssue(
+                    slide_idx=idx,
+                    slide_title=title_text,
+                    issue_type="title_too_long",
+                    severity="medium",
+                    detail=f"Title has {len(title_text)} chars (max {_MAX_TITLE_LEN}).",
+                    patch_hint=f"Truncate to {_MAX_TITLE_LEN} chars.",
+                )
+            )
 
         # --- too_many_bullets (body placeholder) ---------------------------
         if not is_section:
             body_paras, has_body = _ph_body_paragraphs(slide)
             non_empty_paras = [p for p in body_paras if p.text.strip()]
             if has_body and len(non_empty_paras) > _MAX_BULLETS:
-                issues.append(SlideIssue(
-                    slide_idx=idx, slide_title=title_text,
-                    issue_type="too_many_bullets", severity="medium",
-                    detail=f"Body has {len(non_empty_paras)} paragraphs (max {_MAX_BULLETS}).",
-                    patch_hint=f"Truncate to {_MAX_BULLETS} paragraphs.",
-                ))
+                issues.append(
+                    SlideIssue(
+                        slide_idx=idx,
+                        slide_title=title_text,
+                        issue_type="too_many_bullets",
+                        severity="medium",
+                        detail=f"Body has {len(non_empty_paras)} paragraphs (max {_MAX_BULLETS}).",
+                        patch_hint=f"Truncate to {_MAX_BULLETS} paragraphs.",
+                    )
+                )
             elif not has_body and not is_section:
                 # Check if there's any text-bearing shape at all
                 has_text = any(
-                    shape.has_text_frame and shape.text_frame.text.strip()
-                    for shape in slide.shapes
+                    shape.has_text_frame and shape.text_frame.text.strip() for shape in slide.shapes
                 )
                 if not has_text:
                     # Check for image/table — those are OK
@@ -195,12 +212,16 @@ def audit_pptx_deterministic(pptx_path: str | Path) -> DeckVisualAuditResult:
                         for shape in slide.shapes
                     )
                     if not has_content:
-                        issues.append(SlideIssue(
-                            slide_idx=idx, slide_title=title_text,
-                            issue_type="empty_body", severity="low",
-                            detail="Content slide has no body text, image, or table.",
-                            patch_hint="Add content or convert to a section slide.",
-                        ))
+                        issues.append(
+                            SlideIssue(
+                                slide_idx=idx,
+                                slide_title=title_text,
+                                issue_type="empty_body",
+                                severity="low",
+                                detail="Content slide has no body text, image, or table.",
+                                patch_hint="Add content or convert to a section slide.",
+                            )
+                        )
 
         # --- table_overflow -----------------------------------------------
         for shape in slide.shapes:
@@ -210,12 +231,16 @@ def audit_pptx_deterministic(pptx_path: str | Path) -> DeckVisualAuditResult:
                         for cell in row.cells:
                             cell_text = cell.text_frame.text if cell.text_frame else ""
                             if len(cell_text) > _MAX_CELL_LEN:
-                                issues.append(SlideIssue(
-                                    slide_idx=idx, slide_title=title_text,
-                                    issue_type="table_overflow", severity="medium",
-                                    detail=f"Table cell has {len(cell_text)} chars (max {_MAX_CELL_LEN}).",
-                                    patch_hint=f"Clip cell text to {_MAX_CELL_LEN} chars.",
-                                ))
+                                issues.append(
+                                    SlideIssue(
+                                        slide_idx=idx,
+                                        slide_title=title_text,
+                                        issue_type="table_overflow",
+                                        severity="medium",
+                                        detail=f"Table cell has {len(cell_text)} chars (max {_MAX_CELL_LEN}).",
+                                        patch_hint=f"Clip cell text to {_MAX_CELL_LEN} chars.",
+                                    )
+                                )
             except Exception:  # noqa: BLE001
                 pass
 
@@ -230,20 +255,28 @@ def audit_pptx_deterministic(pptx_path: str | Path) -> DeckVisualAuditResult:
                         if run.font.size is not None:
                             pt = run.font.size.pt
                             if pt < _MIN_FONT_PT:
-                                issues.append(SlideIssue(
-                                    slide_idx=idx, slide_title=title_text,
-                                    issue_type="tiny_font", severity="high",
-                                    detail=f"Run '{run.text[:30]}' has font size {pt:.1f}pt (min {_MIN_FONT_PT}pt).",
-                                    patch_hint="Increase font size to at least 10pt.",
-                                ))
+                                issues.append(
+                                    SlideIssue(
+                                        slide_idx=idx,
+                                        slide_title=title_text,
+                                        issue_type="tiny_font",
+                                        severity="high",
+                                        detail=f"Run '{run.text[:30]}' has font size {pt:.1f}pt (min {_MIN_FONT_PT}pt).",
+                                        patch_hint="Increase font size to at least 10pt.",
+                                    )
+                                )
                         # font_drift (only flag when explicitly set, not inherited)
                         if run.font.name and run.font.name not in _BNK_FONTS:
-                            issues.append(SlideIssue(
-                                slide_idx=idx, slide_title=title_text,
-                                issue_type="font_drift", severity="low",
-                                detail=f"Run uses '{run.font.name}' (expected Calibri / Calibri Light).",
-                                patch_hint="Reset font to Calibri.",
-                            ))
+                            issues.append(
+                                SlideIssue(
+                                    slide_idx=idx,
+                                    slide_title=title_text,
+                                    issue_type="font_drift",
+                                    severity="low",
+                                    detail=f"Run uses '{run.font.name}' (expected Calibri / Calibri Light).",
+                                    patch_hint="Reset font to Calibri.",
+                                )
+                            )
             except Exception:  # noqa: BLE001
                 pass
 
@@ -265,6 +298,7 @@ def audit_pptx_deterministic(pptx_path: str | Path) -> DeckVisualAuditResult:
 # ---------------------------------------------------------------------------
 # Targeted patcher
 # ---------------------------------------------------------------------------
+
 
 def patch_pptx_overflow(pptx_path: str | Path, issues: list[SlideIssue]) -> str:
     """Apply surgical text fixes for layout issues; write *out_patched.pptx*.
@@ -321,9 +355,11 @@ def patch_pptx_overflow(pptx_path: str | Path, issues: list[SlideIssue]) -> str:
                 _, has_body = _ph_body_paragraphs(slide)
                 if has_body:
                     for shape in slide.shapes:
-                        if (shape.has_text_frame
-                                and shape.placeholder_format is not None
-                                and shape.placeholder_format.idx == 1):
+                        if (
+                            shape.has_text_frame
+                            and shape.placeholder_format is not None
+                            and shape.placeholder_format.idx == 1
+                        ):
                             paras = shape.text_frame.paragraphs
                             non_empty = [p for p in paras if p.text.strip()]
                             if len(non_empty) > _MAX_BULLETS:
@@ -369,6 +405,7 @@ def patch_pptx_overflow(pptx_path: str | Path, issues: list[SlideIssue]) -> str:
 # Persistence helpers
 # ---------------------------------------------------------------------------
 
+
 def write_visual_audit(result: DeckVisualAuditResult, workspace: Path) -> None:
     path = Path(workspace) / VISUAL_AUDIT_NAME
     path.write_text(
@@ -382,9 +419,7 @@ def load_visual_audit(workspace: Path) -> DeckVisualAuditResult | None:
     if not path.exists():
         return None
     try:
-        return DeckVisualAuditResult.model_validate(
-            json.loads(path.read_text(encoding="utf-8"))
-        )
+        return DeckVisualAuditResult.model_validate(json.loads(path.read_text(encoding="utf-8")))
     except Exception:  # noqa: BLE001
         return None
 
@@ -392,6 +427,7 @@ def load_visual_audit(workspace: Path) -> DeckVisualAuditResult | None:
 # ---------------------------------------------------------------------------
 # Human-readable summary
 # ---------------------------------------------------------------------------
+
 
 def format_visual_audit(result: DeckVisualAuditResult) -> str:
     status = "PASSED" if result.passed else "ISSUES FOUND"
@@ -405,9 +441,7 @@ def format_visual_audit(result: DeckVisualAuditResult) -> str:
     else:
         for iss in result.issues:
             icon = {"high": "🔴", "medium": "🟡", "low": "⚪"}.get(iss.severity, "")
-            lines.append(
-                f"  {icon} slide {iss.slide_idx + 1} [{iss.issue_type}]: {iss.detail}"
-            )
+            lines.append(f"  {icon} slide {iss.slide_idx + 1} [{iss.issue_type}]: {iss.detail}")
             if iss.patch_hint:
                 lines.append(f"      → {iss.patch_hint}")
     return "\n".join(lines)

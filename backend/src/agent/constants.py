@@ -9,9 +9,9 @@ import os
 
 from backends import SKILLS_DIR
 
-DEFAULT_MODEL    = "mimo-v2.5"
-DEFAULT_STYLE    = "pretty"          # "pretty" (prettygraph) or "plain" (raw diagrams)
-RECURSION_LIMIT  = 450               # max agent steps per run (used by the server)
+DEFAULT_MODEL = "mimo-v2.5"
+DEFAULT_STYLE = "pretty"  # "pretty" (prettygraph) or "plain" (raw diagrams)
+RECURSION_LIMIT = 450  # max agent steps per run (used by the server)
 # Shared across main + every delegated subagent (task-tool invocations propagate
 # the same config, so their steps count against this same budget) - ~2 graph
 # steps per model call. Raised from 160 after a real run (main 46 calls +
@@ -20,7 +20,7 @@ RECURSION_LIMIT  = 450               # max agent steps per run (used by the serv
 # over that failing case; per-agent ModelCallLimitMiddleware run_limits (main 120,
 # icon/critic/drawer 40 each, wbs 120, ppt 60) still cap any single runaway agent
 # gracefully well before this shared ceiling is reached in a normal request.
-REASONING_EFFORT = "medium"          # used as fallback when no config.yaml present
+REASONING_EFFORT = "medium"  # used as fallback when no config.yaml present
 
 MAIN_SKILL_PATHS = [
     (SKILLS_DIR / "diagrams-as-code").as_posix(),
@@ -46,7 +46,7 @@ PPT_GENERATOR_SKILL_PATHS = [
 # huge → drop every clearable old result, keep only the recent ones) because the
 # agent re-reads anything it still needs from disk. (deepagents already bundles a
 # SummarizationMiddleware as the long-run safety net.)
-CONTEXT_TRIGGER_TOKENS = 30_000   # main context is lean (no images/icons), can be higher
+CONTEXT_TRIGGER_TOKENS = 30_000  # main context is lean (no images/icons), can be higher
 
 # Per-run model-call caps: after this many model calls in one run the agent
 # exits cleanly ("Model call limits exceeded") instead of looping forever.
@@ -60,8 +60,8 @@ CONTEXT_TRIGGER_TOKENS = 30_000   # main context is lean (no images/icons), can 
 # Lowered 120→80 (main) after the retry-storm fixes (arg coercion, pre-flight
 # audit, code-driven WBS tail): the happy path needs far fewer calls now, and a
 # lower ceiling stops a residual runaway ~1.2M input tokens sooner.
-_RUN_CALL_LIMIT = int(os.getenv("RUN_CALL_LIMIT", "80"))          # main only
-_CRITIC_CALL_LIMIT = int(os.getenv("CRITIC_CALL_LIMIT", "40"))    # inspect+critique only
+_RUN_CALL_LIMIT = int(os.getenv("RUN_CALL_LIMIT", "80"))  # main only
+_CRITIC_CALL_LIMIT = int(os.getenv("CRITIC_CALL_LIMIT", "40"))  # inspect+critique only
 
 # Per-stage (per-subagent) model-call budgets (§4.10 "per-stage budget"). Each
 # subagent is a separate run with its own ceiling so a single stage can't burn
@@ -79,7 +79,7 @@ _CRITIC_CALL_LIMIT = int(os.getenv("CRITIC_CALL_LIMIT", "40"))    # inspect+crit
 # on legitimate NOT_FOUND / brand-logo retries (stubborn off-catalog labels)
 # without reopening the blowout path. Env-overridable.
 _ICON_CALL_LIMIT = int(os.getenv("ICON_CALL_LIMIT", "40"))
-_DRAWER_CALL_LIMIT = int(os.getenv("DRAWER_CALL_LIMIT", "40"))    # ~2.5x the ≤15-call budget
+_DRAWER_CALL_LIMIT = int(os.getenv("DRAWER_CALL_LIMIT", "40"))  # ~2.5x the ≤15-call budget
 # wbs_planner: 60 is ample now that the deterministic tail is one finalize_wbs
 # call (Pass 2 ≈ N add_wbs_items + 1).
 _WBS_CALL_LIMIT = int(os.getenv("WBS_CALL_LIMIT", "60"))
@@ -87,7 +87,7 @@ _PPT_CALL_LIMIT = int(os.getenv("PPT_CALL_LIMIT", "60"))
 
 # Early-warning thresholds: log at WARNING level so runaway traces surface in
 # logs before they show up in LangSmith. Both are env-tunable.
-_WARN_CALL_COUNT   = int(os.getenv("WARN_CALL_COUNT", "30"))
+_WARN_CALL_COUNT = int(os.getenv("WARN_CALL_COUNT", "30"))
 _WARN_INPUT_TOKENS = int(os.getenv("WARN_INPUT_TOKENS", "80000"))
 
 # Main agent has ~42 tool schemas every call (34 MAIN_TOOLS + 6 filesystem
@@ -99,12 +99,26 @@ _WARN_INPUT_TOKENS = int(os.getenv("WARN_INPUT_TOKENS", "80000"))
 # the model actually needed.
 _MAIN_TOOL_SELECTOR = os.getenv("MAIN_TOOL_SELECTOR", "1").strip().lower() not in ("0", "false", "no")
 _MAIN_TOOL_SELECTOR_ALWAYS_INCLUDE = [
-    "read_file", "ls", "glob", "grep", "task", "write_todos",
+    "read_file",
+    "ls",
+    "glob",
+    "grep",
+    "task",
+    "write_todos",
     # Stage and approval gates are control-flow tools. If the selector drops one,
     # the model can get stuck saying the required gate is unavailable.
-    "analyze_architecture_requirements", "propose_diagram_brief",
-    "propose_tech_stack", "propose_blueprint", "finalize_diagram",
-    "generate_pdf_report", "propose_deck_plan", "generate_ppt_proposal",
-    "send_email", "create_client_meeting", "propose_wbs_skeleton",
-    "propose_wbs", "export_wbs_excel", "export_to_delivery",
+    "analyze_architecture_requirements",
+    "propose_diagram_brief",
+    "propose_tech_stack",
+    "propose_blueprint",
+    "finalize_diagram",
+    "generate_pdf_report",
+    "propose_deck_plan",
+    "generate_ppt_proposal",
+    "send_email",
+    "create_client_meeting",
+    "propose_wbs_skeleton",
+    "propose_wbs",
+    "export_wbs_excel",
+    "export_to_delivery",
 ]

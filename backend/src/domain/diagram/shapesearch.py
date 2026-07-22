@@ -13,6 +13,7 @@ Programmatic usage:
   results = search_shapes("dynamodb", limit=5)
   # -> [{"title": "DynamoDB", "style": "...", "w": 78, "h": 78}, ...]
 """
+
 import argparse
 import gzip
 import json
@@ -21,8 +22,8 @@ import re
 import sys
 
 INDEX = os.path.join(os.path.dirname(__file__), "data", "shape-index.json.gz")
-_SOUNDEX_MAP = "01230120022455012603010202"   # A..Z digit codes
-_TRAIL = re.compile(r"\.*\d*$")               # strip trailing digits/dots before soundex
+_SOUNDEX_MAP = "01230120022455012603010202"  # A..Z digit codes
+_TRAIL = re.compile(r"\.*\d*$")  # strip trailing digits/dots before soundex
 
 _shapes_cache: list | None = None
 _tag_map_cache: dict | None = None
@@ -131,10 +132,13 @@ def search(shapes: list, tag_map: dict, query: str, limit: int = 10) -> list[dic
         toks = set(re.split(r"[^a-z0-9]+", shapes[idx].get("title", "").casefold()))
         return len(term_set & toks)
 
-    ranked = sorted(scores, key=lambda i: (-scores[i], -title_hits(i),
-                                           shapes[i].get("title", "").casefold(), i))
-    return [{"style": shapes[i]["style"], "w": shapes[i]["w"],
-             "h": shapes[i]["h"], "title": shapes[i]["title"]} for i in ranked[:limit]]
+    ranked = sorted(
+        scores, key=lambda i: (-scores[i], -title_hits(i), shapes[i].get("title", "").casefold(), i)
+    )
+    return [
+        {"style": shapes[i]["style"], "w": shapes[i]["w"], "h": shapes[i]["h"], "title": shapes[i]["title"]}
+        for i in ranked[:limit]
+    ]
 
 
 def search_shapes(query: str, limit: int = 10) -> list[dict]:

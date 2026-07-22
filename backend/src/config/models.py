@@ -67,7 +67,9 @@ def make_llm(model: str):
     if not api_key:
         logger.warning(
             "API key env var %r is not set (required for model %r / provider %r)",
-            api_key_env, model, provider_name,
+            api_key_env,
+            model,
+            provider_name,
         )
 
     if provider_name == "anthropic":

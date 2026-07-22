@@ -98,6 +98,7 @@ def _data_uri(path: Path) -> str:
     encoded = base64.b64encode(path.read_bytes()).decode("ascii")
     return f"data:{mime};base64,{encoded}"
 
+
 def _read_text_file(path: Path, *, limit: int = 18000) -> str:
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
@@ -108,12 +109,14 @@ def _read_text_file(path: Path, *, limit: int = 18000) -> str:
         return text[:limit].rstrip()
     return text
 
+
 def _clean_htmlish(value: Any) -> str:
     text = str(value or "")
     text = re.sub(r"(?i)<br\s*/?>", "\n", text)
     text = re.sub(r"<[^>]+>", " ", text)
     text = html_lib.unescape(text)
     return " ".join(text.split())
+
 
 def _drawio_label_parts(value: Any) -> tuple[str, str]:
     text = str(value or "")
@@ -128,6 +131,7 @@ def _drawio_label_parts(value: Any) -> tuple[str, str]:
         return cleaned, ""
     return lines[0], " ".join(lines[1:])
 
+
 def _fallback_requirements(workspace: Path) -> dict[str, Any]:
     raw = _read_text_file(workspace / "requirements.md")
     if not raw:
@@ -137,7 +141,7 @@ def _fallback_requirements(workspace: Path) -> dict[str, Any]:
     text = re.sub(r"\s+", " ", text).strip()
     first_clause = re.search(r"\b1\.1\b\s+", text)
     if first_clause:
-        text = text[first_clause.start():]
+        text = text[first_clause.start() :]
     sentences = [
         re.sub(r"^\d+(?:\.\d+)*\s+", "", s.strip(" ;"))
         for s in re.split(r"(?<=[.!?])\s+", text)
@@ -153,15 +157,39 @@ def _fallback_requirements(workspace: Path) -> dict[str, Any]:
             objective = sentence
             break
     if not objective:
-        objective = next((s for s in sentences if not any(s.lower().startswith(p) for p in skip_prefixes)), "")
+        objective = next(
+            (s for s in sentences if not any(s.lower().startswith(p) for p in skip_prefixes)), ""
+        )
 
     nfr_keywords = (
-        "security", "availability", "support", "maintenance", "testing", "acceptance",
-        "incident", "documentation", "environment", "responsive", "compatible", "audit",
+        "security",
+        "availability",
+        "support",
+        "maintenance",
+        "testing",
+        "acceptance",
+        "incident",
+        "documentation",
+        "environment",
+        "responsive",
+        "compatible",
+        "audit",
     )
     functional_keywords = (
-        "shall", "should", "must", "support", "provide", "allow", "cover", "develop",
-        "integrat", "implement", "module", "application", "portal", "mobile",
+        "shall",
+        "should",
+        "must",
+        "support",
+        "provide",
+        "allow",
+        "cover",
+        "develop",
+        "integrat",
+        "implement",
+        "module",
+        "application",
+        "portal",
+        "mobile",
     )
     functional: list[str] = []
     non_functional: list[str] = []
@@ -179,9 +207,12 @@ def _fallback_requirements(workspace: Path) -> dict[str, Any]:
         "objective": _clip_text(objective, 500),
         "functional_requirements": functional[:10],
         "non_functional_requirements": non_functional[:8],
-        "assumptions": ["Canonical brief was unavailable; requirements were summarized from requirements.md."],
+        "assumptions": [
+            "Canonical brief was unavailable; requirements were summarized from requirements.md."
+        ],
         "layout_constraints": ["Report assembled from rendered workspace artifacts."],
     }
+
 
 def _drawio_summary(workspace: Path) -> dict[str, Any]:
     path = workspace / "out.drawio"
@@ -213,12 +244,14 @@ def _drawio_summary(workspace: Path) -> dict[str, Any]:
             continue
         if cid in excluded_ids or cid.startswith(excluded_prefixes):
             continue
-        components.append({
-            "id": cid,
-            "label": label,
-            "tech": tech,
-            "cluster": "rendered_components",
-        })
+        components.append(
+            {
+                "id": cid,
+                "label": label,
+                "tech": tech,
+                "cluster": "rendered_components",
+            }
+        )
 
     for cell in root.iter("mxCell"):
         if cell.get("edge") != "1":
@@ -227,12 +260,14 @@ def _drawio_summary(workspace: Path) -> dict[str, Any]:
         target = str(cell.get("target") or "")
         if not source and not target:
             continue
-        edge_rows.append({
-            "from": labels_by_id.get(source, source),
-            "to": labels_by_id.get(target, target),
-            "label": _clean_htmlish(cell.get("value")) or "connection",
-            "protocol": "",
-        })
+        edge_rows.append(
+            {
+                "from": labels_by_id.get(source, source),
+                "to": labels_by_id.get(target, target),
+                "label": _clean_htmlish(cell.get("value")) or "connection",
+                "protocol": "",
+            }
+        )
 
     title = labels_by_id.get("__title") or _clean_htmlish(diagram_name)
     return {
@@ -242,6 +277,7 @@ def _drawio_summary(workspace: Path) -> dict[str, Any]:
         "edges": edge_rows,
         "labels": list(labels_by_id.values()),
     }
+
 
 def _infer_analysis(
     analysis: dict[str, Any],
@@ -274,14 +310,19 @@ def _infer_analysis(
     provider = "aws" if (" aws " in f" {lower} " or "amazon " in lower) else ""
     node_count = native_stats.get("nodes") or len(drawio.get("components") or [])
     return {
-        "application_type": "enterprise_web_mobile_platform" if "mobile" in lower and "web" in lower else "architecture_diagram",
+        "application_type": "enterprise_web_mobile_platform"
+        if "mobile" in lower and "web" in lower
+        else "architecture_diagram",
         "scale_level": "large" if isinstance(node_count, int) and node_count >= 25 else "",
-        "security_level": "high" if any(k in lower for k in ("waf", "kms", "security hub", "guardduty", "siem")) else "",
+        "security_level": "high"
+        if any(k in lower for k in ("waf", "kms", "security hub", "guardduty", "siem"))
+        else "",
         "provider_preference": provider,
         "detected_capabilities": capabilities[:12],
         "constraints": _as_list(brief.get("layout_constraints"))[:4],
         "recommended_density": "detailed" if isinstance(node_count, int) and node_count >= 25 else "standard",
     }
+
 
 def _infer_tech_stack(tech_stack: Any, drawio: dict[str, Any]) -> Any:
     if _tech_items(tech_stack):
@@ -304,13 +345,16 @@ def _infer_tech_stack(tech_stack: Any, drawio: dict[str, Any]) -> Any:
     )
     for layer, choice, needles in candidates:
         if any(needle in lower for needle in needles):
-            inferred.append({
-                "layer": layer,
-                "choice": choice,
-                "rationale": "Inferred from rendered diagram labels because tech_stack.json was not available.",
-                "alternatives": [],
-            })
+            inferred.append(
+                {
+                    "layer": layer,
+                    "choice": choice,
+                    "rationale": "Inferred from rendered diagram labels because tech_stack.json was not available.",
+                    "alternatives": [],
+                }
+            )
     return inferred
+
 
 def _merge_fallbacks(
     workspace: Path,
@@ -333,7 +377,9 @@ def _merge_fallbacks(
         blueprint = {
             "slide_title": drawio.get("diagram_name") or drawio.get("title") or "Architecture Blueprint",
             "slide_kicker": "Client Architecture Report",
-            "diagram_title": drawio.get("title") or drawio.get("diagram_name") or "Approved Architecture Diagram",
+            "diagram_title": drawio.get("title")
+            or drawio.get("diagram_name")
+            or "Approved Architecture Diagram",
             "brand": "",
             "pattern": "rendered_architecture",
             "density": "detailed" if (native_stats.get("nodes") or 0) >= 25 else "standard",
@@ -429,15 +475,18 @@ def _tech_items(tech_stack: Any) -> list[dict[str, Any]]:
                 # Normalize alternatives: list[str] or list[dict]
                 alts = item.get("alternatives", [])
                 item["alternatives_display"] = [
-                    a.get("name", str(a)) if isinstance(a, dict) else str(a)
-                    for a in alts
+                    a.get("name", str(a)) if isinstance(a, dict) else str(a) for a in alts
                 ]
                 item["alternatives_detail"] = [
-                    a if isinstance(a, dict) else {"name": str(a), "why_rejected": ""}
-                    for a in alts
+                    a if isinstance(a, dict) else {"name": str(a), "why_rejected": ""} for a in alts
                 ]
             else:
-                item = {"layer": layer, "choice": value, "alternatives_display": [], "alternatives_detail": []}
+                item = {
+                    "layer": layer,
+                    "choice": value,
+                    "alternatives_display": [],
+                    "alternatives_detail": [],
+                }
             items.append(item)
         return items
     return []
@@ -500,7 +549,9 @@ def _traceability(brief: dict[str, Any], blueprint: dict[str, Any]) -> list[dict
         for m in _as_list(blueprint.get("nfr_mapping"))
         if isinstance(m, dict)
     }
-    fallback = ", ".join([x for x in (cluster_names[:2] + component_names[:3]) if x]) or "Architecture blueprint"
+    fallback = (
+        ", ".join([x for x in (cluster_names[:2] + component_names[:3]) if x]) or "Architecture blueprint"
+    )
 
     candidates = component_names + cluster_names + key_decisions
     rows = []
@@ -537,16 +588,30 @@ def _risk_items(
 ) -> list[dict[str, str]]:
     risks = []
     for concern in _as_list(analysis.get("concerns"))[:6]:
-        risks.append({"type": "Architecture Concern", "detail": str(concern), "recommendation": "Validate during detailed design."})
+        risks.append(
+            {
+                "type": "Architecture Concern",
+                "detail": str(concern),
+                "recommendation": "Validate during detailed design.",
+            }
+        )
     for assumption in _as_list(brief.get("assumptions"))[:6]:
-        risks.append({"type": "Assumption", "detail": str(assumption), "recommendation": "Confirm with stakeholders before implementation."})
+        risks.append(
+            {
+                "type": "Assumption",
+                "detail": str(assumption),
+                "recommendation": "Confirm with stakeholders before implementation.",
+            }
+        )
     for finding in critique[:5]:
         if isinstance(finding, dict):
             risks.append(
                 {
                     "type": f"Diagram Review: {finding.get('severity', 'note')}",
                     "detail": str(finding.get("title") or finding.get("detail") or "Review finding"),
-                    "recommendation": str(finding.get("fix_suggestion") or "Track as a diagram quality note."),
+                    "recommendation": str(
+                        finding.get("fix_suggestion") or "Track as a diagram quality note."
+                    ),
                 }
             )
     if not blueprint.get("key_decisions"):
@@ -582,12 +647,14 @@ def _well_architected_items(blueprint: dict[str, Any]) -> list[dict[str, Any]]:
             status = "⚠ Gap declared"
         else:
             status = "✗ Not covered"
-        rows.append({
-            "pillar": label,
-            "addressed_by": ", ".join(str(a) for a in addressed[:6]) or "—",
-            "gaps": "; ".join(str(g) for g in gaps[:3]) or "—",
-            "status": status,
-        })
+        rows.append(
+            {
+                "pillar": label,
+                "addressed_by": ", ".join(str(a) for a in addressed[:6]) or "—",
+                "gaps": "; ".join(str(g) for g in gaps[:3]) or "—",
+                "status": status,
+            }
+        )
     return rows
 
 
@@ -625,10 +692,14 @@ def _executive_points(
                 f"The solution stack covers {len(tech_items)} implementation layer(s) with documented trade-offs; overall {cost_posture}."
             )
         else:
-            points.append(f"The solution stack covers {len(tech_items)} implementation layer(s) with documented rationale and alternatives.")
+            points.append(
+                f"The solution stack covers {len(tech_items)} implementation layer(s) with documented rationale and alternatives."
+            )
     decisions = _as_list(blueprint.get("key_decisions"))
     points.extend(str(x) for x in decisions[:3])
-    return points[:7] or ["The report packages the approved architecture diagram and planning artifacts for customer review."]
+    return points[:7] or [
+        "The report packages the approved architecture diagram and planning artifacts for customer review."
+    ]
 
 
 _PROVIDER_WAF_NAMES: dict[str, str] = {
@@ -641,11 +712,7 @@ _PROVIDER_WAF_NAMES: dict[str, str] = {
 
 
 def _waf_title(analysis: dict[str, Any], brief: dict[str, Any]) -> str:
-    provider = (
-        (analysis.get("provider_preference") or brief.get("provider_preference") or "")
-        .lower()
-        .strip()
-    )
+    provider = (analysis.get("provider_preference") or brief.get("provider_preference") or "").lower().strip()
     return _PROVIDER_WAF_NAMES.get(provider, "Well-Architected Framework Review")
 
 
@@ -718,16 +785,13 @@ def assemble_report_data(
     # Extract new wrapped-shape fields before flattening for display
     tech_assumptions = tech_stack.get("assumptions") if isinstance(tech_stack, dict) else None
     tech_scaling_roadmap = tech_stack.get("scaling_roadmap") if isinstance(tech_stack, dict) else None
-    tech_total_cost = tech_stack.get("estimated_total_monthly_cost_usd") if isinstance(tech_stack, dict) else None
+    tech_total_cost = (
+        tech_stack.get("estimated_total_monthly_cost_usd") if isinstance(tech_stack, dict) else None
+    )
     tech = _tech_items(tech_stack)
     artifacts = record_artifact_inventory(workspace)
 
-    report_title = (
-        title
-        or blueprint.get("slide_title")
-        or brief.get("objective")
-        or "Architecture Blueprint"
-    )
+    report_title = title or blueprint.get("slide_title") or brief.get("objective") or "Architecture Blueprint"
     report_subtitle = subtitle or blueprint.get("slide_kicker") or "Client Architecture Report"
     report_brand = brand or blueprint.get("brand") or ""
 
@@ -754,7 +818,9 @@ def assemble_report_data(
         "components_by_cluster": _components_by_cluster(blueprint),
         "traceability": traceability_rows,
         "coverage_pct": round(100 * covered_count / total_count) if total_count else 0,
-        "coverage_summary": f"{covered_count}/{total_count} requirements covered" if total_count else "No requirements",
+        "coverage_summary": f"{covered_count}/{total_count} requirements covered"
+        if total_count
+        else "No requirements",
         "well_architected": _well_architected_items(blueprint),
         "waf_title": _waf_title(analysis, brief),
         "nfr_mapping": _as_list(blueprint.get("nfr_mapping")),

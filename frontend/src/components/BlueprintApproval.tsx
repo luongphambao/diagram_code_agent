@@ -26,11 +26,13 @@ const TIER_DOT: Record<string, string> = {
   security: "bg-red-400",
 };
 
-type KeyDecision = string | {
-  decision?: unknown;
-  rationale?: unknown;
-  tradeoffs?: unknown;
-};
+type KeyDecision =
+  | string
+  | {
+      decision?: unknown;
+      rationale?: unknown;
+      tradeoffs?: unknown;
+    };
 
 function textValue(value: unknown): string {
   if (typeof value === "string") return value;
@@ -43,7 +45,11 @@ function tradeoffText(value: unknown): string {
   return textValue(value);
 }
 
-function normalizeDecision(decision: KeyDecision): { title: string; rationale: string; tradeoffs: string } {
+function normalizeDecision(decision: KeyDecision): {
+  title: string;
+  rationale: string;
+  tradeoffs: string;
+} {
   if (typeof decision === "string") {
     return { title: decision, rationale: "", tradeoffs: "" };
   }
@@ -58,14 +64,19 @@ function normalizeDecision(decision: KeyDecision): { title: string; rationale: s
   return { title: String(decision ?? ""), rationale: "", tradeoffs: "" };
 }
 
-export default function BlueprintApproval({ interrupt, onResolve, onDecision, disabled = false }: BlueprintApprovalProps) {
+export default function BlueprintApproval({
+  interrupt,
+  onResolve,
+  onDecision,
+  disabled = false,
+}: BlueprintApprovalProps) {
   const [mode, setMode] = useState<"idle" | "feedback">("idle");
   const [modifications, setModifications] = useState("");
   const [decided, setDecided] = useState(false);
   const allowedDecisions = interrupt.data.allowed_decisions ?? [];
   // Show the richer HITL v2 menu only when the gate offers more than approve/reject.
-  const useDecisionMenu = onDecision != null &&
-    allowedDecisions.some((a) => a !== "approve" && a !== "reject");
+  const useDecisionMenu =
+    onDecision != null && allowedDecisions.some((a) => a !== "approve" && a !== "reject");
 
   const blueprint = interrupt.data.blueprint as typeof interrupt.data.blueprint & {
     pillar_coverage?: Record<string, { addressed_by?: string[]; gaps?: string[] }>;
@@ -73,7 +84,9 @@ export default function BlueprintApproval({ interrupt, onResolve, onDecision, di
   };
   const pattern = blueprint?.pattern ?? "unknown";
   const patternRationale = blueprint?.pattern_rationale ?? "";
-  const keyDecisions = Array.isArray(blueprint?.key_decisions) ? blueprint.key_decisions as KeyDecision[] : [];
+  const keyDecisions = Array.isArray(blueprint?.key_decisions)
+    ? (blueprint.key_decisions as KeyDecision[])
+    : [];
   const nodes = Array.isArray(blueprint?.nodes) ? blueprint.nodes : [];
   const clusters = Array.isArray(blueprint?.clusters) ? blueprint.clusters : [];
   const edges = Array.isArray(blueprint?.edges) ? blueprint.edges : [];
@@ -94,9 +107,13 @@ export default function BlueprintApproval({ interrupt, onResolve, onDecision, di
     nodes: nodes.filter((n) => n.cluster === c.id),
   }));
   const orphans = nodes.filter((n) => !clusters.some((c) => c.id === n.cluster));
-  if (orphans.length) grouped.push({ cluster: { id: "_other", label: "Other", tier: "" }, nodes: orphans });
+  if (orphans.length)
+    grouped.push({ cluster: { id: "_other", label: "Other", tier: "" }, nodes: orphans });
 
-  const approve = () => { setDecided(true); onResolve(true); };
+  const approve = () => {
+    setDecided(true);
+    onResolve(true);
+  };
   const requestChanges = () => {
     if (!modifications.trim()) return;
     setDecided(true);
@@ -108,12 +125,24 @@ export default function BlueprintApproval({ interrupt, onResolve, onDecision, di
       {/* Header */}
       <div className="flex items-center gap-2.5 border-b border-white/8 bg-white/4 px-4 py-3">
         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500/20">
-          <svg className="h-3.5 w-3.5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
+          <svg
+            className="h-3.5 w-3.5 text-amber-400"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6"
+            />
           </svg>
         </div>
         <p className="flex-1 text-sm font-semibold text-white">Architecture Blueprint</p>
-        <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium capitalize ${patternClass}`}>
+        <span
+          className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium capitalize ${patternClass}`}
+        >
           {pattern}
         </span>
       </div>
@@ -121,7 +150,9 @@ export default function BlueprintApproval({ interrupt, onResolve, onDecision, di
       {decided ? (
         <div className="px-4 py-3">
           <p className="text-xs text-slate-600">
-            {mode === "feedback" ? "Feedback sent — redesigning blueprint..." : "Approved — generating the diagram..."}
+            {mode === "feedback"
+              ? "Feedback sent — redesigning blueprint..."
+              : "Approved — generating the diagram..."}
           </p>
         </div>
       ) : mode === "idle" ? (
@@ -130,7 +161,10 @@ export default function BlueprintApproval({ interrupt, onResolve, onDecision, di
           {metadata.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {metadata.map((m) => (
-                <span key={m} className="rounded-md border border-white/8 bg-black/25 px-2 py-0.5 text-[10px] text-slate-400">
+                <span
+                  key={m}
+                  className="rounded-md border border-white/8 bg-black/25 px-2 py-0.5 text-[10px] text-slate-400"
+                >
                   {m}
                 </span>
               ))}
@@ -140,7 +174,9 @@ export default function BlueprintApproval({ interrupt, onResolve, onDecision, di
           {/* Why this pattern */}
           {patternRationale && (
             <div>
-              <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-amber-400/70">Why this architecture</p>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-amber-400/70">
+                Why this architecture
+              </p>
               <p className="text-[11px] leading-relaxed text-slate-300">{patternRationale}</p>
             </div>
           )}
@@ -148,7 +184,9 @@ export default function BlueprintApproval({ interrupt, onResolve, onDecision, di
           {/* Key design decisions */}
           {keyDecisions.length > 0 && (
             <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-amber-400/70">Key design decisions</p>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-amber-400/70">
+                Key design decisions
+              </p>
               <ul className="flex flex-col gap-1.5">
                 {keyDecisions.map((d, i) => {
                   const item = normalizeDecision(d);
@@ -161,7 +199,9 @@ export default function BlueprintApproval({ interrupt, onResolve, onDecision, di
                           <span className="block text-[10px] text-slate-500">{item.rationale}</span>
                         )}
                         {item.tradeoffs && (
-                          <span className="block text-[10px] text-amber-300/70">Tradeoffs: {item.tradeoffs}</span>
+                          <span className="block text-[10px] text-amber-300/70">
+                            Tradeoffs: {item.tradeoffs}
+                          </span>
                         )}
                       </span>
                     </li>
@@ -179,10 +219,17 @@ export default function BlueprintApproval({ interrupt, onResolve, onDecision, di
               </p>
               <div className="flex flex-col gap-2">
                 {grouped.map(({ cluster, nodes: cNodes }) => (
-                  <div key={cluster.id} className="rounded-xl border border-white/8 bg-white/4 px-3 py-2">
+                  <div
+                    key={cluster.id}
+                    className="rounded-xl border border-white/8 bg-white/4 px-3 py-2"
+                  >
                     <div className="mb-1.5 flex items-center gap-1.5">
-                      <span className={`h-1.5 w-1.5 rounded-full ${TIER_DOT[cluster.tier ?? ""] ?? "bg-slate-500"}`} />
-                      <span className="text-[11px] font-semibold text-slate-200">{cluster.label}</span>
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${TIER_DOT[cluster.tier ?? ""] ?? "bg-slate-500"}`}
+                      />
+                      <span className="text-[11px] font-semibold text-slate-200">
+                        {cluster.label}
+                      </span>
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {cNodes.map((n) => (
@@ -219,7 +266,9 @@ export default function BlueprintApproval({ interrupt, onResolve, onDecision, di
                     )}
                   </div>
                 ))}
-                {edges.length > 12 && <p className="text-[10px] text-slate-600">+{edges.length - 12} more flows</p>}
+                {edges.length > 12 && (
+                  <p className="text-[10px] text-slate-600">+{edges.length - 12} more flows</p>
+                )}
               </div>
             </div>
           )}
@@ -237,26 +286,30 @@ export default function BlueprintApproval({ interrupt, onResolve, onDecision, di
           )}
 
           {/* Well-Architected pillar coverage */}
-          {blueprint?.pillar_coverage && typeof blueprint.pillar_coverage === "object" && Object.keys(blueprint.pillar_coverage).length > 0 && (
-            <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-amber-400/70">Pillar coverage</p>
-              <div className="flex flex-wrap gap-1">
-                {Object.entries(blueprint.pillar_coverage).map(([pillar, data]) => {
-                  const gaps = Array.isArray(data?.gaps) ? data.gaps : [];
-                  const hasGaps = gaps.length > 0;
-                  return (
-                    <span
-                      key={pillar}
-                      title={hasGaps ? `Gaps: ${gaps.join(", ")}` : undefined}
-                      className={`rounded-md border px-2 py-0.5 text-[10px] capitalize ${hasGaps ? "border-amber-500/30 bg-amber-500/10 text-amber-300" : "border-white/8 bg-white/4 text-slate-400"}`}
-                    >
-                      {pillar}
-                    </span>
-                  );
-                })}
+          {blueprint?.pillar_coverage &&
+            typeof blueprint.pillar_coverage === "object" &&
+            Object.keys(blueprint.pillar_coverage).length > 0 && (
+              <div>
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-amber-400/70">
+                  Pillar coverage
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {Object.entries(blueprint.pillar_coverage).map(([pillar, data]) => {
+                    const gaps = Array.isArray(data?.gaps) ? data.gaps : [];
+                    const hasGaps = gaps.length > 0;
+                    return (
+                      <span
+                        key={pillar}
+                        title={hasGaps ? `Gaps: ${gaps.join(", ")}` : undefined}
+                        className={`rounded-md border px-2 py-0.5 text-[10px] capitalize ${hasGaps ? "border-amber-500/30 bg-amber-500/10 text-amber-300" : "border-white/8 bg-white/4 text-slate-400"}`}
+                      >
+                        {pillar}
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           <p className="text-xs text-slate-500">{interrupt.data.question}</p>
 
@@ -266,8 +319,15 @@ export default function BlueprintApproval({ interrupt, onResolve, onDecision, di
               disabled={disabled}
               approveLabel="Looks good! Generate diagram"
               onApprove={approve}
-              onReject={(text) => { setMode("feedback"); setDecided(true); onResolve(false, text); }}
-              onDecision={(payload) => { setDecided(true); onDecision!(payload); }}
+              onReject={(text) => {
+                setMode("feedback");
+                setDecided(true);
+                onResolve(false, text);
+              }}
+              onDecision={(payload) => {
+                setDecided(true);
+                onDecision!(payload);
+              }}
             />
           ) : (
             <div className="flex gap-2.5">
@@ -276,7 +336,13 @@ export default function BlueprintApproval({ interrupt, onResolve, onDecision, di
                 disabled={disabled}
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-700 px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-amber-900/30 transition-all hover:bg-amber-600 active:scale-98 disabled:opacity-50"
               >
-                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <svg
+                  className="h-3.5 w-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
                 Looks good! Generate diagram
@@ -294,7 +360,9 @@ export default function BlueprintApproval({ interrupt, onResolve, onDecision, di
       ) : (
         <div className="flex flex-col gap-3 px-4 py-3">
           <div className="flex items-center gap-2">
-            <button onClick={() => setMode("idle")} className="text-slate-600 hover:text-slate-400">← Back</button>
+            <button onClick={() => setMode("idle")} className="text-slate-600 hover:text-slate-400">
+              ← Back
+            </button>
             <p className="text-xs text-slate-500">What should be changed?</p>
           </div>
           <textarea

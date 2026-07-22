@@ -12,8 +12,18 @@ from xml.sax.saxutils import escape as xml_escape
 from subprocess_utils import run_graphviz
 
 from .constants import (
-    CLUSTER_KINDS, EDGE_COLOR, EDGE_FONTCOLOR, FLOW_COLORS, FLOW_GRID_MIN,
-    FONT, NODE_KINDS, PAGE_SIZE, PRO_ACCENTS, PRO_EDGE, PRO_MUTED, PRO_ORDER,
+    CLUSTER_KINDS,
+    EDGE_COLOR,
+    EDGE_FONTCOLOR,
+    FLOW_COLORS,
+    FLOW_GRID_MIN,
+    FONT,
+    NODE_KINDS,
+    PAGE_SIZE,
+    PRO_ACCENTS,
+    PRO_EDGE,
+    PRO_MUTED,
+    PRO_ORDER,
     PRO_TITLE,
 )
 
@@ -145,31 +155,54 @@ class Pretty:
     flow_layout: bool = True
 
     # ---- authoring API ---- #
-    def cluster(self, id: str, label: str, kind: str = "Neutral",
-                *, parent: str | None = None, number: int | None = None,
-                accent: str | None = None) -> str:
+    def cluster(
+        self,
+        id: str,
+        label: str,
+        kind: str = "Neutral",
+        *,
+        parent: str | None = None,
+        number: int | None = None,
+        accent: str | None = None,
+    ) -> str:
         self.clusters[id] = _Cluster(id, label, kind, parent, number, accent)
         return id
 
-    def box(self, id: str, label: str, kind: str = "process",
-            *, icon: str | None = None, sublabel: str | None = None,
-            parent: str | None = None) -> str:
+    def box(
+        self,
+        id: str,
+        label: str,
+        kind: str = "process",
+        *,
+        icon: str | None = None,
+        sublabel: str | None = None,
+        parent: str | None = None,
+    ) -> str:
         self.nodes[id] = _Node(id, label, kind, icon, sublabel, parent)
         return id
 
-    def link(self, a: str, b: str, *, label: str | None = None,
-             style: str = "solid", color: str | None = None,
-             penwidth: float | None = None, ltail: str | None = None,
-             lhead: str | None = None, constraint: bool | None = None,
-             taillabel: str | None = None, flow: str | None = None) -> None:
+    def link(
+        self,
+        a: str,
+        b: str,
+        *,
+        label: str | None = None,
+        style: str = "solid",
+        color: str | None = None,
+        penwidth: float | None = None,
+        ltail: str | None = None,
+        lhead: str | None = None,
+        constraint: bool | None = None,
+        taillabel: str | None = None,
+        flow: str | None = None,
+    ) -> None:
         if flow and flow in FLOW_COLORS:
             fcolor, fstyle = FLOW_COLORS[flow]
             if color is None:
                 color = fcolor
             if style == "solid":
                 style = fstyle
-        self.edges.append(_Edge(a, b, label, style, color, penwidth,
-                                ltail, lhead, constraint, taillabel))
+        self.edges.append(_Edge(a, b, label, style, color, penwidth, ltail, lhead, constraint, taillabel))
 
     def same_rank(self, ids: list[str]) -> None:
         """Force nodes onto the same row (clean replica grids)."""
@@ -192,12 +225,12 @@ class Pretty:
         min_members = FLOW_GRID_MIN if self.flow_layout else 2
         if len(members) < min_members:
             return []
-        rows = [members[i:i + cols] for i in range(0, len(members), cols)]
+        rows = [members[i : i + cols] for i in range(0, len(members), cols)]
         lines: list[str] = []
         for row in rows:
             if len(row) > 1:
                 joined = " ".join(f'"{m}"' for m in row)
-                lines.append(f'{indent}{{rank=same; {joined}}}')
+                lines.append(f"{indent}{{rank=same; {joined}}}")
         for col in range(cols):
             colnodes = [row[col] for row in rows if col < len(row)]
             for a, b in zip(colnodes[:-1], colnodes[1:]):
@@ -285,8 +318,7 @@ class Pretty:
         """Return (fill, stroke, title_color, sublabel_color)."""
         if self.theme == "pro":
             acc = self._accent_map().get(n.parent) if n.parent else None
-            return (acc[0] if acc else "#F1F5F9",
-                    acc[1] if acc else "#94A3B8", PRO_TITLE, PRO_MUTED)
+            return (acc[0] if acc else "#F1F5F9", acc[1] if acc else "#94A3B8", PRO_TITLE, PRO_MUTED)
         fill, stroke = NODE_KINDS.get(n.kind, NODE_KINDS["neutral"])
         return fill, stroke, None, "#667085"
 
@@ -316,75 +348,78 @@ class Pretty:
         csize = self._sizes()["cluster"]
         badge = ""
         if c.number is not None:
-            badge = (f'<TD BGCOLOR="{accent}" WIDTH="{csize + 9}" HEIGHT="{csize + 9}" '
-                     f'ALIGN="CENTER" VALIGN="MIDDLE"><FONT COLOR="#FFFFFF" '
-                     f'POINT-SIZE="{csize - 1}"><B>'
-                     f'{c.number}</B></FONT></TD><TD WIDTH="8"></TD>')
-        return ('<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">'
-                f'<TR>{badge}<TD ALIGN="LEFT"><FONT COLOR="{accent}" '
-                f'POINT-SIZE="{csize}"><B>{_esc(c.label)}</B></FONT></TD></TR></TABLE>')
+            badge = (
+                f'<TD BGCOLOR="{accent}" WIDTH="{csize + 9}" HEIGHT="{csize + 9}" '
+                f'ALIGN="CENTER" VALIGN="MIDDLE"><FONT COLOR="#FFFFFF" '
+                f'POINT-SIZE="{csize - 1}"><B>'
+                f'{c.number}</B></FONT></TD><TD WIDTH="8"></TD>'
+            )
+        return (
+            '<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">'
+            f'<TR>{badge}<TD ALIGN="LEFT"><FONT COLOR="{accent}" '
+            f'POINT-SIZE="{csize}"><B>{_esc(c.label)}</B></FONT></TD></TR></TABLE>'
+        )
 
     # ---- DOT generation ---- #
     def _node_dot(self, n: _Node) -> str:
         fill, stroke, title_c, sub_c = self._node_style(n)
         icon = self._icon_path(n.icon)
         sz = self._sizes()
-        label_html = (f'<FONT COLOR="{title_c}"><B>{_esc(n.label)}</B></FONT>'
-                      if title_c else f'<B>{_esc(n.label)}</B>')
+        label_html = (
+            f'<FONT COLOR="{title_c}"><B>{_esc(n.label)}</B></FONT>' if title_c else f"<B>{_esc(n.label)}</B>"
+        )
         if n.sublabel:
-            label_html += (f'<BR/><FONT POINT-SIZE="{sz["sub"]}" COLOR="{sub_c}">'
-                           f'{_esc(n.sublabel)}</FONT>')
+            label_html += f'<BR/><FONT POINT-SIZE="{sz["sub"]}" COLOR="{sub_c}">{_esc(n.sublabel)}</FONT>'
         fixed = self.node_width is not None
         align = "LEFT" if (icon or fixed) else "CENTER"
         if icon:
             cell = (
-                '<TR>'
+                "<TR>"
                 f'<TD FIXEDSIZE="TRUE" WIDTH="{sz["icon"]}" HEIGHT="{sz["icon"]}">'
                 f'<IMG SRC="{icon}" SCALE="TRUE"/></TD>'
                 '<TD WIDTH="10"></TD>'
                 f'<TD ALIGN="LEFT" BALIGN="LEFT"><FONT POINT-SIZE="{sz["title"]}">'
-                f'{label_html}</FONT></TD>'
-                '</TR>'
+                f"{label_html}</FONT></TD>"
+                "</TR>"
             )
         else:
-            cell = (f'<TR><TD ALIGN="{align}" BALIGN="{align}">'
-                    f'<FONT POINT-SIZE="{sz["title"]}">{label_html}</FONT></TD></TR>')
+            cell = (
+                f'<TR><TD ALIGN="{align}" BALIGN="{align}">'
+                f'<FONT POINT-SIZE="{sz["title"]}">{label_html}</FONT></TD></TR>'
+            )
         table_attrs = 'BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2"'
         if fixed:
-            need = max(_est_text_w(n.label, sz["title"], bold=True),
-                       _est_text_w(n.sublabel or "", sz["sub"]))
+            need = max(_est_text_w(n.label, sz["title"], bold=True), _est_text_w(n.sublabel or "", sz["sub"]))
             need += (sz["icon"] + 10 if icon else 0) + 24
             tw = max(self.node_width, need)
             th = self.node_height or self.node_width
             if icon:
                 th = max(th, sz["icon"] + 10)
-            table_attrs += (f' WIDTH="{tw:.0f}" '
-                            f'HEIGHT="{th:.0f}" FIXEDSIZE="TRUE"')
-        table = f'<TABLE {table_attrs}>{cell}</TABLE>'
-        return (f'  "{n.id}" [fillcolor="{fill}", color="{stroke}", '
-                f'label=<{table}>];')
+            table_attrs += f' WIDTH="{tw:.0f}" HEIGHT="{th:.0f}" FIXEDSIZE="TRUE"'
+        table = f"<TABLE {table_attrs}>{cell}</TABLE>"
+        return f'  "{n.id}" [fillcolor="{fill}", color="{stroke}", label=<{table}>];'
 
     def _cluster_block(self, cid: str, depth: int) -> list[str]:
         c = self.clusters[cid]
         fill, stroke = self._cluster_style(cid)
         pro = self.theme == "pro"
-        label_html = self._cluster_label_pro(c) if pro else f'<B>{_esc(c.label)}</B>'
+        label_html = self._cluster_label_pro(c) if pro else f"<B>{_esc(c.label)}</B>"
         lines = [
-            f'{"  " * depth}subgraph cluster_{c.id} {{',
+            f"{'  ' * depth}subgraph cluster_{c.id} {{",
             f'{"  " * depth}  style="rounded,filled"; fillcolor="{fill}"; '
             f'color="{stroke}"; penwidth={"1.6" if pro else "1.2"};',
             f'{"  " * depth}  labeljust="l"; fontsize="{self._sizes()["cluster"] - 1}"; '
             f'fontname="{FONT}"; fontcolor="#5a6270";',
-            f'{"  " * depth}  label=<{label_html}>;',
+            f"{'  ' * depth}  label=<{label_html}>;",
         ]
         for sub in self.clusters.values():
             if sub.parent == cid:
                 lines += self._cluster_block(sub.id, depth + 1)
         for n in self.nodes.values():
             if n.parent == cid:
-                lines.append(f'{"  " * depth}{self._node_dot(n)}')
+                lines.append(f"{'  ' * depth}{self._node_dot(n)}")
         lines += self._grid_block(cid, "  " * depth)
-        lines.append(f'{"  " * depth}}}')
+        lines.append(f"{'  ' * depth}}}")
         return lines
 
     def to_dot(self) -> str:
@@ -392,11 +427,12 @@ class Pretty:
         pro = self.theme == "pro"
         tcolor = PRO_TITLE if pro else "#000000"
         tsize = "22" if pro else "20"
-        title = (f'<B><FONT POINT-SIZE="{tsize}" COLOR="{tcolor}">'
-                 f'{_esc(self.title)}</FONT></B>')
+        title = f'<B><FONT POINT-SIZE="{tsize}" COLOR="{tcolor}">{_esc(self.title)}</FONT></B>'
         if self.subtitle:
-            title += (f'<BR/><FONT POINT-SIZE="11" COLOR="{PRO_MUTED if pro else "#8a8a8a"}">'
-                      f'{_esc(self.subtitle)}</FONT>')
+            title += (
+                f'<BR/><FONT POINT-SIZE="11" COLOR="{PRO_MUTED if pro else "#8a8a8a"}">'
+                f"{_esc(self.subtitle)}</FONT>"
+            )
         dpi = self.dpi or (192 if pro else 168)
         nodesep, ranksep = ("0.4", "0.8") if pro else ("0.5", "0.9")
         if self.grid_rows:
@@ -449,8 +485,7 @@ class Pretty:
                     sec = self._top_section(anchor)
                     if sec is None or sec in gridded:
                         continue
-                    members = [nid for nid in self.nodes
-                               if self._top_section(nid) == sec]
+                    members = [nid for nid in self.nodes if self._top_section(nid) == sec]
                     if len(members) > 1:
                         joined = " ".join(f'"{m}"' for m in members)
                         out.append(f"  {{rank=same; {joined}}}")
@@ -474,26 +509,26 @@ class Pretty:
                     '<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" '
                     'CELLPADDING="3" BGCOLOR="white"><TR><TD>'
                     f'<FONT POINT-SIZE="{sz["edge"]}" COLOR="{EDGE_FONTCOLOR}">'
-                    f'{_esc(e.label)}</FONT></TD></TR></TABLE>>'
+                    f"{_esc(e.label)}</FONT></TD></TR></TABLE>>"
                 )
-                attrs.append(f'label={lbl}')
+                attrs.append(f"label={lbl}")
             if anchor_to_tail:
                 albl = (
                     '<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" '
                     'CELLPADDING="2" BGCOLOR="white"><TR><TD>'
                     f'<FONT POINT-SIZE="{sz["edge"]}" COLOR="{EDGE_FONTCOLOR}">'
-                    f'{_esc(e.label)}</FONT></TD></TR></TABLE>>'
+                    f"{_esc(e.label)}</FONT></TD></TR></TABLE>>"
                 )
-                attrs.append(f'taillabel={albl}')
+                attrs.append(f"taillabel={albl}")
                 attrs.append('labeldistance="1.6"')
             if e.taillabel:
                 tlbl = (
                     '<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" '
                     'CELLPADDING="2" BGCOLOR="white"><TR><TD>'
                     f'<FONT POINT-SIZE="{sz["edge"] - 1}" COLOR="{EDGE_FONTCOLOR}">'
-                    f'{_esc(e.taillabel)}</FONT></TD></TR></TABLE>>'
+                    f"{_esc(e.taillabel)}</FONT></TD></TR></TABLE>>"
                 )
-                attrs.append(f'taillabel={tlbl}')
+                attrs.append(f"taillabel={tlbl}")
                 attrs.append('labeldistance="2.0"')
             if e.style and e.style != "solid":
                 attrs.append(f'style="{e.style}"')
@@ -506,9 +541,7 @@ class Pretty:
             if e.lhead:
                 attrs.append(f'lhead="{e.lhead}"')
             relax = e.constraint is False
-            if e.constraint is None and (
-                self.grid_rows or (self.cluster_grids and not self.flow_layout)
-            ):
+            if e.constraint is None and (self.grid_rows or (self.cluster_grids and not self.flow_layout)):
                 ta, tb = self._top_section(e.a), self._top_section(e.b)
                 if ta is not None and tb is not None and ta != tb:
                     relax = True
@@ -541,8 +574,12 @@ class Pretty:
             icon_path = self._icon_path(n.icon)
             stencil_name = self._resolve_stencil_name(_cat, icon_path)
             node_meta[n.id] = {
-                "label": n.label, "sublabel": n.sublabel, "kind": n.kind,
-                "fill": fill, "stroke": stroke, "icon": icon_path,
+                "label": n.label,
+                "sublabel": n.sublabel,
+                "kind": n.kind,
+                "fill": fill,
+                "stroke": stroke,
+                "icon": icon_path,
                 "shadow": 1 if self.theme == "pro" else 0,
                 "stencil_name": stencil_name,
             }
@@ -551,7 +588,9 @@ class Pretty:
             fill, stroke = self._cluster_style(c.id)
             label = c.label if c.number is None else f"{c.number} · {c.label}"
             cluster_meta[c.id] = {
-                "label": label, "fill": fill, "stroke": stroke,
+                "label": label,
+                "fill": fill,
+                "stroke": stroke,
                 "group_name": _aws_group_for_label(c.label),
             }
         style = dict(self._sizes())
@@ -559,13 +598,17 @@ class Pretty:
             style["node_width"] = int(self.node_width)
         if self.node_height is not None:
             style["node_height"] = int(self.node_height)
-        data = {"title": self.title, "subtitle": self.subtitle,
-                "nodes": node_meta, "clusters": cluster_meta,
-                "style": style}
+        data = {
+            "title": self.title,
+            "subtitle": self.subtitle,
+            "nodes": node_meta,
+            "clusters": cluster_meta,
+            "style": style,
+        }
         Path(path).write_text(json.dumps(data), encoding="utf-8")
 
     def to_drawio(self, out_basename: str) -> str:
         """Build an editable .drawio from the laid-out .dot + sidecar styling."""
         from .drawio import dot_to_drawio
-        return dot_to_drawio(f"{out_basename}.dot", f"{out_basename}.nodes.json",
-                             f"{out_basename}.drawio")
+
+        return dot_to_drawio(f"{out_basename}.dot", f"{out_basename}.nodes.json", f"{out_basename}.drawio")

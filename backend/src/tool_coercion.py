@@ -66,6 +66,7 @@ def _maybe_json(value: str):
         pass
     try:
         import ast
+
         parsed = ast.literal_eval(s)
         return parsed if isinstance(parsed, (list, dict)) else None
     except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
@@ -262,7 +263,7 @@ def compact_invocation_error(text: str, schema=None, args: dict | None = None) -
     return (
         f"Tool '{name}' argument validation failed: {error}\n"
         "Fix ONLY the invalid fields and call the tool again. Pass lists and "
-        "objects as real JSON types (e.g. [\"a\",\"b\"]), never as quoted strings."
+        'objects as real JSON types (e.g. ["a","b"]), never as quoted strings.'
     )
 
 

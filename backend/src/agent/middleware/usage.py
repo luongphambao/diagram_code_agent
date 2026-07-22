@@ -33,7 +33,10 @@ def _warn_missing_text_blocks(agent_name: str, messages: list[AnyMessage]) -> No
                 logger.warning(
                     "agent %s: outgoing message block missing non-empty text — "
                     "msg_idx=%d msg_type=%s block_type=%s",
-                    agent_name, i, type(msg).__name__, block.get("type"),
+                    agent_name,
+                    i,
+                    type(msg).__name__,
+                    block.get("type"),
                 )
 
 
@@ -104,12 +107,16 @@ class UsageLoggingMiddleware(AgentMiddleware):
             if self._call_count > _WARN_CALL_COUNT:
                 logger.warning(
                     "agent %s: %d model calls (threshold=%d) — potential runaway loop",
-                    self._agent_name, self._call_count, _WARN_CALL_COUNT,
+                    self._agent_name,
+                    self._call_count,
+                    _WARN_CALL_COUNT,
                 )
             if usage["input_tokens"] > _WARN_INPUT_TOKENS:
                 logger.warning(
                     "agent %s: input context=%d tok (threshold=%d) — approaching limit",
-                    self._agent_name, usage["input_tokens"], _WARN_INPUT_TOKENS,
+                    self._agent_name,
+                    usage["input_tokens"],
+                    _WARN_INPUT_TOKENS,
                 )
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, self._log, usage)
@@ -127,12 +134,16 @@ class UsageLoggingMiddleware(AgentMiddleware):
             if self._call_count > _WARN_CALL_COUNT:
                 logger.warning(
                     "agent %s: %d model calls (threshold=%d) — potential runaway loop",
-                    self._agent_name, self._call_count, _WARN_CALL_COUNT,
+                    self._agent_name,
+                    self._call_count,
+                    _WARN_CALL_COUNT,
                 )
             if usage["input_tokens"] > _WARN_INPUT_TOKENS:
                 logger.warning(
                     "agent %s: input context=%d tok (threshold=%d) — approaching limit",
-                    self._agent_name, usage["input_tokens"], _WARN_INPUT_TOKENS,
+                    self._agent_name,
+                    usage["input_tokens"],
+                    _WARN_INPUT_TOKENS,
                 )
             self._log(usage)
         return response
@@ -160,11 +171,7 @@ def _compact_tool_args(args: dict | None, *, limit: int = 260) -> str:
         desc = " ".join(str(safe["description"]).split())
         safe["description"] = desc[:180] + ("..." if len(desc) > 180 else "")
     if "icons" in safe and isinstance(safe["icons"], list):
-        labels = [
-            str(x.get("label", ""))
-            for x in safe["icons"]
-            if isinstance(x, dict) and x.get("label")
-        ]
+        labels = [str(x.get("label", "")) for x in safe["icons"] if isinstance(x, dict) and x.get("label")]
         safe["icons"] = f"{len(safe['icons'])} icons: {', '.join(labels[:8])}"
     try:
         text = json.dumps(safe, ensure_ascii=False)

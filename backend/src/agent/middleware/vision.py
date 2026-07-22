@@ -23,9 +23,11 @@ class VisionErrorFallbackMiddleware(AgentMiddleware):
     name = "VisionErrorFallbackMiddleware"
     _MARKERS = ("multimodal", "corrupted")
 
-    _NOTE = ("[image removed — the provider rejected the image payload. Review "
-             "using the LAYOUT AUDIT text and the blueprint instead; do not "
-             "request the image again.]")
+    _NOTE = (
+        "[image removed — the provider rejected the image payload. Review "
+        "using the LAYOUT AUDIT text and the blueprint instead; do not "
+        "request the image again.]"
+    )
 
     @classmethod
     def _is_vision_error(cls, exc: Exception) -> bool:
@@ -37,8 +39,7 @@ class VisionErrorFallbackMiddleware(AgentMiddleware):
         for msg in messages:
             content = getattr(msg, "content", None)
             if isinstance(content, list) and any(
-                isinstance(b, dict) and b.get("type") in ("image", "image_url")
-                for b in content
+                isinstance(b, dict) and b.get("type") in ("image", "image_url") for b in content
             ):
                 new_content = [
                     {"type": "text", "text": self._NOTE}

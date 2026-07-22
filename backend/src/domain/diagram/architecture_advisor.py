@@ -31,7 +31,15 @@ _CAPABILITIES: dict[str, list[str]] = {
     "ci_cd": ["ci/cd", "cicd", "github actions", "gitlab", "jenkins", "argocd", "argo cd", "pipeline"],
     "monitoring": ["monitoring", "observability", "metrics", "logs", "cloudwatch", "prometheus", "grafana"],
     "security": ["security", "waf", "guardduty", "security hub", "secrets", "kms", "zero trust"],
-    "governance": ["governance", "organization", "organizations", "multi-account", "landing zone", "control tower", "audit"],
+    "governance": [
+        "governance",
+        "organization",
+        "organizations",
+        "multi-account",
+        "landing zone",
+        "control tower",
+        "audit",
+    ],
     "multi_region": ["multi-region", "global", "disaster recovery", "dr", "failover"],
 }
 
@@ -124,7 +132,15 @@ def _constraints(text: str) -> list[str]:
     return found
 
 
-def _pattern_score(pattern: str, capabilities: set[str], constraints: set[str], app_type: str, scale: str, security: str, provider: str) -> tuple[int, list[str]]:
+def _pattern_score(
+    pattern: str,
+    capabilities: set[str],
+    constraints: set[str],
+    app_type: str,
+    scale: str,
+    security: str,
+    provider: str,
+) -> tuple[int, list[str]]:
     score = 0
     reasons: list[str] = []
 
@@ -150,7 +166,10 @@ def _pattern_score(pattern: str, capabilities: set[str], constraints: set[str], 
         if scale in {"large", "enterprise"}:
             add(1, f"{scale} scale")
     elif pattern == "serverless":
-        if _has_any(capabilities, {"cdn_static_hosting", "messaging"}) and app_type in {"api_service", "web_application"}:
+        if _has_any(capabilities, {"cdn_static_hosting", "messaging"}) and app_type in {
+            "api_service",
+            "web_application",
+        }:
             add(2, "web/API workload with managed services")
         if scale in {"small", "medium"}:
             add(1, "small/medium scale can benefit from managed scaling")
@@ -190,31 +209,59 @@ def _has_any(values: set[str], targets: set[str]) -> bool:
 _PATTERN_COST_META: dict[str, dict[str, Any]] = {
     "aws_multi_account_governance": {
         "relative_cost": "high",
-        "cost_drivers": ["AWS Organizations + Control Tower licensing", "per-account CloudTrail/Config costs", "Transit Gateway data transfer"],
+        "cost_drivers": [
+            "AWS Organizations + Control Tower licensing",
+            "per-account CloudTrail/Config costs",
+            "Transit Gateway data transfer",
+        ],
     },
     "containerized_kubernetes": {
         "relative_cost": "medium",
-        "cost_drivers": ["managed cluster control-plane fee", "node instance costs", "persistent volume storage"],
+        "cost_drivers": [
+            "managed cluster control-plane fee",
+            "node instance costs",
+            "persistent volume storage",
+        ],
     },
     "three_tier": {
         "relative_cost": "medium",
-        "cost_drivers": ["load balancer hourly fee", "multi-AZ RDS standby instance", "EC2/container instance costs"],
+        "cost_drivers": [
+            "load balancer hourly fee",
+            "multi-AZ RDS standby instance",
+            "EC2/container instance costs",
+        ],
     },
     "serverless": {
         "relative_cost": "low",
-        "cost_drivers": ["per-invocation Lambda pricing", "API Gateway request cost", "cold-start mitigation (provisioned concurrency)"],
+        "cost_drivers": [
+            "per-invocation Lambda pricing",
+            "API Gateway request cost",
+            "cold-start mitigation (provisioned concurrency)",
+        ],
     },
     "microservices": {
         "relative_cost": "high",
-        "cost_drivers": ["per-service container/VM overhead", "service mesh sidecar resources", "inter-service network egress"],
+        "cost_drivers": [
+            "per-service container/VM overhead",
+            "service mesh sidecar resources",
+            "inter-service network egress",
+        ],
     },
     "event_driven": {
         "relative_cost": "medium",
-        "cost_drivers": ["message broker throughput pricing", "consumer instance costs", "dead-letter queue storage"],
+        "cost_drivers": [
+            "message broker throughput pricing",
+            "consumer instance costs",
+            "dead-letter queue storage",
+        ],
     },
     "data_pipeline": {
         "relative_cost": "medium",
-        "cost_drivers": ["compute cluster (Spark/Glue) job hours", "data lake storage", "egress between stages"],
+        "cost_drivers": [
+            "compute cluster (Spark/Glue) job hours",
+            "data lake storage",
+            "egress between stages",
+        ],
     },
     "static_site_jamstack": {
         "relative_cost": "low",
@@ -223,7 +270,9 @@ _PATTERN_COST_META: dict[str, dict[str, Any]] = {
 }
 
 
-def _suggest_patterns(app_type: str, scale: str, security: str, provider: str, capabilities: list[str], constraints: list[str]) -> list[dict[str, Any]]:
+def _suggest_patterns(
+    app_type: str, scale: str, security: str, provider: str, capabilities: list[str], constraints: list[str]
+) -> list[dict[str, Any]]:
     caps = set(capabilities)
     cons = set(constraints)
     names = list(_PATTERN_COST_META.keys())
@@ -232,14 +281,16 @@ def _suggest_patterns(app_type: str, scale: str, security: str, provider: str, c
         score, reasons = _pattern_score(name, caps, cons, app_type, scale, security, provider)
         if score > 0:
             cost_meta = _PATTERN_COST_META.get(name, {})
-            out.append({
-                "pattern": name,
-                "fit": "high" if score >= 6 else "medium" if score >= 3 else "low",
-                "score": score,
-                "reasons": reasons[:4],
-                "relative_cost": cost_meta.get("relative_cost", "medium"),
-                "cost_drivers": cost_meta.get("cost_drivers", []),
-            })
+            out.append(
+                {
+                    "pattern": name,
+                    "fit": "high" if score >= 6 else "medium" if score >= 3 else "low",
+                    "score": score,
+                    "reasons": reasons[:4],
+                    "relative_cost": cost_meta.get("relative_cost", "medium"),
+                    "cost_drivers": cost_meta.get("cost_drivers", []),
+                }
+            )
     out.sort(key=lambda item: item["score"], reverse=True)
     return out[:5]
 
@@ -267,13 +318,19 @@ def _concerns(scale: str, security: str, capabilities: list[str], constraints: l
             + ". Missing any of these is a medium critic finding."
         )
     if "governance_required" in cons:
-        out.append("Governance is in scope; show management/security/production boundaries or explain simplification.")
+        out.append(
+            "Governance is in scope; show management/security/production boundaries or explain simplification."
+        )
     if scale in {"large", "enterprise"} and "monitoring" not in caps:
         out.append("Large-scale signal detected; include observability as an aggregated side-channel.")
     if "production_focused" in cons:
-        out.append("Production-focused overview; collapse dev/staging and secondary accounts unless explicitly requested.")
+        out.append(
+            "Production-focused overview; collapse dev/staging and secondary accounts unless explicitly requested."
+        )
     if "ci_cd" in caps and "container_orchestration" in caps:
-        out.append("CI/CD plus orchestration detected; keep deployment lane separate from runtime request path.")
+        out.append(
+            "CI/CD plus orchestration detected; keep deployment lane separate from runtime request path."
+        )
     return out
 
 
@@ -291,9 +348,7 @@ def analyze_requirements(requirements: str, provider_preference: str = "") -> di
 
     n_capabilities = len(capabilities)
     recommended_density = (
-        "poster"
-        if (scale in ("enterprise", "large") and n_capabilities >= 5)
-        else "standard"
+        "poster" if (scale in ("enterprise", "large") and n_capabilities >= 5) else "standard"
     )
 
     return {

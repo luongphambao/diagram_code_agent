@@ -102,8 +102,10 @@ def _settle_finding(finding_id: str, status: str, note: str, *, action: str) -> 
     now = datetime.now(timezone.utc).isoformat()
     updated = set_status(fid, status, reason=note or "", by="agent", at=now, workspace=current_workspace())
     if updated is None:
-        return (f"No finding {fid} in findings_log.json — re-run the stage or export gate to "
-                "refresh the cross-artifact check, then use a live SF-id.")
+        return (
+            f"No finding {fid} in findings_log.json — re-run the stage or export gate to "
+            "refresh the cross-artifact check, then use a live SF-id."
+        )
     # Audit trail: a human DecisionRecord, folded into the CSM on next build_solution_model.
     try:
         rec = new_decision_record(
@@ -120,8 +122,10 @@ def _settle_finding(finding_id: str, status: str, note: str, *, action: str) -> 
         pass
     _bump_tool_summary(action)
     verb = "waived" if status == "waived" else "resolved"
-    return (f"Finding {fid} marked {verb}: {note or '(no note)'}. It no longer blocks an export; "
-            "re-run the export gate to confirm the verdict clears.")
+    return (
+        f"Finding {fid} marked {verb}: {note or '(no note)'}. It no longer blocks an export; "
+        "re-run the export gate to confirm the verdict clears."
+    )
 
 
 @tool(parse_docstring=True)
@@ -174,10 +178,10 @@ def apply_compliance_pack(pack_name: str) -> str:
         pack_name: Name of the pack to activate (e.g. "generic_security").
     """
     from compliance import evidence_gaps, list_packs, load_pack, set_active_pack
+
     available = list_packs()
     if not load_pack(pack_name):
-        return (f"Unknown compliance pack {pack_name!r}. "
-                f"Available: {', '.join(available) or '(none)'}.")
+        return f"Unknown compliance pack {pack_name!r}. Available: {', '.join(available) or '(none)'}."
     set_active_pack(pack_name, current_workspace())
     try:
         model = build_solution_model(current_workspace())  # rebuild so controls + findings appear now
@@ -186,11 +190,14 @@ def apply_compliance_pack(pack_name: str) -> str:
     except Exception:
         n_controls, gaps = 0, []
     _bump_tool_summary("apply_compliance_pack")
-    gap_note = (f" {len(gaps)} control(s) still need implementation/evidence."
-                if gaps else " all controls covered.")
-    return (f"Compliance pack '{pack_name}' active: {n_controls} control(s) mapped into the "
-            f"solution model.{gap_note} Re-run the export gate to see compliance findings; "
-            "attach proof with record_evidence or waive with rationale.")
+    gap_note = (
+        f" {len(gaps)} control(s) still need implementation/evidence." if gaps else " all controls covered."
+    )
+    return (
+        f"Compliance pack '{pack_name}' active: {n_controls} control(s) mapped into the "
+        f"solution model.{gap_note} Re-run the export gate to see compliance findings; "
+        "attach proof with record_evidence or waive with rationale."
+    )
 
 
 @tool(parse_docstring=True)
@@ -234,8 +241,12 @@ def resolve_comment(comment_id: str) -> str:
     from datetime import datetime, timezone
     from comments import resolve_comment as _resolve
 
-    rec = _resolve(comment_id, resolved_by="agent",
-                   resolved_at=datetime.now(timezone.utc).isoformat(), workspace=current_workspace())
+    rec = _resolve(
+        comment_id,
+        resolved_by="agent",
+        resolved_at=datetime.now(timezone.utc).isoformat(),
+        workspace=current_workspace(),
+    )
     if rec is None:
         return f"No comment {comment_id!r} found in comment_log.json."
     _bump_tool_summary("resolve_comment")
@@ -267,6 +278,7 @@ def export_to_delivery(system: str, dry_run: bool = True) -> str:
     if not model.work_items:
         return "No WBS work items to export — run the WBS pipeline first."
     from delivery_export import sync_work_items
+
     res = sync_work_items(model, sys_l, dry_run=dry_run, workspace=current_workspace())  # type: ignore[arg-type]
     _bump_tool_summary("export_to_delivery")
     c = res["counts"]
@@ -276,10 +288,15 @@ def export_to_delivery(system: str, dry_run: bool = True) -> str:
         mode = "SYNCED (live)"
     else:
         mode = "SYNCED (simulated — no credentials)"
-    tail = (" Preview written to delivery_export_preview.json — set dry_run=false to push."
-            if res["dry_run"] else " Mapping saved to delivery_sync_log.json.")
-    return (f"Delivery export to {sys_l} [{mode}]: {c['create']} create, {c['update']} update, "
-            f"{c['skip']} skip (of {len(model.work_items)} work item(s)).{tail}")
+    tail = (
+        " Preview written to delivery_export_preview.json — set dry_run=false to push."
+        if res["dry_run"]
+        else " Mapping saved to delivery_sync_log.json."
+    )
+    return (
+        f"Delivery export to {sys_l} [{mode}]: {c['create']} create, {c['update']} update, "
+        f"{c['skip']} skip (of {len(model.work_items)} work item(s)).{tail}"
+    )
 
 
 @tool(parse_docstring=True)
@@ -320,6 +337,7 @@ def export_adr_pack() -> str:
     """
     try:
         from adr_export import write_adr_pack
+
         path, n = write_adr_pack(current_workspace())
     except Exception as exc:  # noqa: BLE001
         return f"ADR export failed: {exc}"
@@ -333,15 +351,34 @@ def export_adr_pack() -> str:
 # edit_entity — in-place CSM entity patch (docx §5.3 HITL v2)
 # ---------------------------------------------------------------------------
 
-_PATCHABLE_FIELDS = frozenset({
-    "title", "description", "source", "provenance_note", "status",
-    "risk_level", "severity", "mitigation", "rationale", "owner",
-    "definition_of_done", "kind", "confidence",
-})
+_PATCHABLE_FIELDS = frozenset(
+    {
+        "title",
+        "description",
+        "source",
+        "provenance_note",
+        "status",
+        "risk_level",
+        "severity",
+        "mitigation",
+        "rationale",
+        "owner",
+        "definition_of_done",
+        "kind",
+        "confidence",
+    }
+)
 
 _CSM_COLLECTIONS = [
-    "requirements", "constraints", "assumptions", "decisions",
-    "components", "risks", "work_items", "evidence", "deliverables",
+    "requirements",
+    "constraints",
+    "assumptions",
+    "decisions",
+    "components",
+    "risks",
+    "work_items",
+    "evidence",
+    "deliverables",
 ]
 
 
@@ -367,10 +404,7 @@ def edit_entity(entity_id: str, field: str, new_value: str) -> str:
     from csm_adapter import SOLUTION_MODEL_NAME, SOLUTION_MODEL_PREV_NAME
 
     if field not in _PATCHABLE_FIELDS:
-        return (
-            f"EDIT_ENTITY: ERROR — field '{field}' is not patchable. "
-            f"Allowed: {sorted(_PATCHABLE_FIELDS)}."
-        )
+        return f"EDIT_ENTITY: ERROR — field '{field}' is not patchable. Allowed: {sorted(_PATCHABLE_FIELDS)}."
 
     cur_path = current_workspace() / SOLUTION_MODEL_NAME
     cur_raw = _read_json_file(cur_path, None)
@@ -408,9 +442,7 @@ def edit_entity(entity_id: str, field: str, new_value: str) -> str:
 
     # Bump revision and write back
     cur_raw["revision"] = cur_raw.get("revision", 0) + 1
-    cur_path.write_text(
-        _json.dumps(cur_raw, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    cur_path.write_text(_json.dumps(cur_raw, ensure_ascii=False, indent=2), encoding="utf-8")
 
     return (
         f"EDIT_ENTITY: {entity_id}.{field} updated "

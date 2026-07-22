@@ -52,6 +52,7 @@ from .vision import VisionErrorFallbackMiddleware
 
 logger = logging.getLogger(__name__)
 
+
 class SafeLLMToolSelectorMiddleware(AgentMiddleware):
     """LLM tool selector that intersects always_include with current tools.
 
@@ -62,8 +63,7 @@ class SafeLLMToolSelectorMiddleware(AgentMiddleware):
     only the names still present.
     """
 
-    def __init__(self, *, max_tools: int | None = None,
-                 always_include: list[str] | None = None):
+    def __init__(self, *, max_tools: int | None = None, always_include: list[str] | None = None):
         super().__init__()
         self.max_tools = max_tools
         self.always_include = always_include or []
@@ -89,14 +89,19 @@ class SafeLLMToolSelectorMiddleware(AgentMiddleware):
         return self._selector(request).wrap_model_call(request, handler)
 
 
-def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
-                model: str | None = None,
-                use_vision_relay: bool = False,
-                use_tool_selector: bool = False,
-                use_phase_filter: bool = False,
-                use_drawer_revise_gate: bool = False,
-                task_call_limit: int | None = None):
+def _middleware(
+    run_limit: int = _RUN_CALL_LIMIT,
+    *,
+    agent_name: str = "agent",
+    model: str | None = None,
+    use_vision_relay: bool = False,
+    use_tool_selector: bool = False,
+    use_phase_filter: bool = False,
+    use_drawer_revise_gate: bool = False,
+    task_call_limit: int | None = None,
+):
     from config import resolve_provider as _resolve_provider
+
     exclude = GATE_TOOL_NAMES
     # KeepLatestImagesEdit MUST run before InjectVisionAsUserEdit: it reduces
     # the ToolMessage history down to a single live image before the relay
@@ -126,6 +131,7 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
         ),
     ]
     from tool_coercion import ToolArgCoercionMiddleware
+
     layers = [
         ContextEditingMiddleware(
             edits=edits,
@@ -150,9 +156,13 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
         # Defense-in-depth against subagent-dispatch storms: caps `task` calls
         # per run. exit_behavior="continue" (not "end") — "end" raises
         # NotImplementedError when parallel tool calls are pending.
-        layers.append(ToolCallLimitMiddleware(
-            tool_name="task", run_limit=task_call_limit, exit_behavior="continue",
-        ))
+        layers.append(
+            ToolCallLimitMiddleware(
+                tool_name="task",
+                run_limit=task_call_limit,
+                exit_behavior="continue",
+            )
+        )
     if use_drawer_revise_gate:
         layers.append(DrawerReviseGateMiddleware())
         # Must follow DrawerReviseGateMiddleware: only augment task(drawer, ...)
@@ -162,10 +172,12 @@ def _middleware(run_limit: int = _RUN_CALL_LIMIT, *, agent_name: str = "agent",
         layers.append(PhaseToolFilterMiddleware())
         layers.append(PhasePromptFilterMiddleware())
     if use_tool_selector and _MAIN_TOOL_SELECTOR:
-        layers.append(SafeLLMToolSelectorMiddleware(
-            max_tools=20,
-            always_include=_MAIN_TOOL_SELECTOR_ALWAYS_INCLUDE,
-        ))
+        layers.append(
+            SafeLLMToolSelectorMiddleware(
+                max_tools=20,
+                always_include=_MAIN_TOOL_SELECTOR_ALWAYS_INCLUDE,
+            )
+        )
     # Optional model fallback: set FALLBACK_MODEL env var to activate.
     # Format: "provider:model-name" e.g. "anthropic:claude-sonnet-4-5-20250929"
     fallback = os.getenv("FALLBACK_MODEL", "").strip()

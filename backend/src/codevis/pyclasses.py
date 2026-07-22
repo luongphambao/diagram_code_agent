@@ -12,6 +12,7 @@ Programmatic usage:
   graph = build_class_graph("/path/to/project", group=True)
   # -> {"direction": "TB", "nodes": [...], "edges": [...]}
 """
+
 import argparse
 import ast
 import json
@@ -71,8 +72,9 @@ def _transitive_reduce(nodes: list[str], edges: list[tuple[str, str]]) -> list[t
     return [(rev[int(a)], rev[int(b)]) for a, b in re.findall(r"(\d+)\s*->\s*(\d+)", out)]
 
 
-def build_class_graph(project_dir: str, direction: str = "TB",
-                      group: bool = False, reduce: bool = True) -> dict:
+def build_class_graph(
+    project_dir: str, direction: str = "TB", group: bool = False, reduce: bool = True
+) -> dict:
     """Build a class-inheritance graph for a Python project."""
     modules, base = _discover(project_dir)
     classes: dict[str, tuple[str, list[str]]] = {}
@@ -82,8 +84,12 @@ def build_class_graph(project_dir: str, direction: str = "TB",
             classes[cid] = (mod, bases)
             by_name.setdefault(name, []).append(cid)
     if not classes:
-        return {"direction": direction, "nodes": [], "edges": [],
-                "error": f"no classes found under {project_dir}"}
+        return {
+            "direction": direction,
+            "nodes": [],
+            "edges": [],
+            "error": f"no classes found under {project_dir}",
+        }
 
     def resolve(name: str, module: str) -> str | None:
         cands = by_name.get(name, [])
@@ -104,7 +110,7 @@ def build_class_graph(project_dir: str, direction: str = "TB",
         edge_list = _transitive_reduce(list(classes), edge_list)
 
     strip = base + "." if base else ""
-    short = lambda m: m[len(strip):] if strip and m.startswith(strip) else m
+    short = lambda m: m[len(strip) :] if strip and m.startswith(strip) else m
 
     def node(cid: str) -> dict:
         d: dict = {"id": cid, "label": cid.rsplit(".", 1)[1]}

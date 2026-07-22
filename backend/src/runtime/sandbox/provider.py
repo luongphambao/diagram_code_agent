@@ -50,6 +50,4 @@ def get_sandbox_runner() -> SandboxRunner:
 
         return ModalSandboxRunner()
 
-    raise SandboxConfigError(
-        f"Unknown SANDBOX_PROVIDER={provider!r} — expected 'modal' or 'local'."
-    )
+    raise SandboxConfigError(f"Unknown SANDBOX_PROVIDER={provider!r} — expected 'modal' or 'local'.")

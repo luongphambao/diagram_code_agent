@@ -22,11 +22,20 @@ Severity = Literal["low", "medium", "high", "critical"]
 Confidence = Literal["low", "medium", "high"]
 Category = Literal[
     # Functional categories — a blocking one sends the diagram back to the drawer.
-    "layout", "completeness", "correctness", "readability", "pillar_gap",
+    "layout",
+    "completeness",
+    "correctness",
+    "readability",
+    "pillar_gap",
     # Aesthetic ("art-director") categories — advisory polish only, NEVER block
     # finalize. They surface so the drawer can improve the look on a later pass,
     # but the user is never held up by a purely cosmetic note.
-    "style", "color_harmony", "alignment", "legend", "whitespace", "grouping",
+    "style",
+    "color_harmony",
+    "alignment",
+    "legend",
+    "whitespace",
+    "grouping",
 ]
 
 # Aesthetic categories never block finalize regardless of severity — they are the
@@ -77,9 +86,7 @@ class DiagramFinding(BaseModel):
         description="what is wrong and WHERE — name the node/edge/cluster you see "
         "(or that is missing). Concrete and anchored to the PNG/blueprint.",
     )
-    fix_suggestion: Optional[str] = Field(
-        default=None, description="the one concrete fix, ≤4 lines, or omit"
-    )
+    fix_suggestion: Optional[str] = Field(default=None, description="the one concrete fix, ≤4 lines, or omit")
     in_blueprint: bool = Field(
         default=True,
         description="False if this is OUTSIDE the approved blueprint's scope "
@@ -101,11 +108,22 @@ class DiagramFinding(BaseModel):
         defaults = {
             "severity": ("medium", set(_SEVERITY_ORDER)),
             "confidence": ("medium", set(_CONFIDENCE_ORDER)),
-            "category": ("style", {
-                "layout", "completeness", "correctness", "readability",
-                "pillar_gap", "style", "color_harmony", "alignment", "legend",
-                "whitespace", "grouping",
-            }),
+            "category": (
+                "style",
+                {
+                    "layout",
+                    "completeness",
+                    "correctness",
+                    "readability",
+                    "pillar_gap",
+                    "style",
+                    "color_harmony",
+                    "alignment",
+                    "legend",
+                    "whitespace",
+                    "grouping",
+                },
+            ),
         }
         for key, (fallback, allowed) in defaults.items():
             v = values.get(key)
@@ -186,10 +204,7 @@ def format_critique(findings: list[DiagramFinding]) -> str:
     if verdict == "pass" and not kept:
         header = "VERDICT: PASS (no findings — diagram is clean, proceed to finalize)"
     elif verdict == "pass":
-        header = (
-            f"VERDICT: PASS ({len(in_scope)} minor finding(s), none blocking — "
-            "proceed to finalize)"
-        )
+        header = f"VERDICT: PASS ({len(in_scope)} minor finding(s), none blocking — proceed to finalize)"
     else:
         header = (
             f"VERDICT: REVISE ({len(blocking)} blocking finding(s) — send these "
@@ -204,12 +219,9 @@ def format_critique(findings: list[DiagramFinding]) -> str:
             line += f" — fix: {f.fix_suggestion}"
         lines.append(line)
     if out_of_scope:
-        lines.append(
-            "(out-of-blueprint findings are for awareness only and do NOT block finalize)"
-        )
+        lines.append("(out-of-blueprint findings are for awareness only and do NOT block finalize)")
     if any(f.category in AESTHETIC_CATEGORIES for f in kept):
         lines.append(
-            "(aesthetic findings are art-director polish notes — advisory only, "
-            "they do NOT block finalize)"
+            "(aesthetic findings are art-director polish notes — advisory only, they do NOT block finalize)"
         )
     return "\n".join(lines)

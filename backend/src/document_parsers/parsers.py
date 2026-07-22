@@ -83,9 +83,7 @@ def _extract_pdf(path: Path) -> str:
 
     reader = PdfReader(str(path))
     if len(reader.pages) > MAX_PDF_PAGES:
-        raise ValueError(
-            f"PDF has {len(reader.pages)} pages, exceeding the {MAX_PDF_PAGES}-page limit"
-        )
+        raise ValueError(f"PDF has {len(reader.pages)} pages, exceeding the {MAX_PDF_PAGES}-page limit")
     pages: list[str] = []
     for i, page in enumerate(reader.pages):
         try:
@@ -146,8 +144,7 @@ def parse_file(path: Path) -> ParsedDocument:
         if ext in IMAGE_EXT:
             b64, mime = _extract_image(path)
             return ParsedDocument(path, title, "", "image", image_b64=b64, image_mime=mime)
-        return ParsedDocument(path, title, "", "unknown",
-                              error=f"unsupported extension '{ext}'")
+        return ParsedDocument(path, title, "", "unknown", error=f"unsupported extension '{ext}'")
     except Exception as e:  # noqa: BLE001
         logger.warning("failed to parse %s: %s", path.name, e)
         return ParsedDocument(path, title, "", ext.lstrip(".") or "unknown", error=str(e))
@@ -174,10 +171,7 @@ def read_folder(
     if write_md:
         out_dir.mkdir(parents=True, exist_ok=True)
 
-    files = sorted(
-        p for p in folder.iterdir()
-        if p.is_file() and p.suffix.lower() in SUPPORTED_EXT
-    )
+    files = sorted(p for p in folder.iterdir() if p.is_file() and p.suffix.lower() in SUPPORTED_EXT)
     docs: list[ParsedDocument] = []
     for path in files:
         doc = parse_file(path)

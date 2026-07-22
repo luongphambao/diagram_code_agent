@@ -41,9 +41,7 @@ def _get_composio_client(ctx: SessionContext | None = None):
     try:
         import composio  # type: ignore[import]
     except ImportError:
-        raise RuntimeError(
-            "composio package is not installed. Run: pip install composio-langchain"
-        )
+        raise RuntimeError("composio package is not installed. Run: pip install composio-langchain")
     api_key = (ctx.composio_api_key if ctx else "") or os.environ.get("COMPOSIO_API_KEY", "")
     if not api_key:
         raise RuntimeError("No Composio API key in session context or COMPOSIO_API_KEY env.")
@@ -127,8 +125,8 @@ def list_meeting_records(
     lines = ["Conference records:"]
     for rec in records:
         name = rec.get("name", "")
-        start = (rec.get("start_time") or "")
-        end = (rec.get("end_time") or "")
+        start = rec.get("start_time") or ""
+        end = rec.get("end_time") or ""
         lines.append(f"  - {name}  ({start} → {end})")
     return "\n".join(lines)
 

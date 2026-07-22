@@ -47,8 +47,15 @@ DECK_QA_NAME = "deck_qa_result.json"
 # Layout / block names MUST match ppt_reporting.VALID_LAYOUTS / VALID_BLOCKS. Kept as
 # literal strings here (not imported) so deck.py stays free of a ppt_reporting cycle.
 NarrativeRole = Literal[
-    "context", "objective", "solution", "architecture",
-    "scope", "effort", "timeline", "risk", "pricing",
+    "context",
+    "objective",
+    "solution",
+    "architecture",
+    "scope",
+    "effort",
+    "timeline",
+    "risk",
+    "pricing",
 ]
 
 # Roles the storyboard MUST cover for a complete proposal (docx §7.1 deck gate).
@@ -96,6 +103,7 @@ class DeckPlan(BaseModel):
 
 
 # --- building the storyboard from the CSM ------------------------------------
+
 
 def _clip(text: Any, limit: int = 200) -> str:
     value = " ".join(str(text or "").split())
@@ -151,9 +159,9 @@ def build_deck_plan(
     risk_entities = list(model.risks)
 
     objective = _clip(brief.get("objective") or "", 280)
-    exec_bullets = (
-        [objective] if objective else []
-    ) + [_clip(r.statement) for r in (req_business or model.requirements)[:5]]
+    exec_bullets = ([objective] if objective else []) + [
+        _clip(r.statement) for r in (req_business or model.requirements)[:5]
+    ]
 
     slides: list[SlideSpec] = []
 
@@ -163,78 +171,153 @@ def build_deck_plan(
     # 1 — Cover
     add("context", section="cover", title="", layout="Cover-01", block="bullets")
     # 2-3 — Executive Summary
-    add("context", section="executive_summary", title="I. Executive Summary",
-        layout="Head Page", block="bullets")
-    add("objective", section="executive_summary", title="EXECUTIVE SUMMARY | Overview",
-        layout="Detail-01", block="bullets", bullets=exec_bullets or ["(objective TBD)"],
-        source_refs=[r.id for r in (req_business or model.requirements)[:5]])
+    add(
+        "context",
+        section="executive_summary",
+        title="I. Executive Summary",
+        layout="Head Page",
+        block="bullets",
+    )
+    add(
+        "objective",
+        section="executive_summary",
+        title="EXECUTIVE SUMMARY | Overview",
+        layout="Detail-01",
+        block="bullets",
+        bullets=exec_bullets or ["(objective TBD)"],
+        source_refs=[r.id for r in (req_business or model.requirements)[:5]],
+    )
     # 4-6 — Proposed Solution
-    add("solution", section="solution_overview", title="II. Proposed Solution",
-        layout="Head Page", block="bullets")
-    add("solution", section="solution_overview", title="PROPOSED SOLUTION | Overview",
-        layout="Overview-01", block="bullets",
+    add(
+        "solution",
+        section="solution_overview",
+        title="II. Proposed Solution",
+        layout="Head Page",
+        block="bullets",
+    )
+    add(
+        "solution",
+        section="solution_overview",
+        title="PROPOSED SOLUTION | Overview",
+        layout="Overview-01",
+        block="bullets",
         bullets=[_clip(objective or "A centralized platform delivering the scope below.", 200)],
-        source_refs=comp_ids)
-    add("objective", section="solution_overview", title="PROPOSED SOLUTION | Requirements",
-        layout="Detail-01", block="func_nfr",
-        source_refs=[r.id for r in (req_func + req_nfr)])
+        source_refs=comp_ids,
+    )
+    add(
+        "objective",
+        section="solution_overview",
+        title="PROPOSED SOLUTION | Requirements",
+        layout="Detail-01",
+        block="func_nfr",
+        source_refs=[r.id for r in (req_func + req_nfr)],
+    )
     # 7-8 — Architecture (only when a rendered diagram exists)
     if has_diagram:
-        add("architecture", section="architecture_diagram", title="Architecture Overview",
-            layout="Head-01", block="bullets")
-        add("architecture", section="architecture_diagram", title="",
-            layout="Empty", block="bullets", asset_ref="architecture_diagram",
-            source_refs=comp_ids)
+        add(
+            "architecture",
+            section="architecture_diagram",
+            title="Architecture Overview",
+            layout="Head-01",
+            block="bullets",
+        )
+        add(
+            "architecture",
+            section="architecture_diagram",
+            title="",
+            layout="Empty",
+            block="bullets",
+            asset_ref="architecture_diagram",
+            source_refs=comp_ids,
+        )
     # 9 — Technical Stack (cites versions => client-facing, wants evidence)
-    add("solution", section="technical_stack", title="PROPOSED SOLUTION | Technical Stack",
-        layout="Detail-01", block="tech_stack_table",
-        source_refs=dec_ids + evd_ids, client_facing=True)
+    add(
+        "solution",
+        section="technical_stack",
+        title="PROPOSED SOLUTION | Technical Stack",
+        layout="Detail-01",
+        block="tech_stack_table",
+        source_refs=dec_ids + evd_ids,
+        client_facing=True,
+    )
     # 10-12 — Scope of Work
-    add("scope", section="scope", title="IV. Scope of Work",
-        layout="Head Page", block="bullets")
-    add("scope", section="scope", title="SCOPE OF WORK | SDLC Phases",
-        layout="Detail-01", block="sdlc")
-    add("scope", section="scope", title="SCOPE OF WORK | Assumptions & Constraints",
-        layout="Detail-01", block="bullets",
+    add("scope", section="scope", title="IV. Scope of Work", layout="Head Page", block="bullets")
+    add("scope", section="scope", title="SCOPE OF WORK | SDLC Phases", layout="Detail-01", block="sdlc")
+    add(
+        "scope",
+        section="scope",
+        title="SCOPE OF WORK | Assumptions & Constraints",
+        layout="Detail-01",
+        block="bullets",
         bullets=[_clip(c.statement) for c in model.constraints]
-                + [_clip(a.statement) for a in model.assumptions],
-        source_refs=con_ids + asm_ids)
+        + [_clip(a.statement) for a in model.assumptions],
+        source_refs=con_ids + asm_ids,
+    )
     # 13-16 — Project Delivery
-    add("effort", section="delivery_plan", title="V. Project Delivery",
-        layout="Head Page", block="bullets")
-    add("effort", section="delivery_plan", title="PROJECT DELIVERY | Estimated Effort",
-        layout="Detail-01", block="delivery_effort",
+    add("effort", section="delivery_plan", title="V. Project Delivery", layout="Head Page", block="bullets")
+    add(
+        "effort",
+        section="delivery_plan",
+        title="PROJECT DELIVERY | Estimated Effort",
+        layout="Detail-01",
+        block="delivery_effort",
         bullets=[
             f"Total Effort: {totals['total_mandays']} MD (~{totals['total_manmonths']} man-months)",
             f"P50 estimate: {totals['p50_md']} MD",
             f"P80 estimate: {totals['p80_md']} MD",
         ],
-        source_refs=wbs_ids)
-    add("timeline", section="delivery_plan", title="PROJECT DELIVERY | Master Plan & Milestones",
-        layout="Detail-01", block="gantt",
+        source_refs=wbs_ids,
+    )
+    add(
+        "timeline",
+        section="delivery_plan",
+        title="PROJECT DELIVERY | Master Plan & Milestones",
+        layout="Detail-01",
+        block="gantt",
         bullets=[
             f"Timeline: {totals['weeks']} weeks (~{totals['months']} months)",
             f"Delivery in {totals['sprints']} two-week sprints",
         ],
-        source_refs=wbs_ids)
-    add("effort", section="delivery_plan", title="PROJECT DELIVERY | Team Structure",
-        layout="Detail-01", block="team")
+        source_refs=wbs_ids,
+    )
+    add(
+        "effort",
+        section="delivery_plan",
+        title="PROJECT DELIVERY | Team Structure",
+        layout="Detail-01",
+        block="team",
+    )
     # 17 — Risks
-    add("risk", section="risks", title="PROJECT DELIVERY | Risks & Mitigations",
-        layout="Detail-01", block="bullets",
+    add(
+        "risk",
+        section="risks",
+        title="PROJECT DELIVERY | Risks & Mitigations",
+        layout="Detail-01",
+        block="bullets",
         bullets=[
-            _clip(f"{r.statement}" + (f" -> {r.mitigation}" if r.mitigation else ""))
-            for r in risk_entities
-        ] or ["No material delivery risks identified."],
-        source_refs=[r.id for r in risk_entities])
+            _clip(f"{r.statement}" + (f" -> {r.mitigation}" if r.mitigation else "")) for r in risk_entities
+        ]
+        or ["No material delivery risks identified."],
+        source_refs=[r.id for r in risk_entities],
+    )
     # 18-20 — Pricing (CAPEX cites pricing => client-facing, wants evidence)
-    add("pricing", section="pricing", title="VI. Pricing",
-        layout="Head Page", block="bullets")
-    add("pricing", section="pricing", title="PRICING | CAPEX",
-        layout="Detail-01", block="pricing",
-        source_refs=wbs_ids + evd_ids, client_facing=True)
-    add("pricing", section="pricing", title="PRICING | Payment Milestones",
-        layout="Detail-01", block="milestones")
+    add("pricing", section="pricing", title="VI. Pricing", layout="Head Page", block="bullets")
+    add(
+        "pricing",
+        section="pricing",
+        title="PRICING | CAPEX",
+        layout="Detail-01",
+        block="pricing",
+        source_refs=wbs_ids + evd_ids,
+        client_facing=True,
+    )
+    add(
+        "pricing",
+        section="pricing",
+        title="PRICING | Payment Milestones",
+        layout="Detail-01",
+        block="milestones",
+    )
 
     return DeckPlan(
         title=title or str(brief.get("slide_title") or ""),
@@ -245,6 +328,7 @@ def build_deck_plan(
 
 
 # --- validation (docx §4.3 / §4.4 / §7.1 deck gate) --------------------------
+
 
 def validate_deck(plan: DeckPlan, model: SolutionModel) -> list[dict[str, Any]]:
     """Deterministic structured findings over the storyboard. Empty list == clean.
@@ -258,28 +342,39 @@ def validate_deck(plan: DeckPlan, model: SolutionModel) -> list[dict[str, Any]]:
     evidence_ids = {e.id for e in model.evidence}
     n = 0
 
-    def finding(severity: str, dimension: str, slide_no: int,
-                entity_ids: list[str], evidence: str, recommendation: str) -> None:
+    def finding(
+        severity: str,
+        dimension: str,
+        slide_no: int,
+        entity_ids: list[str],
+        evidence: str,
+        recommendation: str,
+    ) -> None:
         nonlocal n
         n += 1
-        findings.append({
-            "finding_id": f"DECK-{n:03d}",
-            "severity": severity,
-            "dimension": dimension,
-            "artifact_type": "deck_plan",
-            "slide_no": slide_no,
-            "entity_ids": entity_ids,
-            "evidence": evidence,
-            "recommendation": recommendation,
-            "status": "open",
-        })
+        findings.append(
+            {
+                "finding_id": f"DECK-{n:03d}",
+                "severity": severity,
+                "dimension": dimension,
+                "artifact_type": "deck_plan",
+                "slide_no": slide_no,
+                "entity_ids": entity_ids,
+                "evidence": evidence,
+                "recommendation": recommendation,
+                "status": "open",
+            }
+        )
 
     # 1. Traceability — every source_ref must resolve to a CSM entity (docx §4.4).
     for s in plan.slides:
         dangling = [ref for ref in s.source_refs if ref not in model_ids]
         if dangling:
             finding(
-                "high", "traceability", s.slide_no, dangling,
+                "high",
+                "traceability",
+                s.slide_no,
+                dangling,
                 f"Slide {s.slide_no} '{s.title}' claims entities not in the solution model: "
                 + ", ".join(dangling),
                 "Remove the slide claim or add the entity to the CSM before rendering.",
@@ -290,7 +385,10 @@ def validate_deck(plan: DeckPlan, model: SolutionModel) -> list[dict[str, Any]]:
     missing_roles = [r for r in REQUIRED_ROLES if r not in present]
     if missing_roles:
         finding(
-            "medium", "completeness", 0, [],
+            "medium",
+            "completeness",
+            0,
+            [],
             "Storyboard is missing required narrative roles: " + ", ".join(missing_roles),
             "Add slides covering: " + ", ".join(missing_roles) + ".",
         )
@@ -304,9 +402,11 @@ def validate_deck(plan: DeckPlan, model: SolutionModel) -> list[dict[str, Any]]:
             joined = " ".join(s.bullets)
             if not _mentions_number(joined, wbs_total):
                 finding(
-                    "high", "consistency", s.slide_no, [w.id for w in model.work_items],
-                    f"Effort slide does not state the WBS total of {wbs_total} MD "
-                    f"(bullets: {joined!r}).",
+                    "high",
+                    "consistency",
+                    s.slide_no,
+                    [w.id for w in model.work_items],
+                    f"Effort slide does not state the WBS total of {wbs_total} MD (bullets: {joined!r}).",
                     f"Restate total effort as {wbs_total} MD to match the WBS roll-up.",
                 )
 
@@ -317,7 +417,10 @@ def validate_deck(plan: DeckPlan, model: SolutionModel) -> list[dict[str, Any]]:
             continue
         if not any(ref in evidence_ids for ref in s.source_refs):
             finding(
-                "medium", "evidence", s.slide_no, list(s.source_refs),
+                "medium",
+                "evidence",
+                s.slide_no,
+                list(s.source_refs),
                 f"Client-facing slide '{s.title}' cites pricing/versions with no grounded "
                 "Evidence (EVD-*) behind it.",
                 "Record an Evidence claim (record_evidence) and reference it, or mark the "
@@ -342,9 +445,11 @@ def _mentions_number(text: str, value: float) -> bool:
 
 # --- store -------------------------------------------------------------------
 
+
 def _plan_path(workspace: Optional[Path]) -> Path:
     if workspace is None:
         from backends import current_workspace
+
         workspace = current_workspace()
     return Path(workspace) / DECK_PLAN_NAME
 
@@ -383,8 +488,8 @@ def load_deck_plan(workspace: Optional[Path] = None) -> Optional[DeckPlan]:
 # --- structural quality scorer -----------------------------------------------
 
 # Thresholds for per-slide rules.
-_MAX_BULLETS = 8          # more → "wall of text"
-_MAX_TITLE_LEN = 80       # characters
+_MAX_BULLETS = 8  # more → "wall of text"
+_MAX_TITLE_LEN = 80  # characters
 _MIN_BULLETS_CONTENT = 1  # section covers + cover may have 0 bullets legitimately
 
 
@@ -448,11 +553,13 @@ def score_deck_structure(plan: DeckPlan) -> dict:
             slide_issues.append(msg)
             deduct += 2.0
 
-        slide_scores.append({
-            "slide_no": s.slide_no,
-            "title": s.title,
-            "issues": slide_issues,
-        })
+        slide_scores.append(
+            {
+                "slide_no": s.slide_no,
+                "title": s.title,
+                "issues": slide_issues,
+            }
+        )
 
     # Overall deck rules
     n_slides = len(plan.slides)
@@ -473,7 +580,9 @@ def score_deck_structure(plan: DeckPlan) -> dict:
             deduct += 8.0
 
     score = max(0.0, min(100.0, 100.0 - deduct))
-    grade = "A" if score >= 90 else "B" if score >= 75 else "C" if score >= 60 else "D" if score >= 45 else "F"
+    grade = (
+        "A" if score >= 90 else "B" if score >= 75 else "C" if score >= 60 else "D" if score >= 45 else "F"
+    )
 
     return {
         "score": round(score, 1),
@@ -485,6 +594,7 @@ def score_deck_structure(plan: DeckPlan) -> dict:
 
 
 # --- projection into the CSM -------------------------------------------------
+
 
 def project_into_csm(model: SolutionModel, plan: Optional[DeckPlan]) -> SolutionModel:
     """Fold the deck plan into `model` in place (and return it).
@@ -505,8 +615,9 @@ def project_into_csm(model: SolutionModel, plan: Optional[DeckPlan]) -> Solution
         return model  # already projected (defensive)
 
     comp_ids = {c.id for c in model.components}
-    claim_ids = {d.id for d in model.decisions} | {r.id for r in model.requirements} \
-        | {e.id for e in model.evidence}
+    claim_ids = (
+        {d.id for d in model.decisions} | {r.id for r in model.requirements} | {e.id for e in model.evidence}
+    )
     existing = model.ids()
     deck_sources: list[str] = []
 
@@ -515,26 +626,37 @@ def project_into_csm(model: SolutionModel, plan: Optional[DeckPlan]) -> Solution
         if not resolved:
             continue
         slide_id = mint_id("slide", s.slide_no)
-        model.deliverables.append(Deliverable(
-            id=slide_id, kind="slide", title=s.title or f"Slide {s.slide_no}",
-            solution_revision=model.revision, source_entity_ids=list(resolved),
-            provenance="agent",
-            source_refs=[SourceRef(kind="derived", ref=DECK_PLAN_NAME)],
-        ))
+        model.deliverables.append(
+            Deliverable(
+                id=slide_id,
+                kind="slide",
+                title=s.title or f"Slide {s.slide_no}",
+                solution_revision=model.revision,
+                source_entity_ids=list(resolved),
+                provenance="agent",
+                source_refs=[SourceRef(kind="derived", ref=DECK_PLAN_NAME)],
+            )
+        )
         for target in resolved:
-            relation = "visualizes" if target in comp_ids else (
-                "claims" if target in claim_ids else None)
+            relation = "visualizes" if target in comp_ids else ("claims" if target in claim_ids else None)
             if relation is None:
                 continue
-            model.trace_links.append(TraceLink(
-                from_id=slide_id, to_id=target, relation=relation, provenance="agent"))
+            model.trace_links.append(
+                TraceLink(from_id=slide_id, to_id=target, relation=relation, provenance="agent")
+            )
         for ref in resolved:
             if ref not in deck_sources:
                 deck_sources.append(ref)
 
-    model.deliverables.append(Deliverable(
-        id=deck_id, kind="pptx", title=plan.title or "Proposal deck",
-        solution_revision=model.revision, source_entity_ids=deck_sources,
-        provenance="agent", source_refs=[SourceRef(kind="derived", ref=DECK_PLAN_NAME)],
-    ))
+    model.deliverables.append(
+        Deliverable(
+            id=deck_id,
+            kind="pptx",
+            title=plan.title or "Proposal deck",
+            solution_revision=model.revision,
+            source_entity_ids=deck_sources,
+            provenance="agent",
+            source_refs=[SourceRef(kind="derived", ref=DECK_PLAN_NAME)],
+        )
+    )
     return model

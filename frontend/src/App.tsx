@@ -36,7 +36,11 @@ function getStoredThreadId(): string {
 }
 
 function setStoredThreadId(id: string) {
-  try { localStorage.setItem("diagram_agent_thread_id", id); } catch { /* ignore */ }
+  try {
+    localStorage.setItem("diagram_agent_thread_id", id);
+  } catch {
+    /* ignore */
+  }
 }
 
 export default function App() {
@@ -46,7 +50,11 @@ export default function App() {
   const convStore = useConversations();
 
   useEffect(() => {
-    try { localStorage.setItem("diagram_agent_user_role", userRole); } catch { /* ignore */ }
+    try {
+      localStorage.setItem("diagram_agent_user_role", userRole);
+    } catch {
+      /* ignore */
+    }
   }, [userRole]);
 
   const diagramStep = diagramAgent.agentState.current_step;
@@ -77,23 +85,29 @@ export default function App() {
     resetToNew();
   }, [resetToNew]);
 
-  const handleSelectConversation = useCallback(async (tid: string) => {
-    if (tid === threadId) return;
-    const hist = await loadHistory(tid);
-    setThreadId(tid);
-    if (hist) {
-      restore(hist.state, hist.chatMessages, hist.wireMessages as never, loadGateHistory(tid));
-    } else {
-      resetToNew();
-    }
-  }, [threadId, loadHistory, restore, resetToNew]);
+  const handleSelectConversation = useCallback(
+    async (tid: string) => {
+      if (tid === threadId) return;
+      const hist = await loadHistory(tid);
+      setThreadId(tid);
+      if (hist) {
+        restore(hist.state, hist.chatMessages, hist.wireMessages as never, loadGateHistory(tid));
+      } else {
+        resetToNew();
+      }
+    },
+    [threadId, loadHistory, restore, resetToNew],
+  );
 
   // Conversation deletion also drops its persisted gate-history entry so
   // localStorage doesn't accumulate orphaned per-thread keys.
-  const handleDeleteConversation = useCallback((tid: string) => {
-    clearGateHistory(tid);
-    remove(tid);
-  }, [remove]);
+  const handleDeleteConversation = useCallback(
+    (tid: string) => {
+      clearGateHistory(tid);
+      remove(tid);
+    },
+    [remove],
+  );
 
   // After each agent run finishes, refresh the conversation list so the sidebar
   // shows the latest name/preview. Use the stable `fetchAll` ref to avoid
@@ -106,28 +120,31 @@ export default function App() {
     prevRunning.current = diagramAgent.isRunning;
   }, [diagramAgent.isRunning, fetchAll]);
 
-  const onDragStart = useCallback((e: React.MouseEvent) => {
-    dragging.current = true;
-    startX.current = e.clientX;
-    startW.current = chatWidth;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
+  const onDragStart = useCallback(
+    (e: React.MouseEvent) => {
+      dragging.current = true;
+      startX.current = e.clientX;
+      startW.current = chatWidth;
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
 
-    const onMove = (ev: MouseEvent) => {
-      if (!dragging.current) return;
-      const delta = ev.clientX - startX.current;
-      setChatWidth(Math.min(CHAT_MAX, Math.max(CHAT_MIN, startW.current + delta)));
-    };
-    const onUp = () => {
-      dragging.current = false;
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  }, [chatWidth]);
+      const onMove = (ev: MouseEvent) => {
+        if (!dragging.current) return;
+        const delta = ev.clientX - startX.current;
+        setChatWidth(Math.min(CHAT_MAX, Math.max(CHAT_MIN, startW.current + delta)));
+      };
+      const onUp = () => {
+        dragging.current = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+      };
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    },
+    [chatWidth],
+  );
 
   const activeStep = diagramStep;
   const activeIsRunning = diagramAgent.isRunning;
@@ -139,11 +156,45 @@ export default function App() {
         <div className="flex items-center gap-2.5">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600/20">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-blue-400">
-              <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.5" />
-              <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.5" />
-              <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M17.5 14v7M14 17.5h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              <path d="M10 6.5h4M6.5 10v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <rect
+                x="3"
+                y="3"
+                width="7"
+                height="7"
+                rx="1"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              <rect
+                x="14"
+                y="3"
+                width="7"
+                height="7"
+                rx="1"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              <rect
+                x="3"
+                y="14"
+                width="7"
+                height="7"
+                rx="1"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+              <path
+                d="M17.5 14v7M14 17.5h7"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+              <path
+                d="M10 6.5h4M6.5 10v4"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
             </svg>
           </div>
           <h1 className="text-sm font-bold tracking-tight text-white">Diagram Agent</h1>
@@ -168,9 +219,17 @@ export default function App() {
         <div className="ml-auto flex items-center gap-3">
           {/* Role selector — sent as userRole on every request; backend enforces gate
               role policy (ROLE_GATE_PERMISSIONS, §8.6). */}
-          <label className="flex items-center gap-1.5 text-[11px] text-slate-500" title="Role used to approve gates">
+          <label
+            className="flex items-center gap-1.5 text-[11px] text-slate-500"
+            title="Role used to approve gates"
+          >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="text-slate-500">
-              <path d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <path
+                d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
             </svg>
             <select
               value={userRole}
@@ -178,7 +237,9 @@ export default function App() {
               className="rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[11px] capitalize text-slate-300 outline-none hover:border-white/20 focus:border-blue-500/40"
             >
               {USER_ROLES.map((r) => (
-                <option key={r} value={r} className="bg-surface-base capitalize">{r}</option>
+                <option key={r} value={r} className="bg-surface-base capitalize">
+                  {r}
+                </option>
               ))}
             </select>
           </label>
@@ -227,7 +288,10 @@ export default function App() {
           />
 
           {/* Chat panel */}
-          <div style={{ width: chatWidth, minWidth: chatWidth, maxWidth: chatWidth }} className="flex flex-col overflow-hidden">
+          <div
+            style={{ width: chatWidth, minWidth: chatWidth, maxWidth: chatWidth }}
+            className="flex flex-col overflow-hidden"
+          >
             <ChatSidebar />
           </div>
 

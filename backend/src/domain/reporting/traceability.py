@@ -25,8 +25,10 @@ def _requirements(brief: dict[str, Any]) -> list[dict[str, str]]:
     """Stable-id requirement list. Honors an explicit `id` if present, else REQ-#."""
     out: list[dict[str, str]] = []
     n = 0
-    for kind, key in (("functional", "functional_requirements"),
-                      ("non-functional", "non_functional_requirements")):
+    for kind, key in (
+        ("functional", "functional_requirements"),
+        ("non-functional", "non_functional_requirements"),
+    ):
         for item in _as_list(brief.get(key)):
             n += 1
             rid = ""
@@ -61,8 +63,14 @@ def build_trace_links(
     # REQ --satisfies--> COMP/CLUSTER
     for r in reqs:
         for hit in _soft_match(r["text"], comp_names):
-            links.append({"from": r["id"], "to": comp_by_name[hit],
-                          "relation": "satisfies", "provenance": "deterministic"})
+            links.append(
+                {
+                    "from": r["id"],
+                    "to": comp_by_name[hit],
+                    "relation": "satisfies",
+                    "provenance": "deterministic",
+                }
+            )
 
     # WBS --implements--> COMP or REQ
     req_by_text = {r["text"]: r["id"] for r in reqs}
@@ -72,11 +80,18 @@ def build_trace_links(
         name = str(it.get("name") or it.get("deliverable") or "")
         wid = f"WBS-{it.get('id') or it.get('ref_code') or it.get('code') or name[:24]}"
         for hit in _soft_match(name, comp_names):
-            links.append({"from": wid, "to": comp_by_name[hit],
-                          "relation": "implements", "provenance": "deterministic"})
+            links.append(
+                {
+                    "from": wid,
+                    "to": comp_by_name[hit],
+                    "relation": "implements",
+                    "provenance": "deterministic",
+                }
+            )
         for hit in _soft_match(name, list(req_by_text.keys())):
-            links.append({"from": wid, "to": req_by_text[hit],
-                          "relation": "implements", "provenance": "deterministic"})
+            links.append(
+                {"from": wid, "to": req_by_text[hit], "relation": "implements", "provenance": "deterministic"}
+            )
 
     covered_reqs = {l["from"] for l in links if l["relation"] == "satisfies"}
     total = len(reqs)
@@ -121,11 +136,13 @@ def write_trace_links(workspace: Optional[Path] = None) -> dict[str, Any]:
     """
     if workspace is None:
         from backends import current_workspace
+
         workspace = current_workspace()
     workspace = Path(workspace)
 
     try:
         from csm_adapter import build_solution_model
+
         graph = _graph_from_model(build_solution_model(workspace))
     except Exception:
         graph = build_trace_links(

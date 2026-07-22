@@ -23,16 +23,16 @@ def _r(v: float) -> int:
 
 
 def _esc(s) -> str:
-    return (str(s).replace("&", "&amp;").replace("<", "&lt;")
-            .replace(">", "&gt;").replace('"', "&quot;"))
+    return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
 def build_edges(d) -> None:
     specs = d.edge_specs
     R = lambda i: d.R[i]
 
-    cards = [{"id": i, "x": r["x"], "y": r["y"], "w": r["w"], "h": r["h"]}
-             for i, r in d.R.items() if r.get("ob")]
+    cards = [
+        {"id": i, "x": r["x"], "y": r["y"], "w": r["w"], "h": r["h"]} for i, r in d.R.items() if r.get("ob")
+    ]
     M = 7
 
     def seg_hit(p, q, ex):
@@ -48,8 +48,12 @@ def build_edges(d) -> None:
                 if x0 < p["x"] < x1 and min(p["y"], q["y"]) < y1 and max(p["y"], q["y"]) > y0:
                     return True
             else:
-                if (min(p["x"], q["x"]) < x1 and max(p["x"], q["x"]) > x0
-                        and min(p["y"], q["y"]) < y1 and max(p["y"], q["y"]) > y0):
+                if (
+                    min(p["x"], q["x"]) < x1
+                    and max(p["x"], q["x"]) > x0
+                    and min(p["y"], q["y"]) < y1
+                    and max(p["y"], q["y"]) > y0
+                ):
                     return True
         return False
 
@@ -61,14 +65,20 @@ def build_edges(d) -> None:
     def enclosing(n, other=None):
         best = None
         for c in containers:
-            if (c["x"] <= n["x"] + 1 and c["y"] <= n["y"] + 1
-                    and c["x"] + c["w"] >= n["x"] + n["w"] - 1
-                    and c["y"] + c["h"] >= n["y"] + n["h"] - 1
-                    and c["w"] * c["h"] > n["w"] * n["h"] + 1):
+            if (
+                c["x"] <= n["x"] + 1
+                and c["y"] <= n["y"] + 1
+                and c["x"] + c["w"] >= n["x"] + n["w"] - 1
+                and c["y"] + c["h"] >= n["y"] + n["h"] - 1
+                and c["w"] * c["h"] > n["w"] * n["h"] + 1
+            ):
                 if other:
-                    enc_other = (c["x"] <= other["x"] + 1 and c["y"] <= other["y"] + 1
-                                 and c["x"] + c["w"] >= other["x"] + other["w"] - 1
-                                 and c["y"] + c["h"] >= other["y"] + other["h"] - 1)
+                    enc_other = (
+                        c["x"] <= other["x"] + 1
+                        and c["y"] <= other["y"] + 1
+                        and c["x"] + c["w"] >= other["x"] + other["w"] - 1
+                        and c["y"] + c["h"] >= other["y"] + other["h"] - 1
+                    )
                     if enc_other:
                         continue
                     if not best or c["w"] * c["h"] > best["w"] * best["h"]:
@@ -81,13 +91,18 @@ def build_edges(d) -> None:
     BM = 24
 
     def inside_any(px, py):
-        return any(c["x"] + 1 < px < c["x"] + c["w"] - 1 and c["y"] + 1 < py < c["y"] + c["h"] - 1
-                   for c in containers)
+        return any(
+            c["x"] + 1 < px < c["x"] + c["w"] - 1 and c["y"] + 1 < py < c["y"] + c["h"] - 1
+            for c in containers
+        )
 
     def _encloses(c, r):
-        return (c["x"] <= r["x"] + 1 and c["y"] <= r["y"] + 1
-                and c["x"] + c["w"] >= r["x"] + r["w"] - 1
-                and c["y"] + c["h"] >= r["y"] + r["h"] - 1)
+        return (
+            c["x"] <= r["x"] + 1
+            and c["y"] <= r["y"] + 1
+            and c["x"] + c["w"] >= r["x"] + r["w"] - 1
+            and c["y"] + c["h"] >= r["y"] + r["h"] - 1
+        )
 
     def along(p, q, a=None, b=None):
         if abs(p["x"] - q["x"]) < 1:
@@ -101,8 +116,10 @@ def build_edges(d) -> None:
                             return True
             if a and b:
                 for c in containers:
-                    if (c["x"] + 8 < p["x"] < c["x"] + c["w"] - 8
-                            and min(y1, c["y"] + c["h"]) - max(y0, c["y"]) > 28):
+                    if (
+                        c["x"] + 8 < p["x"] < c["x"] + c["w"] - 8
+                        and min(y1, c["y"] + c["h"]) - max(y0, c["y"]) > 28
+                    ):
                         if _encloses(c, a) != _encloses(c, b):
                             return True
         else:
@@ -116,8 +133,10 @@ def build_edges(d) -> None:
                             return True
             if a and b:
                 for c in containers:
-                    if (c["y"] + 8 < p["y"] < c["y"] + c["h"] - 8
-                            and min(x1, c["x"] + c["w"]) - max(x0, c["x"]) > 28):
+                    if (
+                        c["y"] + 8 < p["y"] < c["y"] + c["h"] - 8
+                        and min(x1, c["x"] + c["w"]) - max(x0, c["x"]) > 28
+                    ):
                         if _encloses(c, a) != _encloses(c, b):
                             return True
         return False
@@ -175,8 +194,7 @@ def build_edges(d) -> None:
             continue
         if o.get("route"):
             rt = o["route"]
-            face.append({"es": rt["es"], "en": rt["en"],
-                         "horiz": rt["es"] in ("L", "R")})
+            face.append({"es": rt["es"], "en": rt["en"], "horiz": rt["es"] in ("L", "R")})
             continue
         a, b = R(e["src"]), R(e["tgt"])
         fwd_x = b["x"] + b["w"] / 2 >= a["x"] + a["w"] / 2
@@ -186,8 +204,9 @@ def build_edges(d) -> None:
         if o.get("dir"):
             horiz = o["dir"] == "LR"
         else:
-            horiz = True if y_ov > 8 else (False if x_ov > 8
-                    else abs(b["x"] - a["x"]) >= abs(b["y"] - a["y"]))
+            horiz = (
+                True if y_ov > 8 else (False if x_ov > 8 else abs(b["x"] - a["x"]) >= abs(b["y"] - a["y"]))
+            )
         if horiz:
             face.append({"es": "R" if fwd_x else "L", "en": "L" if fwd_x else "R", "horiz": True})
         else:
@@ -211,9 +230,9 @@ def build_edges(d) -> None:
         for k, arr in grp.items():
             if len(arr) < 2:
                 continue
-            side = k[k.rfind("|") + 1:]
+            side = k[k.rfind("|") + 1 :]
             v = side in ("L", "R")
-            node = R(k[:k.rfind("|")])
+            node = R(k[: k.rfind("|")])
             nc = node["y"] + node["h"] / 2 if v else node["x"] + node["w"] / 2
             info = []
             for it in arr:
@@ -236,22 +255,19 @@ def build_edges(d) -> None:
                     set_f(x["it"], (j + 1) / (len(arr) + 1))
 
     all_idx = [i for i in range(len(specs)) if face[i]]
-    decollide(all_idx, lambda i, end: (face[i]["es"] if end == "s" else face[i]["en"]))
+    decollide(all_idx, lambda i, end: face[i]["es"] if end == "s" else face[i]["en"])
 
     used = set()
     used_segs = []
 
     def used_key(x1, y1, x2, y2):
-        return (f"{x1},{y1}|{x2},{y2}" if (x1 < x2 or y1 < y2)
-                else f"{x2},{y2}|{x1},{y1}")
+        return f"{x1},{y1}|{x2},{y2}" if (x1 < x2 or y1 < y2) else f"{x2},{y2}|{x1},{y1}"
 
     def reg(g):
         pp = [g["sp"], *g["wp"], g["ep"]]
         for k in range(len(pp) - 1):
-            used.add(used_key(_r(pp[k]["x"]), _r(pp[k]["y"]),
-                              _r(pp[k + 1]["x"]), _r(pp[k + 1]["y"])))
-            used_segs.append({"x1": pp[k]["x"], "y1": pp[k]["y"],
-                              "x2": pp[k + 1]["x"], "y2": pp[k + 1]["y"]})
+            used.add(used_key(_r(pp[k]["x"]), _r(pp[k]["y"]), _r(pp[k + 1]["x"]), _r(pp[k + 1]["y"])))
+            used_segs.append({"x1": pp[k]["x"], "y1": pp[k]["y"], "x2": pp[k + 1]["x"], "y2": pp[k + 1]["y"]})
 
     def ov1(a0, a1, b0, b1):
         return min(a1, b1) - max(a0, b0)
@@ -261,12 +277,26 @@ def build_edges(d) -> None:
             a, b = pp[i], pp[i + 1]
             for s in used_segs:
                 if abs(a["x"] - b["x"]) < 1 and abs(s["x1"] - s["x2"]) < 1 and abs(a["x"] - s["x1"]) < 6:
-                    if ov1(min(a["y"], b["y"]), max(a["y"], b["y"]),
-                           min(s["y1"], s["y2"]), max(s["y1"], s["y2"])) > 14:
+                    if (
+                        ov1(
+                            min(a["y"], b["y"]),
+                            max(a["y"], b["y"]),
+                            min(s["y1"], s["y2"]),
+                            max(s["y1"], s["y2"]),
+                        )
+                        > 14
+                    ):
                         return True
                 elif abs(a["y"] - b["y"]) < 1 and abs(s["y1"] - s["y2"]) < 1 and abs(a["y"] - s["y1"]) < 6:
-                    if ov1(min(a["x"], b["x"]), max(a["x"], b["x"]),
-                           min(s["x1"], s["x2"]), max(s["x1"], s["x2"])) > 14:
+                    if (
+                        ov1(
+                            min(a["x"], b["x"]),
+                            max(a["x"], b["x"]),
+                            min(s["x1"], s["x2"]),
+                            max(s["x1"], s["x2"]),
+                        )
+                        > 14
+                    ):
                         return True
         return False
 
@@ -377,6 +407,7 @@ def build_edges(d) -> None:
             return abs(X[i] - X[gi]) + abs(Y[j] - Y[gj])
 
         import heapq
+
         gsc = {start: 0}
         came, cdir = {}, {}
         heap = [(heur(start), start)]
@@ -401,11 +432,14 @@ def build_edges(d) -> None:
                     continue
                 nid = idx(ni, nj)
                 nd = "h" if di != 0 else "v"
-                cost = (abs(nx - cx) + abs(ny - cy)
-                        + (80 if cdir.get(cur) and cdir.get(cur) != nd else 0)
-                        + (400 if used_key(cx, cy, nx, ny) in used else 0)
-                        + (220 if along({"x": cx, "y": cy}, {"x": nx, "y": ny}, a, b) else 0)
-                        + check_crossing(cx, cy, nx, ny) * 250)
+                cost = (
+                    abs(nx - cx)
+                    + abs(ny - cy)
+                    + (80 if cdir.get(cur) and cdir.get(cur) != nd else 0)
+                    + (400 if used_key(cx, cy, nx, ny) in used else 0)
+                    + (220 if along({"x": cx, "y": cy}, {"x": nx, "y": ny}, a, b) else 0)
+                    + check_crossing(cx, cy, nx, ny) * 250
+                )
                 ng = gsc[cur] + cost
                 if nid not in gsc or ng < gsc[nid]:
                     gsc[nid] = ng
@@ -463,8 +497,10 @@ def build_edges(d) -> None:
                         break
             if not r:
                 fwd = b["y"] + b["h"] / 2 >= a["y"] + a["h"] / 2
-                for cand in ({"es": f["es"], "en": "T" if fwd else "B", "kind": "Lhv"},
-                             {"es": "B" if fwd else "T", "en": f["en"], "kind": "Lvh"}):
+                for cand in (
+                    {"es": f["es"], "en": "T" if fwd else "B", "kind": "Lhv"},
+                    {"es": "B" if fwd else "T", "en": f["en"], "kind": "Lvh"},
+                ):
                     r = try_r(cand)
                     if r:
                         break
@@ -480,8 +516,10 @@ def build_edges(d) -> None:
                         break
             if not r:
                 fwd = b["x"] + b["w"] / 2 >= a["x"] + a["w"] / 2
-                for cand in ({"es": f["es"], "en": "L" if fwd else "R", "kind": "Lvh"},
-                             {"es": "R" if fwd else "L", "en": f["en"], "kind": "Lhv"}):
+                for cand in (
+                    {"es": f["es"], "en": "L" if fwd else "R", "kind": "Lvh"},
+                    {"es": "R" if fwd else "L", "en": f["en"], "kind": "Lhv"},
+                ):
                     r = try_r(cand)
                     if r:
                         break
@@ -532,11 +570,19 @@ def build_edges(d) -> None:
         fwd_y = b["y"] + b["h"] / 2 >= a["y"] + a["h"] / 2
         fwd_x = b["x"] + b["w"] / 2 >= a["x"] + a["w"] / 2
         if f["horiz"]:
-            tries = [[f["es"], f["en"]], ["T", "T"], ["B", "B"],
-                     ["B" if fwd_y else "T", "L" if fwd_x else "R"]]
+            tries = [
+                [f["es"], f["en"]],
+                ["T", "T"],
+                ["B", "B"],
+                ["B" if fwd_y else "T", "L" if fwd_x else "R"],
+            ]
         else:
-            tries = [[f["es"], f["en"]], ["L", "L"], ["R", "R"],
-                     ["R" if fwd_x else "L", "T" if fwd_y else "B"]]
+            tries = [
+                [f["es"], f["en"]],
+                ["L", "L"],
+                ["R", "R"],
+                ["R" if fwd_x else "L", "T" if fwd_y else "B"],
+            ]
         best = None
         for es, en in tries:
             sf = free_port(e["src"], es, frac[i]["s"])
@@ -546,23 +592,31 @@ def build_edges(d) -> None:
                 best = {"r": rr, "sf": sf, "tf": tf}
         if best:
             frac[i]["s"], frac[i]["t"] = best["sf"], best["tf"]
-            routes[i] = {"es": best["r"]["es"], "en": best["r"]["en"],
-                         "kind": "poly", "pts": best["r"]["pts"]}
+            routes[i] = {
+                "es": best["r"]["es"],
+                "en": best["r"]["en"],
+                "kind": "poly",
+                "pts": best["r"]["pts"],
+            }
         else:
-            lo = (min(a["x"], b["x"]) - 160 if f["horiz"] else min(a["y"], b["y"]) - 160)
-            hi = (max(a["x"] + a["w"], b["x"] + b["w"]) + 160 if f["horiz"]
-                  else max(a["y"] + a["h"], b["y"] + b["h"]) + 160)
+            lo = min(a["x"], b["x"]) - 160 if f["horiz"] else min(a["y"], b["y"]) - 160
+            hi = (
+                max(a["x"] + a["w"], b["x"] + b["w"]) + 160
+                if f["horiz"]
+                else max(a["y"] + a["h"], b["y"] + b["h"]) + 160
+            )
             r = None
             for lane in gap_sweep(lo, hi):
-                cand = {"es": f["es"], "en": f["en"],
-                        "kind": "Zx" if f["horiz"] else "Zy", "lane": lane}
+                cand = {"es": f["es"], "en": f["en"], "kind": "Zx" if f["horiz"] else "Zy", "lane": lane}
                 if clear_w(a, b, cand, frac[i]["s"], frac[i]["t"], ex):
                     r = cand
                     break
-            routes[i] = r or {"es": f["es"], "en": f["en"],
-                              "kind": "Zx" if f["horiz"] else "Zy",
-                              "lane": _r((a["x"] + a["w"] + b["x"]) / 2 if f["horiz"]
-                                         else (a["y"] + a["h"] + b["y"]) / 2)}
+            routes[i] = r or {
+                "es": f["es"],
+                "en": f["en"],
+                "kind": "Zx" if f["horiz"] else "Zy",
+                "lane": _r((a["x"] + a["w"] + b["x"]) / 2 if f["horiz"] else (a["y"] + a["h"] + b["y"]) / 2),
+            }
         reg(geom(a, b, routes[i], frac[i]["s"], frac[i]["t"]))
         take_port(e["src"], routes[i]["es"], frac[i]["s"])
         take_port(e["tgt"], routes[i]["en"], frac[i]["t"])
@@ -578,8 +632,11 @@ def build_edges(d) -> None:
         paths.append([g["sp"], *[{"x": p["x"], "y": p["y"]} for p in g["wp"]], g["ep"]])
 
     def conflict(s, t):
-        return (s["o"] == t["o"] and abs(s["pos"] - t["pos"]) < SEP
-                and min(s["hi"], t["hi"]) - max(s["lo"], t["lo"]) > 8)
+        return (
+            s["o"] == t["o"]
+            and abs(s["pos"] - t["pos"]) < SEP
+            and min(s["hi"], t["hi"]) - max(s["lo"], t["lo"]) > 8
+        )
 
     for _pass in range(3):
         nseg = []
@@ -589,13 +646,31 @@ def build_edges(d) -> None:
             for k in range(1, len(P) - 2):
                 p, q = P[k], P[k + 1]
                 if abs(p["x"] - q["x"]) < 1 and abs(p["y"] - q["y"]) >= 1:
-                    nseg.append({"i": i, "o": "v", "a": P[k], "b": P[k + 1], "pos": p["x"],
-                                 "lo": min(p["y"], q["y"]), "hi": max(p["y"], q["y"]),
-                                 "tie": P[k - 1]["x"] + P[k + 2]["x"]})
+                    nseg.append(
+                        {
+                            "i": i,
+                            "o": "v",
+                            "a": P[k],
+                            "b": P[k + 1],
+                            "pos": p["x"],
+                            "lo": min(p["y"], q["y"]),
+                            "hi": max(p["y"], q["y"]),
+                            "tie": P[k - 1]["x"] + P[k + 2]["x"],
+                        }
+                    )
                 elif abs(p["y"] - q["y"]) < 1 and abs(p["x"] - q["x"]) >= 1:
-                    nseg.append({"i": i, "o": "h", "a": P[k], "b": P[k + 1], "pos": p["y"],
-                                 "lo": min(p["x"], q["x"]), "hi": max(p["x"], q["x"]),
-                                 "tie": P[k - 1]["y"] + P[k + 2]["y"]})
+                    nseg.append(
+                        {
+                            "i": i,
+                            "o": "h",
+                            "a": P[k],
+                            "b": P[k + 1],
+                            "pos": p["y"],
+                            "lo": min(p["x"], q["x"]),
+                            "hi": max(p["x"], q["x"]),
+                            "tie": P[k - 1]["y"] + P[k + 2]["y"],
+                        }
+                    )
         comp = [-1] * len(nseg)
         nc = 0
         for x in range(len(nseg)):
@@ -655,15 +730,15 @@ def build_edges(d) -> None:
         out = [P[0]]
         for k in range(1, len(P) - 1):
             p, q, n = out[-1], P[k], P[k + 1]
-            if ((abs(p["x"] - q["x"]) < 1 and abs(q["x"] - n["x"]) < 1)
-                    or (abs(p["y"] - q["y"]) < 1 and abs(q["y"] - n["y"]) < 1)):
+            if (abs(p["x"] - q["x"]) < 1 and abs(q["x"] - n["x"]) < 1) or (
+                abs(p["y"] - q["y"]) < 1 and abs(q["y"] - n["y"]) < 1
+            ):
                 continue
             if abs(p["x"] - q["x"]) < 1 and abs(p["y"] - q["y"]) < 1:
                 continue
             out.append(q)
         out.append(P[-1])
-        routes[i] = {"es": routes[i]["es"], "en": routes[i]["en"],
-                     "kind": "poly", "pts": out[1:-1]}
+        routes[i] = {"es": routes[i]["es"], "en": routes[i]["en"], "kind": "poly", "pts": out[1:-1]}
 
     # D. residual crossings + parallel overlaps (verification)
     d._cross = 0
@@ -682,14 +757,22 @@ def build_edges(d) -> None:
         for k in range(1, len(P) - 2):
             p, q = P[k], P[k + 1]
             if abs(p["x"] - q["x"]) < 1:
-                fin_seg.append({"o": "v", "pos": p["x"], "lo": min(p["y"], q["y"]), "hi": max(p["y"], q["y"])})
+                fin_seg.append(
+                    {"o": "v", "pos": p["x"], "lo": min(p["y"], q["y"]), "hi": max(p["y"], q["y"])}
+                )
             elif abs(p["y"] - q["y"]) < 1:
-                fin_seg.append({"o": "h", "pos": p["y"], "lo": min(p["x"], q["x"]), "hi": max(p["x"], q["x"])})
+                fin_seg.append(
+                    {"o": "h", "pos": p["y"], "lo": min(p["x"], q["x"]), "hi": max(p["x"], q["x"])}
+                )
     d._overlaps = 0
     for x in range(len(fin_seg)):
         for y in range(x + 1, len(fin_seg)):
             a, b = fin_seg[x], fin_seg[y]
-            if a["o"] == b["o"] and abs(a["pos"] - b["pos"]) < 6 and min(a["hi"], b["hi"]) - max(a["lo"], b["lo"]) > 14:
+            if (
+                a["o"] == b["o"]
+                and abs(a["pos"] - b["pos"]) < 6
+                and min(a["hi"], b["hi"]) - max(a["lo"], b["lo"]) > 14
+            ):
                 d._overlaps += 1
 
     for i, e in enumerate(specs):
@@ -708,14 +791,12 @@ def _path_mid(pts: list[dict]) -> dict:
         seg = abs(b["x"] - a["x"]) + abs(b["y"] - a["y"])
         if half <= seg and seg:
             f = half / seg
-            return {"x": a["x"] + (b["x"] - a["x"]) * f,
-                    "y": a["y"] + (b["y"] - a["y"]) * f}
+            return {"x": a["x"] + (b["x"] - a["x"]) * f, "y": a["y"] + (b["y"] - a["y"]) * f}
         half -= seg
     return dict(pts[-1])
 
 
-def _solve_label_offset(d, label: str, pts: list[dict],
-                        want: tuple | None) -> tuple[float, float] | None:
+def _solve_label_offset(d, label: str, pts: list[dict], want: tuple | None) -> tuple[float, float] | None:
     """Collision-aware edge-label placement, run AFTER routing so the anchor
     (the actual polyline midpoint) is known. Tries the caller's preferred
     offset first, then a bounded candidate ring; a position must clear every
@@ -734,23 +815,47 @@ def _solve_label_offset(d, label: str, pts: list[dict],
         x0, y0 = mid["x"] + dx - lw / 2, mid["y"] + dy - lh / 2
         area = 0.0
         for rr in obstacles:
-            area += (max(0.0, min(x0 + lw, rr["x"] + rr["w"]) - max(x0, rr["x"]))
-                     * max(0.0, min(y0 + lh, rr["y"] + rr["h"]) - max(y0, rr["y"])))
+            area += max(0.0, min(x0 + lw, rr["x"] + rr["w"]) - max(x0, rr["x"])) * max(
+                0.0, min(y0 + lh, rr["y"] + rr["h"]) - max(y0, rr["y"])
+            )
         for bx, by, bw, bh in boxes:
-            area += (max(0.0, min(x0 + lw, bx + bw) - max(x0, bx))
-                     * max(0.0, min(y0 + lh, by + bh) - max(y0, by)))
+            area += max(0.0, min(x0 + lw, bx + bw) - max(x0, bx)) * max(
+                0.0, min(y0 + lh, by + bh) - max(y0, by)
+            )
         return area
 
     cands: list[tuple[float, float]] = []
     if want:
         cands.append((float(want[0]), float(want[1])))
-    cands += [(0, 0), (0, -22), (0, 22), (-52, 0), (52, 0), (0, -44), (0, 44),
-              (-88, 0), (88, 0), (-52, -22), (52, -22), (-52, 22), (52, 22),
-              (-88, -22), (88, -22), (-124, 0), (124, 0),
-              # tight vertical row-gaps need a bigger jump to clear the NEXT
-              # row entirely rather than nudging a few px into it
-              (0, -66), (0, 66), (0, -90), (0, 90), (-52, -44), (52, -44),
-              (-52, 44), (52, 44)]
+    cands += [
+        (0, 0),
+        (0, -22),
+        (0, 22),
+        (-52, 0),
+        (52, 0),
+        (0, -44),
+        (0, 44),
+        (-88, 0),
+        (88, 0),
+        (-52, -22),
+        (52, -22),
+        (-52, 22),
+        (52, 22),
+        (-88, -22),
+        (88, -22),
+        (-124, 0),
+        (124, 0),
+        # tight vertical row-gaps need a bigger jump to clear the NEXT
+        # row entirely rather than nudging a few px into it
+        (0, -66),
+        (0, 66),
+        (0, -90),
+        (0, 90),
+        (-52, -44),
+        (52, -44),
+        (-52, 44),
+        (52, 44),
+    ]
     chosen = None
     for c in cands:
         if _overlap(*c) == 0.0:
@@ -760,8 +865,7 @@ def _solve_label_offset(d, label: str, pts: list[dict],
         # Nothing fully clears — take the least-bad position instead of piling
         # onto the raw midpoint (a garbled overprint is the worst outcome).
         chosen = min(cands, key=lambda c: _overlap(*c))
-    boxes.append((mid["x"] + chosen[0] - lw / 2,
-                  mid["y"] + chosen[1] - lh / 2, lw, lh))
+    boxes.append((mid["x"] + chosen[0] - lw / 2, mid["y"] + chosen[1] - lh / 2, lw, lh))
     return chosen if chosen != (0.0, 0.0) else None
 
 
@@ -777,9 +881,11 @@ def _emit_edge(d, e, r, fr, geom) -> None:
     # routing + ports + waypoints while keeping their typographic edge classes
     # (later mxGraph keys win, so extra strokeWidth/font overrides are safe).
     raw_style = opts.get("style", "") or opts.get("style_extra", "")
-    st = (f"edgeStyle=orthogonalEdgeStyle;html=1;rounded={1 if rounded else 0};"
-          f"jettySize=auto;orthogonalLoop=1;fontSize=10;fontColor={THEME.edge_font_color};"
-          f"strokeColor={stroke};strokeWidth={THEME.edge_stroke_width};")
+    st = (
+        f"edgeStyle=orthogonalEdgeStyle;html=1;rounded={1 if rounded else 0};"
+        f"jettySize=auto;orthogonalLoop=1;fontSize=10;fontColor={THEME.edge_font_color};"
+        f"strokeColor={stroke};strokeWidth={THEME.edge_stroke_width};"
+    )
     if dash:
         st += "dashed=1;"
     if flow:
@@ -794,8 +900,7 @@ def _emit_edge(d, e, r, fr, geom) -> None:
         if label:
             # Post-routing label solve: the polyline is now known, so place
             # the label where it clears cards and other labels.
-            label_offset = _solve_label_offset(
-                d, label, [g["sp"], *g["wp"], g["ep"]], label_offset)
+            label_offset = _solve_label_offset(d, label, [g["sp"], *g["wp"], g["ep"]], label_offset)
 
         def port(s, f):
             if s == "L":
@@ -807,8 +912,10 @@ def _emit_edge(d, e, r, fr, geom) -> None:
             return {"x": f, "y": 1}
 
         ps, pe = port(r["es"], fr["s"]), port(r["en"], fr["t"])
-        st += (f"exitX={ps['x']};exitY={round(ps['y'], 3)};exitDx=0;exitDy=0;"
-               f"entryX={pe['x']};entryY={round(pe['y'], 3)};entryDx=0;entryDy=0;")
+        st += (
+            f"exitX={ps['x']};exitY={round(ps['y'], 3)};exitDx=0;exitDy=0;"
+            f"entryX={pe['x']};entryY={round(pe['y'], 3)};entryDx=0;entryDy=0;"
+        )
         bake = d.contract == "bake"
         if bake and g["wp"]:
             pts = "".join(f'<mxPoint x="{_r(q["x"])}" y="{_r(q["y"])}"/>' for q in g["wp"])
@@ -829,9 +936,11 @@ def _emit_edge(d, e, r, fr, geom) -> None:
         eid = f"ed{d.eid}"
     # Z_EDGE tag => to_xml() sorts connectors behind card shadows/bodies (V2 §7.2).
     from .builder import Z_EDGE
+
     d._emit_cell(
         eid,
         f'<mxCell id="{eid}" value="{_esc(label)}" style="{st}" edge="1" parent="1" '
         f'source="{e["src"]}" target="{e["tgt"]}"><mxGeometry relative="1" as="geometry">'
-        f'{wp_xml}{off_xml}</mxGeometry></mxCell>',
-        Z_EDGE)
+        f"{wp_xml}{off_xml}</mxGeometry></mxCell>",
+        Z_EDGE,
+    )

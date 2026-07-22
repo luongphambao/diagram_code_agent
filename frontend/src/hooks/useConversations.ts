@@ -37,8 +37,11 @@ export function useConversations() {
         const data = await res.json();
         setConversations(Array.isArray(data) ? data : []);
       }
-    } catch { /* ignore — backend may not be up yet */ }
-    finally { setLoading(false); }
+    } catch {
+      /* ignore — backend may not be up yet */
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const create = useCallback(async (threadId: string, name = "Untitled") => {
@@ -53,7 +56,9 @@ export function useConversations() {
         setConversations((prev) => [conv, ...prev]);
         return conv;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return null;
   }, []);
 
@@ -64,17 +69,19 @@ export function useConversations() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
       });
-      setConversations((prev) =>
-        prev.map((c) => (c.thread_id === threadId ? { ...c, name } : c))
-      );
-    } catch { /* ignore */ }
+      setConversations((prev) => prev.map((c) => (c.thread_id === threadId ? { ...c, name } : c)));
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const remove = useCallback(async (threadId: string) => {
     try {
       await fetch(`${BACKEND_URL}/conversations/${threadId}`, { method: "DELETE" });
       setConversations((prev) => prev.filter((c) => c.thread_id !== threadId));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const loadHistory = useCallback(async (threadId: string) => {
@@ -87,7 +94,9 @@ export function useConversations() {
         chatMessages: wireToChat(hist.messages),
         wireMessages: hist.messages,
       };
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   }, []);
 
   // Insert or update a conversation in the local list (called after each agent run).

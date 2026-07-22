@@ -28,8 +28,7 @@ from .subagents import build_subagent_specs
 logger = logging.getLogger(__name__)
 
 
-def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
-                checkpointer=None, store=None):
+def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE, checkpointer=None, store=None):
     """Create the diagram deep agent (a compiled LangGraph graph).
 
     Pass ``checkpointer``/``store`` from :func:`agent.persistence.make_persistence`
@@ -77,6 +76,7 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
     # once here since building the spec list needs it before either model is known.
     drawer_model_for_relay = get_model("drawer", main_model)
     from config import vision_in_tools as _vision_in_tools
+
     drawer_vision_in_tools = _vision_in_tools(drawer_model_for_relay)
     # vision_relay: provider can see images in user messages but not tool messages.
     # Enable RENDER_INCLUDES_IMAGE so tools still return PNG data; InjectVisionAsUserEdit
@@ -95,8 +95,11 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
     backend = make_local_backend()
 
     specs = build_subagent_specs(
-        workdir=workdir, icons_root=LOCAL_ICONS, manifest=LOCAL_MANIFEST,
-        style=style, drawer_vision_relay=drawer_vision_relay,
+        workdir=workdir,
+        icons_root=LOCAL_ICONS,
+        manifest=LOCAL_MANIFEST,
+        style=style,
+        drawer_vision_relay=drawer_vision_relay,
     )
 
     # NO agent gets the implicit general-purpose subagent. wbs_planner used to
@@ -111,7 +114,9 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
 
     logger.info(
         "build_agent  main=%s  style=%s  roles=%s",
-        main_model, style, role_models,
+        main_model,
+        style,
+        role_models,
     )
 
     compiled_subagents: list[dict] = []
@@ -120,33 +125,34 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
         role_prefix = get_system_prompt_prefix(role_model)
         role_llm = make_llm(role_model)
         role_system_prompt = role_prefix + spec.prompt_builder(**spec.prompt_kwargs)
-        compiled_subagents.append({
-            "name": spec.name,
-            "description": spec.description,
-            "runnable": _StreamingSubAgentRunnable(
-                create_deep_agent(
-                    model=role_llm,
-                    tools=spec.tools,
-                    system_prompt=role_system_prompt,
-                    backend=backend,
-                    memory=[GLOBAL_MEMORY_PATH, MEMORY_PATH],
-                    skills=spec.skills,
-                    permissions=spec.permissions,
-                    middleware=_middleware(
-                        run_limit=spec.run_limit, agent_name=spec.name,
-                        model=role_model, use_vision_relay=spec.use_vision_relay,
+        compiled_subagents.append(
+            {
+                "name": spec.name,
+                "description": spec.description,
+                "runnable": _StreamingSubAgentRunnable(
+                    create_deep_agent(
+                        model=role_llm,
+                        tools=spec.tools,
+                        system_prompt=role_system_prompt,
+                        backend=backend,
+                        memory=[GLOBAL_MEMORY_PATH, MEMORY_PATH],
+                        skills=spec.skills,
+                        permissions=spec.permissions,
+                        middleware=_middleware(
+                            run_limit=spec.run_limit,
+                            agent_name=spec.name,
+                            model=role_model,
+                            use_vision_relay=spec.use_vision_relay,
+                        ),
+                        store=store,
                     ),
-                    store=store,
+                    spec.name,
                 ),
-                spec.name,
-            ),
-        })
+            }
+        )
 
     # Each gate tool pauses for human review/approval before it runs.
-    interrupt_on = {
-        name: {"allowed_decisions": ["approve", "reject"]}
-        for name in GATE_TOOL_NAMES
-    }
+    interrupt_on = {name: {"allowed_decisions": ["approve", "reject"]} for name in GATE_TOOL_NAMES}
     if checkpointer is None:
         checkpointer = MemorySaver()
     return create_deep_agent(
@@ -157,10 +163,15 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE,
         memory=[GLOBAL_MEMORY_PATH, MEMORY_PATH],
         skills=MAIN_SKILL_PATHS,
         subagents=compiled_subagents,
-        middleware=_middleware(agent_name="main", model=main_model, use_tool_selector=_selector_ok,
-                               use_phase_filter=True, use_drawer_revise_gate=True,
-                               # Happy path ≈7 task calls; 2 rejection rounds ≈11.
-                               task_call_limit=int(os.getenv("TASK_CALL_LIMIT", "12"))),
+        middleware=_middleware(
+            agent_name="main",
+            model=main_model,
+            use_tool_selector=_selector_ok,
+            use_phase_filter=True,
+            use_drawer_revise_gate=True,
+            # Happy path ≈7 task calls; 2 rejection rounds ≈11.
+            task_call_limit=int(os.getenv("TASK_CALL_LIMIT", "12")),
+        ),
         checkpointer=checkpointer,
         store=store,
         interrupt_on=interrupt_on,

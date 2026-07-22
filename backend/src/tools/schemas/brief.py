@@ -11,9 +11,16 @@ class DiagramBrief(CoercingModel):
     """Requirements-derived diagram brief used before tech stack and blueprint."""
 
     objective: str = Field(description="one concise sentence describing what the diagram must communicate")
-    application_type: str = Field("", description="application type from architecture analysis, e.g. web_application|api_service|data_analytics")
-    scale_level: str = Field("", description="scale signal from architecture analysis: small|medium|large|enterprise")
-    security_level: str = Field("", description="security signal from architecture analysis: basic|standard|high|critical")
+    application_type: str = Field(
+        "",
+        description="application type from architecture analysis, e.g. web_application|api_service|data_analytics",
+    )
+    scale_level: str = Field(
+        "", description="scale signal from architecture analysis: small|medium|large|enterprise"
+    )
+    security_level: str = Field(
+        "", description="security signal from architecture analysis: basic|standard|high|critical"
+    )
     provider_preference: str = Field("", description="cloud/provider signal, e.g. aws|azure|gcp|oci|onprem")
     analysis_signals: list[str] = Field(
         default_factory=list,

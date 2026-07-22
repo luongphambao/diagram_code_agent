@@ -34,21 +34,20 @@ _BUNDLE_MIN = 3
 _BUNDLE_EDGE_CAP = 0.4  # default: never suppress more than 40% of all edges
 _AGGRESSIVE_BUNDLE_MIN = 2
 _AGGRESSIVE_BUNDLE_EDGE_CAP = 0.65
-_AGGRESSIVE_BUNDLE_CLASSES = {
-    "control", "monitoring", "security", "registry", "data", "execution", "serving"
-}
+_AGGRESSIVE_BUNDLE_CLASSES = {"control", "monitoring", "security", "registry", "data", "execution", "serving"}
 _EXECUTIVE_BUNDLE_MIN_EDGES = 24
 _EXECUTIVE_BUNDLE_HUB_DEGREE = 2
 # Rough per-card footprint for the aspect estimate (medium size class + gaps).
 _EST_CARD_W = (_SIZE_CLASSES["medium"][0] + _SIZE_CLASSES["medium"][1]) / 2 + 22
 _EST_CARD_H = 64 + 18
-_EST_BAND_CHROME_H = 70   # band title + padding
-_EST_PAGE_GAP = 46        # _LAYER_LANE_GAP
+_EST_BAND_CHROME_H = 70  # band title + padding
+_EST_PAGE_GAP = 46  # _LAYER_LANE_GAP
 _REFINED_SUPPORT_RX = re.compile(
     r"security|secret|iam\b|identity|access|governance|audit|observ|monitor"
     r"|operation|devops|ci\s*/?\s*cd|data|database|storage|state|archive"
     r"|ledger|replication|evidence|content|store|stores|bucket|blob|nas",
-    re.IGNORECASE)
+    re.IGNORECASE,
+)
 _REFINED_FLOW_ALIAS = {"security": "control", "serving": "execution"}
 
 
@@ -119,7 +118,7 @@ def order_bands(main_roots: list[str], w: dict) -> list[str]:
     for _ in range(20):
         improved = False
         for i in range(len(order) - 1):
-            cand = order[:i] + [order[i + 1], order[i]] + order[i + 2:]
+            cand = order[:i] + [order[i + 1], order[i]] + order[i + 2 :]
             c = _order_cost(cand, w)
             if c < cost - 1e-9:
                 order, cost, improved = cand, c, True
@@ -128,10 +127,15 @@ def order_bands(main_roots: list[str], w: dict) -> list[str]:
     return order
 
 
-def _bundle_edges(spec: dict, node_root: dict, band_pos: dict, *,
-                  min_group: int = _BUNDLE_MIN,
-                  edge_cap: float = _BUNDLE_EDGE_CAP,
-                  aggressive: bool = False) -> tuple[list, list]:
+def _bundle_edges(
+    spec: dict,
+    node_root: dict,
+    band_pos: dict,
+    *,
+    min_group: int = _BUNDLE_MIN,
+    edge_cap: float = _BUNDLE_EDGE_CAP,
+    aggressive: bool = False,
+) -> tuple[list, list]:
     """Collapse hub fan-out: >=_BUNDLE_MIN same-label same-direction edges from
     one hub become 1 representative edge (nearest band) + suppressed members.
 
@@ -142,8 +146,9 @@ def _bundle_edges(spec: dict, node_root: dict, band_pos: dict, *,
     total = len(edges)
     if not total:
         return [], []
-    node_cluster = {n.get("id"): n.get("cluster") for n in spec.get("nodes", [])
-                    if n.get("id") and n.get("cluster")}
+    node_cluster = {
+        n.get("id"): n.get("cluster") for n in spec.get("nodes", []) if n.get("id") and n.get("cluster")
+    }
     deg: dict[str, int] = {}
     cross: dict[str, int] = {}
     direct_cross: dict[str, int] = {}
@@ -158,11 +163,11 @@ def _bundle_edges(spec: dict, node_root: dict, band_pos: dict, *,
             if is_direct_cross:
                 direct_cross[nid] = direct_cross.get(nid, 0) + 1
     hub_degree = _AGGRESSIVE_HUB_DEGREE if aggressive else _HUB_DEGREE
-    hub_cross_share = (_AGGRESSIVE_HUB_CROSS_SHARE if aggressive
-                       else _HUB_CROSS_SHARE)
+    hub_cross_share = _AGGRESSIVE_HUB_CROSS_SHARE if aggressive else _HUB_CROSS_SHARE
     cross_counts = direct_cross if aggressive else cross
-    hubs = {nid for nid, d in deg.items()
-            if d >= hub_degree and cross_counts.get(nid, 0) / d >= hub_cross_share}
+    hubs = {
+        nid for nid, d in deg.items() if d >= hub_degree and cross_counts.get(nid, 0) / d >= hub_cross_share
+    }
 
     groups: dict[tuple, list[dict]] = {}
     for e in edges:
@@ -182,10 +187,13 @@ def _bundle_edges(spec: dict, node_root: dict, band_pos: dict, *,
             groups.setdefault((e["to"], "in", group_label, cls), []).append(e)
 
     candidates = sorted(
-        [(k, v) for k, v in groups.items()
-         if len(v) >= min_group
-         and (not aggressive or not k[3] or k[3] in _AGGRESSIVE_BUNDLE_CLASSES)],
-        key=lambda kv: (-len(kv[1]), kv[0]))
+        [
+            (k, v)
+            for k, v in groups.items()
+            if len(v) >= min_group and (not aggressive or not k[3] or k[3] in _AGGRESSIVE_BUNDLE_CLASSES)
+        ],
+        key=lambda kv: (-len(kv[1]), kv[0]),
+    )
     bundles: list[dict] = []
     suppressed: list[list] = []
     seen: set[tuple] = set()
@@ -198,8 +206,7 @@ def _bundle_edges(spec: dict, node_root: dict, band_pos: dict, *,
         return (abs(ob - hb), str(other))
 
     for (hub, _dirn, _label, _style), members in candidates:
-        members = [m for m in members
-                   if (m["from"], m["to"], m.get("label") or "") not in seen]
+        members = [m for m in members if (m["from"], m["to"], m.get("label") or "") not in seen]
         if len(members) < min_group:
             continue
         drop = len(members) - 1
@@ -209,11 +216,13 @@ def _bundle_edges(spec: dict, node_root: dict, band_pos: dict, *,
         rep, rest = members[0], members[1:]
         for m in members:
             seen.add((m["from"], m["to"], m.get("label") or ""))
-        bundles.append({
-            "kind": "hub",
-            "rep": [rep["from"], rep["to"], rep.get("label") or ""],
-            "members": [[m["from"], m["to"], m.get("label") or ""] for m in rest],
-        })
+        bundles.append(
+            {
+                "kind": "hub",
+                "rep": [rep["from"], rep["to"], rep.get("label") or ""],
+                "members": [[m["from"], m["to"], m.get("label") or ""] for m in rest],
+            }
+        )
         suppressed += [[m["from"], m["to"], m.get("label") or ""] for m in rest]
 
     # Zone-pair aggregation: many-to-many spray between the SAME two bands
@@ -251,8 +260,7 @@ def _bundle_edges(spec: dict, node_root: dict, band_pos: dict, *,
             # into a single line, silently erasing whichever loses the pick.
             continue
         pair_groups.setdefault((ra, rb, cls), []).append(e)
-    for (_ra, _rb, _style), members in sorted(
-            pair_groups.items(), key=lambda kv: (-len(kv[1]), kv[0])):
+    for (_ra, _rb, _style), members in sorted(pair_groups.items(), key=lambda kv: (-len(kv[1]), kv[0])):
         if len(members) < min_group:
             continue
         if aggressive and _style not in _AGGRESSIVE_BUNDLE_CLASSES:
@@ -262,24 +270,34 @@ def _bundle_edges(spec: dict, node_root: dict, band_pos: dict, *,
             continue
         # Representative: the member whose endpoints have the highest total
         # degree (the pair a reader would name first), stable-tied by id.
-        members = sorted(members, key=lambda e: (-(deg.get(e["from"], 0)
-                                                   + deg.get(e["to"], 0)),
-                                                 str(e["from"]), str(e["to"])))
+        members = sorted(
+            members,
+            key=lambda e: (-(deg.get(e["from"], 0) + deg.get(e["to"], 0)), str(e["from"]), str(e["to"])),
+        )
         rep, rest = members[0], members[1:]
         for m in members:
             seen.add((m["from"], m["to"], m.get("label") or ""))
-        bundles.append({
-            "kind": "pair",
-            "rep": [rep["from"], rep["to"], rep.get("label") or ""],
-            "members": [[m["from"], m["to"], m.get("label") or ""] for m in rest],
-        })
+        bundles.append(
+            {
+                "kind": "pair",
+                "rep": [rep["from"], rep["to"], rep.get("label") or ""],
+                "members": [[m["from"], m["to"], m.get("label") or ""] for m in rest],
+            }
+        )
         suppressed += [[m["from"], m["to"], m.get("label") or ""] for m in rest]
     return bundles, suppressed
 
-def _bundle_refined_support_edges(spec: dict, clusters: dict, node_root: dict,
-                                  bundles: list, suppressed: list, *,
-                                  edge_cap: float = _BUNDLE_EDGE_CAP,
-                                  aggressive: bool = False) -> tuple[list, list]:
+
+def _bundle_refined_support_edges(
+    spec: dict,
+    clusters: dict,
+    node_root: dict,
+    bundles: list,
+    suppressed: list,
+    *,
+    edge_cap: float = _BUNDLE_EDGE_CAP,
+    aggressive: bool = False,
+) -> tuple[list, list]:
     """Collapse refined-preset support wiring.
 
     Refined pages reserve visual weight for the main request path. Repeated
@@ -290,8 +308,9 @@ def _bundle_refined_support_edges(spec: dict, clusters: dict, node_root: dict,
     edges = [e for e in spec.get("edges", []) if e.get("from") and e.get("to")]
     if len(edges) < 2:
         return [], []
-    node_cluster = {n.get("id"): n.get("cluster") for n in spec.get("nodes", [])
-                    if n.get("id") and n.get("cluster")}
+    node_cluster = {
+        n.get("id"): n.get("cluster") for n in spec.get("nodes", []) if n.get("id") and n.get("cluster")
+    }
 
     def _edge_key(e: dict) -> tuple:
         return (e.get("from"), e.get("to"), e.get("label") or "")
@@ -369,9 +388,10 @@ def _bundle_refined_support_edges(spec: dict, clusters: dict, node_root: dict,
         budget -= drop
     return extra_bundles, extra_suppressed
 
-def _bundle_refined_executive_edges(spec: dict, clusters: dict, node_root: dict,
-                                    bundles: list, suppressed: list, *,
-                                    edge_cap: float) -> tuple[list, list]:
+
+def _bundle_refined_executive_edges(
+    spec: dict, clusters: dict, node_root: dict, bundles: list, suppressed: list, *, edge_cap: float
+) -> tuple[list, list]:
     """Extra-simplify dense refined pages into executive-readable connectors.
 
     The normal aggressive pass preserves one edge per hub+class. On large client
@@ -411,9 +431,7 @@ def _bundle_refined_executive_edges(spec: dict, clusters: dict, node_root: dict,
 
     def _label_for(hub: str, members: list[dict], rep: dict) -> str:
         classes = {_class(e) for e in members if _class(e)}
-        text = " ".join([_node_text(hub)] + [
-            str(e.get("label") or "").lower() for e in members
-        ])
+        text = " ".join([_node_text(hub)] + [str(e.get("label") or "").lower() for e in members])
         if re.search(r"rpa|erp|dms|tms|invoice|bank|system|reconcile", text):
             return "systems sync"
         if re.search(r"workflow|orchestr|approval|exception|queue|review", text):
@@ -448,8 +466,9 @@ def _bundle_refined_executive_edges(spec: dict, clusters: dict, node_root: dict,
             deg[nid] = deg.get(nid, 0) + 1
             if cls in _AGGRESSIVE_BUNDLE_CLASSES or _is_supportish(nid):
                 support_deg[nid] = support_deg.get(nid, 0) + 1
-    hubs = {nid for nid, d in deg.items()
-            if d >= _EXECUTIVE_BUNDLE_HUB_DEGREE and support_deg.get(nid, 0) >= 2}
+    hubs = {
+        nid for nid, d in deg.items() if d >= _EXECUTIVE_BUNDLE_HUB_DEGREE and support_deg.get(nid, 0) >= 2
+    }
     if not hubs:
         return [], []
 
@@ -457,7 +476,8 @@ def _bundle_refined_executive_edges(spec: dict, clusters: dict, node_root: dict,
     for e in visible:
         cls = _class(e)
         if cls not in _AGGRESSIVE_BUNDLE_CLASSES and not (
-                _is_supportish(e["from"]) or _is_supportish(e["to"])):
+            _is_supportish(e["from"]) or _is_supportish(e["to"])
+        ):
             continue
         for hub in (e["from"], e["to"]):
             if hub not in hubs:
@@ -465,8 +485,9 @@ def _bundle_refined_executive_edges(spec: dict, clusters: dict, node_root: dict,
             other = e["to"] if hub == e["from"] else e["from"]
             # Keep local one-hop card relationships unless the endpoint is a
             # support concern; those usually route inside the same zone cleanly.
-            if (node_cluster.get(hub) == node_cluster.get(other)
-                    and not (_is_supportish(hub) or _is_supportish(other))):
+            if node_cluster.get(hub) == node_cluster.get(other) and not (
+                _is_supportish(hub) or _is_supportish(other)
+            ):
                 continue
             groups.setdefault(hub, []).append(e)
 
@@ -480,10 +501,22 @@ def _bundle_refined_executive_edges(spec: dict, clusters: dict, node_root: dict,
         # Prefer outgoing, named business relationships before purely
         # operational side channels.
         direction_penalty = 0 if e["from"] == hub else 1
-        side_channel = 1 if (cls in {"monitoring", "security", "registry"}
-                             or re.search(r"telemetry|secret|kms|audit|logs?|release", label)) else 0
-        return (direction_penalty, side_channel, -deg.get(e["from"], 0) - deg.get(e["to"], 0),
-                str(e["from"]), str(e["to"]), label)
+        side_channel = (
+            1
+            if (
+                cls in {"monitoring", "security", "registry"}
+                or re.search(r"telemetry|secret|kms|audit|logs?|release", label)
+            )
+            else 0
+        )
+        return (
+            direction_penalty,
+            side_channel,
+            -deg.get(e["from"], 0) - deg.get(e["to"], 0),
+            str(e["from"]),
+            str(e["to"]),
+            label,
+        )
 
     extra_bundles: list[dict] = []
     extra_suppressed: list[list] = []
@@ -499,12 +532,14 @@ def _bundle_refined_executive_edges(spec: dict, clusters: dict, node_root: dict,
         rep, rest = members[0], members[1:]
         rep_key = _edge_key(rep)
         rest_keys = [_edge_key(e) for e in rest]
-        extra_bundles.append({
-            "kind": "pair",
-            "rep": [rep["from"], rep["to"], rep.get("label") or ""],
-            "label": _label_for(hub, members, rep),
-            "members": [[m["from"], m["to"], m.get("label") or ""] for m in rest],
-        })
+        extra_bundles.append(
+            {
+                "kind": "pair",
+                "rep": [rep["from"], rep["to"], rep.get("label") or ""],
+                "label": _label_for(hub, members, rep),
+                "members": [[m["from"], m["to"], m.get("label") or ""] for m in rest],
+            }
+        )
         used.add(rep_key)
         used.update(rest_keys)
         for m in rest:
@@ -515,8 +550,7 @@ def _bundle_refined_executive_edges(spec: dict, clusters: dict, node_root: dict,
     return extra_bundles, extra_suppressed
 
 
-def _pick_band_cols(main_roots: list[str], nodes_in_root: dict,
-                    sidebar_nodes: int) -> dict:
+def _pick_band_cols(main_roots: list[str], nodes_in_root: dict, sidebar_nodes: int) -> dict:
     """Choose per-band grid columns so the predicted body ratio nears 16:9.
 
     A band_cols entry force-wraps its band from 4 cards up (the builder only
@@ -571,9 +605,11 @@ def analyze_layout(spec: dict, *, aggressive_bundles: bool = False) -> dict:
 
     # nodes_in_root counts by ROOT, so descend checks only need the root flag.
     live_roots = [cid for cid in roots if nodes_in_root.get(cid, 0) > 0]
-    cross_roots = [cid for cid in live_roots
-                   if _CROSS_CUT.search(f"{clusters[cid].get('label') or ''} "
-                                        f"{clusters[cid].get('tier') or ''}")]
+    cross_roots = [
+        cid
+        for cid in live_roots
+        if _CROSS_CUT.search(f"{clusters[cid].get('label') or ''} {clusters[cid].get('tier') or ''}")
+    ]
     main_roots = [cid for cid in live_roots if cid not in cross_roots]
 
     # Weighted band digraph from cross-band edges (sidebar edges excluded — the
@@ -595,34 +631,36 @@ def analyze_layout(spec: dict, *, aggressive_bundles: bool = False) -> dict:
     band_pos = {cid: i for i, cid in enumerate(band_order)}
 
     bundle_min = _AGGRESSIVE_BUNDLE_MIN if aggressive_bundles else _BUNDLE_MIN
-    bundle_cap = (_AGGRESSIVE_BUNDLE_EDGE_CAP if aggressive_bundles
-                  else _BUNDLE_EDGE_CAP)
+    bundle_cap = _AGGRESSIVE_BUNDLE_EDGE_CAP if aggressive_bundles else _BUNDLE_EDGE_CAP
     bundles, suppressed = _bundle_edges(
-        spec, node_root, band_pos,
-        min_group=bundle_min, edge_cap=bundle_cap, aggressive=aggressive_bundles)
+        spec, node_root, band_pos, min_group=bundle_min, edge_cap=bundle_cap, aggressive=aggressive_bundles
+    )
     if str(spec.get("style_preset") or "").lower() == "refined":
         eb, es = _bundle_refined_support_edges(
-            spec, clusters, node_root, bundles, suppressed,
-            edge_cap=bundle_cap, aggressive=aggressive_bundles)
+            spec, clusters, node_root, bundles, suppressed, edge_cap=bundle_cap, aggressive=aggressive_bundles
+        )
         bundles += eb
         suppressed += es
         if aggressive_bundles:
             eb, es = _bundle_refined_executive_edges(
-                spec, clusters, node_root, bundles, suppressed,
-                edge_cap=bundle_cap)
+                spec, clusters, node_root, bundles, suppressed, edge_cap=bundle_cap
+            )
             bundles += eb
             suppressed += es
     if bundles:
-        notes.append(f"bundled {len(suppressed)} repetitive hub edge(s) into "
-                     f"{len(bundles)} representative(s)")
+        notes.append(
+            f"bundled {len(suppressed)} repetitive hub edge(s) into {len(bundles)} representative(s)"
+        )
     if aggressive_bundles:
         notes.append("aggressive arrow bundling enabled for dense/crossing-heavy layout")
 
     sidebar_nodes = sum(nodes_in_root.get(cid, 0) for cid in cross_roots)
     band_cols = _pick_band_cols(band_order, nodes_in_root, sidebar_nodes)
     if band_cols:
-        notes.append(f"grid cols {sorted(set(band_cols.values()))[0]} chosen for "
-                     f"{len(band_cols)} dense band(s) targeting ratio {TARGET_RATIO}")
+        notes.append(
+            f"grid cols {sorted(set(band_cols.values()))[0]} chosen for "
+            f"{len(band_cols)} dense band(s) targeting ratio {TARGET_RATIO}"
+        )
 
     return {
         "schema": 1,

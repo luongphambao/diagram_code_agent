@@ -35,14 +35,19 @@ const DEFAULT_PPT_SECTIONS = [
   "appendix",
 ];
 
-export default function PptProposalApproval({ interrupt, onResolve, onDecision, disabled = false }: PptProposalApprovalProps) {
+export default function PptProposalApproval({
+  interrupt,
+  onResolve,
+  onDecision,
+  disabled = false,
+}: PptProposalApprovalProps) {
   const [mode, setMode] = useState<"idle" | "feedback">("idle");
   const [modifications, setModifications] = useState("");
   const [decided, setDecided] = useState(false);
 
   const allowedDecisions = interrupt.data.allowed_decisions ?? [];
-  const useDecisionMenu = onDecision != null &&
-    allowedDecisions.some((a: string) => a !== "approve" && a !== "reject");
+  const useDecisionMenu =
+    onDecision != null && allowedDecisions.some((a: string) => a !== "approve" && a !== "reject");
 
   const title = interrupt.data.title?.trim() || "Architecture Proposal";
   const subtitle = interrupt.data.subtitle?.trim() || "BnK PowerPoint Proposal";
@@ -67,7 +72,13 @@ export default function PptProposalApproval({ interrupt, onResolve, onDecision, 
     <div className="flex w-full flex-col overflow-hidden rounded-2xl border border-orange-500/20 bg-orange-950/15">
       <div className="flex items-center gap-2.5 border-b border-white/8 bg-white/4 px-4 py-3">
         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500/20">
-          <svg className="h-3.5 w-3.5 text-orange-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            className="h-3.5 w-3.5 text-orange-300"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 4h16v16H4z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M8 8h8M8 12h5M8 16h3" />
           </svg>
@@ -81,23 +92,32 @@ export default function PptProposalApproval({ interrupt, onResolve, onDecision, 
       {decided ? (
         <div className="px-4 py-3">
           <p className="text-xs text-slate-600">
-            {mode === "feedback" ? "Feedback sent - updating proposal settings..." : "Approved - generating PPT..."}
+            {mode === "feedback"
+              ? "Feedback sent - updating proposal settings..."
+              : "Approved - generating PPT..."}
           </p>
         </div>
       ) : mode === "idle" ? (
         <div className="flex flex-col gap-3 px-4 py-4">
           <p className="text-xs leading-relaxed text-slate-400">{interrupt.data.question}</p>
           <div className="rounded-xl border border-white/8 bg-white/4 px-3 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-orange-300/70">Title</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-orange-300/70">
+              Title
+            </p>
             <p className="mt-1 text-sm font-semibold text-slate-100">{title}</p>
             <p className="mt-1 text-xs text-slate-500">{subtitle}</p>
             {brand && <p className="mt-1 text-xs text-slate-600">Brand: {brand}</p>}
           </div>
           <div>
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-orange-300/70">Included Sections</p>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-orange-300/70">
+              Included Sections
+            </p>
             <div className="flex flex-wrap gap-1.5">
               {sections.map((section) => (
-                <span key={section} className="rounded-md border border-white/8 bg-black/25 px-2 py-1 text-[11px] text-slate-300">
+                <span
+                  key={section}
+                  className="rounded-md border border-white/8 bg-black/25 px-2 py-1 text-[11px] text-slate-300"
+                >
                   {SECTION_LABELS[section] ?? section}
                 </span>
               ))}
@@ -106,11 +126,15 @@ export default function PptProposalApproval({ interrupt, onResolve, onDecision, 
           {missingSections.length > 0 && (
             <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/8 px-3 py-2.5">
               <p className="text-[11px] font-semibold text-yellow-300">
-                {missingSections.length} section{missingSections.length > 1 ? "s" : ""} will be missing from this PPT
+                {missingSections.length} section{missingSections.length > 1 ? "s" : ""} will be
+                missing from this PPT
               </p>
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {missingSections.map((s) => (
-                  <span key={s} className="rounded border border-yellow-500/25 bg-yellow-500/10 px-1.5 py-0.5 text-[10px] text-yellow-400">
+                  <span
+                    key={s}
+                    className="rounded border border-yellow-500/25 bg-yellow-500/10 px-1.5 py-0.5 text-[10px] text-yellow-400"
+                  >
                     {SECTION_LABELS[s] ?? s}
                   </span>
                 ))}
@@ -123,7 +147,10 @@ export default function PptProposalApproval({ interrupt, onResolve, onDecision, 
               disabled={disabled}
               approveLabel="Generate PPT"
               onApprove={approve}
-              onReject={(t) => { setDecided(true); onResolve(false, t || undefined); }}
+              onReject={(t) => {
+                setDecided(true);
+                onResolve(false, t || undefined);
+              }}
               onDecision={onDecision!}
             />
           ) : (
@@ -148,7 +175,9 @@ export default function PptProposalApproval({ interrupt, onResolve, onDecision, 
       ) : (
         <div className="flex flex-col gap-3 px-4 py-4">
           <div className="flex items-center gap-2">
-            <button onClick={() => setMode("idle")} className="text-slate-600 hover:text-slate-400">Back</button>
+            <button onClick={() => setMode("idle")} className="text-slate-600 hover:text-slate-400">
+              Back
+            </button>
             <p className="text-xs text-slate-500">What should change in the proposal?</p>
           </div>
           <textarea

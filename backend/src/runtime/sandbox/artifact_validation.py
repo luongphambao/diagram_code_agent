@@ -67,8 +67,7 @@ def _validate_png(data: bytes) -> None:
             width, height = img.size
             if width * height > _MAX_PNG_PIXELS:
                 raise ArtifactValidationError(
-                    f"PNG artifact exceeds the maximum pixel count "
-                    f"({width}x{height} > {_MAX_PNG_PIXELS})"
+                    f"PNG artifact exceeds the maximum pixel count ({width}x{height} > {_MAX_PNG_PIXELS})"
                 )
     except ArtifactValidationError:
         raise

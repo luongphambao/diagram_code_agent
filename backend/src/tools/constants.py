@@ -42,7 +42,7 @@ RENDER_HARD_CAP = 6
 # batch resolve_icons — each a full wasted model call. Caps tightened so a
 # non-batched attempt fails fast (was 6/3, warn at 3) instead of burning ~13 calls
 # before the model gives up and switches to batching.
-ICON_SEARCH_PER_QUERY_CAP = 3      # one keyword + one broader term + one tech-derived retry
+ICON_SEARCH_PER_QUERY_CAP = 3  # one keyword + one broader term + one tech-derived retry
 ICON_SEARCH_DEFAULT_TOTAL_CAP = 20
 NODE_SINGLE_SEARCH_WARN = 1
 NODE_SINGLE_SEARCH_HARD_CAP = 2
@@ -56,11 +56,11 @@ CRITIC_REVISION_HARD_CAP = 2
 # Sum of WEB_SEARCH_CATEGORY_CAPS == WEB_SEARCH_SESSION_CAP. Keep them in sync.
 WEB_SEARCH_SESSION_CAP = 10
 WEB_SEARCH_CATEGORY_CAPS: dict[str, int] = {
-    "tech_stack": 4,    # managed-service pricing, latest stable versions / EOL (heaviest)
+    "tech_stack": 4,  # managed-service pricing, latest stable versions / EOL (heaviest)
     "architecture": 2,  # reference architectures / patterns for the chosen design
-    "wbs": 1,           # effort benchmarks / delivery norms
-    "evidence": 2,      # compliance / claim grounding (feeds the evidence store)
-    "general": 1,       # fallback bucket for anything that doesn't fit above
+    "wbs": 1,  # effort benchmarks / delivery norms
+    "evidence": 2,  # compliance / claim grounding (feeds the evidence store)
+    "general": 1,  # fallback bucket for anything that doesn't fit above
 }
 # Tavily's own `topic` hint only accepts these; category is mapped onto one of them.
 WEB_SEARCH_TAVILY_TOPICS: frozenset[str] = frozenset({"general", "news"})
@@ -75,7 +75,11 @@ INSPECT_MAX_WIDTH = 800
 
 # out.* artifacts produced by a render, cleaned before each run.
 _OUT_NAMES = (
-    "out.png", "out.body.png", "out.dot", "out.drawio", "out.nodes.json",
+    "out.png",
+    "out.body.png",
+    "out.dot",
+    "out.drawio",
+    "out.nodes.json",
     "out.slide.json",
 )
 

@@ -119,20 +119,20 @@ GEO = {
     "page_w": 1920,
     "page_h": 1080,
     "margin": 40,
-    "tab_overlap": 15,   # tab pill sits at zone.y - 15 (folder-tab metaphor)
+    "tab_overlap": 15,  # tab pill sits at zone.y - 15 (folder-tab metaphor)
     "tab_h": 30,
-    "arc_zone": 8,       # cards + zones + boundaries
-    "arc_pill": 12,      # tabs / scope pills / chips
+    "arc_zone": 8,  # cards + zones + boundaries
+    "arc_pill": 12,  # tabs / scope pills / chips
     "zone_stroke_w": 1.3,
     "boundary_stroke_w": 1.4,
     "card_stroke_w": 1,
     "card_spacing": 10,
-    "zone_pad": 14,      # inner padding between zone border and cards
-    "zone_gap": 44,      # gap between adjacent zones (room for cross-zone edge labels)
-    "card_gap": 14,      # vertical gap between stacked cards
-    "body_line_max": 35, # chars per body line (playbook §12.4)
+    "zone_pad": 14,  # inner padding between zone border and cards
+    "zone_gap": 44,  # gap between adjacent zones (room for cross-zone edge labels)
+    "card_gap": 14,  # vertical gap between stacked cards
+    "body_line_max": 35,  # chars per body line (playbook §12.4)
     "body_lines_max": 4,
-    "footer_lane": 40,   # routing lane reserved above the footer band
+    "footer_lane": 40,  # routing lane reserved above the footer band
 }
 
 
@@ -143,11 +143,10 @@ def as_json() -> dict:
         "font": FONT,
         "type_scale": TYPE_SCALE,
         "ink": INK,
-        "zone_hues": {k: {"tab": v[0], "stroke": v[1], "tint": v[2]}
-                      for k, v in ZONE_HUES.items()},
-        "edge_classes": {k: {"color": v[0], "width": v[1], "dashed": v[2]}
-                         for k, v in EDGE_CLASSES.items()},
-        "boundary": {k: {"fill": v[0], "stroke": v[1], "dash": v[2], "tab": v[3]}
-                     for k, v in BOUNDARY.items()},
+        "zone_hues": {k: {"tab": v[0], "stroke": v[1], "tint": v[2]} for k, v in ZONE_HUES.items()},
+        "edge_classes": {k: {"color": v[0], "width": v[1], "dashed": v[2]} for k, v in EDGE_CLASSES.items()},
+        "boundary": {
+            k: {"fill": v[0], "stroke": v[1], "dash": v[2], "tab": v[3]} for k, v in BOUNDARY.items()
+        },
         "geometry": GEO,
     }

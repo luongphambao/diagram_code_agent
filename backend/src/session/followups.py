@@ -35,49 +35,63 @@ def _matches_whole_phrase(text: str, phrases: tuple[str, ...]) -> bool:
 
 def _is_pdf_followup(text: str) -> bool:
     """Detect a follow-up asking to package the current diagram as a PDF report."""
-    return _matches_whole_phrase(text, (
-        "pdf",
-        "report",
-        "document",
-        "doc",
-        "tạo pdf",
-        "tao pdf",
-        "xuất pdf",
-        "xuat pdf",
-        "tạo báo cáo",
-        "tao bao cao",
-    ))
+    return _matches_whole_phrase(
+        text,
+        (
+            "pdf",
+            "report",
+            "document",
+            "doc",
+            "tạo pdf",
+            "tao pdf",
+            "xuất pdf",
+            "xuat pdf",
+            "tạo báo cáo",
+            "tao bao cao",
+        ),
+    )
+
 
 def _is_ppt_followup(text: str) -> bool:
     """Detect a follow-up asking to package the current diagram as a PowerPoint proposal."""
-    return _matches_whole_phrase(text, (
-        "ppt",
-        "pptx",
-        "powerpoint",
-        "slide deck",
-        "presentation deck",
-        "make a proposal",
-        "create a proposal",
-        "export proposal",
-        "generate proposal",
-        "tạo ppt",
-        "tao ppt",
-        "xuất ppt",
-        "xuat ppt",
-        "tạo proposal",
-        "tao proposal",
-        "xuất proposal",
-        "xuat proposal",
-    ))
+    return _matches_whole_phrase(
+        text,
+        (
+            "ppt",
+            "pptx",
+            "powerpoint",
+            "slide deck",
+            "presentation deck",
+            "make a proposal",
+            "create a proposal",
+            "export proposal",
+            "generate proposal",
+            "tạo ppt",
+            "tao ppt",
+            "xuất ppt",
+            "xuat ppt",
+            "tạo proposal",
+            "tao proposal",
+            "xuất proposal",
+            "xuat proposal",
+        ),
+    )
 
 
 # A client-delivery framing that unambiguously means "email it" in this app — send_email
 # is the only "send to someone" capability the agent has, so these don't need the word
 # "email" alongside them to be unambiguous.
 _EMAIL_CLIENT_DELIVERY_PHRASES: tuple[str, ...] = (
-    "send to client", "send to the client", "send the deliverable",
-    "send deliverables", "send it to", "send this to",
-    "gửi cho khách", "gui cho khach", "gửi khách hàng", "gui khach hang",
+    "send to client",
+    "send to the client",
+    "send the deliverable",
+    "send deliverables",
+    "send it to",
+    "send this to",
+    "gửi cho khách",
+    "gui cho khach",
+    "gửi khách hàng",
+    "gui khach hang",
 )
 # Verbs that mean "transmit" (not "add"/"build"/etc.) — deliberately excludes
 # "email"/"mail" as verbs since those double as the channel nouns below, and
@@ -109,10 +123,7 @@ def _is_email_followup(text: str) -> bool:
     """
     if _matches_whole_phrase(text, _EMAIL_CLIENT_DELIVERY_PHRASES):
         return True
-    return (
-        _matches_whole_phrase(text, _SEND_VERBS)
-        and _matches_whole_phrase(text, _EMAIL_CHANNELS)
-    )
+    return _matches_whole_phrase(text, _SEND_VERBS) and _matches_whole_phrase(text, _EMAIL_CHANNELS)
 
 
 def _is_wbs_followup(text: str) -> bool:
@@ -125,50 +136,51 @@ def _is_wbs_followup(text: str) -> bool:
     "estimate the work breakdown") — a miss here means the very artifacts the WBS planner
     reads get deleted before it runs.
     """
-    return _matches_whole_phrase(text, (
-        # re-export / send the existing deliverable
-        "wbs",
-        "excel",
-        "xlsx",
-        "xuất wbs",
-        "xuat wbs",
-        "xuất lại wbs",
-        "xuat lai wbs",
-        "gửi wbs",
-        "gui wbs",
-        "re-export wbs",
-        "reexport wbs",
-        "export wbs",
-        # first-time WBS creation / effort estimation (EN)
-        "work breakdown",
-        "work breakdown structure",
-        "estimate effort",
-        "effort estimate",
-        "effort estimation",
-        "man-day",
-        "manday",
-        "create wbs",
-        "build wbs",
-        "generate wbs",
-        # first-time WBS creation / effort estimation (VI, with + without diacritics)
-        "tạo wbs",
-        "tao wbs",
-        "lập wbs",
-        "lap wbs",
-        "ước lượng",
-        "uoc luong",
-        "phân rã công việc",
-        "phan ra cong viec",
-        "bóc tách công việc",
-        "boc tach cong viec",
-        "kế hoạch công việc",
-        "ke hoach cong viec",
-    ))
+    return _matches_whole_phrase(
+        text,
+        (
+            # re-export / send the existing deliverable
+            "wbs",
+            "excel",
+            "xlsx",
+            "xuất wbs",
+            "xuat wbs",
+            "xuất lại wbs",
+            "xuat lai wbs",
+            "gửi wbs",
+            "gui wbs",
+            "re-export wbs",
+            "reexport wbs",
+            "export wbs",
+            # first-time WBS creation / effort estimation (EN)
+            "work breakdown",
+            "work breakdown structure",
+            "estimate effort",
+            "effort estimate",
+            "effort estimation",
+            "man-day",
+            "manday",
+            "create wbs",
+            "build wbs",
+            "generate wbs",
+            # first-time WBS creation / effort estimation (VI, with + without diacritics)
+            "tạo wbs",
+            "tao wbs",
+            "lập wbs",
+            "lap wbs",
+            "ước lượng",
+            "uoc luong",
+            "phân rã công việc",
+            "phan ra cong viec",
+            "bóc tách công việc",
+            "boc tach cong viec",
+            "kế hoạch công việc",
+            "ke hoach cong viec",
+        ),
+    )
 
 
-def _wbs_preserve(
-    text: str, *, solution_exists: bool, wbs_exists: bool, attached: bool
-) -> tuple[bool, bool]:
+def _wbs_preserve(text: str, *, solution_exists: bool, wbs_exists: bool, attached: bool) -> tuple[bool, bool]:
     """Decide whether a WBS request should preserve on-disk artifacts (vs. a fresh wipe).
 
     Returns ``(preserve, already_planned)``:

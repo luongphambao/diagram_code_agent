@@ -54,11 +54,11 @@ class StoredFinding(BaseModel):
     requires_human_decision: bool = False
 
     status: FindingStatus = "open"
-    resolution_reason: str = ""    # why it was waived, or what fix resolved it
-    resolved_by: str = ""          # approver/agent that set the terminal status
-    resolved_at: str = ""          # ISO 8601; injected by the caller
-    first_seen_revision: int = 0   # CSM revision this defect first appeared at
-    last_seen_revision: int = 0    # most recent revision the validator still raised it
+    resolution_reason: str = ""  # why it was waived, or what fix resolved it
+    resolved_by: str = ""  # approver/agent that set the terminal status
+    resolved_at: str = ""  # ISO 8601; injected by the caller
+    first_seen_revision: int = 0  # CSM revision this defect first appeared at
+    last_seen_revision: int = 0  # most recent revision the validator still raised it
 
 
 # Statuses that take a finding out of the "active blocker" set.
@@ -66,8 +66,16 @@ SETTLED_STATUSES: frozenset[str] = frozenset({"waived", "resolved"})
 
 # Content fields refreshed from a fresh validation run (status/audit are preserved).
 _CONTENT_FIELDS = (
-    "dimension", "severity", "confidence", "artifact_type", "entity_ids",
-    "title", "detail", "recommendation", "repair_strategy", "requires_human_decision",
+    "dimension",
+    "severity",
+    "confidence",
+    "artifact_type",
+    "entity_ids",
+    "title",
+    "detail",
+    "recommendation",
+    "repair_strategy",
+    "requires_human_decision",
 )
 
 
@@ -92,9 +100,11 @@ def _from_finding(f: SolutionFinding, *, revision: int) -> StoredFinding:
 
 # --- store -------------------------------------------------------------------
 
+
 def _log_path(workspace: Optional[Path]) -> Path:
     if workspace is None:
         from backends import current_workspace
+
         workspace = current_workspace()
     return Path(workspace) / FINDINGS_LOG_NAME
 

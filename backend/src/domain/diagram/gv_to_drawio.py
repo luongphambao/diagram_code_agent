@@ -36,9 +36,7 @@ def _num(s: str) -> float:
 
 def convert(dot_path: str, out_path: str) -> str:
     """Lay out ``dot_path`` and write a .drawio to ``out_path``; return the XML."""
-    js = run_graphviz(
-        ["dot", "-Tjson", dot_path], capture_output=True, text=True, check=True
-    ).stdout
+    js = run_graphviz(["dot", "-Tjson", dot_path], capture_output=True, text=True, check=True).stdout
     g = json.loads(js)
 
     # Canvas height for the Graphviz(bottom-up) -> draw.io(top-down) y flip.
@@ -95,10 +93,7 @@ def convert(dot_path: str, out_path: str) -> str:
             iw = ih = f"{side:.0f}"
         else:
             # Fallback: a labeled rounded box (still editable).
-            style = (
-                "rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;"
-                "strokeColor=#9AA4B2;fontSize=11;"
-            )
+            style = "rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9AA4B2;fontSize=11;"
             iw, ih = f"{w:.0f}", f"{max(h - 24, 30):.0f}"
         cells.append(
             f'<mxCell id="{cid}" value="{label}" style="{style}" vertex="1" '

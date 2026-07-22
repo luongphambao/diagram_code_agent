@@ -58,15 +58,17 @@ def find_similar_solutions(query: str, top_k: int = 3) -> str:
     projects = []
     for doc in docs:
         meta = doc.metadata
-        projects.append({
-            "name": meta.get("name", ""),
-            "client": meta.get("client", ""),
-            "business_domain": meta.get("business_domain", ""),
-            "solution_type": meta.get("solution_type", ""),
-            "total_mandays": meta.get("total_mandays") or None,
-            "tech_keywords": meta.get("tech_keywords", ""),
-            "summary_snippet": doc.page_content[:400],
-        })
+        projects.append(
+            {
+                "name": meta.get("name", ""),
+                "client": meta.get("client", ""),
+                "business_domain": meta.get("business_domain", ""),
+                "solution_type": meta.get("solution_type", ""),
+                "total_mandays": meta.get("total_mandays") or None,
+                "tech_keywords": meta.get("tech_keywords", ""),
+                "summary_snippet": doc.page_content[:400],
+            }
+        )
 
     result = {
         "status": "OK",

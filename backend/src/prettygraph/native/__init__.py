@@ -8,6 +8,12 @@ the plan `concurrent-wishing-avalanche.md`.
 
 from .theme import THEME, stage_fill, stage_stroke  # noqa: F401
 from .layout_engine import (  # noqa: F401
-    icon, box, group, frame, phantom, grid, render_tree,
+    icon,
+    box,
+    group,
+    frame,
+    phantom,
+    grid,
+    render_tree,
 )
 from .builder import Diagram  # noqa: F401

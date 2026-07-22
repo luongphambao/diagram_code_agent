@@ -73,10 +73,7 @@ def propose_diagram_brief(brief: DiagramBrief) -> str:
         ),
         data=brief.model_dump(),
     )
-    return (
-        "Diagram brief recorded. Next: propose the technology stack with "
-        "propose_tech_stack."
-    )
+    return "Diagram brief recorded. Next: propose the technology stack with propose_tech_stack."
 
 
 @tool(args_schema=ProposeTechStackArgs)
@@ -121,7 +118,9 @@ def propose_tech_stack(
                 a.model_dump() if isinstance(a, TechAlternative) else {"name": str(a), "why_rejected": ""}
                 for a in t.alternatives
             ],
-            "estimated_monthly_cost_usd": t.estimated_monthly_cost_usd.model_dump() if t.estimated_monthly_cost_usd else None,
+            "estimated_monthly_cost_usd": t.estimated_monthly_cost_usd.model_dump()
+            if t.estimated_monthly_cost_usd
+            else None,
             "capacity_sizing": t.capacity_sizing,
             "performance_target": t.performance_target,
             "risks": [r.model_dump() if isinstance(r, TechRisk) else r for r in t.risks],
@@ -132,8 +131,12 @@ def propose_tech_stack(
     as_dict: dict = {
         "assumptions": assumptions.model_dump() if assumptions else None,
         "layers": layers_dict,
-        "scaling_roadmap": [p.model_dump() if isinstance(p, ScalingPhase) else p for p in (scaling_roadmap or [])],
-        "estimated_total_monthly_cost_usd": estimated_total_monthly_cost_usd.model_dump() if estimated_total_monthly_cost_usd else None,
+        "scaling_roadmap": [
+            p.model_dump() if isinstance(p, ScalingPhase) else p for p in (scaling_roadmap or [])
+        ],
+        "estimated_total_monthly_cost_usd": estimated_total_monthly_cost_usd.model_dump()
+        if estimated_total_monthly_cost_usd
+        else None,
     }
 
     warnings: list[str] = []
@@ -173,6 +176,7 @@ def propose_tech_stack(
     if analysis_file.exists():
         try:
             import json as _json
+
             analysis = _json.loads(analysis_file.read_text(encoding="utf-8"))
             sec_level = (analysis.get("security_level") or "").lower()
             layer_names = {t.layer for t in tech_stack}
@@ -199,7 +203,9 @@ def propose_tech_stack(
         "propose_blueprint with the components, clusters and connections."
     )
     if warnings:
-        result += "\n\nSoft warnings (informational — does not block):\n" + "\n".join(f"• {w}" for w in warnings)
+        result += "\n\nSoft warnings (informational — does not block):\n" + "\n".join(
+            f"• {w}" for w in warnings
+        )
     return result
 
 
@@ -243,8 +249,14 @@ def _validate_pillar_coverage(blueprint: Blueprint) -> list[str]:
         return ["pillar_coverage not provided — add Well-Architected pillar coverage to the blueprint."]
     warnings: list[str] = []
     coverage = blueprint.pillar_coverage
-    for pillar_name in ("operational_excellence", "security", "reliability",
-                        "performance_efficiency", "cost_optimization", "sustainability"):
+    for pillar_name in (
+        "operational_excellence",
+        "security",
+        "reliability",
+        "performance_efficiency",
+        "cost_optimization",
+        "sustainability",
+    ):
         pillar = getattr(coverage, pillar_name)
         if not pillar.addressed_by and not pillar.gaps:
             warnings.append(
@@ -266,10 +278,7 @@ def _validate_nfr_mapping(blueprint: Blueprint) -> list[str]:
     if not brief_nfrs:
         return []
     mapped_nfrs = [m.nfr for m in blueprint.nfr_mapping]
-    unmapped = [
-        nfr for nfr in brief_nfrs
-        if not _req_soft_match(nfr, mapped_nfrs)
-    ]
+    unmapped = [nfr for nfr in brief_nfrs if not _req_soft_match(nfr, mapped_nfrs)]
     return unmapped
 
 
@@ -336,9 +345,15 @@ def _infer_edges_when_missing(spec: dict) -> list[dict]:
 
     def text(node: dict) -> str:
         c = clusters.get(node.get("cluster")) or {}
-        return _norm_text(node.get("id"), node.get("label"), node.get("tech"),
-                          node.get("type"), node.get("cluster"), c.get("label"),
-                          c.get("tier"))
+        return _norm_text(
+            node.get("id"),
+            node.get("label"),
+            node.get("tech"),
+            node.get("type"),
+            node.get("cluster"),
+            c.get("label"),
+            c.get("tier"),
+        )
 
     def has(node: dict, *needles: str) -> bool:
         t = text(node)
@@ -359,12 +374,10 @@ def _infer_edges_when_missing(spec: dict) -> list[dict]:
     edges: list[dict] = []
     seen: set[tuple[str, str, str]] = set()
 
-    def add(src: str | None, dst: str | None, label: str = "",
-            flow: str = "data", style: str = "") -> None:
+    def add(src: str | None, dst: str | None, label: str = "", flow: str = "data", style: str = "") -> None:
         if not src or not dst or src == dst or src not in valid_ids or dst not in valid_ids:
             return
-        edge = {"from": src, "to": dst, "label": label, "protocol": "",
-                "flow": flow, "style": style}
+        edge = {"from": src, "to": dst, "label": label, "protocol": "", "flow": flow, "style": style}
         key = _edge_key(edge)
         if key not in seen:
             seen.add(key)
@@ -376,9 +389,11 @@ def _infer_edges_when_missing(spec: dict) -> list[dict]:
     cdn = pick("cloudfront", "cdn")
     waf = pick("waf", "web application firewall")
     gateway = pick("api gateway", "gateway", "load balancer", "alb")
-    core = (pick("aila core", "core service", "application service")
-            or pick_type("service", "lambda")
-            or pick_type("service"))
+    core = (
+        pick("aila core", "core service", "application service")
+        or pick_type("service", "lambda")
+        or pick_type("service")
+    )
 
     if messaging:
         add(user, messaging, "LINE", "data")
@@ -406,8 +421,10 @@ def _infer_edges_when_missing(spec: dict) -> list[dict]:
     add(core, line_pay, "Payment", "control", "dashed")
 
     data_nodes = [
-        n["id"] for n in nodes
-        if n["id"] != core and (
+        n["id"]
+        for n in nodes
+        if n["id"] != core
+        and (
             str(n.get("type") or "").lower() in {"database", "storage", "queue", "cache"}
             or has(n, "rds", "postgres", "dynamodb", "s3", "database", "storage", "queue", "cache")
         )
@@ -421,7 +438,8 @@ def _infer_edges_when_missing(spec: dict) -> list[dict]:
     add(rds, backups, "Backup", "registry", "dashed")
 
     lambda_nodes = [
-        n["id"] for n in nodes
+        n["id"]
+        for n in nodes
         if has(n, "lambda") or (str(n.get("type") or "").lower() == "service" and has(n, "compute"))
     ]
     secrets = pick("secrets manager", "secret")
@@ -457,7 +475,7 @@ def _infer_edges_when_missing(spec: dict) -> list[dict]:
         if rep:
             reps.append(rep)
     if len(reps) < 2:
-        reps = [n["id"] for n in nodes[:min(6, len(nodes))]]
+        reps = [n["id"] for n in nodes[: min(6, len(nodes))]]
     for src, dst in zip(reps, reps[1:]):
         add(src, dst, "Flow", "data")
     return edges
@@ -468,8 +486,12 @@ def _build_render_spec(blueprint: Blueprint, provider: str) -> dict:
     legend = [{"label": le.label, "flow": le.flow} for le in blueprint.legend]
     if not legend:
         _flow_labels = {
-            "data": "Data Flow", "control": "Control Flow", "serving": "Serving / Inference",
-            "registry": "Registry & Storage", "monitoring": "Monitoring", "security": "Security",
+            "data": "Data Flow",
+            "control": "Control Flow",
+            "serving": "Serving / Inference",
+            "registry": "Registry & Storage",
+            "monitoring": "Monitoring",
+            "security": "Security",
         }
         seen: list[str] = []
         for e in blueprint.edges:
@@ -493,14 +515,26 @@ def _build_render_spec(blueprint: Blueprint, provider: str) -> dict:
             for n in blueprint.nodes
         ],
         "clusters": [
-            {"id": c.id, "label": c.label, "tier": c.tier,
-             "parent": c.parent, "accent": c.accent, "number": c.number,
-             "zone": c.zone}
+            {
+                "id": c.id,
+                "label": c.label,
+                "tier": c.tier,
+                "parent": c.parent,
+                "accent": c.accent,
+                "number": c.number,
+                "zone": c.zone,
+            }
             for c in blueprint.clusters
         ],
         "edges": [
-            {"from": e.from_, "to": e.to, "label": e.label, "protocol": e.protocol,
-             "flow": e.flow, "style": e.style}
+            {
+                "from": e.from_,
+                "to": e.to,
+                "label": e.label,
+                "protocol": e.protocol,
+                "flow": e.flow,
+                "style": e.style,
+            }
             for e in blueprint.edges
         ],
     }
@@ -517,10 +551,11 @@ def _build_render_spec(blueprint: Blueprint, provider: str) -> dict:
             "label": p.label,
             "lanes": list(p.lanes),
             "phases": list(p.phases),
-            "steps": [{"id": s.id, "kind": s.kind, "type": s.type,
-                      "lane": s.lane, "col": s.col, "label": s.label} for s in p.steps],
-            "flows": [{"from": f.from_, "to": f.to, "label": f.label, "kind": f.kind}
-                     for f in p.flows],
+            "steps": [
+                {"id": s.id, "kind": s.kind, "type": s.type, "lane": s.lane, "col": s.col, "label": s.label}
+                for s in p.steps
+            ],
+            "flows": [{"from": f.from_, "to": f.to, "label": f.label, "kind": f.kind} for f in p.flows],
         }
     return spec
 
@@ -571,6 +606,7 @@ def propose_blueprint(blueprint: Blueprint) -> str:
     # the spec) so the drawer reads them instead of spending 2 model calls.
     try:
         from ..rendering_tools import write_style_and_fit_plans
+
         write_style_and_fit_plans(render_spec)
     except Exception:
         pass  # advisory files; the drawer can still re-plan via its prompt rules
@@ -586,6 +622,7 @@ def propose_blueprint(blueprint: Blueprint) -> str:
     native_prerender_err: str | None = None
     try:
         from ..rendering_tools import _render_native_from_spec
+
         _render_native_from_spec(render_spec, current_workspace())
     except Exception as exc:  # noqa: BLE001 — advisory; never block approval
         native_prerender_err = f"{type(exc).__name__}: {exc}"
@@ -603,7 +640,8 @@ def propose_blueprint(blueprint: Blueprint) -> str:
         warnings.append(
             f"native pre-render FAILED ({native_prerender_err}) — out.drawio was not "
             "produced; the drawer must call export_drawio_native() itself and report "
-            "the error if it recurs (do NOT silently fall back to render_diagram).")
+            "the error if it recurs (do NOT silently fall back to render_diagram)."
+        )
 
     pillar_warns = _validate_pillar_coverage(blueprint)
     if pillar_warns:
@@ -745,9 +783,7 @@ def submit_critique(findings: list[DiagramFinding]) -> str:
     """
     kept = prune(findings)
     current_workspace().mkdir(parents=True, exist_ok=True)
-    _CRITIQUE_FILE.write_text(
-        json.dumps([f.model_dump() for f in kept], indent=2), encoding="utf-8"
-    )
+    _CRITIQUE_FILE.write_text(json.dumps([f.model_dump() for f in kept], indent=2), encoding="utf-8")
     critique_data = [f.model_dump() for f in kept]
     if verdict_for(kept) == "revise":
         # The revision-round counter is owned by DrawerReviseGateMiddleware
@@ -765,8 +801,7 @@ def submit_critique(findings: list[DiagramFinding]) -> str:
             return (
                 f"VERDICT: PASS (revision limit reached: {CRITIC_REVISION_HARD_CAP} "
                 "drawer revision rounds already used — proceed to finalize and "
-                "mention residual findings)\n"
-                + "\n".join(base.splitlines()[1:])
+                "mention residual findings)\n" + "\n".join(base.splitlines()[1:])
             )
     else:
         _bump_tool_summary("submit_critique")

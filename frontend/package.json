@@ -2,10 +2,15 @@
   "name": "diagram-agent-frontend",
   "version": "0.2.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite --port 5173",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@ag-ui/client": "^0.0.54",
@@ -14,12 +19,20 @@
     "react-dom": "^19.1.2"
   },
   "devDependencies": {
+    "@eslint/js": "^9.18.0",
     "@tailwindcss/vite": "^4.1.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.1.2",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.18",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
     "tailwindcss": "^4.1.0",
     "typescript": "^5.8.0",
+    "typescript-eslint": "^8.20.0",
     "vite": "^6.3.0"
   }
 }

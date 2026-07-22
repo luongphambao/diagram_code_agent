@@ -32,18 +32,18 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 Severity = Literal["low", "medium", "high", "critical"]
 Confidence = Literal["low", "medium", "high"]
 Dimension = Literal[
-    "traceability",      # an entity has no valid link to its source/target
-    "consistency",       # two artifacts disagree (drift)
-    "correctness",       # an internal reference is broken (dangling edge, bad cluster)
-    "coverage",          # a requirement is not addressed by any component/task
-    "completeness",      # an expected piece is missing (no decisions, no effort)
-    "security",          # public flow no auth boundary; PII flow unprotected (§4.3)
-    "reliability",       # async flow without retry/DLQ/idempotency
-    "feasibility",       # schedule not deliverable under resource capacity (§4.4)
-    "compliance",        # a required control (from a compliance pack) is missing/ungrounded (§4 P2)
+    "traceability",  # an entity has no valid link to its source/target
+    "consistency",  # two artifacts disagree (drift)
+    "correctness",  # an internal reference is broken (dangling edge, bad cluster)
+    "coverage",  # a requirement is not addressed by any component/task
+    "completeness",  # an expected piece is missing (no decisions, no effort)
+    "security",  # public flow no auth boundary; PII flow unprotected (§4.3)
+    "reliability",  # async flow without retry/DLQ/idempotency
+    "feasibility",  # schedule not deliverable under resource capacity (§4.4)
+    "compliance",  # a required control (from a compliance pack) is missing/ungrounded (§4 P2)
     "diagram_structural",  # drawio error: dangling edge, duplicate id, broken geometry, wrong stencil
-    "diagram_layout",      # drawio warning: node overlap, negative coords, missing aspect=fixed
-    "diagram_style",       # drawio advice: font sizes, palette, AWS hierarchy, edge routing
+    "diagram_layout",  # drawio warning: node overlap, negative coords, missing aspect=fixed
+    "diagram_style",  # drawio advice: font sizes, palette, AWS hierarchy, edge routing
 ]
 # How a finding gets resolved (docx §4.3 repair contract). `patch_*` and
 # `auto_repair` can be fixed mechanically (an agent/tool owns the fix);
@@ -129,16 +129,19 @@ def stable_finding_id(dimension: str, entity_ids: list[str], title: str) -> str:
     Same (dimension, entity set, title) → same id across runs, so `finding_store` can
     carry a `waived`/`resolved` status forward instead of re-raising the defect each run.
     """
-    basis = "|".join([
-        dimension,
-        ",".join(sorted(str(e) for e in (entity_ids or []))),
-        " ".join((title or "").split()),
-    ])
+    basis = "|".join(
+        [
+            dimension,
+            ",".join(sorted(str(e) for e in (entity_ids or []))),
+            " ".join((title or "").split()),
+        ]
+    )
     digest = hashlib.sha256(basis.encode("utf-8")).hexdigest()[:10]
     return f"SF-{digest}"
 
 
 # --- tiny helpers (copied from reporting.py to stay dependency-light) --------
+
 
 def _as_list(value: Any) -> list:
     if isinstance(value, list):
@@ -210,6 +213,7 @@ def _read_json(path: Path, default: Any) -> Any:
 
 # --- the rules ---------------------------------------------------------------
 
+
 def evaluate_solution(
     brief: dict[str, Any],
     blueprint: dict[str, Any],
@@ -229,12 +233,8 @@ def evaluate_solution(
     graph the CSM doesn't store) are unaffected.
     """
     # CSM lookups for stable-id anchoring (empty when model is absent).
-    req_id_by_text: dict[str, str] = (
-        {r.statement: r.id for r in model.requirements} if model else {}
-    )
-    wbs_id_by_name: dict[str, str] = (
-        {w.name: w.id for w in model.work_items} if model else {}
-    )
+    req_id_by_text: dict[str, str] = {r.statement: r.id for r in model.requirements} if model else {}
+    wbs_id_by_name: dict[str, str] = {w.name: w.id for w in model.work_items} if model else {}
 
     findings: list[SolutionFinding] = []
 
@@ -247,9 +247,7 @@ def evaluate_solution(
     cluster_names = [str(c.get("label") or c.get("id") or "") for c in clusters]
     decisions = [str(d) for d in _as_list(blueprint.get("key_decisions"))]
     nfr_mechanisms = [
-        str(m.get("mechanism") or "")
-        for m in _as_list(blueprint.get("nfr_mapping"))
-        if isinstance(m, dict)
+        str(m.get("mechanism") or "") for m in _as_list(blueprint.get("nfr_mapping")) if isinstance(m, dict)
     ]
     coverage_candidates = component_names + cluster_names + decisions + nfr_mechanisms
 
@@ -258,34 +256,43 @@ def evaluate_solution(
         src, dst = _edge_endpoints(e)
         missing = [p for p in (src, dst) if p and p not in node_ids]
         if missing:
-            findings.append(SolutionFinding(
-                severity="high", dimension="correctness", artifact_type="blueprint",
-                repair_strategy="patch_blueprint",
-                entity_ids=[f"COMP-{m}" for m in missing],
-                title="Edge references a missing component",
-                detail=f"Edge {src or '?'}→{dst or '?'} points at node id(s) "
-                       f"{missing} that are not in the blueprint's node list.",
-                recommendation="Add the missing node or fix the edge endpoint id.",
-            ))
+            findings.append(
+                SolutionFinding(
+                    severity="high",
+                    dimension="correctness",
+                    artifact_type="blueprint",
+                    repair_strategy="patch_blueprint",
+                    entity_ids=[f"COMP-{m}" for m in missing],
+                    title="Edge references a missing component",
+                    detail=f"Edge {src or '?'}→{dst or '?'} points at node id(s) "
+                    f"{missing} that are not in the blueprint's node list.",
+                    recommendation="Add the missing node or fix the edge endpoint id.",
+                )
+            )
 
     # Rule 2 — node assigned to a non-existent cluster (correctness, medium).
     for n in nodes:
         cl = str(n.get("cluster") or "")
         if cl and cluster_ids and cl not in cluster_ids:
-            findings.append(SolutionFinding(
-                severity="medium", dimension="correctness", artifact_type="blueprint",
-                repair_strategy="patch_blueprint",
-                entity_ids=[f"COMP-{n.get('id')}", f"CLUSTER-{cl}"],
-                title="Component points at a missing cluster",
-                detail=f"Node '{n.get('id')}' has cluster='{cl}' which is not a "
-                       f"declared cluster id.",
-                recommendation="Add the cluster or reassign the node.",
-            ))
+            findings.append(
+                SolutionFinding(
+                    severity="medium",
+                    dimension="correctness",
+                    artifact_type="blueprint",
+                    repair_strategy="patch_blueprint",
+                    entity_ids=[f"COMP-{n.get('id')}", f"CLUSTER-{cl}"],
+                    title="Component points at a missing cluster",
+                    detail=f"Node '{n.get('id')}' has cluster='{cl}' which is not a declared cluster id.",
+                    recommendation="Add the cluster or reassign the node.",
+                )
+            )
 
     # Rule 3 — requirement with no addressing component/cluster/decision (coverage).
     reqs: list[tuple[str, str]] = []
-    for kind, key in (("functional", "functional_requirements"),
-                      ("non-functional", "non_functional_requirements")):
+    for kind, key in (
+        ("functional", "functional_requirements"),
+        ("non-functional", "non_functional_requirements"),
+    ):
         for item in _as_list(brief.get(key))[:25]:
             reqs.append((kind, str(item)))
     for kind, text in reqs:
@@ -293,15 +300,20 @@ def evaluate_solution(
             continue
         if not _soft_match(text, coverage_candidates):
             rid = req_id_by_text.get(text) or req_id_by_text.get(text.strip())
-            findings.append(SolutionFinding(
-                severity="medium", dimension="coverage", artifact_type="requirement",
-                repair_strategy="human_decision",
-                entity_ids=[rid] if rid else [], requires_human_decision=True,
-                title=f"Unmapped {kind} requirement",
-                detail=f"Requirement \"{text[:90]}\" is not addressed by any blueprint "
-                       f"component, cluster, decision or NFR mechanism.",
-                recommendation="Map it to a component/work item, or explicitly defer it.",
-            ))
+            findings.append(
+                SolutionFinding(
+                    severity="medium",
+                    dimension="coverage",
+                    artifact_type="requirement",
+                    repair_strategy="human_decision",
+                    entity_ids=[rid] if rid else [],
+                    requires_human_decision=True,
+                    title=f"Unmapped {kind} requirement",
+                    detail=f'Requirement "{text[:90]}" is not addressed by any blueprint '
+                    f"component, cluster, decision or NFR mechanism.",
+                    recommendation="Map it to a component/work item, or explicitly defer it.",
+                )
+            )
 
     # Rule 4 — WBS leaf items that trace to nothing in brief or blueprint (traceability).
     wbs_items = [it for it in _as_list(wbs.get("items")) if isinstance(it, dict)]
@@ -313,14 +325,20 @@ def evaluate_solution(
         if trace_targets and not _soft_match(name, trace_targets):
             ref = str(it.get("id") or it.get("ref_code") or it.get("code") or name[:24])
             wid = wbs_id_by_name.get(name) or f"WBS-{ref}"
-            findings.append(SolutionFinding(
-                severity="low", confidence="medium", dimension="traceability",
-                artifact_type="wbs", repair_strategy="human_decision", entity_ids=[wid],
-                title="WBS task traces to no requirement or component",
-                detail=f"Task '{name}' does not soft-match any requirement or blueprint "
-                       f"component; it may be internal-only work or scope creep.",
-                recommendation="Link it to a REQ/COMP, or record a rationale for internal work.",
-            ))
+            findings.append(
+                SolutionFinding(
+                    severity="low",
+                    confidence="medium",
+                    dimension="traceability",
+                    artifact_type="wbs",
+                    repair_strategy="human_decision",
+                    entity_ids=[wid],
+                    title="WBS task traces to no requirement or component",
+                    detail=f"Task '{name}' does not soft-match any requirement or blueprint "
+                    f"component; it may be internal-only work or scope creep.",
+                    recommendation="Link it to a REQ/COMP, or record a rationale for internal work.",
+                )
+            )
 
     # Rule 5 — WBS exists but carries zero effort (completeness, high).
     if wbs_items:
@@ -330,25 +348,35 @@ def evaluate_solution(
         except (TypeError, ValueError):
             total_md = 0.0
         if total_md <= 0:
-            findings.append(SolutionFinding(
-                severity="high", dimension="completeness", artifact_type="wbs",
-                repair_strategy="patch_wbs",
-                entity_ids=[], title="WBS has tasks but zero total effort",
-                detail="effort_totals.total_mandays is 0 while items exist — the rollup "
-                       "did not run or every task is unestimated.",
-                recommendation="Run compute_wbs_rollup and ensure tasks carry man-days.",
-            ))
+            findings.append(
+                SolutionFinding(
+                    severity="high",
+                    dimension="completeness",
+                    artifact_type="wbs",
+                    repair_strategy="patch_wbs",
+                    entity_ids=[],
+                    title="WBS has tasks but zero total effort",
+                    detail="effort_totals.total_mandays is 0 while items exist — the rollup "
+                    "did not run or every task is unestimated.",
+                    recommendation="Run compute_wbs_rollup and ensure tasks carry man-days.",
+                )
+            )
 
     # Rule 6 — blueprint has components but no recorded decisions (completeness).
     if nodes and not decisions:
-        findings.append(SolutionFinding(
-            severity="medium", dimension="completeness", artifact_type="blueprint",
-            repair_strategy="human_decision",
-            entity_ids=[], title="Architecture has no recorded key decisions",
-            detail="The approved blueprint lists components but no key_decisions, so the "
-                   "deck/report can't answer \"why this?\".",
-            recommendation="Add 3-6 explicit design decisions before client-facing export.",
-        ))
+        findings.append(
+            SolutionFinding(
+                severity="medium",
+                dimension="completeness",
+                artifact_type="blueprint",
+                repair_strategy="human_decision",
+                entity_ids=[],
+                title="Architecture has no recorded key decisions",
+                detail="The approved blueprint lists components but no key_decisions, so the "
+                'deck/report can\'t answer "why this?".',
+                recommendation="Add 3-6 explicit design decisions before client-facing export.",
+            )
+        )
 
     # --- Semantic lint (§4.7): architecture smell rules ----------------------
     # All three rules gate on an activation condition to minimise false positives.
@@ -360,83 +388,164 @@ def evaluate_solution(
 
     # Rule 7 — Public ingress flow with no auth boundary (security, medium).
     # Activation: ingress node exists AND has outbound edge AND NFR requires auth/security.
-    _PUBLIC_KW = ["internet", "user", "client", "cdn", "waf", "api gateway",
-                  "load balancer", "external"]
-    _AUTH_KW = ["auth", "oauth", "oidc", "jwt", "identity", "cognito", "iam",
-                "api key", "token", "sso", "waf", "keycloak", "authz", "authn"]
+    _PUBLIC_KW = ["internet", "user", "client", "cdn", "waf", "api gateway", "load balancer", "external"]
+    _AUTH_KW = [
+        "auth",
+        "oauth",
+        "oidc",
+        "jwt",
+        "identity",
+        "cognito",
+        "iam",
+        "api key",
+        "token",
+        "sso",
+        "waf",
+        "keycloak",
+        "authz",
+        "authn",
+    ]
     _SECURITY_NFR_KW = ["security", "auth", "access-control", "access control", "identity"]
 
-    public_nodes = [n for n in nodes
-                    if _has((n.get("label") or n.get("type") or "").lower(), _PUBLIC_KW)]
+    public_nodes = [n for n in nodes if _has((n.get("label") or n.get("type") or "").lower(), _PUBLIC_KW)]
     if public_nodes:
         public_ids = {str(n.get("id")) for n in public_nodes}
         has_edge_from_public = any(_edge_endpoints(e)[0] in public_ids for e in edges)
         if has_edge_from_public and _has(nfr_txt, _SECURITY_NFR_KW):
             if not _has(corpus, _AUTH_KW):
                 pub_comp_ids = [f"COMP-{n.get('id')}" for n in public_nodes[:3]]
-                findings.append(SolutionFinding(
-                    severity="medium", confidence="medium", dimension="security",
-                    artifact_type="blueprint", repair_strategy="human_decision",
-                    entity_ids=pub_comp_ids, requires_human_decision=True,
-                    title="Public-facing flow has no auth boundary",
-                    detail=(f"Blueprint has {len(public_nodes)} public ingress node(s) with "
+                findings.append(
+                    SolutionFinding(
+                        severity="medium",
+                        confidence="medium",
+                        dimension="security",
+                        artifact_type="blueprint",
+                        repair_strategy="human_decision",
+                        entity_ids=pub_comp_ids,
+                        requires_human_decision=True,
+                        title="Public-facing flow has no auth boundary",
+                        detail=(
+                            f"Blueprint has {len(public_nodes)} public ingress node(s) with "
                             f"outbound edges and NFR requires auth/security, but no auth "
-                            f"mechanism (oauth/jwt/iam/etc.) found in decisions or NFR mapping."),
-                    recommendation="Add an auth boundary (JWT validator, IAM policy, API Gateway "
-                                   "auth) or record the mechanism in key_decisions.",
-                ))
+                            f"mechanism (oauth/jwt/iam/etc.) found in decisions or NFR mapping."
+                        ),
+                        recommendation="Add an auth boundary (JWT validator, IAM policy, API Gateway "
+                        "auth) or record the mechanism in key_decisions.",
+                    )
+                )
 
     # Rule 8 — PII/privacy flow with no data-protection mechanism (security).
     # Activation: brief/constraints mention PII or privacy regulation.
     # severity=high when a compliance/residency constraint is present, else medium.
-    _PII_KW = ["pii", "personal data", "gdpr", "ccpa", "hipaa", "pci", "residency",
-               "customer data", "sensitive", "data protection"]
+    _PII_KW = [
+        "pii",
+        "personal data",
+        "gdpr",
+        "ccpa",
+        "hipaa",
+        "pci",
+        "residency",
+        "customer data",
+        "sensitive",
+        "data protection",
+    ]
     _COMPLIANCE_KW = ["compliance", "residency", "gdpr", "ccpa", "hipaa", "pci"]
-    _PROTECTION_KW = ["encrypt", "kms", "tls", "at rest", "in transit", "classification",
-                      "retention", "masking", "tokeniz", "anonymiz", "vault"]
+    _PROTECTION_KW = [
+        "encrypt",
+        "kms",
+        "tls",
+        "at rest",
+        "in transit",
+        "classification",
+        "retention",
+        "masking",
+        "tokeniz",
+        "anonymiz",
+        "vault",
+    ]
 
     if _has(nfr_txt, _PII_KW):
         if not _has(corpus, _PROTECTION_KW):
             sev: Severity = "high" if _has(nfr_txt, _COMPLIANCE_KW) else "medium"
-            findings.append(SolutionFinding(
-                severity=sev, confidence="medium", dimension="security",
-                artifact_type="blueprint", repair_strategy="human_decision",
-                entity_ids=[], requires_human_decision=True,
-                title="PII flow has no data-protection mechanism",
-                detail=("Brief/constraints reference PII or privacy regulation but blueprint "
+            findings.append(
+                SolutionFinding(
+                    severity=sev,
+                    confidence="medium",
+                    dimension="security",
+                    artifact_type="blueprint",
+                    repair_strategy="human_decision",
+                    entity_ids=[],
+                    requires_human_decision=True,
+                    title="PII flow has no data-protection mechanism",
+                    detail=(
+                        "Brief/constraints reference PII or privacy regulation but blueprint "
                         "has no encryption, KMS, TLS, masking, or retention policy in "
-                        "decisions or NFR mapping."),
-                recommendation=("Add data-at-rest encryption, TLS in-transit, "
-                                "masking/tokenisation, or an explicit retention policy to "
-                                "key_decisions or nfr_mapping."),
-            ))
+                        "decisions or NFR mapping."
+                    ),
+                    recommendation=(
+                        "Add data-at-rest encryption, TLS in-transit, "
+                        "masking/tokenisation, or an explicit retention policy to "
+                        "key_decisions or nfr_mapping."
+                    ),
+                )
+            )
 
     # Rule 9 — Async messaging node with no retry/DLQ/idempotency (reliability, medium).
     # Activation: any node whose label/type/tech suggests a message broker, or an AMQP edge.
-    _ASYNC_KW = ["queue", "kafka", "sqs", "rabbitmq", "pubsub", "topic", "broker",
-                 "event bus", "kinesis", "eventbridge", "sns", "nats"]
-    _RESILIENCE_KW = ["retry", "dlq", "dead letter", "idempoten", "backoff",
-                      "redrive", "outbox", "at least once"]
+    _ASYNC_KW = [
+        "queue",
+        "kafka",
+        "sqs",
+        "rabbitmq",
+        "pubsub",
+        "topic",
+        "broker",
+        "event bus",
+        "kinesis",
+        "eventbridge",
+        "sns",
+        "nats",
+    ]
+    _RESILIENCE_KW = [
+        "retry",
+        "dlq",
+        "dead letter",
+        "idempoten",
+        "backoff",
+        "redrive",
+        "outbox",
+        "at least once",
+    ]
 
-    async_nodes = [n for n in nodes
-                   if _has((n.get("label") or n.get("type") or n.get("tech") or "").lower(),
-                           _ASYNC_KW)]
+    async_nodes = [
+        n for n in nodes if _has((n.get("label") or n.get("type") or n.get("tech") or "").lower(), _ASYNC_KW)
+    ]
     has_amqp_edge = any(str(e.get("protocol") or "").upper() == "AMQP" for e in edges)
     if async_nodes or has_amqp_edge:
         if not _has(corpus, _RESILIENCE_KW):
             async_ids = [f"COMP-{n.get('id')}" for n in async_nodes[:3]]
             amqp_note = " and AMQP edge(s)" if has_amqp_edge else ""
-            findings.append(SolutionFinding(
-                severity="medium", confidence="medium", dimension="reliability",
-                artifact_type="blueprint", repair_strategy="human_decision",
-                entity_ids=async_ids, requires_human_decision=True,
-                title="Async flow has no retry/DLQ/idempotency mechanism",
-                detail=(f"Blueprint has {len(async_nodes)} async messaging node(s){amqp_note} "
+            findings.append(
+                SolutionFinding(
+                    severity="medium",
+                    confidence="medium",
+                    dimension="reliability",
+                    artifact_type="blueprint",
+                    repair_strategy="human_decision",
+                    entity_ids=async_ids,
+                    requires_human_decision=True,
+                    title="Async flow has no retry/DLQ/idempotency mechanism",
+                    detail=(
+                        f"Blueprint has {len(async_nodes)} async messaging node(s){amqp_note} "
                         f"but decisions/NFR mapping do not mention retry, DLQ, idempotency, "
-                        f"or backoff."),
-                recommendation=("Add a dead-letter queue, retry policy, or idempotency key to "
-                                "the async consumer's design decision."),
-            ))
+                        f"or backoff."
+                    ),
+                    recommendation=(
+                        "Add a dead-letter queue, retry policy, or idempotency key to "
+                        "the async consumer's design decision."
+                    ),
+                )
+            )
 
     # Rule 10 — Sprint resource overload detected by resource leveling (feasibility, high).
     # Reads the pre-computed resource_leveling.overloads written by plan_team_and_resources.
@@ -449,22 +558,32 @@ def evaluate_solution(
             f"Sprint {o['sprint']} {o['role']}: {o['demand_md']:.1f}>{o['capacity_md']:.1f} MD"
             for o in overloads[:3]
         ]
-        findings.append(SolutionFinding(
-            severity="high", confidence="medium", dimension="feasibility",
-            artifact_type="wbs", repair_strategy="human_decision",
-            entity_ids=[], requires_human_decision=True,
-            title=f"Schedule not deliverable: {len(overloads)} sprint(s) overloaded",
-            detail=("; ".join(detail_parts)
-                    + f" (worst: sprint {worst['sprint']} {worst['role']} "
-                    f"+{float(worst['overflow_md']):.1f} MD over capacity)."),
-            recommendation=("Increase FTE, reduce scope per sprint, or extend the timeline "
-                            "to distribute load across sprints."),
-        ))
+        findings.append(
+            SolutionFinding(
+                severity="high",
+                confidence="medium",
+                dimension="feasibility",
+                artifact_type="wbs",
+                repair_strategy="human_decision",
+                entity_ids=[],
+                requires_human_decision=True,
+                title=f"Schedule not deliverable: {len(overloads)} sprint(s) overloaded",
+                detail=(
+                    "; ".join(detail_parts) + f" (worst: sprint {worst['sprint']} {worst['role']} "
+                    f"+{float(worst['overflow_md']):.1f} MD over capacity)."
+                ),
+                recommendation=(
+                    "Increase FTE, reduce scope per sprint, or extend the timeline "
+                    "to distribute load across sprints."
+                ),
+            )
+        )
 
     return findings
 
 
 # --- verdict + rendering (mirrors findings.format_critique) ------------------
+
 
 def _rank_key(f: SolutionFinding) -> tuple[int, int]:
     return (_SEVERITY_ORDER[f.severity], 1 if requires_human(f) else 0)
@@ -519,8 +638,10 @@ def format_validation(findings: list[SolutionFinding], *, block: bool = False) -
     for f in kept:
         flag = " [needs human decision]" if requires_human(f) else ""
         ids = f" {f.entity_ids}" if f.entity_ids else ""
-        line = (f"- [{f.severity}/{f.dimension}] ({f.finding_id} repair={f.repair_strategy})"
-                f"{flag} {f.title}:{ids} {f.detail}")
+        line = (
+            f"- [{f.severity}/{f.dimension}] ({f.finding_id} repair={f.repair_strategy})"
+            f"{flag} {f.title}:{ids} {f.detail}"
+        )
         if f.recommendation:
             line += f" — fix: {f.recommendation}"
         lines.append(line)
@@ -540,6 +661,7 @@ def validate_solution(
     """
     if workspace is None:
         from backends import current_workspace  # local import keeps this module importable standalone
+
         workspace = current_workspace()
     workspace = Path(workspace)
     brief = _read_json(workspace / "diagram_brief.json", {}) or {}
@@ -549,6 +671,7 @@ def validate_solution(
     # this module importable standalone and avoids the cycle (csm_adapter imports us).
     try:
         from csm_adapter import build_solution_model
+
         model = build_solution_model(workspace)
     except Exception:
         model = None

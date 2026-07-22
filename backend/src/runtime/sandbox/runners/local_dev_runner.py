@@ -24,9 +24,20 @@ from ..render_exec import run_render
 # indirection) plus a keyword fallback so a newly added `*_API_KEY`/`*_TOKEN`/
 # `*_SECRET` doesn't need this list updated to stay covered.
 _SECRET_ENV_PREFIXES = (
-    "OPENAI_", "ANTHROPIC_", "TAVILY_", "COMPOSIO_", "GMAIL_", "GOOGLE_",
-    "QDRANT_", "JIRA_", "MODAL_", "LANGSMITH_", "LANGCHAIN_", "MIMO_",
-    "BNK_", "DATABASE_",
+    "OPENAI_",
+    "ANTHROPIC_",
+    "TAVILY_",
+    "COMPOSIO_",
+    "GMAIL_",
+    "GOOGLE_",
+    "QDRANT_",
+    "JIRA_",
+    "MODAL_",
+    "LANGSMITH_",
+    "LANGCHAIN_",
+    "MIMO_",
+    "BNK_",
+    "DATABASE_",
 )
 _SECRET_KEYWORDS = ("KEY", "SECRET", "TOKEN", "PASSWORD", "CREDENTIAL")
 

@@ -47,8 +47,8 @@ DecisionAction = Literal[
     "request_evidence",
     "request_alternative",
     "edit_entity",
-    "waive_finding",     # accept a cross-artifact finding as a known trade-off
-    "resolve_finding",   # record that a finding was fixed
+    "waive_finding",  # accept a cross-artifact finding as a known trade-off
+    "resolve_finding",  # record that a finding was fixed
 ]
 
 
@@ -65,12 +65,12 @@ class DecisionRecord(BaseModel):
     """
 
     id: str
-    gate: str = ""                 # gate tool name, e.g. "propose_blueprint"
+    gate: str = ""  # gate tool name, e.g. "propose_blueprint"
     action: DecisionAction
     approver: str = ""
-    approver_role: str = ""        # role the approver acted in (architect/pm/reviewer/...) §8.6
-    timestamp: str = ""            # ISO 8601; injected by the caller
-    revision: int = 0              # CSM revision the decision was made against
+    approver_role: str = ""  # role the approver acted in (architect/pm/reviewer/...) §8.6
+    timestamp: str = ""  # ISO 8601; injected by the caller
+    revision: int = 0  # CSM revision the decision was made against
     comment: str = ""
     payload: dict[str, Any] = Field(default_factory=dict)
 
@@ -107,9 +107,11 @@ def new_decision_record(
 
 # --- store -------------------------------------------------------------------
 
+
 def _log_path(workspace: Optional[Path]) -> Path:
     if workspace is None:
         from backends import current_workspace
+
         workspace = current_workspace()
     return Path(workspace) / DECISION_LOG_NAME
 
@@ -154,6 +156,7 @@ def next_seq(workspace: Optional[Path] = None) -> int:
 
 # --- projection into the CSM -------------------------------------------------
 
+
 def _decision_title(rec: DecisionRecord) -> str:
     pretty = rec.action.replace("_", " ")
     return f"{pretty} @ {rec.gate}" if rec.gate else pretty
@@ -180,10 +183,18 @@ def project_into_csm(model: SolutionModel, records: Iterable[DecisionRecord]) ->
         if rec.id in existing_ids:
             continue  # already projected (defensive; a fresh build never has these)
 
-        status = "approved" if rec.action in (
-            "approve", "approve_with_assumptions", "accept_risk",
-            "waive_finding", "resolve_finding",
-        ) else "deferred"
+        status = (
+            "approved"
+            if rec.action
+            in (
+                "approve",
+                "approve_with_assumptions",
+                "accept_risk",
+                "waive_finding",
+                "resolve_finding",
+            )
+            else "deferred"
+        )
         dec = Decision(
             id=rec.id,
             provenance="human",
@@ -197,8 +208,11 @@ def project_into_csm(model: SolutionModel, records: Iterable[DecisionRecord]) ->
             rid = rec.payload.get("risk_id") or mint_id("risk", f"h{rec.id}")
             risk = next((r for r in model.risks if r.id == rid), None)
             if risk is None:
-                risk = Risk(id=rid, provenance="human",
-                            statement=rec.payload.get("statement") or rec.comment or "Accepted risk")
+                risk = Risk(
+                    id=rid,
+                    provenance="human",
+                    statement=rec.payload.get("statement") or rec.comment or "Accepted risk",
+                )
                 model.risks.append(risk)
                 existing_ids.add(rid)
             risk.owner = rec.payload.get("owner", risk.owner) or rec.approver
@@ -209,7 +223,8 @@ def project_into_csm(model: SolutionModel, records: Iterable[DecisionRecord]) ->
                 risk.impact = rec.payload["impact"]
             dec.risk_ids = [rid]
             model.trace_links.append(
-                TraceLink(from_id=rec.id, to_id=rid, relation="accepts", provenance="human"))
+                TraceLink(from_id=rec.id, to_id=rid, relation="accepts", provenance="human")
+            )
 
         elif rec.action == "approve_with_assumptions":
             confirmed: list[str] = []
@@ -222,16 +237,23 @@ def project_into_csm(model: SolutionModel, records: Iterable[DecisionRecord]) ->
                         a.owner = rec.approver
                     confirmed.append(aid)
                     model.trace_links.append(
-                        TraceLink(from_id=rec.id, to_id=aid, relation="accepts", provenance="human"))
+                        TraceLink(from_id=rec.id, to_id=aid, relation="accepts", provenance="human")
+                    )
             dec.assumption_ids = confirmed
 
         elif rec.action == "request_evidence":
             claim = rec.payload.get("claim") or rec.comment or "Evidence requested"
             aid = mint_id("assumption", f"evd_{rec.id}")
             if aid not in existing_ids:
-                model.assumptions.append(Assumption(
-                    id=aid, provenance="human", status="pending",
-                    statement=f"Evidence requested: {claim}", owner=rec.approver))
+                model.assumptions.append(
+                    Assumption(
+                        id=aid,
+                        provenance="human",
+                        status="pending",
+                        statement=f"Evidence requested: {claim}",
+                        owner=rec.approver,
+                    )
+                )
                 existing_ids.add(aid)
             dec.assumption_ids = [aid]
 

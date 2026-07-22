@@ -51,7 +51,7 @@ export default function ConversationSidebar({
 
   function commitEdit(threadId: string) {
     const trimmed = editValue.trim();
-    if (trimmed && trimmed !== conversations.find(c => c.thread_id === threadId)?.name) {
+    if (trimmed && trimmed !== conversations.find((c) => c.thread_id === threadId)?.name) {
       onRename(threadId, trimmed);
     }
     setEditingId(null);
@@ -64,14 +64,23 @@ export default function ConversationSidebar({
 
   if (collapsed) {
     return (
-      <div className="flex flex-col items-center border-r border-white/8 bg-[#0d1017] py-3" style={{ width: 40, minWidth: 40 }}>
+      <div
+        className="flex flex-col items-center border-r border-white/8 bg-[#0d1017] py-3"
+        style={{ width: 40, minWidth: 40 }}
+      >
         <button
           onClick={() => setCollapsed(false)}
           className="flex h-7 w-7 items-center justify-center rounded text-slate-500 hover:text-slate-300 hover:bg-white/6 transition-colors"
           title="Expand conversations"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path
+              d="M9 18l6-6-6-6"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </button>
         <button
@@ -80,7 +89,12 @@ export default function ConversationSidebar({
           title="New conversation"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <path
+              d="M12 5v14M5 12h14"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
       </div>
@@ -88,7 +102,10 @@ export default function ConversationSidebar({
   }
 
   return (
-    <div className="flex flex-col border-r border-white/8 bg-[#0d1017]" style={{ width: 220, minWidth: 220 }}>
+    <div
+      className="flex flex-col border-r border-white/8 bg-[#0d1017]"
+      style={{ width: 220, minWidth: 220 }}
+    >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-white/8 px-3 py-2.5">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
@@ -101,7 +118,12 @@ export default function ConversationSidebar({
             title="New conversation"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-              <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <path
+                d="M12 5v14M5 12h14"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
             </svg>
           </button>
           <button
@@ -110,7 +132,13 @@ export default function ConversationSidebar({
             title="Collapse"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-              <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M15 18l-6-6 6-6"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </button>
         </div>
@@ -165,12 +193,20 @@ export default function ConversationSidebar({
                 {/* Delete button */}
                 {!isEditing && isHovered && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); onDelete(conv.thread_id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(conv.thread_id);
+                    }}
                     className="flex-shrink-0 flex h-4 w-4 items-center justify-center rounded text-slate-600 hover:text-red-400 transition-colors"
                     title="Delete"
                   >
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
-                      <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      <path
+                        d="M18 6L6 18M6 6l12 12"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
                     </svg>
                   </button>
                 )}
@@ -180,7 +216,10 @@ export default function ConversationSidebar({
               {!isEditing && (
                 <div className="mt-0.5 flex items-center gap-1.5 min-w-0">
                   {conv.last_message && (
-                    <span className="flex-1 truncate text-[10px] text-slate-600" title={conv.last_message}>
+                    <span
+                      className="flex-1 truncate text-[10px] text-slate-600"
+                      title={conv.last_message}
+                    >
                       {conv.last_message}
                     </span>
                   )}

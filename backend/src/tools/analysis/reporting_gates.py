@@ -82,7 +82,11 @@ def generate_pdf_report(
     AFTER finalize_diagram is approved.
     """
     auto_expanded_msg = ""
-    if include_sections and len(include_sections) < len(DEFAULT_REPORT_SECTIONS) and not reason_for_subset.strip():
+    if (
+        include_sections
+        and len(include_sections) < len(DEFAULT_REPORT_SECTIONS)
+        and not reason_for_subset.strip()
+    ):
         auto_expanded_msg = (
             f" NOTE: include_sections had only {len(include_sections)} section(s) but no "
             "reason_for_subset was provided — auto-expanded to all sections to avoid a "
@@ -117,10 +121,7 @@ def generate_pdf_report(
     if include_sections:
         missing = [s for s in DEFAULT_REPORT_SECTIONS if s not in sections]
         if missing:
-            msg += (
-                f" NOTE: {len(missing)} section(s) were omitted from this run: "
-                + ", ".join(missing) + "."
-            )
+            msg += f" NOTE: {len(missing)} section(s) were omitted from this run: " + ", ".join(missing) + "."
     msg += _solution_gate_note("pdf_export", block=True)
     return msg
 
@@ -162,7 +163,11 @@ def generate_ppt_proposal(
     out.pptx using the BnK proposal template. Call this AFTER finalize_diagram is approved.
     """
     auto_expanded_msg = ""
-    if include_sections and len(include_sections) < len(DEFAULT_PPT_SECTIONS) and not reason_for_subset.strip():
+    if (
+        include_sections
+        and len(include_sections) < len(DEFAULT_PPT_SECTIONS)
+        and not reason_for_subset.strip()
+    ):
         auto_expanded_msg = (
             f" NOTE: include_sections had only {len(include_sections)} section(s) but no "
             "reason_for_subset was provided - auto-expanded to all sections to avoid a "
@@ -247,15 +252,23 @@ def create_pptx(
 
 # --- deck quality loop (docx §4.8) -------------------------------------------
 
+
 def _refresh_deck_plan(title: str = "", subtitle: str = "", brand: str = ""):
     """Build/refresh deck_plan.json from the CSM + artifacts. Returns (model, plan)."""
     model = build_solution_model(current_workspace())
     wbs = _read_json_file(current_workspace() / "wbs.json", {}) or {}
     brief = _read_json_file(current_workspace() / "diagram_brief.json", {}) or {}
-    has_diagram = (current_workspace() / "out.body.png").exists() or (current_workspace() / "out.png").exists()
+    has_diagram = (current_workspace() / "out.body.png").exists() or (
+        current_workspace() / "out.png"
+    ).exists()
     plan = build_deck_plan(
-        model, wbs=wbs, brief=brief, has_diagram=has_diagram,
-        title=title, subtitle=subtitle, brand=brand,
+        model,
+        wbs=wbs,
+        brief=brief,
+        has_diagram=has_diagram,
+        title=title,
+        subtitle=subtitle,
+        brand=brand,
     )
     write_deck_plan(plan, current_workspace())
     return model, plan
@@ -275,13 +288,17 @@ def _deck_qa_note(model=None) -> str:
     struct = score_deck_structure(plan)
     try:
         (current_workspace() / DECK_QA_NAME).write_text(
-            json.dumps({
-                "deck_revision": plan.revision,
-                "findings": findings,
-                "structural_score": struct["score"],
-                "structural_grade": struct["grade"],
-                "structural_issues": struct["issues"],
-            }, indent=2, ensure_ascii=False),
+            json.dumps(
+                {
+                    "deck_revision": plan.revision,
+                    "findings": findings,
+                    "structural_score": struct["score"],
+                    "structural_grade": struct["grade"],
+                    "structural_issues": struct["issues"],
+                },
+                indent=2,
+                ensure_ascii=False,
+            ),
             encoding="utf-8",
         )
     except Exception:
@@ -310,7 +327,9 @@ def _deck_qa_note(model=None) -> str:
     if struct["issues"]:
         struct_lines = [f"  ⚠ {iss}" for iss in struct["issues"][:6]]
         extra2 = f"\n  … (+{len(struct['issues']) - 6} more)" if len(struct["issues"]) > 6 else ""
-        parts.append(f"Structural issues ({struct['deductions']} pts deducted):\n" + "\n".join(struct_lines) + extra2)
+        parts.append(
+            f"Structural issues ({struct['deductions']} pts deducted):\n" + "\n".join(struct_lines) + extra2
+        )
     return head + " " + " | ".join(parts)
 
 
@@ -321,6 +340,7 @@ def _visual_audit_note(pptx_path: str | None) -> str:
         return ""
     try:
         from pathlib import Path as _Path
+
         result = audit_pptx_deterministic(pptx_path)
         if result.high_count > 0:
             high_issues = [i for i in result.issues if i.severity == "high"]
@@ -390,9 +410,7 @@ def export_proposal_package(title: str = "") -> str:
             "or confirm you accept the risk."
         )
     elif manifest.open_findings:
-        summary += (
-            f"\n\n⚠ {manifest.open_findings} finding(s) still open — review before sending."
-        )
+        summary += f"\n\n⚠ {manifest.open_findings} finding(s) still open — review before sending."
     else:
         summary += "\n\nAll quality gates clear. Ready to send to client."
 

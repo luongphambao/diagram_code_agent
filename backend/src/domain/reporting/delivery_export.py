@@ -45,6 +45,7 @@ class ExternalRef(BaseModel):
 
 # --- work-item hashing (drives create/update/skip) ---------------------------
 
+
 def work_item_hash(wi: WorkItem) -> str:
     """Content hash of the fields we sync; a change here means 'needs update'."""
     payload = {
@@ -60,6 +61,7 @@ def work_item_hash(wi: WorkItem) -> str:
 
 
 # --- adapters: CSM WorkItem -> external payload ------------------------------
+
 
 def build_payload(system: System, wi: WorkItem) -> dict:
     """Map a WorkItem to the create/update payload shape of the target system.
@@ -100,9 +102,11 @@ def build_payload(system: System, wi: WorkItem) -> dict:
 
 # --- store -------------------------------------------------------------------
 
+
 def _log_path(workspace: Optional[Path]) -> Path:
     if workspace is None:
         from backends import current_workspace
+
         workspace = current_workspace()
     return Path(workspace) / DELIVERY_SYNC_LOG_NAME
 
@@ -139,13 +143,13 @@ def _ref_key(csm_id: str, system: str) -> tuple[str, str]:
 
 # --- the sync ----------------------------------------------------------------
 
+
 def _simulate_external_id(system: System, csm_id: str) -> str:
     """Deterministic stand-in id for an offline/credential-less push."""
     return f"{system.upper()}-{csm_id}"
 
 
-def plan_sync(model: SolutionModel, system: System,
-              workspace: Optional[Path] = None) -> list[dict]:
+def plan_sync(model: SolutionModel, system: System, workspace: Optional[Path] = None) -> list[dict]:
     """Compute the create/update/skip plan for ``system`` without mutating anything."""
     refs = {(_ref_key(r.csm_id, r.system)): r for r in read_refs(workspace)}
     plan: list[dict] = []
@@ -158,13 +162,15 @@ def plan_sync(model: SolutionModel, system: System,
             action = "skip"
         else:
             action = "update"
-        plan.append({
-            "csm_id": wi.id,
-            "action": action,
-            "external_id": existing.external_id if existing else "",
-            "hash": h,
-            "payload": build_payload(system, wi),
-        })
+        plan.append(
+            {
+                "csm_id": wi.id,
+                "action": action,
+                "external_id": existing.external_id if existing else "",
+                "hash": h,
+                "payload": build_payload(system, wi),
+            }
+        )
     return plan
 
 
@@ -187,14 +193,18 @@ def sync_work_items(
         counts[row["action"]] += 1
 
     if dry_run:
-        preview_path = (_log_path(workspace).parent / DELIVERY_PREVIEW_NAME)
+        preview_path = _log_path(workspace).parent / DELIVERY_PREVIEW_NAME
         preview_path.write_text(
-            json.dumps({"system": system, "dry_run": True, "plan": plan},
-                       indent=2, ensure_ascii=False),
+            json.dumps({"system": system, "dry_run": True, "plan": plan}, indent=2, ensure_ascii=False),
             encoding="utf-8",
         )
-        return {"system": system, "dry_run": True, "counts": counts, "plan": plan,
-                "preview": str(preview_path)}
+        return {
+            "system": system,
+            "dry_run": True,
+            "counts": counts,
+            "plan": plan,
+            "preview": str(preview_path),
+        }
 
     # Real sync: apply create/update, persist refs (skip leaves the ref untouched).
     # Jira pushes for real when credentials are configured; otherwise (and for
@@ -204,6 +214,7 @@ def sync_work_items(
     if system == "jira":
         try:
             from jira_adapter import jira_credentials
+
             creds = jira_credentials()
         except Exception:  # noqa: BLE001 — never let adapter import break the sync
             creds = None
@@ -217,13 +228,13 @@ def sync_work_items(
         prior_id = existing.external_id if existing and existing.external_id else ""
         if creds is not None:
             from jira_adapter import push_issue
-            external_id = push_issue(creds, row["payload"], action=row["action"],
-                                     external_id=prior_id)
+
+            external_id = push_issue(creds, row["payload"], action=row["action"], external_id=prior_id)
         else:
             external_id = prior_id or _simulate_external_id(system, row["csm_id"])
-        refs[key] = ExternalRef(csm_id=row["csm_id"], system=system,
-                                external_id=external_id, last_synced_hash=row["hash"])
+        refs[key] = ExternalRef(
+            csm_id=row["csm_id"], system=system, external_id=external_id, last_synced_hash=row["hash"]
+        )
         row["external_id"] = external_id
     _write_refs(refs.values(), workspace)
-    return {"system": system, "dry_run": False, "counts": counts, "plan": plan,
-            "pushed": creds is not None}
+    return {"system": system, "dry_run": False, "counts": counts, "plan": plan, "pushed": creds is not None}

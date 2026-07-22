@@ -106,13 +106,10 @@ def load_template(name: str) -> dict[str, Any]:
 
 def find_template(query: str, provider: str = "", limit: int = 3) -> list[dict[str, Any]]:
     """Rank templates by token overlap against name, tags, summary, and labels."""
-    scored = [
-        (_score_entry(template, query, provider), template)
-        for template in _load_all()
-    ]
+    scored = [(_score_entry(template, query, provider), template) for template in _load_all()]
     scored = [(score, template) for score, template in scored if score > 0]
     scored.sort(key=lambda item: (-item[0], str((item[1].get("_meta") or {}).get("name") or "")))
-    return [copy.deepcopy(template) for score, template in scored[:max(1, limit)]]
+    return [copy.deepcopy(template) for score, template in scored[: max(1, limit)]]
 
 
 def template_skeleton(template: dict[str, Any]) -> dict[str, Any]:

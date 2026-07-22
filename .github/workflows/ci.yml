@@ -1,0 +1,197 @@
+name: ci
+
+# Improvement plan §1.3 — full backend + frontend + container + security gate.
+# Complements evals.yml (deterministic eval-suite regression gate): this
+# workflow is about code quality and the render/deploy security boundary,
+# not model-output quality.
+
+on:
+  push:
+    branches: [main, sandbox]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Sync deps
+        # A stale/out-of-sync lockfile must fail CI, not silently re-resolve
+        # (see pyproject.toml's dev-tooling note on why this bit before).
+        run: uv sync --frozen
+      - name: ruff format --check
+        run: uv run ruff format --check .
+      - name: ruff check (blocking set — see pyproject.toml [tool.ruff.lint])
+        run: uv run ruff check .
+      - name: ruff check (full report, non-blocking)
+        # The full pyflakes/pycodestyle/isort ruleset has ~500 pre-existing
+        # hits with no prior lint config in this repo — surfaced here as a
+        # visible, non-blocking report to tighten [tool.ruff.lint].select
+        # into over time, rather than either hiding it or blocking every PR
+        # on unrelated pre-existing debt on day one.
+        run: uv run ruff check --select ALL --exit-zero . || true
+        continue-on-error: true
+      - name: pyright (non-blocking)
+        # 228 pre-existing errors on a duck-typed deepagents/langchain
+        # codebase with no prior type-checking — same rationale as the ruff
+        # report step above. Promote to blocking once that number is driven
+        # down deliberately.
+        run: uv run pyright . || true
+        continue-on-error: true
+      - name: pytest + coverage
+        run: |
+          uv run pytest tests/ -q \
+            --cov=src --cov-report=term-missing --cov-report=xml \
+            --cov-fail-under=45
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+
+  frontend-quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run format:check
+      - run: npm run build
+      # No `npm run test`/`playwright test` step yet — improvement plan §1.7
+      # (frontend HITL flow tests) hasn't landed; adding an empty vitest run
+      # here would just be CI theater (0 tests "passing" proves nothing).
+
+  security:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks (secret scanning)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: astral-sh/setup-uv@v5
+      - name: pip-audit (backend dependency vulnerabilities)
+        working-directory: backend
+        run: |
+          uv sync --frozen
+          uvx pip-audit --local || true
+        continue-on-error: true # advisory until triaged — don't block on a fresh rollout
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - name: npm audit (frontend dependency vulnerabilities)
+        working-directory: frontend
+        run: |
+          npm ci
+          npm audit --audit-level=high || true
+        continue-on-error: true
+
+      - name: CodeQL init
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python, javascript-typescript
+      - name: CodeQL analyze
+        uses: github/codeql-action/analyze@v3
+
+  container-build:
+    runs-on: ubuntu-latest
+    needs: [backend-quality]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        # First real build-verification of backend/Dockerfile's §1.6 hardening
+        # (non-root user, pinned base digest, Playwright browsers path, health
+        # check) — it could not be build-tested in the sandbox that wrote it.
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: false
+          load: true
+          tags: diagram-agent-backend:ci
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+            BUILD_TIME=${{ github.event.repository.updated_at }}
+
+      - name: Boot backend image and check /health/live
+        run: |
+          docker run -d --name backend-smoke -p 8001:8001 \
+            -e OPENAI_API_KEY=sk-ci-placeholder \
+            -e APP_ENV=development \
+            diagram-agent-backend:ci
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8001/health/live; then echo; break; fi
+            sleep 2
+          done
+          curl -sf http://localhost:8001/health/live
+          docker logs backend-smoke
+          docker rm -f backend-smoke
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: diagram-agent-backend:ci
+          severity: CRITICAL,HIGH
+          exit-code: "0" # advisory until triaged — don't block on a fresh rollout
+
+      - name: Generate SBOM (Syft)
+        uses: anchore/sbom-action@v0
+        with:
+          image: diagram-agent-backend:ci
+          format: spdx-json
+          output-file: backend-sbom.spdx.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backend-sbom
+          path: backend-sbom.spdx.json
+
+  modal-smoke:
+    # Real Modal compute + live credentials — runs only on the protected
+    # branch, not every PR (improvement plan's migration-plan Phase 3/CI
+    # section). Verifies the actual security properties end to end: sandbox
+    # executes, secrets are absent, outbound network is blocked, sandbox
+    # terminates (see backend/modal/smoke_test.py).
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --frozen
+      - name: Modal Sandbox smoke test
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: uv run python modal/smoke_test.py

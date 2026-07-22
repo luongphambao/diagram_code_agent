@@ -22,39 +22,49 @@ from .builder import Diagram, Z_CHROME
 from . import refined_theme as RT
 
 # Role inference when the spec doesn't say (playbook §5 inventory classes).
-_OPS_RX = re.compile(r"security|iam\b|monitor|logging|log\b|cloudwatch|governance"
-                     r"|compliance|audit|ci[-/ ]?cd|operation|devops|observ"
-                     r"|identity|access|foundation", re.I)
+_OPS_RX = re.compile(
+    r"security|iam\b|monitor|logging|log\b|cloudwatch|governance"
+    r"|compliance|audit|ci[-/ ]?cd|operation|devops|observ"
+    r"|identity|access|foundation",
+    re.I,
+)
 # Entry-ish zones ("NETWORK & SECURITY", "ACCESS & EDGE") carry main-flow
 # traffic — they beat the ops match (reference: zone 2 sits in the main row).
-_ENTRY_RX = re.compile(
-    r"network|ingress|\bedge\b|gateway|channel|source|presenting|producer|input",
-    re.I)
-_OUTCOME_RX = re.compile(r"outcome|consum|downstream|client|dashboard|notification",
-                         re.I)
+_ENTRY_RX = re.compile(r"network|ingress|\bedge\b|gateway|channel|source|presenting|producer|input", re.I)
+_OUTCOME_RX = re.compile(r"outcome|consum|downstream|client|dashboard|notification", re.I)
 _FUTURE_RX = re.compile(r"future|phase\s*2|deferred|roadmap|planned", re.I)
 # External dependency tiers (identity providers, partner SaaS, third-party APIs)
 # belong in a sidebar next to what they connect to — NOT the ops/governance band,
 # even though "identity"/"access" also hit the ops regex.
-_EXTERNAL_RX = re.compile(r"external|third.?party|partner|\bsaas\b|vendor|"
-                          r"upstream provider", re.I)
+_EXTERNAL_RX = re.compile(
+    r"external|third.?party|partner|\bsaas\b|vendor|"
+    r"upstream provider",
+    re.I,
+)
 _SUPPORT_STATE_RX = re.compile(
     r"\b(data|database|storage|state|archive|ledger|replication|evidence"
     r"|content|store|stores|bucket|blob|nas)\b",
-    re.I)
+    re.I,
+)
 
 # Boundary zone kinds recognised from the existing `zone` cluster field.
-_BOUNDARY_KINDS = {"cloud": "cloud", "region": "cloud", "account": "cloud",
-                   "vpc": "vpc", "az": "az", "onprem": "onprem"}
+_BOUNDARY_KINDS = {
+    "cloud": "cloud",
+    "region": "cloud",
+    "account": "cloud",
+    "vpc": "vpc",
+    "az": "az",
+    "onprem": "onprem",
+}
 
-_CARD_W = 200          # standard refined card width
-_CARD_PAD_H = 40       # card height base (title row + padding)
-_LINE_H = 15           # per body line
-_MAX_ROWS = 4          # cards per zone column before wrapping to a new column
-_HEADER_Y = (22, 64, 102)   # title / subtitle / backbone strip y positions
-_ZONE_TOP = 185        # top of the main zone row (leaves room for boundary tabs)
-_OPS_GAP = 70          # gap between main row and the operations band
-_SIDEBAR_GAP = 55      # gap between main row and the outcomes sidebar
+_CARD_W = 200  # standard refined card width
+_CARD_PAD_H = 40  # card height base (title row + padding)
+_LINE_H = 15  # per body line
+_MAX_ROWS = 4  # cards per zone column before wrapping to a new column
+_HEADER_Y = (22, 64, 102)  # title / subtitle / backbone strip y positions
+_ZONE_TOP = 185  # top of the main zone row (leaves room for boundary tabs)
+_OPS_GAP = 70  # gap between main row and the operations band
+_SIDEBAR_GAP = 55  # gap between main row and the outcomes sidebar
 
 
 def _wrap(text: str, width: int = 32, max_lines: int = 3) -> list[str]:
@@ -78,7 +88,7 @@ def _wrap(text: str, width: int = 32, max_lines: int = 3) -> list[str]:
 def _body_lines(n: dict) -> list[str]:
     body = [str(l).strip() for l in (n.get("body") or []) if str(l).strip()]
     if body:
-        return body[:RT.GEO["body_lines_max"]]
+        return body[: RT.GEO["body_lines_max"]]
     tech = str(n.get("tech") or "").strip()
     label = str(n.get("label") or "").strip()
     if tech and tech.lower() != label.lower():
@@ -89,8 +99,11 @@ def _body_lines(n: dict) -> list[str]:
 # "Hard" ops — telemetry/governance that belongs in the cross-cutting band even
 # when nested inside a VPC (CloudWatch, audit). Distinct from "soft" ops words
 # (security/access) that, inside a network boundary, are main-plane edge zones.
-_HARD_OPS_RX = re.compile(r"monitor|cloudwatch|logg?ing|\blogs?\b|metric|telemetry"
-                          r"|observ|governance|complian|audit|ci[-/ ]?cd|devops", re.I)
+_HARD_OPS_RX = re.compile(
+    r"monitor|cloudwatch|logg?ing|\blogs?\b|metric|telemetry"
+    r"|observ|governance|complian|audit|ci[-/ ]?cd|devops",
+    re.I,
+)
 _NET_ZONES = {"vpc", "subnet", "subnet_public", "subnet_private", "az"}
 
 
@@ -163,29 +176,33 @@ def _card_h(lines: list[str]) -> int:
     return max(56, _CARD_PAD_H + (8 + _LINE_H * len(lines) if lines else 8))
 
 
-_MON_RX = re.compile(r"monitor|cloudwatch|logg?ing|\blogs?\b|metric|telemetry"
-                     r"|alarm|observ", re.I)
-_CTRL_RX = re.compile(r"\biam\b|identity|least.priv|access|policy|permission"
-                      r"|secret|auth", re.I)
+_MON_RX = re.compile(
+    r"monitor|cloudwatch|logg?ing|\blogs?\b|metric|telemetry"
+    r"|alarm|observ",
+    re.I,
+)
+_CTRL_RX = re.compile(
+    r"\biam\b|identity|least.priv|access|policy|permission"
+    r"|secret|auth",
+    re.I,
+)
 
 
-def _label_box_free(cx: float, cy: float, label: str,
-                    card_rects: list[dict]) -> bool:
+def _label_box_free(cx: float, cy: float, label: str, card_rects: list[dict]) -> bool:
     """True when a label box centred at (cx, cy) clears every card. Box size
     mirrors validate_drawio's edge-label estimate (6.6px/char × 14px)."""
     w = max(30.0, len(label) * 6.6)
     x0, x1 = cx - w / 2, cx + w / 2
     y0, y1 = cy - 8, cy + 8
     for r in card_rects:
-        if (x0 < r["x"] + r["w"] and x1 > r["x"]
-                and y0 < r["y"] + r["h"] and y1 > r["y"]):
+        if x0 < r["x"] + r["w"] and x1 > r["x"] and y0 < r["y"] + r["h"] and y1 > r["y"]:
             return False
     return True
 
 
-def _label_offset(src_r: dict, tgt_r: dict, top_bound: float | None,
-                  label: str = "",
-                  card_rects: list[dict] | None = None) -> tuple[float, float] | None:
+def _label_offset(
+    src_r: dict, tgt_r: dict, top_bound: float | None, label: str = "", card_rects: list[dict] | None = None
+) -> tuple[float, float] | None:
     """Nudge a same-row edge label off the direct line so it clears the source/
     target cards instead of sitting on top of them (the raw-midpoint default —
     fine for the reference's generous card gaps, not for tightly-packed
@@ -208,8 +225,7 @@ def _label_offset(src_r: dict, tgt_r: dict, top_bound: float | None,
     top = min(src_r["y"], tgt_r["y"])
     bottom = max(src_r["y"] + src_r["h"], tgt_r["y"] + tgt_r["h"])
     above, below = top - 20, bottom + 18
-    candidates = [above, below] if (top_bound is None or above - 8 >= top_bound) \
-        else [below, above]
+    candidates = [above, below] if (top_bound is None or above - 8 >= top_bound) else [below, above]
     for want_y in candidates:
         dy = max(-70.0, min(70.0, want_y - mid_y))  # bounded, never a runaway
         if abs(dy) <= 1:
@@ -246,9 +262,9 @@ def _edge_class(e: dict, ctx: dict | None = None) -> str:
 # subzone column frames (AZ/subnet boxes nested inside a zone), per-card
 # sub-tint. This is what lifts the output from "boxes in bands" to the authored
 # reference look (playbook §8.5 main-flow-plus-support, §10.3 sub-grouping). --- #
-_SUBZONE_W = 176      # dashed AZ/subnet sub-frame outer width inside a zone
-_SUBZONE_PAD = 10     # inner pad between sub-frame border and its cards
-_SUBZONE_TOP = 26     # room at the sub-frame top for its label pill
+_SUBZONE_W = 176  # dashed AZ/subnet sub-frame outer width inside a zone
+_SUBZONE_PAD = 10  # inner pad between sub-frame border and its cards
+_SUBZONE_TOP = 26  # room at the sub-frame top for its label pill
 
 
 def _card_fill_stroke(n: dict, zone_hue: str):
@@ -270,8 +286,7 @@ def _zone_content(members: list[dict]) -> dict:
     headers, footers, body = [], [], []
     for n in members:
         sp = str(n.get("span") or "").lower()
-        (headers if sp == "header" else footers if sp == "footer"
-         else body).append(n)
+        (headers if sp == "header" else footers if sp == "footer" else body).append(n)
     columns: list[dict] = []
     sub_ix: dict[str, int] = {}
     plain: list[dict] = []
@@ -283,8 +298,7 @@ def _zone_content(members: list[dict]) -> dict:
                 sub_ix[szid] = len(columns)
                 label = szid if isinstance(sz, str) else str(sz.get("label") or szid)
                 kind = "az" if isinstance(sz, str) else str(sz.get("kind") or "az")
-                columns.append({"sub": {"id": szid, "label": label, "kind": kind},
-                                "cards": []})
+                columns.append({"sub": {"id": szid, "label": label, "kind": kind}, "cards": []})
             columns[sub_ix[szid]]["cards"].append(n)
         else:
             plain.append(n)
@@ -292,7 +306,7 @@ def _zone_content(members: list[dict]) -> dict:
         pcols = max(1, (len(plain) + _MAX_ROWS - 1) // _MAX_ROWS)
         per = (len(plain) + pcols - 1) // pcols or 1
         for ci in range(pcols):
-            chunk = plain[ci * per:(ci + 1) * per]
+            chunk = plain[ci * per : (ci + 1) * per]
             if chunk:
                 columns.append({"sub": None, "cards": chunk})
     return {"headers": headers, "footers": footers, "columns": columns}
@@ -309,7 +323,7 @@ def _measure_content(content: dict) -> tuple[int, int]:
     col_ws, col_hs = [], []
     for col in content["columns"]:
         col_ws.append(_col_card_w(col) + (2 * _SUBZONE_PAD if col["sub"] else 0))
-        ch = (_SUBZONE_TOP if col["sub"] else 0)
+        ch = _SUBZONE_TOP if col["sub"] else 0
         ch += sum(_card_h(_body_lines(n)) + gap for n in col["cards"]) - gap
         if col["sub"]:
             ch += _SUBZONE_PAD
@@ -340,8 +354,7 @@ def build_refined(spec: dict, plan: dict | None = None):
     # reassign every node in an unnumbered interior zone to its nearest
     # NUMBERED ancestor section; the interior boundary either becomes a visual
     # boundary rect (zone-tagged, node-free) or disappears.
-    numbered = {cid for cid, c in clusters.items()
-                if c.get("number") is not None}
+    numbered = {cid for cid, c in clusters.items() if c.get("number") is not None}
 
     def _nearest_numbered(cid: str) -> str | None:
         cur, guard = cid, 0
@@ -352,8 +365,7 @@ def build_refined(spec: dict, plan: dict | None = None):
             guard += 1
         return None
 
-    _SUB_ZONES = {"az": "az", "subnet": "subnet", "subnet_public": "subnet",
-                  "subnet_private": "subnet"}
+    _SUB_ZONES = {"az": "az", "subnet": "subnet", "subnet_public": "subnet", "subnet_private": "subnet"}
 
     def _interior_subzone(cid: str, tgt: str) -> dict | None:
         """The AZ/subnet the node sat in before section-collapse, so the refined
@@ -386,8 +398,7 @@ def build_refined(spec: dict, plan: dict | None = None):
     loose: list[dict] = []
     for n in nodes:
         cid = n.get("cluster")
-        (nodes_by_cluster.setdefault(cid, []) if cid in clusters
-         else loose).append(n)
+        (nodes_by_cluster.setdefault(cid, []) if cid in clusters else loose).append(n)
     if loose:
         clusters.setdefault("__misc", {"id": "__misc", "label": "Components"})
         nodes_by_cluster.setdefault("__misc", []).extend(loose)
@@ -408,11 +419,14 @@ def build_refined(spec: dict, plan: dict | None = None):
 
     # A zone-tagged wrapper WITH direct nodes stays a zone (a boundary would
     # orphan its nodes); only childful, node-free wrappers become boundaries.
-    boundary_ids = [cid for cid, c in clusters.items()
-                    if _BOUNDARY_KINDS.get(str(c.get("zone") or "").lower())
-                    and children_of.get(cid) and not nodes_by_cluster.get(cid)]
-    zone_ids = [cid for cid in clusters
-                if cid not in boundary_ids and nodes_by_cluster.get(cid)]
+    boundary_ids = [
+        cid
+        for cid, c in clusters.items()
+        if _BOUNDARY_KINDS.get(str(c.get("zone") or "").lower())
+        and children_of.get(cid)
+        and not nodes_by_cluster.get(cid)
+    ]
+    zone_ids = [cid for cid in clusters if cid not in boundary_ids and nodes_by_cluster.get(cid)]
 
     # Split zones by role; keep spec (or plan band_order) sequence inside groups.
     order = list(zone_ids)
@@ -439,10 +453,11 @@ def build_refined(spec: dict, plan: dict | None = None):
     # support shelf instead of forcing a fifth main column or a short second row.
     # Explicit roles still win; this only rebalances inferred roles.
     if sum(1 for z in order if role_by_zone.get(z) == "main") > 4:
-        candidates = [z for z in order
-                      if role_by_zone.get(z) == "main"
-                      and not clusters[z].get("role")
-                      and _support_state_zone(z)]
+        candidates = [
+            z
+            for z in order
+            if role_by_zone.get(z) == "main" and not clusters[z].get("role") and _support_state_zone(z)
+        ]
         for z in sorted(candidates, key=_num_key, reverse=True):
             if sum(1 for x in order if role_by_zone.get(x) == "main") <= 4:
                 break
@@ -464,8 +479,7 @@ def build_refined(spec: dict, plan: dict | None = None):
     used_glue: set[str] = set()
     for z in mains + ops + sides:
         role = _layout_role(z)
-        cat = ("sidebar" if role == "sidebar"
-               else "security" if role == "ops" else "state")
+        cat = "sidebar" if role == "sidebar" else "security" if role == "ops" else "state"
         if cat in used_glue:
             continue
         if any(str(n.get("kind") or "") == "note" for n in nodes_by_cluster.get(z, [])):
@@ -475,8 +489,15 @@ def build_refined(spec: dict, plan: dict | None = None):
         if glue:
             title, lines = glue
             nodes_by_cluster.setdefault(z, []).append(
-                {"id": f"note_auto_{z}", "cluster": z, "kind": "note",
-                 "span": "footer", "label": title, "body": lines})
+                {
+                    "id": f"note_auto_{z}",
+                    "cluster": z,
+                    "kind": "note",
+                    "span": "footer",
+                    "label": title,
+                    "body": lines,
+                }
+            )
             used_glue.add(cat)
 
     # ---- measure zones ---- #
@@ -494,8 +515,9 @@ def build_refined(spec: dict, plan: dict | None = None):
     geo_main = {z: _zone_geom(z) for z in mains}
     geo_side = {z: _zone_geom(z) for z in sides}
 
-    d = Diagram(spec.get("pattern", "pipeline"), contract="bake", flat=True,
-                page=(RT.GEO["page_w"], RT.GEO["page_h"]))
+    d = Diagram(
+        spec.get("pattern", "pipeline"), contract="bake", flat=True, page=(RT.GEO["page_w"], RT.GEO["page_h"])
+    )
     d.grid = True
     margin = RT.GEO["margin"]
 
@@ -505,6 +527,7 @@ def build_refined(spec: dict, plan: dict | None = None):
     provider = str(spec.get("provider") or "").lower()
     try:
         from .topology import _resolve_node_icon as _rni, _load_catalog as _lc
+
         _cat = _lc() if _lc else None
     except Exception:  # noqa: BLE001
         _cat, _rni = None, None
@@ -538,7 +561,7 @@ def build_refined(spec: dict, plan: dict | None = None):
     ry = _ZONE_TOP
     main_right = margin
     for r in range(n_rows):
-        row = mains[r * per_row:(r + 1) * per_row]
+        row = mains[r * per_row : (r + 1) * per_row]
         if not row:
             continue
         row_h = max(geo_main[z]["h"] for z in row)
@@ -560,8 +583,7 @@ def build_refined(spec: dict, plan: dict | None = None):
         g = geo_side[z]
         zone_rects[z] = {"x": sx, "y": sy, "w": g["w"], "h": g["h"]}
         sy += g["h"] + RT.GEO["zone_gap"] + RT.GEO["tab_overlap"]
-    content_right = (sx + max((g["w"] for g in geo_side.values()), default=0)
-                     if sides else main_right)
+    content_right = sx + max((g["w"] for g in geo_side.values()), default=0) if sides else main_right
 
     # ---- operations band: ops zones share ONE horizontal band row (the
     # reference's cross-cutting strip under the cloud), wrapping if needed ---- #
@@ -575,6 +597,7 @@ def build_refined(spec: dict, plan: dict | None = None):
             cur = (clusters.get(cur) or {}).get("parent")
             guard += 1
         return False
+
     cloud_mains = [z for z in mains if _has_boundary_ancestor(z) and z in zone_rects]
     if cloud_mains:
         band_left = min(zone_rects[z]["x"] for z in cloud_mains)
@@ -591,8 +614,7 @@ def build_refined(spec: dict, plan: dict | None = None):
     if ops_pack:
         band_right = max(band_right, content_right)
     ops_rects: dict[str, dict] = {}
-    oy = max(main_bottom, (sy - RT.GEO["zone_gap"] - RT.GEO["tab_overlap"])
-             if sides else 0) + _OPS_GAP
+    oy = max(main_bottom, (sy - RT.GEO["zone_gap"] - RT.GEO["tab_overlap"]) if sides else 0) + _OPS_GAP
     avail = band_right - band_left
     ox, row_h_ops = band_left, 0
     for z in ops:
@@ -619,12 +641,14 @@ def build_refined(spec: dict, plan: dict | None = None):
             cur = (clusters.get(cur) or {}).get("parent")
             guard += 1
         return n
+
     max_anc = max((_b_anc(b) for b in boundary_ids), default=0)
     for bid in boundary_ids:
         # Wrap only main-row members: the ops band is full-width and would balloon
         # the box out under external zones; the sidebar sits outside the cloud.
-        members = [zone_rects[z] for z in _descendant_zones(bid)
-                   if _layout_role(z) == "main" and z in zone_rects]
+        members = [
+            zone_rects[z] for z in _descendant_zones(bid) if _layout_role(z) == "main" and z in zone_rects
+        ]
         if not members:
             continue
         pad = 18 + (max_anc - _b_anc(bid)) * 22
@@ -633,8 +657,7 @@ def build_refined(spec: dict, plan: dict | None = None):
         bw = max(r["x"] + r["w"] for r in members) + pad - bx
         bh = max(r["y"] + r["h"] for r in members) + pad - by
         kind = _BOUNDARY_KINDS[str(clusters[bid].get("zone")).lower()]
-        d.boundary_rect(f"bnd_{bid}", [bx, by], [bw, bh], kind,
-                        clusters[bid].get("label") or kind.upper())
+        d.boundary_rect(f"bnd_{bid}", [bx, by], [bw, bh], kind, clusters[bid].get("label") or kind.upper())
 
     # ---- emit zones + cards ---- #
     hue_i = 0
@@ -645,12 +668,10 @@ def build_refined(spec: dict, plan: dict | None = None):
     # numbers — the playbook demands a coherent reading order, so renumber).
     given = [clusters[z].get("number") for z in zone_order]
     ints = [int(n) for n in given if str(n).isdigit()]
-    use_given = (len(ints) == len(zone_order)
-                 and sorted(ints) == list(range(1, len(ints) + 1)))
+    use_given = len(ints) == len(zone_order) and sorted(ints) == list(range(1, len(ints) + 1))
     if use_given:
         zone_order = [z for _, z in sorted(zip(ints, zone_order))]
-    zone_no = {z: (int(clusters[z]["number"]) if use_given else i + 1)
-               for i, z in enumerate(zone_order)}
+    zone_no = {z: (int(clusters[z]["number"]) if use_given else i + 1) for i, z in enumerate(zone_order)}
     for z in zone_order:
         c = clusters[z]
         rect = zone_rects[z]
@@ -666,27 +687,55 @@ def build_refined(spec: dict, plan: dict | None = None):
                 hue_i += 1
         num = zone_no[z]
         zid = z if str(z).startswith("zone_") else f"zone_{z}"
-        d.tab_zone(zid, [rect["x"], rect["y"]], [rect["w"], rect["h"]],
-                   str(c.get("label") or z).upper(), hue, number=num)
+        d.tab_zone(
+            zid,
+            [rect["x"], rect["y"]],
+            [rect["w"], rect["h"]],
+            str(c.get("label") or z).upper(),
+            hue,
+            number=num,
+        )
         scope = str(c.get("scope") or ("future" if role == "future" else "")).upper()
         if scope:
             pw = max(60, len(scope) * 6 + 24)
-            d.pill(f"tag_{z}", [rect["x"] + rect["w"] - pw - 8, rect["y"] - 11],
-                   [pw, 22], scope.replace("_", " "), fill="#FFFFFF",
-                   stroke=RT.ZONE_HUES[hue][1],
-                   font_color=RT.ZONE_HUES[hue][0], fs=9)
+            d.pill(
+                f"tag_{z}",
+                [rect["x"] + rect["w"] - pw - 8, rect["y"] - 11],
+                [pw, 22],
+                scope.replace("_", " "),
+                fill="#FFFFFF",
+                stroke=RT.ZONE_HUES[hue][1],
+                font_color=RT.ZONE_HUES[hue][0],
+                fs=9,
+            )
+
         def _render(n, xy, wh, span=False, zone_hue=hue):
             fill, cstroke = _card_fill_stroke(n, zone_hue)
             if str(n.get("kind") or "") == "note":
-                d.note_card(n["id"], xy, wh, n.get("label") or n["id"],
-                            _body_lines(n), fill=fill, stroke=cstroke or "#D0D5DD")
+                d.note_card(
+                    n["id"],
+                    xy,
+                    wh,
+                    n.get("label") or n["id"],
+                    _body_lines(n),
+                    fill=fill,
+                    stroke=cstroke or "#D0D5DD",
+                )
             else:
                 iname, img = (None, None) if span else _node_icon(n)
-                d.rich_card(n["id"], xy, wh, n.get("label") or n["id"],
-                            _body_lines(n), fill=fill, stroke=cstroke,
-                            align="center" if span else "left",
-                            icon_name=iname, image_data_uri=img,
-                            dashed=str(n.get("scope") or "") == "future")
+                d.rich_card(
+                    n["id"],
+                    xy,
+                    wh,
+                    n.get("label") or n["id"],
+                    _body_lines(n),
+                    fill=fill,
+                    stroke=cstroke,
+                    align="center" if span else "left",
+                    icon_name=iname,
+                    image_data_uri=img,
+                    dashed=str(n.get("scope") or "") == "future",
+                )
 
         if z in ops_rects:  # horizontal band
             cards = ops_rects[z]["cards"]
@@ -697,8 +746,9 @@ def build_refined(spec: dict, plan: dict | None = None):
                 _render(n, [cx, rect["y"] + 40], [cw, _card_h(lines)])
                 cx += cw + 14
         else:  # vertical: header spans / subzone columns / footer spans
-            content = ((geo_main.get(z) or geo_side.get(z) or {}).get("content")
-                       or _zone_content(nodes_by_cluster.get(z, [])))
+            content = (geo_main.get(z) or geo_side.get(z) or {}).get("content") or _zone_content(
+                nodes_by_cluster.get(z, [])
+            )
             pad = RT.GEO["zone_pad"]
             gap = RT.GEO["card_gap"]
             inner_x = rect["x"] + pad
@@ -723,9 +773,13 @@ def build_refined(spec: dict, plan: dict | None = None):
                 bottom = ccy - gap
                 if col["sub"]:
                     fh = bottom - col_top + _SUBZONE_PAD
-                    d.boundary_rect(f"bnd_{z}_{col['sub']['id']}", [cx, col_top],
-                                    [frame_w, fh], col["sub"]["kind"],
-                                    col["sub"]["label"])
+                    d.boundary_rect(
+                        f"bnd_{z}_{col['sub']['id']}",
+                        [cx, col_top],
+                        [frame_w, fh],
+                        col["sub"]["kind"],
+                        col["sub"]["label"],
+                    )
                     bottom += _SUBZONE_PAD
                 col_bottoms.append(bottom)
                 cx += frame_w + gap
@@ -739,19 +793,36 @@ def build_refined(spec: dict, plan: dict | None = None):
     # Page hugs the content (playbook §9 canvas table: 1400x900 floor) instead
     # of forcing 1920 — small diagrams shouldn't swim in whitespace.
     page_w = max(1400, content_right + margin)
-    title = (spec.get("diagram_title") or spec.get("slide_title")
-             or spec.get("title") or "Architecture")
-    t = d._put("__title", "1", margin, _HEADER_Y[0], page_w - 2 * margin, 42,
-               f"text;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;"
-               f"fontFamily={RT.FONT};fontColor={RT.INK['title']};"
-               f"fontSize={RT.TYPE_SCALE['title']};fontStyle=1;", title, z=Z_CHROME)
+    title = spec.get("diagram_title") or spec.get("slide_title") or spec.get("title") or "Architecture"
+    t = d._put(
+        "__title",
+        "1",
+        margin,
+        _HEADER_Y[0],
+        page_w - 2 * margin,
+        42,
+        f"text;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;"
+        f"fontFamily={RT.FONT};fontColor={RT.INK['title']};"
+        f"fontSize={RT.TYPE_SCALE['title']};fontStyle=1;",
+        title,
+        z=Z_CHROME,
+    )
     t["ob"] = False
     subtitle = spec.get("subtitle") or ""
     if subtitle:
-        s = d._put("__subtitle", "1", margin, _HEADER_Y[1], page_w - 2 * margin, 24,
-                   f"text;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;"
-                   f"fontFamily={RT.FONT};fontColor={RT.INK['muted']};"
-                   f"fontSize={RT.TYPE_SCALE['subtitle']};", subtitle, z=Z_CHROME)
+        s = d._put(
+            "__subtitle",
+            "1",
+            margin,
+            _HEADER_Y[1],
+            page_w - 2 * margin,
+            24,
+            f"text;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;"
+            f"fontFamily={RT.FONT};fontColor={RT.INK['muted']};"
+            f"fontSize={RT.TYPE_SCALE['subtitle']};",
+            subtitle,
+            z=Z_CHROME,
+        )
         s["ob"] = False
     phases = [str(p).upper() for p in (spec.get("backbone") or []) if str(p).strip()]
     if not phases and len(mains) >= 3:
@@ -759,32 +830,40 @@ def build_refined(spec: dict, plan: dict | None = None):
     if phases:
         label = "  →  ".join(phases)
         bw = min(page_w - 2 * margin, max(600, len(label) * 8))
-        bb = d.pill("backbone", [round((page_w - bw) / 2), _HEADER_Y[2]], [bw, 36],
-                    label, fill=RT.CHROME["strip_fill"],
-                    stroke=RT.CHROME["strip_stroke"],
-                    font_color=RT.INK["muted"], fs=RT.TYPE_SCALE["backbone"],
-                    arc=RT.GEO["arc_zone"], ob=True)
+        bb = d.pill(
+            "backbone",
+            [round((page_w - bw) / 2), _HEADER_Y[2]],
+            [bw, 36],
+            label,
+            fill=RT.CHROME["strip_fill"],
+            stroke=RT.CHROME["strip_stroke"],
+            font_color=RT.INK["muted"],
+            fs=RT.TYPE_SCALE["backbone"],
+            arc=RT.GEO["arc_zone"],
+            ob=True,
+        )
 
     # ---- edges (honouring the layout plan's hub bundling, like topology) ---- #
     plan = plan or {}
     suppressed = {tuple(x) for x in plan.get("suppressed_edges", [])}
     rep_keys = {tuple(b.get("rep") or []) for b in plan.get("edge_bundles", [])}
-    rep_labels = {tuple(b.get("rep") or []): b.get("label")
-                  for b in plan.get("edge_bundles", [])
-                  if b.get("label")}
+    rep_labels = {
+        tuple(b.get("rep") or []): b.get("label") for b in plan.get("edge_bundles", []) if b.get("label")
+    }
     # Zone-pair bundle representatives get a multiplicity tag ("×N") instead of
     # the hub bundles' "(all layers)" phrasing.
-    rep_pair_count = {tuple(b.get("rep") or []): len(b.get("members") or []) + 1
-                      for b in plan.get("edge_bundles", [])
-                      if b.get("kind") == "pair"}
+    rep_pair_count = {
+        tuple(b.get("rep") or []): len(b.get("members") or []) + 1
+        for b in plan.get("edge_bundles", [])
+        if b.get("kind") == "pair"
+    }
     node_by_id = {n["id"]: n for n in nodes}
     side_set = set(sides)
     # Left-to-right position of each main zone — an edge between two ADJACENT
     # main zones just follows the backbone spine, so its label is redundant and
     # only clutters the narrow inter-zone gap (playbook §13.7). Labels on edges
     # to the ops band / sidebar / skip-level zones (the non-obvious ones) stay.
-    main_x_order = sorted((z for z in mains if z in zone_rects),
-                          key=lambda z: zone_rects[z]["x"])
+    main_x_order = sorted((z for z in mains if z in zone_rects), key=lambda z: zone_rects[z]["x"])
     main_pos = {z: i for i, z in enumerate(main_x_order)}
 
     def _ectx(nid: str) -> tuple[str, bool]:
@@ -793,6 +872,7 @@ def build_refined(spec: dict, plan: dict | None = None):
         c = clusters.get(cid) or {}
         txt = f"{n.get('label') or ''} {c.get('label') or ''}"
         return txt, cid in side_set
+
     # Obstacle rects for collision-aware label placement (computed once).
     card_rects = [r for r in d.R.values() if r.get("ob")]
     data_chain: list[tuple[str, str]] = []  # card->card data edges (flow badges)
@@ -807,8 +887,7 @@ def build_refined(spec: dict, plan: dict | None = None):
             continue
         s_txt, s_side = _ectx(s)
         t_txt, t_side = _ectx(t_)
-        cls = _edge_class(e, {"s_txt": s_txt, "t_txt": t_txt,
-                              "s_side": s_side, "t_side": t_side})
+        cls = _edge_class(e, {"s_txt": s_txt, "t_txt": t_txt, "s_side": s_side, "t_side": t_side})
         color, width, dashed = RT.EDGE_CLASSES[cls]
         if cls in RT.EDGE_LEGEND_LABELS and cls not in legend_flows:
             legend_flows.append(cls)
@@ -829,8 +908,13 @@ def build_refined(spec: dict, plan: dict | None = None):
             label = "Flows"  # bundle rep with no label of its own — give the tag a stem
         elif label and s_cl is not None and s_cl == t_cl and not is_bundle_rep:
             label = ""  # same-zone adjacency is self-evident
-        elif (label and s_cl in main_pos and t_cl in main_pos
-              and abs(main_pos[s_cl] - main_pos[t_cl]) == 1 and not is_bundle_rep):
+        elif (
+            label
+            and s_cl in main_pos
+            and t_cl in main_pos
+            and abs(main_pos[s_cl] - main_pos[t_cl]) == 1
+            and not is_bundle_rep
+        ):
             label = ""  # adjacent main zones follow the backbone L->R
         if key in rep_pair_count:
             n = rep_pair_count[key]
@@ -844,19 +928,30 @@ def build_refined(spec: dict, plan: dict | None = None):
         if label:
             src_zone = zone_rects.get(node_by_id.get(s, {}).get("cluster"))
             top_bound = (src_zone["y"] + 18) if src_zone else None
-            label_offset = _label_offset(d.R[sid], d.R[tid], top_bound,
-                                         label, card_rects)
+            label_offset = _label_offset(d.R[sid], d.R[tid], top_bound, label, card_rects)
         # style_extra (NOT style): the class styling is appended after the
         # router's base style, so these edges go through the deterministic
         # A*/NUDGE router (obstacle avoidance, ports, baked waypoints) instead
         # of being emitted raw for draw.io to route blindly at render time.
-        d.link(sid, tid, label, id=f"e_{sid}_{tid}", stroke=color, dash=dashed,
-               label_offset=label_offset,
-               style_extra=(f"strokeWidth={width};endArrow=block;endFill=1;"
-                            f"fontFamily={RT.FONT};fontSize={RT.TYPE_SCALE['edge']};"
-                            f"fontColor={RT.INK['body']};labelBackgroundColor=#FFFFFF;"))
-        if ((cls == "data" or sequence_mode) and not str(sid).startswith("zone_")
-                and not str(tid).startswith("zone_")):
+        d.link(
+            sid,
+            tid,
+            label,
+            id=f"e_{sid}_{tid}",
+            stroke=color,
+            dash=dashed,
+            label_offset=label_offset,
+            style_extra=(
+                f"strokeWidth={width};endArrow=block;endFill=1;"
+                f"fontFamily={RT.FONT};fontSize={RT.TYPE_SCALE['edge']};"
+                f"fontColor={RT.INK['body']};labelBackgroundColor=#FFFFFF;"
+            ),
+        )
+        if (
+            (cls == "data" or sequence_mode)
+            and not str(sid).startswith("zone_")
+            and not str(tid).startswith("zone_")
+        ):
             data_chain.append((sid, tid))
 
     # ---- numbered flow badges (consulting-deck reading order) ---- #
@@ -871,8 +966,11 @@ def build_refined(spec: dict, plan: dict | None = None):
             out_map.setdefault(a, []).append(b)
             indeg[b] = indeg.get(b, 0) + 1
         starts = [a for a in out_map if not indeg.get(a)]
-        cur = min(starts, key=lambda a: (d.R[a]["x"], d.R[a]["y"])) if starts \
+        cur = (
+            min(starts, key=lambda a: (d.R[a]["x"], d.R[a]["y"]))
+            if starts
             else min(out_map, key=lambda a: (d.R[a]["x"], d.R[a]["y"]))
+        )
         seq: list[tuple[str, str]] = []
         walked: set[tuple[str, str]] = set()
         while cur in out_map and len(seq) < 9:
@@ -888,40 +986,52 @@ def build_refined(spec: dict, plan: dict | None = None):
             seq = []  # a 1-2 hop "chain" numbers nothing worth reading
         for i, (a, b) in enumerate(seq, 1):
             ra, rb = d.R[a], d.R[b]
-            if rb["x"] >= ra["x"] + ra["w"]:          # exits right
+            if rb["x"] >= ra["x"] + ra["w"]:  # exits right
                 bx, by = ra["x"] + ra["w"] + 4, ra["y"] + ra["h"] / 2 - 21
-            elif rb["x"] + rb["w"] <= ra["x"]:        # exits left
+            elif rb["x"] + rb["w"] <= ra["x"]:  # exits left
                 bx, by = ra["x"] - 22, ra["y"] + ra["h"] / 2 - 21
-            elif rb["y"] >= ra["y"]:                  # exits bottom
+            elif rb["y"] >= ra["y"]:  # exits bottom
                 bx, by = ra["x"] + ra["w"] / 2 + 6, ra["y"] + ra["h"] + 4
-            else:                                      # exits top
+            else:  # exits top
                 bx, by = ra["x"] + ra["w"] / 2 + 6, ra["y"] - 22
-            if any(bx < r["x"] + r["w"] and bx + 18 > r["x"]
-                   and by < r["y"] + r["h"] and by + 18 > r["y"]
-                   for r in card_rects):
+            if any(
+                bx < r["x"] + r["w"] and bx + 18 > r["x"] and by < r["y"] + r["h"] and by + 18 > r["y"]
+                for r in card_rects
+            ):
                 continue  # never drop a chip ON a card — skip that hop instead
-            chip = d._put(f"flow_badge_{i}", "1", bx, by, 18, 18,
-                          "ellipse;html=1;fillColor=#1D4ED8;strokeColor=#FFFFFF;"
-                          f"strokeWidth=1;fontFamily={RT.FONT};fontColor=#FFFFFF;"
-                          "fontSize=9;fontStyle=1;align=center;verticalAlign=middle;",
-                          str(i), z=Z_CHROME)
+            chip = d._put(
+                f"flow_badge_{i}",
+                "1",
+                bx,
+                by,
+                18,
+                18,
+                "ellipse;html=1;fillColor=#1D4ED8;strokeColor=#FFFFFF;"
+                f"strokeWidth=1;fontFamily={RT.FONT};fontColor=#FFFFFF;"
+                "fontSize=9;fontStyle=1;align=center;verticalAlign=middle;",
+                str(i),
+                z=Z_CHROME,
+            )
             chip["ob"] = False
 
     # ---- legend footer (content-sized, not full-width) ---- #
     fy = content_bottom + RT.GEO["footer_lane"] + 15
-    entries = [(RT.EDGE_LEGEND_LABELS[f], RT.EDGE_CLASSES[f][0],
-                RT.EDGE_CLASSES[f][2]) for f in legend_flows]
+    entries = [(RT.EDGE_LEGEND_LABELS[f], RT.EDGE_CLASSES[f][0], RT.EDGE_CLASSES[f][2]) for f in legend_flows]
     meta = spec.get("metadata") or {}
-    meta_html = "<br>".join(f"<b>{k.title()}:</b> {v}" for k, v in meta.items()
-                            if v) if isinstance(meta, dict) else str(meta)
+    meta_html = (
+        "<br>".join(f"<b>{k.title()}:</b> {v}" for k, v in meta.items() if v)
+        if isinstance(meta, dict)
+        else str(meta)
+    )
     scope_note = spec.get("scope_note") or (
-        "Current target architecture. Original page retained for audit and "
-        "requirement comparison." if spec.get("source_page") else "")
+        "Current target architecture. Original page retained for audit and requirement comparison."
+        if spec.get("source_page")
+        else ""
+    )
     # Width = what the swatches + optional meta/scope cards actually need
     # (mirrors legend_band's internal layout) — a full-width legend band for
     # three entries reads as filler on a client deliverable.
-    legend_w = 30 + sum(55 + max(90, round(len(str(lbl)) * 6.5) + 10) + 30
-                        for lbl, _c, _d in entries) + 20
+    legend_w = 30 + sum(55 + max(90, round(len(str(lbl)) * 6.5) + 10) + 30 for lbl, _c, _d in entries) + 20
     legend_w = max(legend_w, 25 + 280 + 20)  # never narrower than the title row
     if meta_html:
         legend_w += 240
@@ -931,17 +1041,17 @@ def build_refined(spec: dict, plan: dict | None = None):
     # Swatch row only -> shallow band; the 145px default exists for the
     # scope/metadata cards.
     legend_h = 145 if (meta_html or scope_note) else 100
-    d.legend_band("footer", [margin, fy], legend_w, entries,
-                  scope_note=scope_note, metadata=meta_html, h=legend_h)
+    d.legend_band(
+        "footer", [margin, fy], legend_w, entries, scope_note=scope_note, metadata=meta_html, h=legend_h
+    )
 
     # ---- background + page ---- #
     page_h = max(900, fy + legend_h + 35)
     d.page = [page_w, page_h]
-    bg = d._put("__bg", "1", 0, 0, page_w, page_h,
-                f"html=1;fillColor={RT.CHROME['bg']};strokeColor=none;", "",
-                z=-1)  # behind every z-bucket
+    bg = d._put(
+        "__bg", "1", 0, 0, page_w, page_h, f"html=1;fillColor={RT.CHROME['bg']};strokeColor=none;", "", z=-1
+    )  # behind every z-bucket
     bg["ob"] = False
 
-    root = {"x": margin, "y": _ZONE_TOP, "w": content_right - margin,
-            "h": content_bottom - _ZONE_TOP}
+    root = {"x": margin, "y": _ZONE_TOP, "w": content_right - margin, "h": content_bottom - _ZONE_TOP}
     return d, root

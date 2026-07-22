@@ -223,31 +223,38 @@ DIAGRAM_TOOLS = [
 
 # Late imports (same as original tools.py bottom section)
 from integrations import (  # noqa: E402
-    send_email, propose_meeting_slots, create_client_meeting,
-    list_meeting_records, get_meeting_transcript, get_meeting_recordings,
+    send_email,
+    propose_meeting_slots,
+    create_client_meeting,
+    list_meeting_records,
+    get_meeting_transcript,
+    get_meeting_recordings,
     list_meeting_participants,
 )
 from domain.wbs.wbs_tools import (  # noqa: E402
-    WBS_PLANNER_TOOLS, propose_wbs_skeleton, propose_wbs, export_wbs_excel,
+    WBS_PLANNER_TOOLS,
+    propose_wbs_skeleton,
+    propose_wbs,
+    export_wbs_excel,
 )
 
 MAIN_TOOLS = [
     analyze_architecture_requirements,
     propose_diagram_brief,
     # find_similar_solutions,   # DISABLED: focus on WBS testing
-    web_research,             # 10 Tavily calls/session, split per stage (topic=tech_stack/architecture/wbs/evidence)
-    record_evidence,          # persist a grounded claim -> evidence_log.json -> CSM Evidence + supports links
-    waive_finding,            # accept a cross-artifact finding as a trade-off -> findings_log.json
-    resolve_finding,          # mark a cross-artifact finding fixed -> findings_log.json
-    edit_entity,              # patch a single field on a CSM entity -> solution_model.json
-    quality_summary,          # aggregate quality health snapshot (findings/evidence/assumptions/score)
-    apply_compliance_pack,    # activate a compliance control pack -> CSM Control entities + compliance findings
-    compare_revisions,        # diff current CSM vs an approved revision snapshot (§8.6)
-    add_comment,              # anchor a review comment to a CSM entity -> comment_log.json
-    resolve_comment,          # close a review comment
-    export_adr_pack,          # render decisions -> adr_pack.md for the proposal package
-    export_to_delivery,       # idempotent sync of WBS work items to Jira/Linear/Confluence (gate)
-    reality_sync,             # diff design vs a real repo/infra source -> drift_report.json (§5.2)
+    web_research,  # 10 Tavily calls/session, split per stage (topic=tech_stack/architecture/wbs/evidence)
+    record_evidence,  # persist a grounded claim -> evidence_log.json -> CSM Evidence + supports links
+    waive_finding,  # accept a cross-artifact finding as a trade-off -> findings_log.json
+    resolve_finding,  # mark a cross-artifact finding fixed -> findings_log.json
+    edit_entity,  # patch a single field on a CSM entity -> solution_model.json
+    quality_summary,  # aggregate quality health snapshot (findings/evidence/assumptions/score)
+    apply_compliance_pack,  # activate a compliance control pack -> CSM Control entities + compliance findings
+    compare_revisions,  # diff current CSM vs an approved revision snapshot (§8.6)
+    add_comment,  # anchor a review comment to a CSM entity -> comment_log.json
+    resolve_comment,  # close a review comment
+    export_adr_pack,  # render decisions -> adr_pack.md for the proposal package
+    export_to_delivery,  # idempotent sync of WBS work items to Jira/Linear/Confluence (gate)
+    reality_sync,  # diff design vs a real repo/infra source -> drift_report.json (§5.2)
     propose_tech_stack,
     find_diagram_template,
     propose_blueprint,
@@ -255,25 +262,30 @@ MAIN_TOOLS = [
     list_saved_diagrams,
     finalize_diagram,
     generate_pdf_report,
-    propose_deck_plan,        # HITL: approve the deck storyboard before rendering
+    propose_deck_plan,  # HITL: approve the deck storyboard before rendering
     generate_ppt_proposal,
     send_email,
-    propose_meeting_slots,    # uses internal interrupt() — NOT in GATE_TOOL_NAMES
-    create_client_meeting,    # interrupt_on gate — in GATE_TOOL_NAMES
-    list_meeting_records,     # read-only: past Google Meet conference records
-    get_meeting_transcript,   # read-only: transcript of a finished Meet call
-    get_meeting_recordings,   # read-only: recording file links for a finished call
+    propose_meeting_slots,  # uses internal interrupt() — NOT in GATE_TOOL_NAMES
+    create_client_meeting,  # interrupt_on gate — in GATE_TOOL_NAMES
+    list_meeting_records,  # read-only: past Google Meet conference records
+    get_meeting_transcript,  # read-only: transcript of a finished Meet call
+    get_meeting_recordings,  # read-only: recording file links for a finished call
     list_meeting_participants,  # read-only: who attended a finished call
-    propose_wbs_skeleton,     # WBS structure approval gate
-    propose_wbs,              # WBS plan/effort approval gate
-    export_wbs_excel,         # WBS .xlsx deliverable gate
-    query_change_impact,      # report blast radius of a requirement change (CSM diff)
+    propose_wbs_skeleton,  # WBS structure approval gate
+    propose_wbs,  # WBS plan/effort approval gate
+    export_wbs_excel,  # WBS .xlsx deliverable gate
+    query_change_impact,  # report blast radius of a requirement change (CSM diff)
 ]
 
 # Icon resolver subagent tools: node search + icon resolution (runs before drawer).
 ICON_RESOLVER_TOOLS = [
-    search_diagrams_nodes, resolve_icons, search_icons, search_drawio_shapes, fetch_logo,
-    update_icon_plan_entry, resolve_missing_icons,
+    search_diagrams_nodes,
+    resolve_icons,
+    search_icons,
+    search_drawio_shapes,
+    fetch_logo,
+    update_icon_plan_entry,
+    resolve_missing_icons,
 ]
 
 # Drawer subagent tools: render-refine loop only. Icons are pre-resolved by
@@ -282,9 +294,16 @@ ICON_RESOLVER_TOOLS = [
 # render_diagram as a pre-flight gate. export_drawio_native is the deterministic
 # DEFAULT for architecture diagrams (spec -> native engine, no Graphviz);
 # read_drawio/edit_drawio are the targeted in-place fix loop on its output.
-DRAWER_TOOLS = [declare_poster_grid, render_diagram, export_drawio,
-                export_drawio_native, upgrade_drawio, read_drawio, edit_drawio,
-                inspect_render_quality]
+DRAWER_TOOLS = [
+    declare_poster_grid,
+    render_diagram,
+    export_drawio,
+    export_drawio_native,
+    upgrade_drawio,
+    read_drawio,
+    edit_drawio,
+    inspect_render_quality,
+]
 
 # Critic subagent tools: read-only review of the rendered diagram.
 CRITIC_TOOLS = [inspect_diagram, submit_critique]
@@ -320,10 +339,22 @@ GATE_TOOL_NAMES = [
 # "request_evidence"/"request_alternative" send the agent back to revise (reject with a
 # guiding message). The structured intent is captured in the persisted record + CSM.
 GATE_DECISIONS: dict[str, list[str]] = {
-    "propose_tech_stack": ["approve", "approve_with_assumptions", "accept_risk",
-                           "request_evidence", "request_alternative", "reject"],
-    "propose_blueprint": ["approve", "approve_with_assumptions", "accept_risk",
-                          "request_alternative", "request_evidence", "reject"],
+    "propose_tech_stack": [
+        "approve",
+        "approve_with_assumptions",
+        "accept_risk",
+        "request_evidence",
+        "request_alternative",
+        "reject",
+    ],
+    "propose_blueprint": [
+        "approve",
+        "approve_with_assumptions",
+        "accept_risk",
+        "request_alternative",
+        "request_evidence",
+        "reject",
+    ],
     "finalize_diagram": ["approve", "reject"],
     "generate_pdf_report": ["approve", "request_evidence", "reject"],
     "propose_deck_plan": ["approve", "request_alternative", "reject"],
@@ -331,8 +362,7 @@ GATE_DECISIONS: dict[str, list[str]] = {
     "send_email": ["approve", "reject"],
     "create_client_meeting": ["approve", "reject"],
     "propose_wbs_skeleton": ["approve", "request_alternative", "reject"],
-    "propose_wbs": ["approve", "approve_with_assumptions", "accept_risk",
-                    "request_alternative", "reject"],
+    "propose_wbs": ["approve", "approve_with_assumptions", "accept_risk", "request_alternative", "reject"],
     "export_wbs_excel": ["approve", "reject"],
     "export_to_delivery": ["approve", "reject"],
 }

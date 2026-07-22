@@ -9,8 +9,9 @@ from ..constants import DRAWER_SKILL_PATHS, _DRAWER_CALL_LIMIT
 from .spec import SubagentSpec
 
 
-def _drawer_spec(*, workdir: str, icons_root: str, manifest: str, style: str,
-                 use_vision_relay: bool) -> SubagentSpec:
+def _drawer_spec(
+    *, workdir: str, icons_root: str, manifest: str, style: str, use_vision_relay: bool
+) -> SubagentSpec:
     """Spec for the drawer subagent: render-refine loop + export (icons pre-resolved)."""
     return SubagentSpec(
         name="drawer",

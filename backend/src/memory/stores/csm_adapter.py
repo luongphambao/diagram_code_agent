@@ -54,6 +54,7 @@ def archive_approved_revision(workspace: Optional[Path] = None) -> Optional[Path
     """
     if workspace is None:
         from backends import current_workspace
+
         workspace = current_workspace()
     workspace = Path(workspace)
     src = workspace / SOLUTION_MODEL_NAME
@@ -70,6 +71,7 @@ def archive_approved_revision(workspace: Optional[Path] = None) -> Optional[Path
         dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
         try:
             import stat
+
             dest.chmod(stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)  # read-only marker
         except OSError:
             pass  # chmod is best-effort (e.g. restrictive Windows ACLs)
@@ -85,8 +87,7 @@ def _src(ref: str) -> list[SourceRef]:
 def _requirements(brief: dict[str, Any]) -> list[Requirement]:
     out: list[Requirement] = []
     n = 0
-    for kind, key in (("functional", "functional_requirements"),
-                      ("nfr", "non_functional_requirements")):
+    for kind, key in (("functional", "functional_requirements"), ("nfr", "non_functional_requirements")):
         for item in _as_list(brief.get(key)):
             n += 1
             rid, text = "", item
@@ -96,11 +97,15 @@ def _requirements(brief: dict[str, Any]) -> list[Requirement]:
             text = str(text).strip()
             if not text:
                 continue
-            out.append(Requirement(
-                id=rid or mint_id("requirement", n),
-                kind=kind, statement=text, provenance="agent",
-                source_refs=_src("diagram_brief.json"),
-            ))
+            out.append(
+                Requirement(
+                    id=rid or mint_id("requirement", n),
+                    kind=kind,
+                    statement=text,
+                    provenance="agent",
+                    source_refs=_src("diagram_brief.json"),
+                )
+            )
     return out
 
 
@@ -135,11 +140,16 @@ def _assumptions(brief: dict[str, Any]) -> list[Assumption]:
     for i, item in enumerate(_as_list(brief.get("assumptions")), start=1):
         text = str(item).strip()
         if text:
-            out.append(Assumption(
-                id=mint_id("assumption", i), statement=text, status="pending",
-                confidence_tier=_classify_assumption_tier(text),
-                provenance="agent", source_refs=_src("diagram_brief.json"),
-            ))
+            out.append(
+                Assumption(
+                    id=mint_id("assumption", i),
+                    statement=text,
+                    status="pending",
+                    confidence_tier=_classify_assumption_tier(text),
+                    provenance="agent",
+                    source_refs=_src("diagram_brief.json"),
+                )
+            )
     return out
 
 
@@ -148,23 +158,32 @@ def _components(blueprint: dict[str, Any]) -> list[Component]:
     for c in _as_list(blueprint.get("clusters")):
         if not isinstance(c, dict) or not c.get("id"):
             continue
-        out.append(Component(
-            id=mint_id("cluster", str(c.get("id"))), kind="cluster",
-            name=str(c.get("label") or c.get("id")), purpose=str(c.get("tier") or ""),
-            provenance="agent", source_refs=_src("blueprint.json"),
-        ))
+        out.append(
+            Component(
+                id=mint_id("cluster", str(c.get("id"))),
+                kind="cluster",
+                name=str(c.get("label") or c.get("id")),
+                purpose=str(c.get("tier") or ""),
+                provenance="agent",
+                source_refs=_src("blueprint.json"),
+            )
+        )
     for n in _as_list(blueprint.get("nodes")):
         if not isinstance(n, dict) or not n.get("id"):
             continue
         ntype = str(n.get("type") or "")
         kind = "integration" if ntype == "external" else "component"
-        out.append(Component(
-            id=mint_id("component", str(n.get("id"))), kind=kind,
-            name=str(n.get("label") or n.get("id")),
-            cluster=mint_id("cluster", str(n.get("cluster"))) if n.get("cluster") else "",
-            purpose=str(n.get("tech") or ""),
-            provenance="agent", source_refs=_src("blueprint.json"),
-        ))
+        out.append(
+            Component(
+                id=mint_id("component", str(n.get("id"))),
+                kind=kind,
+                name=str(n.get("label") or n.get("id")),
+                cluster=mint_id("cluster", str(n.get("cluster"))) if n.get("cluster") else "",
+                purpose=str(n.get("tech") or ""),
+                provenance="agent",
+                source_refs=_src("blueprint.json"),
+            )
+        )
     return out
 
 
@@ -188,20 +207,29 @@ def _constraints(brief: dict[str, Any], analysis: dict[str, Any]) -> list[Constr
         if not text:
             continue
         n += 1
-        out.append(Constraint(
-            id=mint_id("constraint", n), statement=text, kind="other",
-            provenance="agent", source_refs=_src("diagram_brief.json"),
-        ))
+        out.append(
+            Constraint(
+                id=mint_id("constraint", n),
+                statement=text,
+                kind="other",
+                provenance="agent",
+                source_refs=_src("diagram_brief.json"),
+            )
+        )
     for tag in _as_list(analysis.get("constraints")):
         tag = str(tag).strip()
         if not tag:
             continue
         n += 1
-        out.append(Constraint(
-            id=mint_id("constraint", n), statement=tag.replace("_", " "),
-            kind=_CONSTRAINT_TAG_KIND.get(tag, "other"),
-            provenance="deterministic", source_refs=_src("architecture_analysis.json"),
-        ))
+        out.append(
+            Constraint(
+                id=mint_id("constraint", n),
+                statement=tag.replace("_", " "),
+                kind=_CONSTRAINT_TAG_KIND.get(tag, "other"),
+                provenance="deterministic",
+                source_refs=_src("architecture_analysis.json"),
+            )
+        )
     return out
 
 
@@ -225,10 +253,10 @@ def _risks(tech_stack: dict[str, Any], blueprint: dict[str, Any]) -> list[Risk]:
     layers = tech_stack.get("layers")
     layer_iter = layers.values() if isinstance(layers, dict) else _as_list(layers)
     for source, items in (
-        ("tech_stack.json", (
-            r for layer in layer_iter if isinstance(layer, dict)
-            for r in _as_list(layer.get("risks"))
-        )),
+        (
+            "tech_stack.json",
+            (r for layer in layer_iter if isinstance(layer, dict) for r in _as_list(layer.get("risks"))),
+        ),
         ("blueprint.json", _as_list(blueprint.get("risks"))),
     ):
         for item in items:
@@ -237,10 +265,15 @@ def _risks(tech_stack: dict[str, Any], blueprint: dict[str, Any]) -> list[Risk]:
                 continue
             seen.add(stmt)
             n += 1
-            out.append(Risk(
-                id=mint_id("risk", n), statement=stmt, mitigation=mit,
-                provenance="agent", source_refs=_src(source),
-            ))
+            out.append(
+                Risk(
+                    id=mint_id("risk", n),
+                    statement=stmt,
+                    mitigation=mit,
+                    provenance="agent",
+                    source_refs=_src(source),
+                )
+            )
     return out
 
 
@@ -249,10 +282,15 @@ def _decisions(blueprint: dict[str, Any]) -> list[Decision]:
     for i, d in enumerate(_as_list(blueprint.get("key_decisions")), start=1):
         title = str(d).strip()
         if title:
-            out.append(Decision(
-                id=mint_id("decision", i), title=title, status="proposed",
-                provenance="agent", source_refs=_src("blueprint.json"),
-            ))
+            out.append(
+                Decision(
+                    id=mint_id("decision", i),
+                    title=title,
+                    status="proposed",
+                    provenance="agent",
+                    source_refs=_src("blueprint.json"),
+                )
+            )
     return out
 
 
@@ -270,27 +308,32 @@ def _work_items(wbs: dict[str, Any]) -> list[WorkItem]:
         except (TypeError, ValueError):
             md = 0.0
         sprint_raw = it.get("assigned_sprint")
-        out.append(WorkItem(
-            id=mint_id("work_item", key), name=name, effort_mandays=md,
-            parent=str(it.get("module") or it.get("phase") or ""),
-            predecessors=[str(p) for p in _as_list(it.get("predecessors"))],
-            pert_expected_md=float(it.get("pert_expected_md") or 0),
-            owner=str(it.get("owner") or "") or None,
-            definition_of_done=list(it.get("acceptance_criteria") or []),
-            assigned_sprint=(int(sprint_raw) if sprint_raw is not None else None),
-            provenance="agent", source_refs=_src("wbs.json"),
-        ))
+        out.append(
+            WorkItem(
+                id=mint_id("work_item", key),
+                name=name,
+                effort_mandays=md,
+                parent=str(it.get("module") or it.get("phase") or ""),
+                predecessors=[str(p) for p in _as_list(it.get("predecessors"))],
+                pert_expected_md=float(it.get("pert_expected_md") or 0),
+                owner=str(it.get("owner") or "") or None,
+                definition_of_done=list(it.get("acceptance_criteria") or []),
+                assigned_sprint=(int(sprint_raw) if sprint_raw is not None else None),
+                provenance="agent",
+                source_refs=_src("wbs.json"),
+            )
+        )
     return out
 
 
 def _trace_links(model: SolutionModel) -> list[TraceLink]:
     """Soft-match typed edges over CSM ids:
 
-      REQ  --satisfies--> COMP
-      WBS  --implements--> COMP / REQ
-      CON  --constrains--> COMP / REQ
-      DEC  --assumes--> ASM
-      DEC / COMP --mitigates--> RISK
+    REQ  --satisfies--> COMP
+    WBS  --implements--> COMP / REQ
+    CON  --constrains--> COMP / REQ
+    DEC  --assumes--> ASM
+    DEC / COMP --mitigates--> RISK
     """
     comp_by_name = {c.name: c.id for c in model.components}
     comp_names = list(comp_by_name.keys())
@@ -365,6 +408,7 @@ def build_solution_model(
     """
     if workspace is None:
         from backends import current_workspace
+
         workspace = current_workspace()
     workspace = Path(workspace)
 
@@ -380,12 +424,14 @@ def build_solution_model(
     # the model so the validator / change-impact / epistemic summary see them. A new
     # decision changes the content hash and therefore bumps the revision below.
     from .decisions import project_into_csm, read_decisions
+
     project_into_csm(model, read_decisions(workspace))
 
     # Fold grounded claims (web research / document evidence) into the model as
     # Evidence entities + `supports` trace links, back-filling Decision.evidence_ids.
     # New evidence changes the content hash and therefore bumps the revision below.
     from .evidence import project_into_csm as project_evidence, read_evidence
+
     project_evidence(model, read_evidence(workspace))
 
     # Fold the deck storyboard (if planned) into the model as Deliverable entities +
@@ -393,12 +439,14 @@ def build_solution_model(
     # is not in the CSM. No-op until `deck_plan.json` exists; a new/changed plan bumps
     # the revision below.
     from deck import load_deck_plan, project_into_csm as project_deck
+
     project_deck(model, load_deck_plan(workspace))
 
     # Fold the active compliance pack (if one was selected via apply_compliance_pack)
     # into the model as Control entities + implements/mitigates/supports links. No-op
     # until `compliance_pack.json` marks a pack; a new/changed pack bumps the revision.
     from compliance import project_into_csm as project_compliance
+
     project_compliance(model, workspace)
 
     prev = _read_json(workspace / SOLUTION_MODEL_NAME, {}) or {}
@@ -431,7 +479,8 @@ def build_solution_model(
         src = workspace / SOLUTION_MODEL_NAME
         if src.exists():
             (workspace / SOLUTION_MODEL_PREV_NAME).write_text(
-                src.read_text(encoding="utf-8"), encoding="utf-8")
+                src.read_text(encoding="utf-8"), encoding="utf-8"
+            )
         model.revision = int(prev.get("revision") or 0) + 1
         model.created_at = created_at if created_at is not None else prev.get("created_at")
 

@@ -52,8 +52,8 @@ class EvidenceRecord(BaseModel):
     claim: str
     source_url: str = ""
     source_type: SourceType = "web"
-    fetched_at: str = ""              # ISO 8601; injected by the recording tool
-    freshness_date: str = ""         # the date the source itself reflects, if known
+    fetched_at: str = ""  # ISO 8601; injected by the recording tool
+    freshness_date: str = ""  # the date the source itself reflects, if known
     quote_or_excerpt: str = ""
     confidence: Confidence = "medium"
     supports_entity_ids: list[str] = Field(default_factory=list)
@@ -90,9 +90,11 @@ def new_evidence_record(
 
 # --- store -------------------------------------------------------------------
 
+
 def _log_path(workspace: Optional[Path]) -> Path:
     if workspace is None:
         from backends import current_workspace
+
         workspace = current_workspace()
     return Path(workspace) / EVIDENCE_LOG_NAME
 
@@ -137,6 +139,7 @@ def next_seq(workspace: Optional[Path] = None) -> int:
 
 # --- projection into the CSM -------------------------------------------------
 
+
 def project_into_csm(model: SolutionModel, records: Iterable[EvidenceRecord]) -> SolutionModel:
     """Fold evidence records into `model` in place (and return it).
 
@@ -177,7 +180,8 @@ def project_into_csm(model: SolutionModel, records: Iterable[EvidenceRecord]) ->
             if target not in existing_ids:
                 continue  # dangling reference — skip the link
             model.trace_links.append(
-                TraceLink(from_id=rec.id, to_id=target, relation="supports", provenance="agent"))
+                TraceLink(from_id=rec.id, to_id=target, relation="supports", provenance="agent")
+            )
             dec = decisions_by_id.get(target)
             if dec is not None and rec.id not in dec.evidence_ids:
                 dec.evidence_ids.append(rec.id)

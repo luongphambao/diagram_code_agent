@@ -12,7 +12,12 @@ interface ChatInputProps {
 }
 
 export default function ChatInput({
-  isRunning, uploadedFiles, isUploading, onSend, onUploadFile, onClearFiles,
+  isRunning,
+  uploadedFiles,
+  isUploading,
+  onSend,
+  onUploadFile,
+  onClearFiles,
 }: ChatInputProps) {
   const [draft, setDraft] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -48,9 +53,13 @@ export default function ChatInput({
           onClear={onClearFiles}
         />
       </div>
-      <div className={`flex items-end gap-3 rounded-2xl border bg-white/4 px-4 py-3 transition-colors ${
-        isRunning ? "border-white/5 opacity-60" : "border-white/10 focus-within:border-blue-500/40"
-      }`}>
+      <div
+        className={`flex items-end gap-3 rounded-2xl border bg-white/4 px-4 py-3 transition-colors ${
+          isRunning
+            ? "border-white/5 opacity-60"
+            : "border-white/10 focus-within:border-blue-500/40"
+        }`}
+      >
         <textarea
           ref={textareaRef}
           className="flex-1 resize-none bg-transparent text-sm leading-relaxed text-slate-200 placeholder:text-slate-700 focus:outline-none"
@@ -72,7 +81,9 @@ export default function ChatInput({
           </svg>
         </button>
       </div>
-      <p className="mt-2 px-1 text-[11px] text-slate-800">Enter to send · Shift+Enter for new line</p>
+      <p className="mt-2 px-1 text-[11px] text-slate-800">
+        Enter to send · Shift+Enter for new line
+      </p>
     </div>
   );
 }

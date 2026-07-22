@@ -95,23 +95,41 @@ def clear_stage_markers(*, preserve_wbs: bool = False) -> None:
     """
     ws = current_workspace()
     files = [
-        _ARCH_ANALYSIS_FILE, _BRIEF_FILE, _TECHSTACK_FILE, _BLUEPRINT_FILE,
-        _CRITIQUE_FILE, _REVISION_COUNT_FILE, _TOOL_SUMMARY_FILE,
-        _ICON_SEARCH_BUDGET_FILE, _NODE_SEARCH_BUDGET_FILE, _RENDER_SPEC_FILE,
-        _ICON_PLAN_FILE, _WEB_SEARCH_BUDGET_FILE, ws / REPORT_EVIDENCE_NAME,
-        ws / "solution_model.json", ws / "trace_links.json",
+        _ARCH_ANALYSIS_FILE,
+        _BRIEF_FILE,
+        _TECHSTACK_FILE,
+        _BLUEPRINT_FILE,
+        _CRITIQUE_FILE,
+        _REVISION_COUNT_FILE,
+        _TOOL_SUMMARY_FILE,
+        _ICON_SEARCH_BUDGET_FILE,
+        _NODE_SEARCH_BUDGET_FILE,
+        _RENDER_SPEC_FILE,
+        _ICON_PLAN_FILE,
+        _WEB_SEARCH_BUDGET_FILE,
+        ws / REPORT_EVIDENCE_NAME,
+        ws / "solution_model.json",
+        ws / "trace_links.json",
         ws / "evidence_log.json",
-        ws / "pending_gate.json", ws / "tech_stack_draft.json",
+        ws / "pending_gate.json",
+        ws / "tech_stack_draft.json",
         ws / "blueprint_draft.json",
-        ws / "deck_plan.json", ws / "deck_qa_result.json",
-        ws / "quality_snapshot.json", ws / "compliance_pack.json",
+        ws / "deck_plan.json",
+        ws / "deck_qa_result.json",
+        ws / "quality_snapshot.json",
+        ws / "compliance_pack.json",
         ws / "delivery_export_preview.json",
-        ws / "current_state_model.json", ws / "drift_report.json",
+        ws / "current_state_model.json",
+        ws / "drift_report.json",
     ]
     if not preserve_wbs:
-        files.extend([
-            ws / "wbs_skeleton.json", ws / "wbs.json", ws / "wbs_filled.xlsx",
-        ])
+        files.extend(
+            [
+                ws / "wbs_skeleton.json",
+                ws / "wbs.json",
+                ws / "wbs_filled.xlsx",
+            ]
+        )
     for f in files:
         if f.exists():
             f.unlink()
@@ -135,6 +153,7 @@ def _layout_audit() -> str:
     if drawio.exists():
         try:
             from domain.validation.validate_drawio import validate_file, production_scorecard
+
             stats = _read_json_file(current_workspace() / "out.native_stats.json", {})
             report = validate_file(str(drawio), stats=stats)
             scorecard = production_scorecard(report, stats)
@@ -168,6 +187,7 @@ def _layout_audit() -> str:
         return ""
     try:
         from prettygraph import audit_layout
+
         verdict = audit_layout(str(dot), str(png))
     except Exception:  # noqa: BLE001 — audit is advisory, never fail over it
         return ""
@@ -213,12 +233,7 @@ def _archive_session() -> Path | None:
         if meta_file.exists():
             try:
                 data = json.loads(meta_file.read_text(encoding="utf-8"))
-                title = (
-                    data.get("diagram_title")
-                    or data.get("title")
-                    or data.get("topic")
-                    or ""
-                )
+                title = data.get("diagram_title") or data.get("title") or data.get("topic") or ""
                 if title:
                     break
             except Exception:  # noqa: BLE001
@@ -259,6 +274,7 @@ def _save_web_search_state(state: dict) -> None:
 
 def _icon_search_state() -> dict:
     from .constants import ICON_SEARCH_DEFAULT_TOTAL_CAP
+
     return _read_json_file(
         _ICON_SEARCH_BUDGET_FILE,
         {"counts": {}, "cache": {}, "total_calls": 0, "planned_icons": 0},
@@ -300,6 +316,7 @@ def _inspection_image_b64(png_path: Path) -> tuple[str, str]:
         return base64.standard_b64encode(buf.getvalue()).decode("ascii"), "image/jpeg"
     except Exception:  # noqa: BLE001 — never fail a render over the preview copy
         import logging
+
         logging.getLogger(__name__).warning(
             "_inspection_image_b64: Pillow downscale failed — sending FULL-SIZE "
             "raw PNG (%s bytes); large payloads can trigger provider vision 400s",

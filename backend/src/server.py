@@ -50,7 +50,8 @@ def _configure_tracing() -> bool:
         has_key = bool(os.getenv("LANGSMITH_API_KEY") or os.getenv("LANGCHAIN_API_KEY"))
         logger.info(
             "LangSmith tracing ON  project=%s  api_key=%s",
-            os.getenv("LANGSMITH_PROJECT"), "set" if has_key else "MISSING (set LANGSMITH_API_KEY)",
+            os.getenv("LANGSMITH_PROJECT"),
+            "set" if has_key else "MISSING (set LANGSMITH_API_KEY)",
         )
     else:
         logger.info("LangSmith tracing OFF (set LANGSMITH_TRACING=true + LANGSMITH_API_KEY to enable)")
@@ -92,7 +93,8 @@ if not os.getenv("ALLOWED_ORIGINS", "").strip():
     logger.warning(
         "ALLOWED_ORIGINS not set — defaulting to local-dev origins %s (APP_ENV=%s). "
         "Set ALLOWED_ORIGINS explicitly for any non-dev deployment.",
-        _origins, _APP_ENV,
+        _origins,
+        _APP_ENV,
     )
 
 app.add_middleware(
@@ -109,9 +111,11 @@ app.add_middleware(
 # resolve_auth_mode) — this just makes the effective posture visible at
 # startup, mirroring the CORS warning above.
 logger.info(
-    "Auth mode: %s%s", AUTH_MODE,
-    " (DEV FALLBACK — trusts client-supplied userEmail/userRole; refused in "
-    "APP_ENV=production)" if AUTH_MODE == "none" else "",
+    "Auth mode: %s%s",
+    AUTH_MODE,
+    " (DEV FALLBACK — trusts client-supplied userEmail/userRole; refused in APP_ENV=production)"
+    if AUTH_MODE == "none"
+    else "",
 )
 
 

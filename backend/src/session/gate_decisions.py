@@ -19,6 +19,7 @@ from .normalize import _coerce_assumptions, _coerce_list, _normalize_blueprint, 
 
 _DEFAULT_TZ = "Asia/Ho_Chi_Minh"
 
+
 def _persist_pending_gate(name: str, args: dict) -> None:
     """Persist the exact HITL proposal payload before the tool is approved.
 
@@ -139,15 +140,23 @@ def _card_for(val, summary: str):
         _persist_pending_gate(name, args)
         bp = _normalize_blueprint(args.get("blueprint", {}))
         return (
-            {"type": "blueprint_approval", "blueprint": bp,
-             "question": "Review the architecture blueprint. Approve, or request changes."},
-            "awaiting_blueprint", {"blueprint": bp, "blueprint_draft": args.get("blueprint", {})},
+            {
+                "type": "blueprint_approval",
+                "blueprint": bp,
+                "question": "Review the architecture blueprint. Approve, or request changes.",
+            },
+            "awaiting_blueprint",
+            {"blueprint": bp, "blueprint_draft": args.get("blueprint", {})},
         )
     if name == "finalize_diagram":
         return (
-            {"type": "result_review", "summary": summary,
-             "question": "Is the diagram good? Approve to finish, or describe the changes you want."},
-            "reviewing", {},
+            {
+                "type": "result_review",
+                "summary": summary,
+                "question": "Is the diagram good? Approve to finish, or describe the changes you want.",
+            },
+            "reviewing",
+            {},
         )
     if name == "generate_pdf_report":
         sections = args.get("include_sections") or DEFAULT_REPORT_SECTIONS
@@ -207,6 +216,7 @@ def _card_for(val, summary: str):
         try:
             from datetime import datetime
             from zoneinfo import ZoneInfo
+
             _tz = ZoneInfo(tz_name)
             _s = datetime.fromisoformat(start_iso).astimezone(_tz)
             _e = datetime.fromisoformat(end_iso).astimezone(_tz)
@@ -299,8 +309,11 @@ _PROCEED_ACTIONS = {"approve", "approve_with_assumptions", "accept_risk"}
 _REVISE_ACTIONS = {"reject", "request_evidence", "request_alternative"}
 # Actions worth persisting as a structured decision record + CSM projection.
 HITL_V2_ACTIONS = {
-    "approve_with_assumptions", "accept_risk", "request_evidence",
-    "request_alternative", "edit_entity",
+    "approve_with_assumptions",
+    "accept_risk",
+    "request_evidence",
+    "request_alternative",
+    "edit_entity",
 }
 
 
@@ -315,8 +328,11 @@ def _revise_message(action: str, payload: dict) -> str:
         ask = payload.get("constraint_change") or payload.get("option_comparison") or ""
         base = "User requests an alternative option (e.g. Fast MVP / Balanced / Enterprise)."
         return (base + f" {ask}").strip()
-    return payload.get("modifications") or payload.get("comment") or \
-        "Please revise based on the user's feedback."
+    return (
+        payload.get("modifications")
+        or payload.get("comment")
+        or "Please revise based on the user's feedback."
+    )
 
 
 def _decision_from_payload(payload: dict, pending_name: str | None) -> dict:
@@ -345,8 +361,12 @@ def _decision_from_payload(payload: dict, pending_name: str | None) -> dict:
             decision["selected_slot"] = payload["selected_slot"]
         return decision
     # Revise path (reject / request_evidence / request_alternative / unknown).
-    return {"type": "reject", "message": _revise_message(action, payload) if action in _REVISE_ACTIONS
-            else (msg or "Please revise based on the user's feedback.")}
+    return {
+        "type": "reject",
+        "message": _revise_message(action, payload)
+        if action in _REVISE_ACTIONS
+        else (msg or "Please revise based on the user's feedback."),
+    }
 
 
 def decision_record_from_payload(
@@ -367,10 +387,20 @@ def decision_record_from_payload(
     if action not in HITL_V2_ACTIONS:
         return None
     from decisions import new_decision_record
+
     # Carry the action-specific fields through verbatim (minus routing keys).
-    body = {k: v for k, v in payload.items()
-            if k not in ("action", "approved", "satisfied", "modifications", "feedback")}
+    body = {
+        k: v
+        for k, v in payload.items()
+        if k not in ("action", "approved", "satisfied", "modifications", "feedback")
+    }
     return new_decision_record(
-        gate, action, seq=seq, approver=approver, timestamp=timestamp,
-        revision=revision, comment=payload.get("comment", ""), payload=body,
+        gate,
+        action,
+        seq=seq,
+        approver=approver,
+        timestamp=timestamp,
+        revision=revision,
+        comment=payload.get("comment", ""),
+        payload=body,
     )

@@ -77,7 +77,9 @@ def _tool_detail(tool: str, args: dict | None, *, limit: int = 260) -> str:
         return ""
     if tool == "task":
         sa = args.get("subagent_type") or args.get("subagent") or args.get("name") or "unknown"
-        desc = " ".join(str(args.get("description") or args.get("instruction") or args.get("prompt") or "").split())
+        desc = " ".join(
+            str(args.get("description") or args.get("instruction") or args.get("prompt") or "").split()
+        )
         return f"{_display_subagent(sa)}: {desc[:180]}{'...' if len(desc) > 180 else ''}"
     if tool == "render_diagram":
         code = str(args.get("code") or "")

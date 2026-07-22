@@ -36,6 +36,7 @@ _TF_RESOURCE = re.compile(r'resource\s+"([^"]+)"\s+"([^"]+)"')
 def _load_yaml(text: str):
     try:
         import yaml  # PyYAML
+
         return yaml.safe_load(text)
     except Exception:  # noqa: BLE001 — degrade gracefully if YAML is malformed/absent
         return None
@@ -43,12 +44,13 @@ def _load_yaml(text: str):
 
 # --- per-source ingest -------------------------------------------------------
 
+
 def ingest_compose(text: str, ref: str) -> list[tuple[str, str, str]]:
     """docker-compose services → (name, kind, source_ref)."""
     data = _load_yaml(text)
     out: list[tuple[str, str, str]] = []
     if isinstance(data, dict):
-        for svc in (data.get("services") or {}):
+        for svc in data.get("services") or {}:
             out.append((str(svc), "component", ref))
     return out
 
@@ -58,6 +60,7 @@ def ingest_k8s(text: str, ref: str) -> list[tuple[str, str, str]]:
     out: list[tuple[str, str, str]] = []
     try:
         import yaml
+
         docs = list(yaml.safe_load_all(text))
     except Exception:  # noqa: BLE001
         docs = [_load_yaml(text)]
@@ -99,7 +102,7 @@ def ingest_openapi(text: str, ref: str) -> list[tuple[str, str, str]]:
         for t in sorted(filter(None, tags)):
             out.append((f"api:{t}", "integration", ref))
     else:
-        for path in (data.get("paths") or {}):
+        for path in data.get("paths") or {}:
             top = "/" + str(path).strip("/").split("/")[0]
             out.append((f"api:{top}", "integration", ref))
     # de-dup while preserving determinism
@@ -117,6 +120,7 @@ def ingest_repo(source_dir: Path) -> list[tuple[str, str, str]]:
     """Python repo → top-level packages as components (reuses codevis.discover)."""
     try:
         from codevis.pyimports import discover
+
         modules, _root = discover(str(source_dir))
     except Exception:  # noqa: BLE001 — codevis optional / non-python repo
         return []
@@ -128,6 +132,7 @@ def ingest_repo(source_dir: Path) -> list[tuple[str, str, str]]:
 
 
 # --- assemble current-state model -------------------------------------------
+
 
 def build_current_state_model(source_dir: Path) -> SolutionModel:
     """Scan ``source_dir`` for known infra/spec files + a python repo and assemble a
@@ -161,18 +166,21 @@ def build_current_state_model(source_dir: Path) -> SolutionModel:
         if key in seen:
             continue
         seen.add(key)
-        model.components.append(Component(
-            id=mint_id("component", raw_name),
-            provenance="deterministic",
-            name=raw_name,
-            kind=kind,  # type: ignore[arg-type]
-            purpose="observed in current state",
-            source_refs=[SourceRef(kind="document", ref=ref)],
-        ))
+        model.components.append(
+            Component(
+                id=mint_id("component", raw_name),
+                provenance="deterministic",
+                name=raw_name,
+                kind=kind,  # type: ignore[arg-type]
+                purpose="observed in current state",
+                source_refs=[SourceRef(kind="document", ref=ref)],
+            )
+        )
     return model
 
 
 # --- drift -------------------------------------------------------------------
+
 
 def _comp_index(model: SolutionModel) -> dict[str, Component]:
     """Normalized-name → component (last wins; current/desired keyed independently)."""
@@ -200,11 +208,15 @@ def drift(desired: SolutionModel, current: SolutionModel) -> dict:
 
     remediation: list[str] = []
     for k in only_design:
-        remediation.append(f"DESIGN-ONLY: '{d_idx[k].name}' is in the proposal but not in the "
-                           f"current state — implement it or mark it as future scope.")
+        remediation.append(
+            f"DESIGN-ONLY: '{d_idx[k].name}' is in the proposal but not in the "
+            f"current state — implement it or mark it as future scope."
+        )
     for k in only_reality:
-        remediation.append(f"DRIFT: '{c_idx[k].name}' exists in the source but is not in the "
-                           f"design — document it or remove it.")
+        remediation.append(
+            f"DRIFT: '{c_idx[k].name}' exists in the source but is not in the "
+            f"design — document it or remove it."
+        )
 
     return {
         "summary": {
@@ -241,10 +253,12 @@ def format_drift(report: dict) -> str:
 
 # --- orchestration -----------------------------------------------------------
 
+
 def run_reality_sync(source_dir: Path, workspace: Optional[Path] = None) -> dict:
     """Build the current-state model + drift report and write both into the workspace."""
     if workspace is None:
         from backends import current_workspace
+
         workspace = current_workspace()
     workspace = Path(workspace)
     workspace.mkdir(parents=True, exist_ok=True)
@@ -256,12 +270,12 @@ def run_reality_sync(source_dir: Path, workspace: Optional[Path] = None) -> dict
     desired = SolutionModel()
     if desired_path.exists():
         try:
-            desired = SolutionModel.model_validate(
-                json.loads(desired_path.read_text(encoding="utf-8")))
+            desired = SolutionModel.model_validate(json.loads(desired_path.read_text(encoding="utf-8")))
         except Exception:  # noqa: BLE001
             desired = SolutionModel()
 
     report = drift(desired, current)
     (workspace / DRIFT_REPORT_NAME).write_text(
-        json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
+        json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     return report

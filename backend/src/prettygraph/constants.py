@@ -50,15 +50,15 @@ CLUSTER_KINDS: dict[str, tuple[str, str]] = {
 }
 
 PRO_ACCENTS: dict[str, tuple[str, str, str]] = {
-    "blue":   ("#E3EDFD", "#2563EB", "#F4F8FE"),
-    "cyan":   ("#DEF3F9", "#0891B2", "#F2FBFD"),
-    "teal":   ("#DEF3EF", "#0D9488", "#F2FBF9"),
+    "blue": ("#E3EDFD", "#2563EB", "#F4F8FE"),
+    "cyan": ("#DEF3F9", "#0891B2", "#F2FBFD"),
+    "teal": ("#DEF3EF", "#0D9488", "#F2FBF9"),
     "violet": ("#ECE4FD", "#7C3AED", "#F8F5FE"),
     "indigo": ("#E5E8FD", "#4F46E5", "#F5F6FE"),
-    "green":  ("#E0F4E9", "#059669", "#F2FBF6"),
-    "amber":  ("#FCEFD7", "#D97706", "#FEF9EF"),
-    "rose":   ("#FBE3E8", "#E11D48", "#FEF4F6"),
-    "slate":  ("#E7EBF0", "#475569", "#F5F7F9"),
+    "green": ("#E0F4E9", "#059669", "#F2FBF6"),
+    "amber": ("#FCEFD7", "#D97706", "#FEF9EF"),
+    "rose": ("#FBE3E8", "#E11D48", "#FEF4F6"),
+    "slate": ("#E7EBF0", "#475569", "#F5F7F9"),
 }
 PRO_ORDER = ["blue", "cyan", "teal", "violet", "indigo", "green"]
 PRO_EDGE = "#334155"
@@ -70,12 +70,12 @@ EDGE_FONTCOLOR = "#3f4a57"
 FONT = "Helvetica"
 
 FLOW_COLORS: dict[str, tuple[str, str]] = {
-    "data":       ("#2563EB", "solid"),
-    "control":    ("#64748B", "dashed"),
-    "serving":    ("#0D9488", "solid"),
-    "registry":   ("#7C3AED", "solid"),
+    "data": ("#2563EB", "solid"),
+    "control": ("#64748B", "dashed"),
+    "serving": ("#0D9488", "solid"),
+    "registry": ("#7C3AED", "solid"),
     "monitoring": ("#D97706", "dashed"),
-    "security":   ("#E11D48", "dashed"),
+    "security": ("#E11D48", "dashed"),
 }
 
 # ---- draw.io theme tokens (ported from drawio-ai-kit/src/theme.mjs) ---------- #
@@ -93,18 +93,28 @@ DRAWIO_THEME: dict[str, object] = {
         "light-dark(#e9eef4,#19222e)",  # blue-grey
     ],
     "stage_stroke": ["#82B366", "#D79B00", "#D6B656", "#9673A6", "#6C8EBF"],
-    "base": "light-dark(#ffffff,#0f1620)", "base_stroke": "#5A6B7B",
-    "endpoint": "light-dark(#eaf3ff,#10202e)", "endpoint_stroke": "#6C8EBF",
-    "band": "light-dark(#eef1f5,#1b2430)", "band_stroke": "#8593A3",
+    "base": "light-dark(#ffffff,#0f1620)",
+    "base_stroke": "#5A6B7B",
+    "endpoint": "light-dark(#eaf3ff,#10202e)",
+    "endpoint_stroke": "#6C8EBF",
+    "band": "light-dark(#eef1f5,#1b2430)",
+    "band_stroke": "#8593A3",
     # AWS-convention container colours
-    "subnet_public": "light-dark(#eef5e6,#1a2410)", "subnet_public_stroke": "#7AA116",
-    "subnet_private": "light-dark(#e6f4f4,#0f2424)", "subnet_private_stroke": "#00A4A6",
-    "region_stroke": "#147EBA", "vpc_stroke": "#8C4FFF", "account_stroke": "#C2487A",
+    "subnet_public": "light-dark(#eef5e6,#1a2410)",
+    "subnet_public_stroke": "#7AA116",
+    "subnet_private": "light-dark(#e6f4f4,#0f2424)",
+    "subnet_private_stroke": "#00A4A6",
+    "region_stroke": "#147EBA",
+    "vpc_stroke": "#8C4FFF",
+    "account_stroke": "#C2487A",
     "az_stroke": "#2F9491",
-    "note": "light-dark(#fbe7d4,#3a2a16)", "note_stroke": "#D79B00",
-    "onprem": "light-dark(#eef1f5,#181f29)", "onprem_stroke": "#666666",
+    "note": "light-dark(#fbe7d4,#3a2a16)",
+    "note_stroke": "#D79B00",
+    "onprem": "light-dark(#eef1f5,#181f29)",
+    "onprem_stroke": "#666666",
     "font_color": "light-dark(#1B2733,#CFE0F0)",
-    "edge_stroke": "light-dark(#2D6A9F,#5B9BD5)", "edge_stroke_width": 2,
+    "edge_stroke": "light-dark(#2D6A9F,#5B9BD5)",
+    "edge_stroke_width": 2,
     "edge_label_bg": "light-dark(#FFFFFF,#0B0F14)",
 }
 

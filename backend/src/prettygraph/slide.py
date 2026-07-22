@@ -9,8 +9,12 @@ from pathlib import Path
 from xml.sax.saxutils import escape as xml_escape
 
 from .constants import (
-    FLOW_COLORS, SLIDE_HERO_H, SLIDE_MARGIN, SLIDE_PAGE_RATIO,
-    SLIDE_PANEL_PAD, SLIDE_SIZE,
+    FLOW_COLORS,
+    SLIDE_HERO_H,
+    SLIDE_MARGIN,
+    SLIDE_PAGE_RATIO,
+    SLIDE_PANEL_PAD,
+    SLIDE_SIZE,
 )
 
 
@@ -22,11 +26,15 @@ def _font(size: int, *, bold: bool = False):
     from PIL import ImageFont
 
     names = (
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
-    ) if bold else (
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+        (
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
+        )
+        if bold
+        else (
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+        )
     )
     for name in names:
         try:
@@ -58,8 +66,9 @@ def _gradient(size: tuple[int, int]):
     return img
 
 
-def _draw_centered_text(draw, xy: tuple[int, int], text: str, font, fill,
-                        max_width: int, line_gap: int = 8) -> int:
+def _draw_centered_text(
+    draw, xy: tuple[int, int], text: str, font, fill, max_width: int, line_gap: int = 8
+) -> int:
     words = (text or "").split()
     if not words:
         return xy[1]
@@ -103,10 +112,12 @@ def _normal_legend(legend) -> list[dict[str, str]]:
     return out
 
 
-def vstack_pngs(png_paths: list[str], out_png: str, gap: int = 26,
-                bg: tuple[int, int, int] = (255, 255, 255)) -> None:
+def vstack_pngs(
+    png_paths: list[str], out_png: str, gap: int = 26, bg: tuple[int, int, int] = (255, 255, 255)
+) -> None:
     """Stack PNGs top-to-bottom into one image, each centered horizontally."""
     from PIL import Image
+
     imgs = [Image.open(p).convert("RGBA") for p in png_paths]
     w = max(im.width for im in imgs)
     h = sum(im.height for im in imgs) + gap * (len(imgs) - 1)
@@ -118,10 +129,17 @@ def vstack_pngs(png_paths: list[str], out_png: str, gap: int = 26,
     canvas.convert("RGB").save(out_png)
 
 
-def _compose_slide_png(body_png: str, out_png: str, *, title: str,
-                       kicker: str | None, brand: str | None,
-                       diagram_title: str | None, legend,
-                       include_hero: bool = False) -> dict:
+def _compose_slide_png(
+    body_png: str,
+    out_png: str,
+    *,
+    title: str,
+    kicker: str | None,
+    brand: str | None,
+    diagram_title: str | None,
+    legend,
+    include_hero: bool = False,
+) -> dict:
     from PIL import Image, ImageDraw
 
     panel_x = SLIDE_MARGIN
@@ -134,8 +152,7 @@ def _compose_slide_png(body_png: str, out_png: str, *, title: str,
     max_w = panel_w - SLIDE_PANEL_PAD * 2
 
     slide_h = round(SLIDE_SIZE / SLIDE_PAGE_RATIO)
-    avail_h_for_body = (slide_h - panel_y - SLIDE_MARGIN
-                        - caption_area - SLIDE_PANEL_PAD - legend_h)
+    avail_h_for_body = slide_h - panel_y - SLIDE_MARGIN - caption_area - SLIDE_PANEL_PAD - legend_h
     avail_h_for_body = max(avail_h_for_body, 100)
 
     body = Image.open(body_png).convert("RGBA")
@@ -154,23 +171,33 @@ def _compose_slide_png(body_png: str, out_png: str, *, title: str,
     draw = ImageDraw.Draw(canvas)
 
     if include_hero and brand:
-        draw.text((SLIDE_SIZE - SLIDE_MARGIN, 54), brand, font=_font(58, bold=True),
-                  fill="white", anchor="ra")
+        draw.text(
+            (SLIDE_SIZE - SLIDE_MARGIN, 54), brand, font=_font(58, bold=True), fill="white", anchor="ra"
+        )
     if include_hero and kicker:
-        _draw_centered_text(draw, (SLIDE_SIZE // 2, 284), kicker, _font(68),
-                            (248, 250, 252), 1550)
+        _draw_centered_text(draw, (SLIDE_SIZE // 2, 284), kicker, _font(68), (248, 250, 252), 1550)
     if include_hero:
-        _draw_centered_text(draw, (SLIDE_SIZE // 2, 390), title, _font(78, bold=True),
-                            "white", 1850, line_gap=12)
+        _draw_centered_text(
+            draw, (SLIDE_SIZE // 2, 390), title, _font(78, bold=True), "white", 1850, line_gap=12
+        )
 
-    draw.rounded_rectangle((panel_x, panel_y, panel_x + panel_w, panel_y + panel_h),
-                           radius=4, fill="white", outline="#D7DEE8", width=2)
+    draw.rounded_rectangle(
+        (panel_x, panel_y, panel_x + panel_w, panel_y + panel_h),
+        radius=4,
+        fill="white",
+        outline="#D7DEE8",
+        width=2,
+    )
 
     caption = diagram_title or "System Architecture"
     cap_font = _font(34, bold=True)
     cap_box = draw.textbbox((0, 0), caption, font=cap_font)
-    draw.text((SLIDE_SIZE // 2 - (cap_box[2] - cap_box[0]) / 2, panel_y + 22),
-              caption, font=cap_font, fill="#0F172A")
+    draw.text(
+        (SLIDE_SIZE // 2 - (cap_box[2] - cap_box[0]) / 2, panel_y + 22),
+        caption,
+        font=cap_font,
+        fill="#0F172A",
+    )
 
     body_x = panel_x + (panel_w - body.width) // 2
     body_y = panel_y + caption_area + max(0, (body_render_h - body.height) // 2)
@@ -179,10 +206,10 @@ def _compose_slide_png(body_png: str, out_png: str, *, title: str,
     if legend_items:
         lx, ly = panel_x + 26, panel_y + panel_h - legend_h + 18
         lw, lh = 260, legend_h - 36
-        draw.rounded_rectangle((lx, ly, lx + lw, ly + lh), radius=8,
-                               fill="#FFFFFF", outline="#CBD5E1", width=2)
-        draw.text((lx + 16, ly + 12), "LEGEND", font=_font(17, bold=True),
-                  fill="#334155")
+        draw.rounded_rectangle(
+            (lx, ly, lx + lw, ly + lh), radius=8, fill="#FFFFFF", outline="#CBD5E1", width=2
+        )
+        draw.text((lx + 16, ly + 12), "LEGEND", font=_font(17, bold=True), fill="#334155")
         yy = ly + 40
         for item in legend_items[:4]:
             color = item["color"]
@@ -208,41 +235,59 @@ def _compose_slide_png(body_png: str, out_png: str, *, title: str,
     }
 
 
-def _drawio_text_cell(cid: str, value: str, x: float, y: float, w: float, h: float,
-                      *, size: int, color: str = "#0F172A", bold: bool = False,
-                      align: str = "center", fill: str = "none",
-                      stroke: str = "none") -> str:
+def _drawio_text_cell(
+    cid: str,
+    value: str,
+    x: float,
+    y: float,
+    w: float,
+    h: float,
+    *,
+    size: int,
+    color: str = "#0F172A",
+    bold: bool = False,
+    align: str = "center",
+    fill: str = "none",
+    stroke: str = "none",
+) -> str:
     style = (
         "text;html=1;strokeColor={stroke};fillColor={fill};align={align};"
         "verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize={size};"
         "fontColor={color};fontStyle={bold};"
-    ).format(stroke=stroke, fill=fill, align=align, size=size,
-             color=color, bold=1 if bold else 0)
-    return (f'<mxCell id="{cid}" value="{_xml(value)}" style="{style}" vertex="1" '
-            f'parent="1"><mxGeometry x="{x:.0f}" y="{y:.0f}" width="{w:.0f}" '
-            f'height="{h:.0f}" as="geometry"/></mxCell>')
-
-
-def _drawio_rect_cell(cid: str, x: float, y: float, w: float, h: float,
-                      *, fill: str, stroke: str = "none", rounded: int = 0,
-                      shadow: int = 0) -> str:
-    style = (
-        f"rounded={rounded};whiteSpace=wrap;html=1;fillColor={fill};"
-        f"strokeColor={stroke};shadow={shadow};"
+    ).format(stroke=stroke, fill=fill, align=align, size=size, color=color, bold=1 if bold else 0)
+    return (
+        f'<mxCell id="{cid}" value="{_xml(value)}" style="{style}" vertex="1" '
+        f'parent="1"><mxGeometry x="{x:.0f}" y="{y:.0f}" width="{w:.0f}" '
+        f'height="{h:.0f}" as="geometry"/></mxCell>'
     )
-    return (f'<mxCell id="{cid}" value="" style="{style}" vertex="1" parent="1">'
-            f'<mxGeometry x="{x:.0f}" y="{y:.0f}" width="{w:.0f}" '
-            f'height="{h:.0f}" as="geometry"/></mxCell>')
 
 
-def _transform_drawio_body(xml: str, *, x: float, y: float, scale: float,
-                           prefix: str = "body_") -> str:
+def _drawio_rect_cell(
+    cid: str,
+    x: float,
+    y: float,
+    w: float,
+    h: float,
+    *,
+    fill: str,
+    stroke: str = "none",
+    rounded: int = 0,
+    shadow: int = 0,
+) -> str:
+    style = f"rounded={rounded};whiteSpace=wrap;html=1;fillColor={fill};strokeColor={stroke};shadow={shadow};"
+    return (
+        f'<mxCell id="{cid}" value="" style="{style}" vertex="1" parent="1">'
+        f'<mxGeometry x="{x:.0f}" y="{y:.0f}" width="{w:.0f}" '
+        f'height="{h:.0f}" as="geometry"/></mxCell>'
+    )
+
+
+def _transform_drawio_body(xml: str, *, x: float, y: float, scale: float, prefix: str = "body_") -> str:
     m = re.search(r"<root>(.*)</root>", xml, re.S)
     inner = m.group(1) if m else ""
     inner = re.sub(r'<mxCell id="0"/>\s*<mxCell id="1" parent="0"/>', "", inner)
     for attr in ("id", "source", "target"):
-        inner = re.sub(fr'{attr}="([^"]+)"',
-                       lambda mt: f'{attr}="{prefix}{mt.group(1)}"', inner)
+        inner = re.sub(rf'{attr}="([^"]+)"', lambda mt: f'{attr}="{prefix}{mt.group(1)}"', inner)
     inner = inner.replace(f'parent="{prefix}1"', 'parent="1"')
 
     def _geo(mt: "re.Match[str]") -> str:
@@ -250,8 +295,7 @@ def _transform_drawio_body(xml: str, *, x: float, y: float, scale: float,
         gy = float(mt.group(2)) * scale + y
         gw = float(mt.group(3)) * scale
         gh = float(mt.group(4)) * scale
-        return (f'<mxGeometry x="{gx:.0f}" y="{gy:.0f}" width="{gw:.0f}" '
-                f'height="{gh:.0f}"')
+        return f'<mxGeometry x="{gx:.0f}" y="{gy:.0f}" width="{gw:.0f}" height="{gh:.0f}"'
 
     inner = re.sub(
         r'<mxGeometry x="(-?[\d.]+)" y="(-?[\d.]+)" width="([\d.]+)" height="([\d.]+)"',
@@ -284,12 +328,21 @@ def _transform_drawio_body(xml: str, *, x: float, y: float, scale: float,
     return inner
 
 
-def _compose_slide_drawio(body_xml: str, out_path: str, *, title: str,
-                          kicker: str | None, brand: str | None,
-                          diagram_title: str | None, legend, body_box: list[int],
-                          panel: list[int], include_hero: bool = False,
-                          slide_h: int = SLIDE_SIZE,
-                          hero_h: int = SLIDE_HERO_H) -> str:
+def _compose_slide_drawio(
+    body_xml: str,
+    out_path: str,
+    *,
+    title: str,
+    kicker: str | None,
+    brand: str | None,
+    diagram_title: str | None,
+    legend,
+    body_box: list[int],
+    panel: list[int],
+    include_hero: bool = False,
+    slide_h: int = SLIDE_SIZE,
+    hero_h: int = SLIDE_HERO_H,
+) -> str:
     from .drawio import _page_dims
 
     body_w, body_h = _page_dims(body_xml)
@@ -302,42 +355,96 @@ def _compose_slide_drawio(body_xml: str, out_path: str, *, title: str,
 
     cells: list[str] = [
         _drawio_rect_cell("slide_bg", 0, 0, SLIDE_SIZE, slide_h, fill="#FFFFFF"),
-        _drawio_rect_cell("slide_panel", panel[0], panel[1], panel[2], panel[3],
-                          fill="#FFFFFF", stroke="#D7DEE8", rounded=1, shadow=1),
+        _drawio_rect_cell(
+            "slide_panel",
+            panel[0],
+            panel[1],
+            panel[2],
+            panel[3],
+            fill="#FFFFFF",
+            stroke="#D7DEE8",
+            rounded=1,
+            shadow=1,
+        ),
     ]
     if include_hero:
-        cells.insert(1, _drawio_rect_cell("slide_hero", 0, 0, SLIDE_SIZE, hero_h,
-                                          fill="#075985"))
+        cells.insert(1, _drawio_rect_cell("slide_hero", 0, 0, SLIDE_SIZE, hero_h, fill="#075985"))
     if include_hero and brand:
-        cells.append(_drawio_text_cell("slide_brand", brand, SLIDE_SIZE - 368,
-                                       round(hero_h * 0.075), 330, 70,
-                                       size=min(36, round(hero_h * 0.13)),
-                                       color="#FFFFFF", bold=True, align="right"))
+        cells.append(
+            _drawio_text_cell(
+                "slide_brand",
+                brand,
+                SLIDE_SIZE - 368,
+                round(hero_h * 0.075),
+                330,
+                70,
+                size=min(36, round(hero_h * 0.13)),
+                color="#FFFFFF",
+                bold=True,
+                align="right",
+            )
+        )
     if include_hero and kicker:
-        cells.append(_drawio_text_cell("slide_kicker", kicker, 90,
-                                       round(hero_h * 0.27), 1868,
-                                       round(hero_h * 0.16),
-                                       size=min(42, round(hero_h * 0.12)),
-                                       color="#F8FAFC"))
+        cells.append(
+            _drawio_text_cell(
+                "slide_kicker",
+                kicker,
+                90,
+                round(hero_h * 0.27),
+                1868,
+                round(hero_h * 0.16),
+                size=min(42, round(hero_h * 0.12)),
+                color="#F8FAFC",
+            )
+        )
     if include_hero:
-        cells.append(_drawio_text_cell("slide_title", title, 90,
-                                       round(hero_h * 0.48), 1868,
-                                       round(hero_h * 0.40),
-                                       size=min(50, round(hero_h * 0.17)),
-                                       color="#FFFFFF", bold=True))
-    cells.append(_drawio_text_cell("slide_diagram_title",
-                                   diagram_title or "System Architecture",
-                                   panel[0] + 30, panel[1] + 18, panel[2] - 60, 48,
-                                   size=26, color="#0F172A", bold=True))
+        cells.append(
+            _drawio_text_cell(
+                "slide_title",
+                title,
+                90,
+                round(hero_h * 0.48),
+                1868,
+                round(hero_h * 0.40),
+                size=min(50, round(hero_h * 0.17)),
+                color="#FFFFFF",
+                bold=True,
+            )
+        )
+    cells.append(
+        _drawio_text_cell(
+            "slide_diagram_title",
+            diagram_title or "System Architecture",
+            panel[0] + 30,
+            panel[1] + 18,
+            panel[2] - 60,
+            48,
+            size=26,
+            color="#0F172A",
+            bold=True,
+        )
+    )
 
     legend_items = _normal_legend(legend)
     if legend_items:
         lx, ly, lw, lh = panel[0] + 26, panel[1] + panel[3] - 100, 260, 82
-        cells.append(_drawio_rect_cell("legend_box", lx, ly, lw, lh,
-                                       fill="#FFFFFF", stroke="#CBD5E1", rounded=1))
-        cells.append(_drawio_text_cell("legend_title", "LEGEND", lx + 12, ly + 8,
-                                       94, 24, size=13, color="#334155",
-                                       bold=True, align="left"))
+        cells.append(
+            _drawio_rect_cell("legend_box", lx, ly, lw, lh, fill="#FFFFFF", stroke="#CBD5E1", rounded=1)
+        )
+        cells.append(
+            _drawio_text_cell(
+                "legend_title",
+                "LEGEND",
+                lx + 12,
+                ly + 8,
+                94,
+                24,
+                size=13,
+                color="#334155",
+                bold=True,
+                align="left",
+            )
+        )
         yy = ly + 36
         for i, item in enumerate(legend_items[:4]):
             style = "dashed=1;" if item["style"] == "dashed" else ""
@@ -347,11 +454,21 @@ def _compose_slide_drawio(body_xml: str, out_path: str, *, title: str,
                 f'edge="1" parent="1"><mxGeometry width="50" height="50" relative="1" '
                 f'as="geometry"><mxPoint x="{lx + 18:.0f}" y="{yy + 10:.0f}" as="sourcePoint"/>'
                 f'<mxPoint x="{lx + 72:.0f}" y="{yy + 10:.0f}" as="targetPoint"/>'
-                f'</mxGeometry></mxCell>'
+                f"</mxGeometry></mxCell>"
             )
-            cells.append(_drawio_text_cell(f"legend_label_{i}", item["label"],
-                                           lx + 84, yy, 148, 22, size=12,
-                                           color="#334155", align="left"))
+            cells.append(
+                _drawio_text_cell(
+                    f"legend_label_{i}",
+                    item["label"],
+                    lx + 84,
+                    yy,
+                    148,
+                    22,
+                    size=12,
+                    color="#334155",
+                    align="left",
+                )
+            )
             yy += 24
 
     xml_out = (
@@ -360,7 +477,9 @@ def _compose_slide_drawio(body_xml: str, out_path: str, *, title: str,
         'connect="1" arrows="1" fold="1" page="1" pageScale="1" '
         f'pageWidth="{SLIDE_SIZE}" pageHeight="{slide_h}" math="0" shadow="0">'
         '<root><mxCell id="0"/><mxCell id="1" parent="0"/>'
-        + "".join(cells) + body_inner + "</root></mxGraphModel></diagram></mxfile>"
+        + "".join(cells)
+        + body_inner
+        + "</root></mxGraphModel></diagram></mxfile>"
     )
     Path(out_path).write_text(xml_out, encoding="utf-8")
     return xml_out
@@ -377,16 +496,25 @@ def _slide_panel_geometry(*, include_hero: bool, has_legend: bool):
     panel_w = SLIDE_SIZE - SLIDE_MARGIN * 2
     max_w = panel_w - SLIDE_PANEL_PAD * 2
     slide_h = round(SLIDE_SIZE / SLIDE_PAGE_RATIO)
-    avail_h = max(slide_h - panel_y - SLIDE_MARGIN - caption_area
-                  - SLIDE_PANEL_PAD - legend_h, 100)
+    avail_h = max(slide_h - panel_y - SLIDE_MARGIN - caption_area - SLIDE_PANEL_PAD - legend_h, 100)
     panel_h = caption_area + avail_h + SLIDE_PANEL_PAD + legend_h
-    return {"hero_h": hero_h, "legend_h": legend_h, "caption_area": caption_area,
-            "panel_x": panel_x, "panel_y": panel_y, "panel_w": panel_w, "max_w": max_w,
-            "slide_h": slide_h, "avail_h": avail_h, "panel_h": panel_h}
+    return {
+        "hero_h": hero_h,
+        "legend_h": legend_h,
+        "caption_area": caption_area,
+        "panel_x": panel_x,
+        "panel_y": panel_y,
+        "panel_w": panel_w,
+        "max_w": max_w,
+        "slide_h": slide_h,
+        "avail_h": avail_h,
+        "panel_h": panel_h,
+    }
 
 
-def slide_fit_scale(body_w: float, body_h: float, *, include_hero: bool = True,
-                    has_legend: bool = True) -> float:
+def slide_fit_scale(
+    body_w: float, body_h: float, *, include_hero: bool = True, has_legend: bool = True
+) -> float:
     """The scale compose_native_slide would apply to fit a body into the slide
     panel. Below ~0.72 the body is too dense for a slide (text collides) and the
     caller should render a standalone diagram instead."""
@@ -396,10 +524,17 @@ def slide_fit_scale(body_w: float, body_h: float, *, include_hero: bool = True,
     return min(g["max_w"] / body_w, g["avail_h"] / body_h)
 
 
-def compose_native_slide(body_xml: str, out_path: str, *, title: str,
-                         kicker: str | None = None, brand: str | None = None,
-                         diagram_title: str | None = None, legend=None,
-                         include_hero: bool = True) -> str:
+def compose_native_slide(
+    body_xml: str,
+    out_path: str,
+    *,
+    title: str,
+    kicker: str | None = None,
+    brand: str | None = None,
+    diagram_title: str | None = None,
+    legend=None,
+    include_hero: bool = True,
+) -> str:
     """Wrap a NATIVE-engine body .drawio in the standard slide chrome (hero band,
     panel, caption, legend) — the drawio counterpart of render_slide for a body
     produced WITHOUT Graphviz. Panel/body geometry mirrors ``_compose_slide_png``.
@@ -409,19 +544,35 @@ def compose_native_slide(body_xml: str, out_path: str, *, title: str,
     # strip under a half-slide banner. Geometry is shared with slide_fit_scale().
     legend_items = _normal_legend(legend or [])
     g = _slide_panel_geometry(include_hero=include_hero, has_legend=bool(legend_items))
-    body_box = [g["panel_x"] + SLIDE_PANEL_PAD, g["panel_y"] + g["caption_area"],
-                g["max_w"], g["avail_h"]]
+    body_box = [g["panel_x"] + SLIDE_PANEL_PAD, g["panel_y"] + g["caption_area"], g["max_w"], g["avail_h"]]
     panel = [g["panel_x"], g["panel_y"], g["panel_w"], g["panel_h"]]
     return _compose_slide_drawio(
-        body_xml, out_path, title=title, kicker=kicker, brand=brand,
-        diagram_title=diagram_title, legend=legend or [], body_box=body_box,
-        panel=panel, include_hero=include_hero, slide_h=g["slide_h"], hero_h=g["hero_h"])
+        body_xml,
+        out_path,
+        title=title,
+        kicker=kicker,
+        brand=brand,
+        diagram_title=diagram_title,
+        legend=legend or [],
+        body_box=body_box,
+        panel=panel,
+        include_hero=include_hero,
+        slide_h=g["slide_h"],
+        hero_h=g["hero_h"],
+    )
 
 
-def render_slide(g, out_basename: str, *, title: str,
-                 kicker: str | None = None, brand: str | None = None,
-                 diagram_title: str | None = None, legend=None,
-                 include_hero: bool = False) -> str:
+def render_slide(
+    g,
+    out_basename: str,
+    *,
+    title: str,
+    kicker: str | None = None,
+    brand: str | None = None,
+    diagram_title: str | None = None,
+    legend=None,
+    include_hero: bool = False,
+) -> str:
     """Render ``g`` as a single-page 16:9 landscape slide (white background)."""
     from PIL import Image as _Img
 
@@ -444,27 +595,45 @@ def render_slide(g, out_basename: str, *, title: str,
     shutil.copy(body_png, body_copy)
     body_xml = g.to_drawio(out_basename)
     layout = _compose_slide_png(
-        body_png, png_path, title=title, kicker=kicker, brand=brand,
-        diagram_title=diagram_title or g.title, legend=legend,
+        body_png,
+        png_path,
+        title=title,
+        kicker=kicker,
+        brand=brand,
+        diagram_title=diagram_title or g.title,
+        legend=legend,
         include_hero=include_hero,
     )
     _compose_slide_drawio(
-        body_xml, drawio_path, title=title, kicker=kicker, brand=brand,
-        diagram_title=diagram_title or g.title, legend=legend,
-        body_box=layout["body"], panel=layout["panel"], include_hero=include_hero,
+        body_xml,
+        drawio_path,
+        title=title,
+        kicker=kicker,
+        brand=brand,
+        diagram_title=diagram_title or g.title,
+        legend=legend,
+        body_box=layout["body"],
+        panel=layout["panel"],
+        include_hero=include_hero,
         slide_h=layout.get("slide_h", SLIDE_SIZE),
     )
-    Path(marker_path).write_text(json.dumps({
-        "type": "slide",
-        "title": title,
-        "kicker": kicker,
-        "brand": brand,
-        "diagram_title": diagram_title or g.title,
-        "include_hero": include_hero,
-        "png": str(out.with_suffix(".png")),
-        "body_png": str(out.with_suffix(".body.png")),
-        "drawio": str(out.with_suffix(".drawio")),
-        "dot": str(out.with_suffix(".dot")),
-        "layout": layout,
-    }, indent=2), encoding="utf-8")
+    Path(marker_path).write_text(
+        json.dumps(
+            {
+                "type": "slide",
+                "title": title,
+                "kicker": kicker,
+                "brand": brand,
+                "diagram_title": diagram_title or g.title,
+                "include_hero": include_hero,
+                "png": str(out.with_suffix(".png")),
+                "body_png": str(out.with_suffix(".body.png")),
+                "drawio": str(out.with_suffix(".drawio")),
+                "dot": str(out.with_suffix(".dot")),
+                "layout": layout,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
     return png_path

@@ -81,7 +81,7 @@ def render_diagram(
     if not _BLUEPRINT_FILE.exists():
         return ToolMessage(
             content="Get the architecture approved first: call propose_tech_stack, "
-                    "then propose_blueprint, before rendering.",
+            "then propose_blueprint, before rendering.",
             name="render_diagram",
             tool_call_id=tool_call_id,
             status="error",
@@ -89,10 +89,11 @@ def render_diagram(
     audit_pre = _audit_code(code)
     if audit_pre["verdict"] == "REVISE":
         return ToolMessage(
-            content=("PRE-FLIGHT AUDIT blocked this render (NO render budget "
-                     "consumed). Fix every high/medium finding below, then call "
-                     "render_diagram again with the corrected script:\n"
-                     + json.dumps(audit_pre, indent=2)),
+            content=(
+                "PRE-FLIGHT AUDIT blocked this render (NO render budget "
+                "consumed). Fix every high/medium finding below, then call "
+                "render_diagram again with the corrected script:\n" + json.dumps(audit_pre, indent=2)
+            ),
             name="render_diagram",
             tool_call_id=tool_call_id,
             status="error",
@@ -103,11 +104,11 @@ def render_diagram(
             "summary listing residual audit warnings."
             if (current_workspace() / "out.png").exists()
             else "No usable out.png remains. Stop rendering and return a short "
-                 "failure summary with the last traceback."
+            "failure summary with the last traceback."
         )
         return ToolMessage(
             content=f"RENDER BUDGET EXHAUSTED ({RENDER_HARD_CAP} renders this round). "
-                    f"{next_step} Do NOT keep re-rendering to chase warnings.",
+            f"{next_step} Do NOT keep re-rendering to chase warnings.",
             name="render_diagram",
             tool_call_id=tool_call_id,
             status="error",
@@ -125,7 +126,7 @@ def render_diagram(
     except subprocess.TimeoutExpired:
         return ToolMessage(
             content=f"Render #{attempt}/{RENDER_HARD_CAP} TIMED OUT after {RENDER_TIMEOUT_S}s. "
-                    "Simplify the diagram or fix infinite work.",
+            "Simplify the diagram or fix infinite work.",
             name="render_diagram",
             tool_call_id=tool_call_id,
             status="error",
@@ -136,28 +137,34 @@ def render_diagram(
         err = (proc.stderr or proc.stdout or "").strip()
         return ToolMessage(
             content=f"Render #{attempt}/{RENDER_HARD_CAP} FAILED (exit {proc.returncode}). "
-                    f"Fix the code and retry only if under budget.\n\n{err[-3000:]}",
+            f"Fix the code and retry only if under budget.\n\n{err[-3000:]}",
             name="render_diagram",
             tool_call_id=tool_call_id,
             status="error",
         )
 
     audit = _layout_audit()
-    text = (f"Rendered out.png successfully (render #{attempt} of "
-            f"{RENDER_HARD_CAP} this round). Inspect it and refine if the "
-            "layout is not clean.")
+    text = (
+        f"Rendered out.png successfully (render #{attempt} of "
+        f"{RENDER_HARD_CAP} this round). Inspect it and refine if the "
+        "layout is not clean."
+    )
     if audit:
         text += "\n\n" + audit
         if attempt < RENDER_SOFT_CAP:
-            text += ("\n\nAct on any audit WARNING before finalizing "
-                     "(re-render after fixing). A clean diagram is balanced "
-                     "(~1.3–2:1) with every label-bearing edge short.")
+            text += (
+                "\n\nAct on any audit WARNING before finalizing "
+                "(re-render after fixing). A clean diagram is balanced "
+                "(~1.3–2:1) with every label-bearing edge short."
+            )
         else:
-            text += (f"\n\nRender budget nearly spent ({attempt}/{RENDER_HARD_CAP}). "
-                     "Re-render ONLY for a defect you know exactly how to fix "
-                     "(e.g. a specific TEXT OVERFLOW label). Otherwise finalize "
-                     "with this image and report residual warnings in your "
-                     "summary — do not chase the same warning again.")
+            text += (
+                f"\n\nRender budget nearly spent ({attempt}/{RENDER_HARD_CAP}). "
+                "Re-render ONLY for a defect you know exactly how to fix "
+                "(e.g. a specific TEXT OVERFLOW label). Otherwise finalize "
+                "with this image and report residual warnings in your "
+                "summary — do not chase the same warning again."
+            )
     record_report_step(
         current_workspace(),
         "render_diagram",
@@ -205,9 +212,11 @@ def export_drawio() -> str:
     try:
         if sidecar.exists():
             from prettygraph import dot_to_drawio
+
             dot_to_drawio(str(dot), str(sidecar), str(out))
         else:
             from domain.diagram.gv_to_drawio import convert
+
             convert(str(dot), str(out))
     except Exception as exc:  # noqa: BLE001 — surface to the agent
         return f"export_drawio failed: {exc}"
@@ -223,10 +232,13 @@ def export_drawio() -> str:
     lint = ""
     try:
         from domain.validation.validate_drawio import validate_file
+
         report = validate_file(str(out))
-        lint = (f"\nLint: {report['error_count']} error(s), "
-                f"{report['warning_count']} warning(s), "
-                f"{report.get('advice_count', 0)} advice.")
+        lint = (
+            f"\nLint: {report['error_count']} error(s), "
+            f"{report['warning_count']} warning(s), "
+            f"{report.get('advice_count', 0)} advice."
+        )
         if report["errors"]:
             lint += f" Errors: {'; '.join(report['errors'][:5])}"
         elif report["warnings"]:
@@ -249,6 +261,7 @@ def export_drawio() -> str:
     gate_note = ""
     try:
         from .analysis.gates import _diagram_gate_note
+
         gate_note = _diagram_gate_note(block=False)
     except Exception:  # noqa: BLE001
         pass
@@ -259,6 +272,7 @@ def export_drawio() -> str:
 def _find_drawio_cli() -> str | None:
     """Locate the draw.io desktop CLI (env DRAWIO_CLI, PATH, then common installs)."""
     import shutil
+
     env = os.environ.get("DRAWIO_CLI")
     if env and Path(env).exists():
         return env
@@ -269,7 +283,8 @@ def _find_drawio_cli() -> str | None:
     candidates = [
         Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "draw.io" / "draw.io.exe",
         Path("C:/Program Files/draw.io/draw.io.exe"),
-        Path("/usr/bin/drawio"), Path("/opt/drawio/drawio"),
+        Path("/usr/bin/drawio"),
+        Path("/opt/drawio/drawio"),
         Path("/Applications/draw.io.app/Contents/MacOS/draw.io"),
     ]
     for p in candidates:
@@ -292,6 +307,7 @@ def _drawio_viewer_fragment(xml: str) -> str:
     import base64
     import urllib.parse
     import zlib
+
     pre = urllib.parse.quote(xml, safe="!~*'()")
     c = zlib.compressobj(9, zlib.DEFLATED, -zlib.MAX_WBITS)
     compressed = c.compress(pre.encode("utf-8")) + c.flush()
@@ -299,8 +315,9 @@ def _drawio_viewer_fragment(xml: str) -> str:
     return "R" + urllib.parse.quote(payload, safe="")
 
 
-def _render_drawio_png_playwright(drawio_path: Path, png_path: Path,
-                                  scale: int = 2, timeout_s: int = 45) -> bool:
+def _render_drawio_png_playwright(
+    drawio_path: Path, png_path: Path, scale: int = 2, timeout_s: int = 45
+) -> bool:
     """Fallback PNG export via the diagrams.net web viewer + a headless browser.
 
     Uses the same Playwright/Chromium already installed for PDF report export
@@ -317,8 +334,9 @@ def _render_drawio_png_playwright(drawio_path: Path, png_path: Path,
         return False
     try:
         xml = drawio_path.read_text(encoding="utf-8")
-        url = ("https://viewer.diagrams.net/?tags=%7B%7D&lightbox=1&edit=_blank#"
-               + _drawio_viewer_fragment(xml))
+        url = "https://viewer.diagrams.net/?tags=%7B%7D&lightbox=1&edit=_blank#" + _drawio_viewer_fragment(
+            xml
+        )
         with sync_playwright() as p:
             browser = p.chromium.launch(args=["--no-sandbox"])
             try:
@@ -345,10 +363,15 @@ def _render_drawio_png_playwright(drawio_path: Path, png_path: Path,
                 }""")
                 pad = 12
                 if box and box["width"] > 0 and box["height"] > 0:
-                    page.screenshot(path=str(png_path), clip={
-                        "x": max(0, box["x"] - pad), "y": max(0, box["y"] - pad),
-                        "width": box["width"] + pad * 2, "height": box["height"] + pad * 2,
-                    })
+                    page.screenshot(
+                        path=str(png_path),
+                        clip={
+                            "x": max(0, box["x"] - pad),
+                            "y": max(0, box["y"] - pad),
+                            "width": box["width"] + pad * 2,
+                            "height": box["height"] + pad * 2,
+                        },
+                    )
                 else:  # getBBox failed (unexpected DOM) — full element as a last resort
                     page.locator("svg").first.screenshot(path=str(png_path))
             finally:
@@ -363,13 +386,27 @@ def _render_drawio_png(drawio_path: Path, png_path: Path, scale: int = 2) -> boo
     the Playwright/viewer.diagrams.net fallback (needs outbound HTTPS but no
     desktop app). False if neither is available/works."""
     import shutil
+
     exe = _find_drawio_cli()
     if exe:
         # --page-index 0 pins the export to page 1 — multi-page refined output
         # keeps the messy original as page 2, which must never be the PNG.
-        cmd = [exe, "--export", "--format", "png", "--scale", str(scale), "--border", "20",
-               "--page-index", "0",
-               "--output", str(png_path), str(drawio_path), "--no-sandbox"]
+        cmd = [
+            exe,
+            "--export",
+            "--format",
+            "png",
+            "--scale",
+            str(scale),
+            "--border",
+            "20",
+            "--page-index",
+            "0",
+            "--output",
+            str(png_path),
+            str(drawio_path),
+            "--no-sandbox",
+        ]
         # draw.io desktop is an Electron app; on headless Linux (containers) it
         # needs an X server. Wrap in xvfb-run when available.
         if sys.platform.startswith("linux") and shutil.which("xvfb-run"):
@@ -405,6 +442,7 @@ def _attach_icon_data_uri(node: dict, rel: str, root: Path) -> bool:
     except OSError:
         return False
     import base64
+
     # aiicons.lookup_ai_logo falls back to a raw cached .svg when cairosvg
     # (native libcairo) isn't installed — labeling that as image/png would
     # silently render as a broken image, no error surfaced anywhere.
@@ -433,8 +471,7 @@ _CATEGORY_GLYPHS: tuple[tuple[str, str], ...] = (
 def _category_glyph(node: dict) -> str:
     """Deterministic neutral glyph from node type/cluster/label semantics —
     the never-bare-card guarantee's last resort."""
-    text = " ".join(str(node.get(k) or "")
-                    for k in ("type", "tech", "label", "cluster")).lower()
+    text = " ".join(str(node.get(k) or "") for k in ("type", "tech", "label", "cluster")).lower()
     for pat, name in _CATEGORY_GLYPHS:
         if re.search(pat, text):
             return name
@@ -492,21 +529,31 @@ def _bake_icon_plan(spec: dict, workspace: Path) -> None:
 
     try:
         from prettygraph.native.topology import _load_catalog, _resolve_node_icon
+
         cat = _load_catalog() if _load_catalog else None
     except Exception:
         cat, _resolve_node_icon = None, None
 
     from backends import LOCAL_ICONS
+
     root = Path(LOCAL_ICONS)
     fallback_icons = 0
     for node in spec.get("nodes", []):
         if node.get("icon_data_uri") or node.get("icon"):
             continue
         # 1) icon_plan resolution (normalized id/label/tech match)
-        rel = next((by_key[k] for k in (_icon_key(node.get("id")),
-                                        _icon_key(node.get("label")),
-                                        _icon_key(node.get("tech"))) if k and k in by_key),
-                   None)
+        rel = next(
+            (
+                by_key[k]
+                for k in (
+                    _icon_key(node.get("id")),
+                    _icon_key(node.get("label")),
+                    _icon_key(node.get("tech")),
+                )
+                if k and k in by_key
+            ),
+            None,
+        )
         if rel and _attach_icon_data_uri(node, rel, root):
             continue
         # 2) provider catalog stencil
@@ -523,6 +570,7 @@ def _bake_icon_plan(spec: dict, workspace: Path) -> None:
         hit = None
         try:
             from tools.icon_tools import _resolve_one_tech_icon
+
             for q in (node.get("tech"), node.get("label")):
                 if not q:
                     continue
@@ -546,6 +594,7 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     export_drawio_native tool and the deterministic pre-render in propose_blueprint.
     """
     from prettygraph.native.topology import build_drawio_from_spec
+
     out = workspace / "out.drawio"
     name = spec.get("slide_title") or spec.get("diagram_title") or "Architecture"
     if spec.get("process"):
@@ -561,6 +610,7 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
         out.write_text(xml, encoding="utf-8")
         try:
             from domain.validation.validate_drawio import check_semantic_preservation
+
             process = spec.get("process") or {}
             step_ids = [s.get("id") for s in (process.get("steps") or [])]
             flow_pairs = [(f.get("from"), f.get("to")) for f in (process.get("flows") or [])]
@@ -570,8 +620,7 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
         _render_drawio_png(out, workspace / "out.png")
         stats["fallback_icons"] = 0
         try:
-            (workspace / "out.native_stats.json").write_text(
-                json.dumps(stats), encoding="utf-8")
+            (workspace / "out.native_stats.json").write_text(json.dumps(stats), encoding="utf-8")
         except Exception:  # noqa: BLE001
             pass
         _reset_drawio_edit_rounds()
@@ -589,8 +638,10 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
         # Dump the design tokens next to the render (playbook §19).
         try:
             from prettygraph.native import refined_theme
+
             (workspace / "design_tokens.json").write_text(
-                json.dumps(refined_theme.as_json(), indent=2), encoding="utf-8")
+                json.dumps(refined_theme.as_json(), indent=2), encoding="utf-8"
+            )
         except Exception:  # noqa: BLE001
             pass
     # Attach vendor logos to nodes (both presets) — refined draws each as a
@@ -602,6 +653,7 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     plan = None
     try:
         from prettygraph.native.layout_plan import analyze_layout
+
         plan = analyze_layout(spec)
     except Exception:  # noqa: BLE001
         plan = None
@@ -612,14 +664,15 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     # (refined_zones_per_row / refined_ops_pack) instead of band_cols.
     try:
         from prettygraph.native.repair import auto_repair
+
         plan, engineer_report = auto_repair(spec, name, plan)
         (workspace / "engineer_report.json").write_text(
-            json.dumps(engineer_report, indent=2), encoding="utf-8")
+            json.dumps(engineer_report, indent=2), encoding="utf-8"
+        )
     except Exception:  # noqa: BLE001
         pass
     try:
-        (workspace / "layout_plan.json").write_text(
-            json.dumps(plan or {}, indent=2), encoding="utf-8")
+        (workspace / "layout_plan.json").write_text(json.dumps(plan or {}, indent=2), encoding="utf-8")
     except Exception:  # noqa: BLE001
         pass
     # Slide presentations (the default) get the hero-band + legend chrome by wrapping
@@ -634,6 +687,7 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     if want_slide:
         from prettygraph.slide import compose_native_slide, slide_fit_scale
         from prettygraph.drawio import _page_dims
+
         body_w, body_h = _page_dims(xml)
         fit = slide_fit_scale(body_w, body_h, has_legend=bool(spec.get("legend")))
         if fit < _DENSE_SCALE_FLOOR:
@@ -643,22 +697,34 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
             xml, stats = build_drawio_from_spec(spec, name, flat=False, plan=plan)
             out.write_text(xml, encoding="utf-8")
             (workspace / "out.slide.json").write_text(
-                json.dumps({"drawio": "out.drawio", "png": "out.png",
-                            "engine": "native", "style": "diagram",
-                            "dense_fallback": True, "fit_scale": round(fit, 3)}),
-                encoding="utf-8")
-            stats["slide_fallback"] = {"fit_scale": round(fit, 3),
-                                       "floor": _DENSE_SCALE_FLOOR}
+                json.dumps(
+                    {
+                        "drawio": "out.drawio",
+                        "png": "out.png",
+                        "engine": "native",
+                        "style": "diagram",
+                        "dense_fallback": True,
+                        "fit_scale": round(fit, 3),
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stats["slide_fallback"] = {"fit_scale": round(fit, 3), "floor": _DENSE_SCALE_FLOOR}
         else:
             compose_native_slide(
-                xml, str(out), title=spec.get("slide_title") or name,
+                xml,
+                str(out),
+                title=spec.get("slide_title") or name,
                 kicker=spec.get("slide_kicker") or None,
                 brand=spec.get("brand") or None,
                 diagram_title=spec.get("diagram_title") or None,
-                legend=spec.get("legend") or [], include_hero=True)
+                legend=spec.get("legend") or [],
+                include_hero=True,
+            )
             (workspace / "out.slide.json").write_text(
-                json.dumps({"drawio": "out.drawio", "png": "out.png",
-                            "engine": "native", "style": "slide"}), encoding="utf-8")
+                json.dumps({"drawio": "out.drawio", "png": "out.png", "engine": "native", "style": "slide"}),
+                encoding="utf-8",
+            )
     else:
         sp = spec.get("source_page") or {}
         if refined and sp.get("path"):
@@ -668,11 +734,13 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
             try:
                 from domain.diagram.drawio_ingest import first_page_model_xml
                 from xml.sax.saxutils import quoteattr
+
                 pname = str(sp.get("name") or "02 — Original Source")
                 xml = xml.replace(
                     "</mxfile>",
                     f'<diagram name={quoteattr(pname)} id="dsrc">'
-                    f'{first_page_model_xml(str(sp["path"]))}</diagram></mxfile>')
+                    f"{first_page_model_xml(str(sp['path']))}</diagram></mxfile>",
+                )
                 stats["pages"] = 2
             except Exception:  # noqa: BLE001 — page 1 alone is still a valid result
                 stats["pages"] = 1
@@ -682,6 +750,7 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     # ids; the composed slide re-prefixes them). Surfaces silently-dropped nodes/edges.
     try:
         from prettygraph.native.repair import semantic_stats
+
         stats["semantic"] = semantic_stats(spec, xml, plan)
     except Exception:  # noqa: BLE001 — best-effort, never block a render
         pass
@@ -691,14 +760,14 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     # key on (reads zone chains directly off the render_spec instead).
     try:
         from domain.validation.validate_drawio import audit_spec_architecture
+
         stats["well_arch_advice"] = audit_spec_architecture(spec)
     except Exception:  # noqa: BLE001 — advisory only, never block a render
         pass
     _render_drawio_png(out, workspace / "out.png")
     stats["fallback_icons"] = int(spec.get("_fallback_icons") or 0)
     try:  # persist stats so the diagram gate / finalize can score without the spec
-        (workspace / "out.native_stats.json").write_text(
-            json.dumps(stats), encoding="utf-8")
+        (workspace / "out.native_stats.json").write_text(json.dumps(stats), encoding="utf-8")
     except Exception:  # noqa: BLE001
         pass
     _reset_drawio_edit_rounds()  # fresh export -> fresh edit_drawio budget
@@ -723,6 +792,7 @@ def export_drawio_native(style_preset: str = "") -> str:
             force the legacy icon-heavy / slide-hero look.
     """
     from .constants import _RENDER_SPEC_FILE
+
     out = current_workspace() / "out.drawio"
     if not _RENDER_SPEC_FILE.exists():
         return "No render_spec.json — call propose_blueprint first (native export needs a blueprint)."
@@ -737,38 +807,45 @@ def export_drawio_native(style_preset: str = "") -> str:
         return "export_drawio_native produced no file."
     png = current_workspace() / "out.png"
     png_ok = png.exists()
-    png_note = (f" out.png rendered ({png.stat().st_size} bytes) — inspect it."
-                if png_ok else
-                " NOTE: draw.io CLI not found, so no out.png was produced — rely on "
-                "the validator lint below (set DRAWIO_CLI or install draw.io desktop to preview).")
+    png_note = (
+        f" out.png rendered ({png.stat().st_size} bytes) — inspect it."
+        if png_ok
+        else " NOTE: draw.io CLI not found, so no out.png was produced — rely on "
+        "the validator lint below (set DRAWIO_CLI or install draw.io desktop to preview)."
+    )
     record_report_step(
         current_workspace(),
         "export_drawio_native",
-        summary=(f"Native draw.io: {stats['native_icons']} stencils, "
-                 f"{stats['native_groups']} group frames ({out.stat().st_size} bytes)."),
+        summary=(
+            f"Native draw.io: {stats['native_icons']} stencils, "
+            f"{stats['native_groups']} group frames ({out.stat().st_size} bytes)."
+        ),
         data={"artifacts": record_artifact_inventory(current_workspace()), "native_stats": stats},
     )
     lint = ""
     try:
         from domain.validation.validate_drawio import validate_file
+
         report = validate_file(str(out), stats=stats)
-        lint = (f"\nLint: {report['error_count']} error(s), "
-                f"{report['warning_count']} warning(s), "
-                f"{report.get('polish_count', 0)} polish gate finding(s), "
-                f"{report.get('advice_count', 0)} advice.")
+        lint = (
+            f"\nLint: {report['error_count']} error(s), "
+            f"{report['warning_count']} warning(s), "
+            f"{report.get('polish_count', 0)} polish gate finding(s), "
+            f"{report.get('advice_count', 0)} advice."
+        )
         if report["errors"]:
             lint += f" Errors: {'; '.join(report['errors'][:5])}"
         if report.get("polish"):
-            lint += ("\nPOLISH GATE (must fix via edit_drawio): "
-                     + "; ".join(report["polish"][:5]))
+            lint += "\nPOLISH GATE (must fix via edit_drawio): " + "; ".join(report["polish"][:5])
         if report.get("advice"):
             lint += f"\nDesign advice: {'; '.join(report['advice'][:5])}"
         from domain.validation.validate_drawio import production_scorecard
+
         sc = production_scorecard(report, stats)
-        verdict = ("PASS" if sc["pass"]
-                   else "BELOW GATE (need >=85, semantic & relationship = 100%)")
-        lint += (f"\nProduction scorecard: {sc['total']}/100 ({verdict}) — "
-                 + ", ".join(f"{k}={v}" for k, v in sc["breakdown"].items()))
+        verdict = "PASS" if sc["pass"] else "BELOW GATE (need >=85, semantic & relationship = 100%)"
+        lint += f"\nProduction scorecard: {sc['total']}/100 ({verdict}) — " + ", ".join(
+            f"{k}={v}" for k, v in sc["breakdown"].items()
+        )
     except Exception:  # noqa: BLE001
         pass
     vendor_icons = stats["native_icons"] + stats.get("image_icons", 0)
@@ -776,14 +853,18 @@ def export_drawio_native(style_preset: str = "") -> str:
     sem_note = ""
     if sem.get("missing_nodes") or sem.get("missing_edges"):
         mn, me = sem.get("missing_nodes", []), sem.get("missing_edges", [])
-        sem_note = (f"\nSEMANTIC LOSS: {len(mn)} node(s) and {len(me)} edge(s) from "
-                    f"render_spec did NOT render "
-                    f"(nodes: {', '.join(map(str, mn[:5]))}) — check their cluster/ids.")
+        sem_note = (
+            f"\nSEMANTIC LOSS: {len(mn)} node(s) and {len(me)} edge(s) from "
+            f"render_spec did NOT render "
+            f"(nodes: {', '.join(map(str, mn[:5]))}) — check their cluster/ids."
+        )
     fb = stats.get("slide_fallback")
     if fb:
-        sem_note += (f"\nDENSE FALLBACK: body would shrink to {fb['fit_scale']}x in a "
-                     f"slide (< {fb['floor']} floor) — rendered as a STANDALONE diagram "
-                     "(title + legend, no hero/panel) for readability.")
+        sem_note += (
+            f"\nDENSE FALLBACK: body would shrink to {fb['fit_scale']}x in a "
+            f"slide (< {fb['floor']} floor) — rendered as a STANDALONE diagram "
+            "(title + legend, no hero/panel) for readability."
+        )
     return (
         f"Wrote out.drawio ({out.stat().st_size} bytes) via native engine.{png_note} "
         f"Fidelity: {vendor_icons}/{stats['nodes']} vendor icons "
@@ -822,6 +903,7 @@ def upgrade_drawio(source_path: str, style_preset: str = "refined") -> str:
     from pathlib import Path
     from .constants import _RENDER_SPEC_FILE
     from domain.diagram.drawio_ingest import extract_inventory, inventory_to_render_spec
+
     ws = current_workspace()
     src = Path(source_path)
     if not src.is_absolute() and not src.exists():
@@ -836,8 +918,7 @@ def upgrade_drawio(source_path: str, style_preset: str = "refined") -> str:
         return f"upgrade_drawio: no nodes found in {src.name} (empty or unsupported)."
     (ws / "inventory.json").write_text(json.dumps(inv, indent=2), encoding="utf-8")
     preset = str(style_preset or "refined").lower()
-    spec = inventory_to_render_spec(
-        inv, style_preset=preset if preset == "refined" else "")
+    spec = inventory_to_render_spec(inv, style_preset=preset if preset == "refined" else "")
     if preset == "refined":
         spec["source_page"] = {"name": "02 — Original Source", "path": str(src)}
     _RENDER_SPEC_FILE.write_text(json.dumps(spec), encoding="utf-8")
@@ -850,24 +931,30 @@ def upgrade_drawio(source_path: str, style_preset: str = "refined") -> str:
     lint = ""
     try:
         from domain.validation.validate_drawio import validate_file, production_scorecard
+
         report = validate_file(str(out), stats=stats)
         sc = production_scorecard(report, stats)
-        verdict = ("PASS" if sc["pass"]
-                   else "BELOW GATE (need >=85, semantic & relationship = 100%)")
-        lint = (f" Scorecard {sc['total']}/100 ({verdict}). Lint: "
-                f"{report['error_count']} error(s), {report.get('polish_count', 0)} polish.")
+        verdict = "PASS" if sc["pass"] else "BELOW GATE (need >=85, semantic & relationship = 100%)"
+        lint = (
+            f" Scorecard {sc['total']}/100 ({verdict}). Lint: "
+            f"{report['error_count']} error(s), {report.get('polish_count', 0)} polish."
+        )
     except Exception:  # noqa: BLE001
         pass
     icons = sum(1 for n in inv["nodes"] if n.get("icon"))
     miss = sem.get("missing_nodes", [])
     record_report_step(
-        ws, "upgrade_drawio",
-        summary=(f"Upgraded {src.name}: {len(inv['nodes'])} nodes, {len(inv['edges'])} edges, "
-                 f"{icons} icons reused."),
+        ws,
+        "upgrade_drawio",
+        summary=(
+            f"Upgraded {src.name}: {len(inv['nodes'])} nodes, {len(inv['edges'])} edges, "
+            f"{icons} icons reused."
+        ),
         data={"source": str(src), "inventory": "inventory.json", "native_stats": stats},
     )
-    pages_note = (" 2-page file: page 1 = refined, page 2 = untouched original."
-                  if stats.get("pages") == 2 else "")
+    pages_note = (
+        " 2-page file: page 1 = refined, page 2 = untouched original." if stats.get("pages") == 2 else ""
+    )
     return (
         f"Upgraded {src.name}: extracted {len(inv['nodes'])} nodes, {len(inv['edges'])} edges, "
         f"{len(spec['clusters'])} clusters, {icons} embedded icons reused. Rebuilt out.drawio "
@@ -875,8 +962,10 @@ def upgrade_drawio(source_path: str, style_preset: str = "refined") -> str:
         f"({preset} preset, ids preserved).{pages_note} "
         f"Semantic preservation: {int(sem.get('node_recall', 1) * 100)}% nodes, "
         f"{int(sem.get('edge_recall', 1) * 100)}% edges"
-        + (f" — MISSING nodes {miss[:5]}" if miss else "") + "." + lint +
-        "\nReview out.png; refine in place via read_drawio -> edit_drawio if needed."
+        + (f" — MISSING nodes {miss[:5]}" if miss else "")
+        + "."
+        + lint
+        + "\nReview out.png; refine in place via read_drawio -> edit_drawio if needed."
     )
 
 
@@ -889,7 +978,7 @@ def upgrade_drawio(source_path: str, style_preset: str = "refined") -> str:
 # mirroring the drawio-ai-kit "author XML → validate → render → loop" workflow.
 # --------------------------------------------------------------------------- #
 
-_DRAWIO_EDIT_CAP = 2          # edit_drawio batches per exported diagram
+_DRAWIO_EDIT_CAP = 2  # edit_drawio batches per exported diagram
 _EDIT_ROUNDS_FILE = ".drawio_edit_rounds"
 # Engineer loop tiers 1-2 (LLM rounds): hard cap on inspect_render_quality calls
 # per export — each call ships a (downscaled) image to the model, so the budget
@@ -958,38 +1047,49 @@ def inspect_render_quality(tool_call_id: Annotated[str, InjectedToolCallId]) -> 
     ws = current_workspace()
     out = ws / "out.drawio"
     if not out.exists():
-        return ToolMessage(content="No out.drawio yet — export first.",
-                           name="inspect_render_quality",
-                           tool_call_id=tool_call_id, status="error")
+        return ToolMessage(
+            content="No out.drawio yet — export first.",
+            name="inspect_render_quality",
+            tool_call_id=tool_call_id,
+            status="error",
+        )
     rounds = _bump_engineer_rounds()
     if rounds > _ENGINEER_INSPECT_CAP:
         return ToolMessage(
-            content=(f"Engineer budget exhausted ({_ENGINEER_INSPECT_CAP} inspections "
-                     "used for this export). Finalize with the current score and "
-                     "report residual findings — do not keep polishing."),
-            name="inspect_render_quality", tool_call_id=tool_call_id, status="error")
+            content=(
+                f"Engineer budget exhausted ({_ENGINEER_INSPECT_CAP} inspections "
+                "used for this export). Finalize with the current score and "
+                "report residual findings — do not keep polishing."
+            ),
+            name="inspect_render_quality",
+            tool_call_id=tool_call_id,
+            status="error",
+        )
     text = f"Engineer inspection {rounds}/{_ENGINEER_INSPECT_CAP}."
     try:
         from domain.validation.validate_drawio import validate_file, production_scorecard
+
         stats_path = ws / "out.native_stats.json"
         stats = json.loads(stats_path.read_text(encoding="utf-8")) if stats_path.exists() else {}
         report = validate_file(str(out), stats=stats)
         sc = production_scorecard(report, stats)
         m = report.get("layout_metrics") or {}
         arrow = m.get("arrow_clarity") or {}
-        text += (f"\nProduction scorecard: {sc['total']}/100 "
-                 f"({'PASS' if sc['pass'] else 'below gate — fix the worst categories'})\n"
-                 + ", ".join(f"{k}={v}" for k, v in sc["breakdown"].items())
-                 + f"\nLayout metrics: ratio={m.get('ratio')} (target 1.3-1.9), "
-                   f"crossings={m.get('edge_crossings')}, long_edges={m.get('long_edges')}, "
-                   f"icon_coverage={m.get('icon_coverage')}, "
-                   f"label_overlaps={m.get('edge_label_overlaps')}, "
-                   f"collisions={sc.get('collisions')}"
-                 + f"\nArrow clarity: score={arrow.get('arrow_clarity_score')}/100, "
-                   f"visible_edges={arrow.get('visible_edge_count')}, "
-                   f"bundled_edges={arrow.get('bundled_edge_count')}, "
-                   f"crossings_per_edge={arrow.get('crossings_per_edge')}, "
-                   f"long_edge_ratio={arrow.get('long_edge_ratio')}")
+        text += (
+            f"\nProduction scorecard: {sc['total']}/100 "
+            f"({'PASS' if sc['pass'] else 'below gate — fix the worst categories'})\n"
+            + ", ".join(f"{k}={v}" for k, v in sc["breakdown"].items())
+            + f"\nLayout metrics: ratio={m.get('ratio')} (target 1.3-1.9), "
+            f"crossings={m.get('edge_crossings')}, long_edges={m.get('long_edges')}, "
+            f"icon_coverage={m.get('icon_coverage')}, "
+            f"label_overlaps={m.get('edge_label_overlaps')}, "
+            f"collisions={sc.get('collisions')}"
+            + f"\nArrow clarity: score={arrow.get('arrow_clarity_score')}/100, "
+            f"visible_edges={arrow.get('visible_edge_count')}, "
+            f"bundled_edges={arrow.get('bundled_edge_count')}, "
+            f"crossings_per_edge={arrow.get('crossings_per_edge')}, "
+            f"long_edge_ratio={arrow.get('long_edge_ratio')}"
+        )
         if report.get("polish"):
             text += "\nPolish findings: " + "; ".join(report["polish"][:4])
         if report.get("collisions"):
@@ -1000,25 +1100,37 @@ def inspect_render_quality(tool_call_id: Annotated[str, InjectedToolCallId]) -> 
         er = ws / "engineer_report.json"
         if er.exists():
             rep = json.loads(er.read_text(encoding="utf-8"))
-            text += (f"\nAuto-repair already ran: chose '{rep.get('chosen')}' "
-                     f"at {rep.get('final_score')}/100 over "
-                     f"{len(rep.get('iterations', []))} candidate(s) — don't re-try "
-                     "those; fix what it couldn't (labels, styles, single-cell moves).")
+            text += (
+                f"\nAuto-repair already ran: chose '{rep.get('chosen')}' "
+                f"at {rep.get('final_score')}/100 over "
+                f"{len(rep.get('iterations', []))} candidate(s) — don't re-try "
+                "those; fix what it couldn't (labels, styles, single-cell moves)."
+            )
     except Exception:  # noqa: BLE001
         pass
-    text += ("\nApply every fix in ONE batched edit_drawio call "
-             f"(edit budget {_drawio_edit_rounds()}/{_DRAWIO_EDIT_CAP} used).")
+    text += (
+        "\nApply every fix in ONE batched edit_drawio call "
+        f"(edit budget {_drawio_edit_rounds()}/{_DRAWIO_EDIT_CAP} used)."
+    )
     png = ws / "out.png"
     include_image = os.getenv("RENDER_INCLUDES_IMAGE", "1").lower() not in ("0", "false", "no")
     if png.exists() and include_image:
         b64, mime = _inspection_image_b64(png)
         return ToolMessage(
-            content_blocks=[{"type": "text", "text": text},
-                            {"type": "image", "base64": b64, "mime_type": mime}],
-            name="inspect_render_quality", tool_call_id=tool_call_id, status="success")
-    return ToolMessage(content=text + "\n(no out.png to attach)",
-                       name="inspect_render_quality",
-                       tool_call_id=tool_call_id, status="success")
+            content_blocks=[
+                {"type": "text", "text": text},
+                {"type": "image", "base64": b64, "mime_type": mime},
+            ],
+            name="inspect_render_quality",
+            tool_call_id=tool_call_id,
+            status="success",
+        )
+    return ToolMessage(
+        content=text + "\n(no out.png to attach)",
+        name="inspect_render_quality",
+        tool_call_id=tool_call_id,
+        status="success",
+    )
 
 
 def _style_get(style: str, key: str) -> str | None:
@@ -1053,12 +1165,14 @@ def _load_drawio_model(path: Path):
     output every read/edit therefore targets page 1 only; the preserved
     "Original Source" page 2 is written back untouched by tree.write()."""
     import xml.etree.ElementTree as ET
+
     tree = ET.parse(str(path))
     root = tree.getroot()
     model = root.find(".//mxGraphModel")
     if model is None:
-        raise ValueError("no mxGraphModel found — is the diagram compressed? "
-                         "Re-export with export_drawio_native.")
+        raise ValueError(
+            "no mxGraphModel found — is the diagram compressed? Re-export with export_drawio_native."
+        )
     cell_root = model.find("root")
     if cell_root is None:
         raise ValueError("mxGraphModel has no <root>.")
@@ -1111,10 +1225,12 @@ def read_drawio() -> str:
         geo = cell.find("mxGeometry")
         if cell.get("edge") == "1":
             pins = "".join(
-                f" {k}={_style_get(style, k)}" for k in
-                ("exitX", "exitY", "entryX", "entryY") if _style_get(style, k))
+                f" {k}={_style_get(style, k)}"
+                for k in ("exitX", "exitY", "entryX", "entryY")
+                if _style_get(style, k)
+            )
             npts = len(geo.findall(".//mxPoint")) if geo is not None else 0
-            bits = [f'E {cid} {cell.get("source")} -> {cell.get("target")}']
+            bits = [f"E {cid} {cell.get('source')} -> {cell.get('target')}"]
             lbl = _clean_label(cell.get("value") or "")
             if lbl:
                 bits.append(f'"{lbl}"')
@@ -1131,11 +1247,16 @@ def read_drawio() -> str:
         else:
             g = ""
             if geo is not None:
-                g = (f'[{geo.get("x", "0")},{geo.get("y", "0")} '
-                     f'{geo.get("width", "?")}x{geo.get("height", "?")}]')
-            bits = [f'V {cid} p={cell.get("parent")}', g,
-                    f'"{_clean_label(cell.get("value") or "")}"',
-                    _shape_summary(style)]
+                g = (
+                    f"[{geo.get('x', '0')},{geo.get('y', '0')} "
+                    f"{geo.get('width', '?')}x{geo.get('height', '?')}]"
+                )
+            bits = [
+                f"V {cid} p={cell.get('parent')}",
+                g,
+                f'"{_clean_label(cell.get("value") or "")}"',
+                _shape_summary(style),
+            ]
             for k in ("fillColor", "strokeColor", "fontSize"):
                 v = _style_get(style, k)
                 if v:
@@ -1146,31 +1267,38 @@ def read_drawio() -> str:
     lint = ""
     try:
         from domain.validation.validate_drawio import validate_file
+
         report = validate_file(str(out))
-        lint = ("\n\nValidator: "
-                f"{report['error_count']} error(s), {report['warning_count']} "
-                f"warning(s), {report.get('polish_count', 0)} polish gate, "
-                f"{report.get('advice_count', 0)} advice.")
+        lint = (
+            "\n\nValidator: "
+            f"{report['error_count']} error(s), {report['warning_count']} "
+            f"warning(s), {report.get('polish_count', 0)} polish gate, "
+            f"{report.get('advice_count', 0)} advice."
+        )
         for kind in ("errors", "warnings", "polish", "advice"):
             for msg in (report.get(kind) or [])[:6]:
                 lint += f"\n- [{kind.rstrip('s')}] {msg}"
     except Exception:  # noqa: BLE001
         pass
     rounds_left = max(0, _DRAWIO_EDIT_CAP - _drawio_edit_rounds())
-    return ("\n".join(lines) + lint
-            + f"\n\nedit_drawio batches left: {rounds_left}. Batch ALL fixes into one call.")
+    return (
+        "\n".join(lines)
+        + lint
+        + f"\n\nedit_drawio batches left: {rounds_left}. Batch ALL fixes into one call."
+    )
 
 
 class DrawioOp(BaseModel):
     """One targeted edit operation on out.drawio."""
-    op: Literal["set_style", "move", "resize", "set_label",
-                "pin_edge", "delete", "add_edge"] = Field(
-        description="Operation kind.")
+
+    op: Literal["set_style", "move", "resize", "set_label", "pin_edge", "delete", "add_edge"] = Field(
+        description="Operation kind."
+    )
     id: str = Field(description="Target cell id (for add_edge: the NEW edge id).")
     key: Optional[str] = Field(None, description="set_style: style key, e.g. fillColor.")
     value: Optional[str] = Field(
-        None, description="set_style: value (empty removes the key). "
-                          "set_label: the new label text.")
+        None, description="set_style: value (empty removes the key). set_label: the new label text."
+    )
     x: Optional[float] = Field(None, description="move: new x (relative to parent).")
     y: Optional[float] = Field(None, description="move: new y (relative to parent).")
     dx: Optional[float] = Field(None, description="move: x delta (alternative to x).")
@@ -1207,19 +1335,31 @@ def edit_drawio(
     """
     out = current_workspace() / "out.drawio"
     if not out.exists():
-        return ToolMessage(content="No out.drawio to edit — export the diagram first.",
-                           name="edit_drawio", tool_call_id=tool_call_id, status="error")
+        return ToolMessage(
+            content="No out.drawio to edit — export the diagram first.",
+            name="edit_drawio",
+            tool_call_id=tool_call_id,
+            status="error",
+        )
     if _drawio_edit_rounds() >= _DRAWIO_EDIT_CAP:
         return ToolMessage(
             content=f"EDIT BUDGET EXHAUSTED ({_DRAWIO_EDIT_CAP} edit batches). Keep the "
-                    "current out.drawio and report residual findings in your summary.",
-            name="edit_drawio", tool_call_id=tool_call_id, status="error")
+            "current out.drawio and report residual findings in your summary.",
+            name="edit_drawio",
+            tool_call_id=tool_call_id,
+            status="error",
+        )
     import xml.etree.ElementTree as ET
+
     try:
         tree, cell_root = _load_drawio_model(out)
     except Exception as exc:  # noqa: BLE001
-        return ToolMessage(content=f"edit_drawio failed to parse: {exc}",
-                           name="edit_drawio", tool_call_id=tool_call_id, status="error")
+        return ToolMessage(
+            content=f"edit_drawio failed to parse: {exc}",
+            name="edit_drawio",
+            tool_call_id=tool_call_id,
+            status="error",
+        )
     cells = {c.get("id"): c for c in cell_root.iter("mxCell") if c.get("id")}
     applied: list[str] = []
     failed: list[str] = []
@@ -1227,10 +1367,16 @@ def edit_drawio(
     # without an explicit delete. Decorative sub-cells cancel out (present before
     # and after). deleted_ids collects intended removals (incl. cascades).
     _decor = lambda i: bool(i) and i.endswith(("__sh", "__ac", "__ic", "__pill"))
-    before_v = {c.get("id") for c in cell_root.iter("mxCell")
-                if c.get("vertex") == "1" and c.get("id") and not _decor(c.get("id"))}
-    before_e = {(c.get("source"), c.get("target")) for c in cell_root.iter("mxCell")
-                if c.get("edge") == "1" and c.get("source") and c.get("target")}
+    before_v = {
+        c.get("id")
+        for c in cell_root.iter("mxCell")
+        if c.get("vertex") == "1" and c.get("id") and not _decor(c.get("id"))
+    }
+    before_e = {
+        (c.get("source"), c.get("target"))
+        for c in cell_root.iter("mxCell")
+        if c.get("edge") == "1" and c.get("source") and c.get("target")
+    }
     deleted_ids: set[str] = set()
 
     def _geo(cell):
@@ -1249,15 +1395,17 @@ def edit_drawio(
                 if not op.key:
                     failed.append(f"set_style {op.id}: missing key")
                     continue
-                if (op.key.lower() in ("image", "fillpatternimage")
-                        and re.match(r"\s*https?://", str(op.value or ""), re.I)):
+                if op.key.lower() in ("image", "fillpatternimage") and re.match(
+                    r"\s*https?://", str(op.value or ""), re.I
+                ):
                     # Remote URLs render as broken-image glyphs in the offline
                     # PNG export (and are never catalog ground truth).
                     failed.append(
                         f"set_style {op.id}: remote image URLs are not allowed — "
                         "they render as broken glyphs in PNG export. Use the "
                         "icon_plan/data-URI pipeline or a catalog stencil "
-                        "(resIcon=mxgraph.aws4.<name>) instead.")
+                        "(resIcon=mxgraph.aws4.<name>) instead."
+                    )
                     continue
                 cell.set("style", _style_set(cell.get("style") or "", op.key, op.value))
                 applied.append(f"set_style {op.id} {op.key}={op.value}")
@@ -1280,8 +1428,12 @@ def edit_drawio(
                 applied.append(f"set_label {op.id}")
             elif op.op == "pin_edge":
                 style = cell.get("style") or ""
-                for k, v in (("exitX", op.exitX), ("exitY", op.exitY),
-                             ("entryX", op.entryX), ("entryY", op.entryY)):
+                for k, v in (
+                    ("exitX", op.exitX),
+                    ("exitY", op.exitY),
+                    ("entryX", op.entryX),
+                    ("entryY", op.entryY),
+                ):
                     if v is not None:
                         style = _style_set(style, k, v)
                         style = _style_set(style, k.replace("X", "Dx").replace("Y", "Dy"), 0)
@@ -1297,8 +1449,7 @@ def edit_drawio(
                 # parented to the frame, not the card, so cascade-by-parent misses them).
                 doomed = {op.id, f"{op.id}__sh", f"{op.id}__ac"}
                 for c in list(cell_root.iter("mxCell")):
-                    if c.get("parent") in doomed or c.get("source") in doomed \
-                            or c.get("target") in doomed:
+                    if c.get("parent") in doomed or c.get("source") in doomed or c.get("target") in doomed:
                         doomed.add(c.get("id"))
                 doomed &= {c.get("id") for c in cell_root.iter("mxCell")}
                 for c in list(cell_root):
@@ -1315,13 +1466,23 @@ def edit_drawio(
                     failed.append(f"add_edge {op.id}: id already exists")
                     continue
                 color = op.color or "light-dark(#2D6A9F,#5B9BD5)"
-                style = ("edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;jettySize=auto;"
-                         f"orthogonalLoop=1;fontSize=10;strokeColor={color};strokeWidth=2;"
-                         "labelBackgroundColor=light-dark(#FFFFFF,#0B0F14);"
-                         + ("dashed=1;" if op.dashed else ""))
-                e = ET.SubElement(cell_root, "mxCell", {
-                    "id": op.id, "style": style, "edge": "1", "parent": "1",
-                    "source": op.source, "target": op.target})
+                style = (
+                    "edgeStyle=orthogonalEdgeStyle;html=1;rounded=0;jettySize=auto;"
+                    f"orthogonalLoop=1;fontSize=10;strokeColor={color};strokeWidth=2;"
+                    "labelBackgroundColor=light-dark(#FFFFFF,#0B0F14);" + ("dashed=1;" if op.dashed else "")
+                )
+                e = ET.SubElement(
+                    cell_root,
+                    "mxCell",
+                    {
+                        "id": op.id,
+                        "style": style,
+                        "edge": "1",
+                        "parent": "1",
+                        "source": op.source,
+                        "target": op.target,
+                    },
+                )
                 if op.label:
                     e.set("value", op.label)
                 ET.SubElement(e, "mxGeometry", {"relative": "1", "as": "geometry"})
@@ -1333,37 +1494,49 @@ def edit_drawio(
     if not applied:
         return ToolMessage(
             content="No op applied.\n" + "\n".join(f"- {f}" for f in failed),
-            name="edit_drawio", tool_call_id=tool_call_id, status="error")
+            name="edit_drawio",
+            tool_call_id=tool_call_id,
+            status="error",
+        )
 
     xml_text = ET.tostring(tree.getroot(), encoding="unicode")
     out.write_text(xml_text, encoding="utf-8")
     rounds = _bump_drawio_edit_rounds()
 
     # Count-preservation guard: nodes/edges that disappeared without a delete op.
-    after_v = {c.get("id") for c in cell_root.iter("mxCell")
-               if c.get("vertex") == "1" and c.get("id") and not _decor(c.get("id"))}
-    after_e = {(c.get("source"), c.get("target")) for c in cell_root.iter("mxCell")
-               if c.get("edge") == "1" and c.get("source") and c.get("target")}
+    after_v = {
+        c.get("id")
+        for c in cell_root.iter("mxCell")
+        if c.get("vertex") == "1" and c.get("id") and not _decor(c.get("id"))
+    }
+    after_e = {
+        (c.get("source"), c.get("target"))
+        for c in cell_root.iter("mxCell")
+        if c.get("edge") == "1" and c.get("source") and c.get("target")
+    }
     lost_v = (before_v - after_v) - deleted_ids
-    lost_e = {(s, t) for (s, t) in (before_e - after_e)
-              if s not in deleted_ids and t not in deleted_ids}
+    lost_e = {(s, t) for (s, t) in (before_e - after_e) if s not in deleted_ids and t not in deleted_ids}
     preservation_note = ""
     if lost_v or lost_e:
         preservation_note = (
             f"\nWARNING — SEMANTIC LOSS: {len(lost_v)} node(s) and {len(lost_e)} edge(s) "
             f"disappeared without a delete op (nodes: {', '.join(sorted(map(str, lost_v))[:5])}). "
-            "This usually means an edit corrupted the tree — undo or re-export.")
+            "This usually means an edit corrupted the tree — undo or re-export."
+        )
 
     lint = ""
     try:
         from domain.validation.validate_drawio import validate_file, production_scorecard
+
         stats_path = current_workspace() / "out.native_stats.json"
         stats = json.loads(stats_path.read_text(encoding="utf-8")) if stats_path.exists() else {}
         report = validate_file(str(out), stats=stats)
-        lint = (f"\nLint: {report['error_count']} error(s), "
-                f"{report['warning_count']} warning(s), "
-                f"{report.get('polish_count', 0)} polish gate finding(s), "
-                f"{report.get('advice_count', 0)} advice.")
+        lint = (
+            f"\nLint: {report['error_count']} error(s), "
+            f"{report['warning_count']} warning(s), "
+            f"{report.get('polish_count', 0)} polish gate finding(s), "
+            f"{report.get('advice_count', 0)} advice."
+        )
         if report["errors"]:
             lint += f" Errors: {'; '.join(report['errors'][:5])}"
         if report.get("polish"):
@@ -1372,30 +1545,44 @@ def edit_drawio(
             lint += f"\nDesign advice: {'; '.join(report['advice'][:5])}"
         # Recomputed scorecard so the drawer sees progress without re-inspecting.
         sc = production_scorecard(report, stats)
-        lint += (f"\nProduction scorecard after edit: {sc['total']}/100 "
-                 f"({'PASS' if sc['pass'] else 'below gate'}).")
+        lint += (
+            f"\nProduction scorecard after edit: {sc['total']}/100 "
+            f"({'PASS' if sc['pass'] else 'below gate'})."
+        )
     except Exception:  # noqa: BLE001
         pass
     png = current_workspace() / "out.png"
     png_ok = _render_drawio_png(out, png)
     record_report_step(
-        current_workspace(), "edit_drawio",
+        current_workspace(),
+        "edit_drawio",
         summary=f"Applied {len(applied)} drawio edit(s), batch {rounds}/{_DRAWIO_EDIT_CAP}.",
         data={"applied": applied, "failed": failed},
     )
-    text = (f"Applied {len(applied)} op(s) (batch {rounds}/{_DRAWIO_EDIT_CAP})."
-            + ("\nFailed: " + "; ".join(failed) if failed else "") + lint + preservation_note
-            + ("" if png_ok else "\nNOTE: draw.io CLI unavailable — out.png NOT "
-                                 "re-rendered; rely on the Lint line."))
+    text = (
+        f"Applied {len(applied)} op(s) (batch {rounds}/{_DRAWIO_EDIT_CAP})."
+        + ("\nFailed: " + "; ".join(failed) if failed else "")
+        + lint
+        + preservation_note
+        + (
+            ""
+            if png_ok
+            else "\nNOTE: draw.io CLI unavailable — out.png NOT re-rendered; rely on the Lint line."
+        )
+    )
     include_image = os.getenv("RENDER_INCLUDES_IMAGE", "1").lower() not in ("0", "false", "no")
     if png_ok and include_image:
         b64, mime = _inspection_image_b64(png)
         return ToolMessage(
-            content_blocks=[{"type": "text", "text": text},
-                            {"type": "image", "base64": b64, "mime_type": mime}],
-            name="edit_drawio", tool_call_id=tool_call_id, status="success")
-    return ToolMessage(content=text, name="edit_drawio",
-                       tool_call_id=tool_call_id, status="success")
+            content_blocks=[
+                {"type": "text", "text": text},
+                {"type": "image", "base64": b64, "mime_type": mime},
+            ],
+            name="edit_drawio",
+            tool_call_id=tool_call_id,
+            status="success",
+        )
+    return ToolMessage(content=text, name="edit_drawio", tool_call_id=tool_call_id, status="success")
 
 
 @tool
@@ -1468,8 +1655,7 @@ def _compute_style_plan(
 
     # Fit the longest text row: lr margins (~32pt) + icon + gap + text width.
     # Helvetica ~0.60em/char bold title, ~0.52em/char sublabel.
-    text_w = max(0.60 * title * longest_label_chars,
-                 0.52 * sub * longest_sublabel_chars)
+    text_w = max(0.60 * title * longest_label_chars, 0.52 * sub * longest_sublabel_chars)
     raw_w = 32 + icon + 10 + text_w
     w_cap = 260 if output == "poster" else 380
     w_min = 200 if output == "poster" else 240
@@ -1541,8 +1727,12 @@ def _compute_style_plan(
         )
 
     sizes = {
-        "node_width": node_w, "node_height": node_h, "icon_size": icon,
-        "title_size": title, "sublabel_size": sub, "edge_label_size": edge,
+        "node_width": node_w,
+        "node_height": node_h,
+        "icon_size": icon,
+        "title_size": title,
+        "sublabel_size": sub,
+        "edge_label_size": edge,
         "cluster_label_size": cluster,
     }
     plan = {
@@ -1555,9 +1745,7 @@ def _compute_style_plan(
         "notes": notes,
     }
     current_workspace().mkdir(parents=True, exist_ok=True)
-    (current_workspace() / "style_plan.json").write_text(
-        json.dumps(plan, indent=2), encoding="utf-8"
-    )
+    (current_workspace() / "style_plan.json").write_text(json.dumps(plan, indent=2), encoding="utf-8")
     return plan
 
 
@@ -1580,14 +1768,14 @@ def plan_style_sizes(
         output: "slide" (pro slide canvas), "diagram" (plain render), or "poster".
     """
     return json.dumps(
-        _compute_style_plan(node_count, longest_label_chars,
-                            longest_sublabel_chars, output),
+        _compute_style_plan(node_count, longest_label_chars, longest_sublabel_chars, output),
         indent=2,
     )
 
 
 class NodeText(BaseModel):
     """One node's visible text, to be checked against the planned card size."""
+
     label: str = Field(description="node title text")
     sublabel: str = Field("", description="node sublabel text (may be empty)")
 
@@ -1595,14 +1783,28 @@ class NodeText(BaseModel):
 # Deterministic, meaning-preserving shortenings tried in order. Vendor prefixes
 # are stripped LAST (the icon already carries the brand).
 _WORD_ABBREVS = [
-    ("PostgreSQL", "Postgres"), ("Kubernetes", "K8s"), ("Database", "DB"),
-    ("Application", "App"), ("Configuration", "Config"),
-    ("Authentication", "Auth"), ("Authorization", "Authz"),
-    ("Management", "Mgmt"), ("Infrastructure", "Infra"),
-    ("Repository", "Repo"), ("Environment", "Env"),
+    ("PostgreSQL", "Postgres"),
+    ("Kubernetes", "K8s"),
+    ("Database", "DB"),
+    ("Application", "App"),
+    ("Configuration", "Config"),
+    ("Authentication", "Auth"),
+    ("Authorization", "Authz"),
+    ("Management", "Mgmt"),
+    ("Infrastructure", "Infra"),
+    ("Repository", "Repo"),
+    ("Environment", "Env"),
 ]
-_VENDOR_PREFIXES = ("Amazon ", "AWS ", "Microsoft ", "Google Cloud ",
-                    "Google ", "Azure ", "Alibaba Cloud ", "Oracle ")
+_VENDOR_PREFIXES = (
+    "Amazon ",
+    "AWS ",
+    "Microsoft ",
+    "Google Cloud ",
+    "Google ",
+    "Azure ",
+    "Alibaba Cloud ",
+    "Oracle ",
+)
 
 
 def _shorten(text: str, fits) -> tuple[str, str, list[str]]:
@@ -1626,7 +1828,7 @@ def _shorten(text: str, fits) -> tuple[str, str, list[str]]:
     if not fits(text):
         for prefix in _VENDOR_PREFIXES:
             if text.startswith(prefix) and len(text) > len(prefix):
-                text = text[len(prefix):]
+                text = text[len(prefix) :]
                 steps.append(f"dropped vendor prefix '{prefix.strip()}' (icon shows the brand)")
                 break
     return text, moved, steps
@@ -1671,21 +1873,20 @@ def _compute_label_fits(
         sub_fits = len(sublabel) <= max_sub
         entry: dict = {"label": label, "fits": title_fits and sub_fits}
         if not title_fits:
-            new_label, moved, steps = _shorten(label,
-                                               lambda t: len(t) <= max_title)
+            new_label, moved, steps = _shorten(label, lambda t: len(t) <= max_title)
             if steps:
                 sub = sublabel or ""
                 if moved:
                     sub = f"{moved} · {sub}".strip(" ·") if sub else moved
-                entry["suggestion"] = {"label": new_label, "sublabel": sub,
-                                       "steps": steps}
+                entry["suggestion"] = {"label": new_label, "sublabel": sub, "steps": steps}
             if len(new_label) > max_title:
                 entry["still_too_long"] = True
-                entry["hint"] = (f"rename manually to <= {max_title} chars "
-                                 "(or raise node_width and re-run plan_style_sizes)")
+                entry["hint"] = (
+                    f"rename manually to <= {max_title} chars "
+                    "(or raise node_width and re-run plan_style_sizes)"
+                )
         if not sub_fits:
-            new_sub, _, steps = _shorten(sublabel,
-                                         lambda t: len(t) <= max_sub)
+            new_sub, _, steps = _shorten(sublabel, lambda t: len(t) <= max_sub)
             entry.setdefault("suggestion", {})["sublabel"] = new_sub
             entry["sublabel_still_too_long"] = len(new_sub) > max_sub
         results.append(entry)
@@ -1700,8 +1901,12 @@ def _compute_label_fits(
         edge_results.append(item)
 
     return {
-        "card": {"node_width": node_width, "icon_size": icon_size,
-                 "title_size": title_size, "sublabel_size": sublabel_size},
+        "card": {
+            "node_width": node_width,
+            "icon_size": icon_size,
+            "title_size": title_size,
+            "sublabel_size": sublabel_size,
+        },
         "max_title_chars": max_title,
         "max_sublabel_chars": max_sub,
         "nodes": results,
@@ -1734,7 +1939,11 @@ def fit_labels(
     """
     out = _compute_label_fits(
         [{"label": n.label, "sublabel": n.sublabel} for n in nodes],
-        edge_labels, node_width, icon_size, title_size, sublabel_size,
+        edge_labels,
+        node_width,
+        icon_size,
+        title_size,
+        sublabel_size,
     )
     return json.dumps(out, indent=2, ensure_ascii=False)
 
@@ -1752,16 +1961,18 @@ def write_style_and_fit_plans(render_spec: dict) -> None:
     node_count = len(nodes)
     labels = [str(n.get("label") or "") for n in nodes]
     sublabels = [str(n.get("tech") or "") for n in nodes]
-    output = "poster" if render_spec.get("density") == "poster" else (
-        render_spec.get("presentation_style") or "slide")
+    output = (
+        "poster"
+        if render_spec.get("density") == "poster"
+        else (render_spec.get("presentation_style") or "slide")
+    )
     plan = _compute_style_plan(
         node_count=node_count,
         longest_label_chars=max([len(s) for s in labels] or [22]),
         longest_sublabel_chars=max([len(s) for s in sublabels] or [26]),
         output=output if output in ("slide", "diagram", "poster") else "slide",
     )
-    edge_labels = [str(e.get("label")) for e in (render_spec.get("edges") or [])
-                   if e.get("label")]
+    edge_labels = [str(e.get("label")) for e in (render_spec.get("edges") or []) if e.get("label")]
     fits = _compute_label_fits(
         [{"label": lb, "sublabel": sb} for lb, sb in zip(labels, sublabels)],
         edge_labels,
@@ -1776,8 +1987,9 @@ def write_style_and_fit_plans(render_spec: dict) -> None:
 
 
 @tool(parse_docstring=True)
-def visualize_code_structure(project_path: str, mode: str = "imports",
-                             language: str = "python", group: bool = True) -> str:
+def visualize_code_structure(
+    project_path: str, mode: str = "imports", language: str = "python", group: bool = True
+) -> str:
     """Extract and visualize a codebase's module-import graph or class-inheritance hierarchy.
 
     Returns a JSON graph describing the code structure. After calling this, use the
@@ -1800,9 +2012,11 @@ def visualize_code_structure(project_path: str, mode: str = "imports",
     try:
         if mode == "imports":
             from codevis import build_import_graph
+
             graph = build_import_graph(project_path, group=group)
         elif mode == "classes":
             from codevis import build_class_graph
+
             graph = build_class_graph(project_path, group=group)
         else:
             return json.dumps({"error": f"mode={mode!r} not recognized. Use 'imports' or 'classes'."})
@@ -1831,6 +2045,7 @@ def finalize_diagram() -> str:
 
 class GridSection(BaseModel):
     """One region 'plane' (cluster) in a poster-mode layout."""
+
     id: str = Field(description="snake_case id matching the g.cluster() id")
     label: str = Field(description="section label, e.g. '① Client / Access Layer'")
     anchor_node_id: str = Field(description="id of one node inside this section (first box)")
@@ -1878,15 +2093,11 @@ def declare_poster_grid(
     n1, n2, n3 = len(row1), len(row2), len(row3)
 
     # One g.grid_cluster(...) per plane packs its boxes into a dense COLS-wide grid.
-    grid_lines = [
-        f"g.grid_cluster({s.id!r}, cols={max(1, s.cols)})  # {s.label}"
-        for s in all_sections
-    ]
+    grid_lines = [f"g.grid_cluster({s.id!r}, cols={max(1, s.cols)})  # {s.label}" for s in all_sections]
     call = "\n".join(grid_lines)
 
     def _sec(s: GridSection) -> dict:
-        return {"id": s.id, "label": s.label, "anchor": s.anchor_node_id,
-                "cols": max(1, s.cols)}
+        return {"id": s.id, "label": s.label, "anchor": s.anchor_node_id, "cols": max(1, s.cols)}
 
     sections_info: dict = {
         "row1": [_sec(s) for s in row1],
@@ -1898,22 +2109,27 @@ def declare_poster_grid(
         col_info["row3"] = n3
 
     current_workspace().mkdir(parents=True, exist_ok=True)
-    (current_workspace() / "poster_grid.json").write_text(json.dumps(sections_info, indent=2), encoding="utf-8")
+    (current_workspace() / "poster_grid.json").write_text(
+        json.dumps(sections_info, indent=2), encoding="utf-8"
+    )
 
-    return json.dumps({
-        "status": "OK",
-        "planes": col_info,
-        "grid_cluster_calls": call,
-        "instruction": (
-            "1) Create Pretty(..., direction=<'LR' for 5+ planes (tall portrait "
-            "poster, closest to the reference) / 'TB' for ≤4 planes>, theme='pro'). "
-            "2) Declare every plane with g.cluster(id, label, number=1,2,...) and add "
-            "its boxes with g.box(..., parent=id, icon=<REAL logo>, sublabel=<tech>). "
-            "3) AFTER all boxes/links, paste the grid_cluster_calls below — one per "
-            "plane — to pack each into a dense logo grid. "
-            "4) Add only a few cross-plane g.link(...) for the primary flow; they "
-            "auto-relax so the grids drive the layout. "
-            "Do NOT call g.poster_grid — it fights the in-plane grids. "
-            "Do NOT add manual invisible spine / same_rank lines."
-        ),
-    }, indent=2)
+    return json.dumps(
+        {
+            "status": "OK",
+            "planes": col_info,
+            "grid_cluster_calls": call,
+            "instruction": (
+                "1) Create Pretty(..., direction=<'LR' for 5+ planes (tall portrait "
+                "poster, closest to the reference) / 'TB' for ≤4 planes>, theme='pro'). "
+                "2) Declare every plane with g.cluster(id, label, number=1,2,...) and add "
+                "its boxes with g.box(..., parent=id, icon=<REAL logo>, sublabel=<tech>). "
+                "3) AFTER all boxes/links, paste the grid_cluster_calls below — one per "
+                "plane — to pack each into a dense logo grid. "
+                "4) Add only a few cross-plane g.link(...) for the primary flow; they "
+                "auto-relax so the grids drive the layout. "
+                "Do NOT call g.poster_grid — it fights the in-plane grids. "
+                "Do NOT add manual invisible spine / same_rank lines."
+            ),
+        },
+        indent=2,
+    )

@@ -36,7 +36,7 @@ ROLE_ALIASES: dict[str, str] = {
     "DEV_BE_IoT_DevOps": "be_coding",
     "Fix bugs": "be_coding",
     "Golive/Deployment": "be_coding",
-    "DEV_md": "be_coding",          # WBS_EUP sheet
+    "DEV_md": "be_coding",  # WBS_EUP sheet
     "DEV": "be_coding",
     # ---- FE / mobile / frontend ----
     "FE/Mobile Coding": "fe_mobile_coding",
@@ -63,7 +63,7 @@ ROLE_ALIASES: dict[str, str] = {
     "BA_Tester": "requirement_analysis",
     "BA": "requirement_analysis",
     "BA_md": "requirement_analysis",
-    "JBA": "requirement_analysis",      # arm1 sheet
+    "JBA": "requirement_analysis",  # arm1 sheet
     # ---- QA / testing ----
     "Testing": "testing",
     "Testing (QA)": "testing",
@@ -86,7 +86,7 @@ ROLE_ALIASES: dict[str, str] = {
     "pm_md": "project_management",
     "PM": "project_management",
     "PM_md": "project_management",
-    "Python": "be_coding",              # arm1 treats Python as dev role
+    "Python": "be_coding",  # arm1 treats Python as dev role
 }
 
 _CANONICAL_ROLES = frozenset(
@@ -136,6 +136,7 @@ def _flatten_tech_stack(value: Any) -> list[str]:
 # ---------------------------------------------------------------------------
 # EffortByRole
 # ---------------------------------------------------------------------------
+
 
 class EffortByRole(BaseModel):
     """Effort breakdown by the 5 canonical BnK roles (in mandays)."""
@@ -205,6 +206,7 @@ class EffortByRole(BaseModel):
 # WbsItem — one task / line in the WBS
 # ---------------------------------------------------------------------------
 
+
 class WbsItem(BaseModel):
     """Normalised WBS task row."""
 
@@ -212,7 +214,7 @@ class WbsItem(BaseModel):
     code: str = ""
     name: str = ""
     description: str = ""
-    module: str = ""     # module or phase grouping
+    module: str = ""  # module or phase grouping
     phase: str = ""
     total_md: float = 0.0
     effort: EffortByRole = Field(default_factory=EffortByRole)
@@ -247,6 +249,7 @@ class WbsItem(BaseModel):
 # WbsModule — one row from effort_by_module (summary level)
 # ---------------------------------------------------------------------------
 
+
 class WbsModule(BaseModel):
     """One module/phase row from effort_by_module."""
 
@@ -270,6 +273,7 @@ class WbsModule(BaseModel):
 # ---------------------------------------------------------------------------
 # WbsProject — top-level canonical shape
 # ---------------------------------------------------------------------------
+
 
 class WbsProject(BaseModel):
     """Canonical representation of one BnK WBS project."""
@@ -370,6 +374,7 @@ class WbsProject(BaseModel):
 # ---------------------------------------------------------------------------
 # Helper: extract and flatten wbs_items from the many source shapes
 # ---------------------------------------------------------------------------
+
 
 def _extract_wbs_items(data: dict[str, Any]) -> list[WbsItem]:
     """Convert the highly-variable wbs_items field to list[WbsItem]."""
