@@ -154,6 +154,19 @@ jobs:
             GIT_SHA=${{ github.sha }}
             BUILD_TIME=${{ steps.meta.outputs.build_time }}
 
+      - name: Verify no secret file leaked into the image
+        # A missing/regressed .dockerignore silently bakes backend/.env (real
+        # API keys) into every layer of the image — verified against a real
+        # `docker build` while writing this Dockerfile's hardening: even a
+        # LOCAL image that's never pushed anywhere has the secret readable
+        # from any `docker save`/layer inspection. Fail the build outright if
+        # this ever reappears, rather than relying on remembering .dockerignore.
+        run: |
+          if docker run --rm diagram-agent-backend:ci test -f /app/backend/.env; then
+            echo "::error::backend/.env was copied into the image — check .dockerignore"
+            exit 1
+          fi
+
       - name: Boot backend image and check /health/live
         run: |
           docker run -d --name backend-smoke -p 8001:8001 \

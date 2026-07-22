@@ -1,0 +1,62 @@
+# Docker build context excludes — build context is the repo root (see
+# backend/Dockerfile's/frontend/Dockerfile's top comments).
+#
+# CRITICAL: without this file, `COPY backend ./backend` / `COPY frontend
+# ./frontend` copy EVERYTHING under those directories into the image layer,
+# including backend/.env (real API keys: OPENAI_API_KEY, MODAL_TOKEN_ID,
+# MODAL_TOKEN_SECRET, COMPOSIO_API_KEY, ...). .gitignore does NOT protect
+# against this — it only stops `git add`, Docker's COPY ignores it entirely.
+# A baked-in .env means every image built from this Dockerfile (and every
+# layer, even after a later `RUN rm .env`) permanently contains the secrets
+# that were present in .env at build time — anyone who can `docker pull` or
+# `docker save`/inspect the image layers can read them back out, whether or
+# not the image is ever run.
+
+# --- Secrets — never let these into a build context ---
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+.env
+.env.*
+!.env.example
+
+# --- VCS / editor ---
+.git/
+.github/
+.claude/
+.codex/
+.agents/
+
+# --- Python ---
+**/__pycache__/
+**/*.pyc
+backend/.venv/
+backend/**/*.egg-info/
+
+# --- Node ---
+**/node_modules/
+frontend/dist/
+
+# --- Runtime data / large local artifacts (never needed inside the image) ---
+backend/agent_space/
+backend/logs/
+artifacts/
+DATA/
+example/
+example_doc/
+requirement/
+
+# --- Misc large / irrelevant top-level dirs not part of the image build ---
+Paper2Any/
+deer-flow/
+next-ai-draw-io/
+open-swe/
+drawio-skill/
+mcp/
+scripts/
+plans/
+new/
+improvement/
