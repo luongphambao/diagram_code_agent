@@ -38,10 +38,22 @@ CREATE TABLE IF NOT EXISTS conversations (
 # legacy row from before this migration, or a thread nobody has claimed yet;
 # unowned rows stay visible to every caller rather than locking out existing
 # users the moment this ships (see list_all/get_owner/claim_owner below).
-_ALTER_DDL = """
-ALTER TABLE conversations ADD COLUMN IF NOT EXISTS outcomes_json TEXT NOT NULL DEFAULT '[]';
-ALTER TABLE conversations ADD COLUMN IF NOT EXISTS owner_email TEXT NOT NULL DEFAULT '';
-"""
+#
+# ONE statement per list entry, executed via separate conn.execute() calls
+# below — NOT joined into one semicolon-separated string. psycopg3 sends a
+# non-parameterized execute() through PostgreSQL's extended query protocol
+# (Parse/Bind/Execute), which only accepts a SINGLE command per prepared
+# statement; a multi-statement string intermittently raises "cannot insert
+# multiple commands into a prepared statement" depending on the connection's
+# prior state (observed in production: silently swallowed by setup()'s own
+# except-and-warn, so outcomes_json's ALTER (added first, alone) had already
+# succeeded on an earlier deploy while owner_email's (added later, as a
+# second statement in the same string) never actually ran — the column stayed
+# missing while every query referencing it failed at request time instead).
+_ALTER_STATEMENTS = [
+    "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS outcomes_json TEXT NOT NULL DEFAULT '[]';",
+    "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS owner_email TEXT NOT NULL DEFAULT '';",
+]
 
 
 async def setup(pool) -> None:
@@ -51,7 +63,8 @@ async def setup(pool) -> None:
     try:
         async with pool.connection() as conn:
             await conn.execute(_DDL)
-            await conn.execute(_ALTER_DDL)
+            for statement in _ALTER_STATEMENTS:
+                await conn.execute(statement)
         logger.info("conversations table ready")
     except Exception as exc:  # noqa: BLE001
         logger.warning("conversations table setup failed: %s", exc)

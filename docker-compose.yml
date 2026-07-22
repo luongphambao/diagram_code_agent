@@ -30,16 +30,38 @@ services:
   #     timeout: 5s
   #     retries: 10
 
+  # One-shot: makes the host-bind-mounted ./artifacts dir writable by the
+  # backend's non-root appuser before backend starts, then exits.
+  #
+  # Why this exists: `docker inspect`-verified on Docker Desktop for Linux —
+  # a bind-mounted host directory is presented INSIDE every container as
+  # owned by 0:0 (root) regardless of its real host ownership (only the
+  # permission BITS pass through correctly, not the owner/group). So
+  # `user: 1000:1000` below can never satisfy an owner- or group-based check
+  # against a bind mount on this Docker setup, no matter what UID/GID the
+  # host directory actually has or what you set `${UID}`/`${GID}` to — the
+  # only permission class that still applies is "other". This init step
+  # chmods the mount to rwx for "other" (root:root owner/group, from the
+  # backend container's point of view, keep their normal bits; "other" gets
+  # write+execute so appuser — neither the owner nor the group under this
+  # remapping — can still create/write per-thread subdirectories).
+  # Idempotent and harmless on setups where bind mounts DO preserve host
+  # ownership (native Docker Engine, no VM) — chmod is a no-op there since
+  # appuser would already own or match-group the directory.
+  artifacts-init:
+    image: busybox:1.36
+    command: ["sh", "-c", "chmod 777 /app/artifacts"]
+    volumes:
+      - ./artifacts:/app/artifacts
+
   backend:
     build:
       context: .
       dockerfile: backend/Dockerfile
     # Runs as a fixed non-root UID/GID (improvement plan §1.6 — see
-    # backend/Dockerfile). Defaults to 1000:1000 (the image's baked-in
-    # `appuser`, and the common default host-user UID on Linux); if your host
-    # user has a different UID/GID and ./artifacts ends up not writable,
-    # `export UID GID` (or set them in a top-level .env) before `docker
-    # compose up` to match your account.
+    # backend/Dockerfile). Defaults to 1000:1000; see artifacts-init above
+    # for why ./artifacts being host-owned by a matching UID is NOT
+    # sufficient by itself on Docker Desktop for Linux.
     user: "${UID:-1000}:${GID:-1000}"
     # Secrets (OPENAI_API_KEY, LANGSMITH_*) come from backend/.env at RUNTIME —
     # they are never baked into the image.
@@ -59,6 +81,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      artifacts-init:
+        condition: service_completed_successfully
       # qdrant:
       #   condition: service_healthy
     ports:
