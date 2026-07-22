@@ -16,8 +16,9 @@ from pathlib import Path
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 load_dotenv()
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
@@ -25,6 +26,7 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 from agent import build_agent, make_persistence
 from config.cors import resolve_allowed_origins
 import conversations as conv_db
+from health_checks import run_readiness_checks, version_info
 from security.auth import AUTH_MODE
 import session_state
 
@@ -135,6 +137,34 @@ app.include_router(comments_router)
 @app.get("/health", tags=["ops"])
 def health():
     return {"status": "ok", "agent": "diagram_agent"}
+
+
+@app.get("/health/live", tags=["ops"])
+def health_live():
+    """Liveness: the process is up and serving requests. No dependency checks —
+    a slow/degraded dependency belongs in /health/ready, not in a liveness
+    probe (which typically triggers a container restart on failure — restarting
+    a healthy process because Postgres is briefly slow would make things worse,
+    not better)."""
+    return {"status": "ok"}
+
+
+@app.get("/health/ready", tags=["ops"])
+async def health_ready(request: Request):
+    """Readiness: can THIS instance actually serve a request right now?
+    Checks Postgres and Modal auth/App lookup (improvement plan §1.5) — a load
+    balancer or orchestrator should stop routing traffic here on a non-200."""
+    ok, checks = await run_readiness_checks(request.app.state.pool)
+    status_code = 200 if ok else 503
+    return JSONResponse(
+        status_code=status_code,
+        content={"status": "ok" if ok else "degraded", "checks": checks},
+    )
+
+
+@app.get("/version", tags=["ops"])
+def version():
+    return version_info(app_version=app.version, auth_mode=AUTH_MODE)
 
 
 def main() -> None:

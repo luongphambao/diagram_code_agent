@@ -34,6 +34,13 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+    # Runs as a fixed non-root UID/GID (improvement plan §1.6 — see
+    # backend/Dockerfile). Defaults to 1000:1000 (the image's baked-in
+    # `appuser`, and the common default host-user UID on Linux); if your host
+    # user has a different UID/GID and ./artifacts ends up not writable,
+    # `export UID GID` (or set them in a top-level .env) before `docker
+    # compose up` to match your account.
+    user: "${UID:-1000}:${GID:-1000}"
     # Secrets (OPENAI_API_KEY, LANGSMITH_*) come from backend/.env at RUNTIME —
     # they are never baked into the image.
     env_file:
