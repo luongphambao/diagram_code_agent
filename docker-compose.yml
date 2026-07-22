@@ -58,6 +58,20 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+    # Bypass Docker's embedded DNS proxy (127.0.0.11) for external lookups.
+    # Root-caused live: resolving a Modal sandbox's per-task hostname
+    # (task-<id>.w.modal.host — DNSSEC-signed zone, short 60s TTL, minted
+    # fresh per sandbox) via the container's default resolver chain took
+    # 300+ seconds before finally failing, long enough that the sandbox's
+    # own timeout expired first — while `dig`/`getaddrinfo` against 8.8.8.8
+    # directly resolved the SAME hostname in under half a second. Every other
+    # domain tested (pypi.org, github, api.modal.com, ...) was unaffected —
+    # this is specific to Docker's embedded DNS proxy's handling of this
+    # zone, not a real network/DNS outage. Modal render calls will hang for
+    # minutes and then fail without this.
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     # Runs as a fixed non-root UID/GID (improvement plan §1.6 — see
     # backend/Dockerfile). Defaults to 1000:1000; see artifacts-init above
     # for why ./artifacts being host-owned by a matching UID is NOT
