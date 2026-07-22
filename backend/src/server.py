@@ -25,6 +25,7 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 from agent import build_agent, make_persistence
 from config.cors import resolve_allowed_origins
 import conversations as conv_db
+from security.auth import AUTH_MODE
 import session_state
 
 from routers.chat import router as chat_router
@@ -98,6 +99,17 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
+)
+
+# --- Auth (improvement plan §0.6) -------------------------------------------
+# Importing security.auth above already evaluated AUTH_MODE and raised
+# AuthConfigError if APP_ENV=production picked an insecure mode (see
+# resolve_auth_mode) — this just makes the effective posture visible at
+# startup, mirroring the CORS warning above.
+logger.info(
+    "Auth mode: %s%s", AUTH_MODE,
+    " (DEV FALLBACK — trusts client-supplied userEmail/userRole; refused in "
+    "APP_ENV=production)" if AUTH_MODE == "none" else "",
 )
 
 

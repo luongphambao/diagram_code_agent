@@ -6,7 +6,7 @@ import json
 import logging
 
 import httpx
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.errors import GraphRecursionError
@@ -22,6 +22,8 @@ from backends import (
 from runtime.safe_path import safe_workspace_path
 from context import SessionContext
 from domain.reporting.reporting import record_report_step
+from security.auth import Identity, require_identity
+from security.ownership import ensure_owner
 from tools import GATE_TOOL_NAMES, allowed_decisions_for, clear_stage_markers
 import session_state as ss
 from session_state import (
@@ -177,12 +179,20 @@ async def _restore_workspace_from_db(pool, thread_id: str, workspace) -> None:
 
 
 @router.post("/agui")
-async def agui_endpoint(request: Request):
+async def agui_endpoint(
+    request: Request, identity: Identity = Depends(require_identity)
+):
     body = await request.json()
     thread_id = body.get("threadId", "thread-default")
     run_id = body.get("runId", "run-1")
     messages = body.get("messages", [])
     file_ids = body.get("file_ids", [])
+
+    # §0.6: threadId is client-supplied and was previously unauthenticated — any
+    # caller who knew/guessed a thread_id could resume/approve it. The first
+    # authenticated caller to touch a thread_id claims it; a later caller with a
+    # different identity gets 404 rather than silently attaching to it.
+    await ensure_owner(request.app.state.pool, thread_id, identity.email)
 
     # §4.10 per-thread isolation: every JSON store / stage marker / render artifact —
     # including the agent's own built-in FilesystemBackend, requirements.md, and the
@@ -198,7 +208,10 @@ async def agui_endpoint(request: Request):
         "metadata": {"thread_id": thread_id, "run_id": run_id},
     }
     session_ctx = SessionContext(
-        user_email=body.get("userEmail", "") or "",
+        # §0.6: user_email now comes from the server-verified identity, not the
+        # client-supplied body — a self-asserted userEmail could previously be
+        # used as the HITL approver-of-record for any gate.
+        user_email=identity.email,
         composio_api_key=body.get("composioApiKey", "") or "",
         gmail_account_id=body.get("gmailAccountId", "") or "",
         calendar_account_id=body.get("calendarAccountId", "") or "",
@@ -225,7 +238,7 @@ async def agui_endpoint(request: Request):
                 # (accept_risk, approve_with_assumptions, request_evidence, ...). It is
                 # projected into the CSM on the next build_solution_model.
                 _persist_decision_record(payload, pending_name, session_ctx.user_email,
-                                         approver_role=body.get("userRole", "") or "")
+                                         approver_role=identity.role)
                 # §4.10: on a gate approval, snapshot the signed-off solution model as an
                 # immutable approved revision (approved/REV-<n>.json) for audit/repro.
                 if decision.get("type") == "approve" and pending_name in GATE_TOOL_NAMES:
@@ -649,6 +662,7 @@ async def agui_endpoint(request: Request):
                                **_artifacts(ws), "run_metrics": run_met},
                         last_msg=_last_user_text(messages),
                         auto_name=(_last_user_text(messages) or "Untitled")[:50],
+                        owner_email=identity.email,
                     )
                     yield _sse({"type": "RUN_FINISHED", "threadId": thread_id, "runId": run_id})
                     return
@@ -719,6 +733,7 @@ async def agui_endpoint(request: Request):
                 state=_upsert_snap,
                 last_msg=_last_user_text(messages),
                 auto_name=(_last_user_text(messages) or "Untitled")[:50],
+                owner_email=identity.email,
             )
         if not run_errored:
             # AG-UI treats RUN_ERROR as terminal; don't also emit RUN_FINISHED.

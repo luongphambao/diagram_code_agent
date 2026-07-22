@@ -7,13 +7,14 @@ import os
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 from backends import AGENT_SPACE
 from document_parsers import parse_file
 from document_parsers.content_sniff import sniff_mismatch
 from document_parsers.parsers import SUPPORTED_EXT
 from safe_path import safe_filename
+from security.auth import Identity, require_identity
 
 router = APIRouter(tags=["upload"])
 
@@ -50,7 +51,15 @@ async def _stream_to_disk(file: UploadFile, dest: Path) -> None:
 
 
 @router.post("/upload")
-async def upload(file: UploadFile = File(...)):
+async def upload(
+    file: UploadFile = File(...), identity: Identity = Depends(require_identity)
+):
+    # §0.6: require *some* server-resolved identity so /upload isn't a fully
+    # anonymous write surface — no per-upload ownership is enforced here (a
+    # file_id is only useful to the caller that receives it back in this same
+    # response and later attaches it via file_ids on /agui, which is where
+    # thread-ownership is actually enforced).
+    del identity
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
     ext = Path(file.filename or "").suffix.lower()

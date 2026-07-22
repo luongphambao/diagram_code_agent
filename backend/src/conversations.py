@@ -26,13 +26,20 @@ CREATE TABLE IF NOT EXISTS conversations (
     last_message  TEXT        NOT NULL DEFAULT '',
     messages_json TEXT        NOT NULL DEFAULT '[]',
     state_json    TEXT        NOT NULL DEFAULT '{}',
-    outcomes_json TEXT        NOT NULL DEFAULT '[]'
+    outcomes_json TEXT        NOT NULL DEFAULT '[]',
+    owner_email   TEXT        NOT NULL DEFAULT ''
 );
 """
 
-# Idempotent: add outcomes_json to existing tables created without it.
+# Idempotent: add columns to existing tables created without them.
+# owner_email (improvement plan §0.6): the first authenticated caller to touch a
+# thread claims it (see security/ownership.py). '' means unowned — either a
+# legacy row from before this migration, or a thread nobody has claimed yet;
+# unowned rows stay visible to every caller rather than locking out existing
+# users the moment this ships (see list_all/get_owner/claim_owner below).
 _ALTER_DDL = """
 ALTER TABLE conversations ADD COLUMN IF NOT EXISTS outcomes_json TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS owner_email TEXT NOT NULL DEFAULT '';
 """
 
 
@@ -49,16 +56,27 @@ async def setup(pool) -> None:
         logger.warning("conversations table setup failed: %s", exc)
 
 
-async def list_all(pool) -> list[dict]:
+async def list_all(pool, owner_email: str = "") -> list[dict]:
+    """List conversations visible to *owner_email*: rows it owns, plus unowned
+    (legacy/unclaimed) rows. An empty *owner_email* (unauthenticated dev mode)
+    returns everything, matching the pre-§0.6 behavior."""
     if pool is None:
         return []
     try:
         async with pool.connection() as conn:
             async with conn.cursor() as cur:
-                await cur.execute(
-                    "SELECT thread_id, name, created_at, updated_at, last_message "
-                    "FROM conversations ORDER BY updated_at DESC"
-                )
+                if owner_email:
+                    await cur.execute(
+                        "SELECT thread_id, name, created_at, updated_at, last_message "
+                        "FROM conversations WHERE owner_email = %s OR owner_email = '' "
+                        "ORDER BY updated_at DESC",
+                        (owner_email,),
+                    )
+                else:
+                    await cur.execute(
+                        "SELECT thread_id, name, created_at, updated_at, last_message "
+                        "FROM conversations ORDER BY updated_at DESC"
+                    )
                 rows = await cur.fetchall()
         return [
             {
@@ -75,18 +93,64 @@ async def list_all(pool) -> list[dict]:
         return []
 
 
-async def create(pool, thread_id: str, name: str) -> dict:
+async def create(pool, thread_id: str, name: str, owner_email: str = "") -> dict:
+    """Create *thread_id* (no-op if it already exists) and, if it is currently
+    unowned, claim it for *owner_email* — covers both "brand-new thread" and "an
+    /agui run touched this thread_id before the user explicitly named it"
+    without overwriting an existing owner or name."""
     if pool is not None:
         try:
             async with pool.connection() as conn:
                 await conn.execute(
-                    "INSERT INTO conversations (thread_id, name) VALUES (%s, %s) "
-                    "ON CONFLICT (thread_id) DO NOTHING",
-                    (thread_id, name),
+                    "INSERT INTO conversations (thread_id, name, owner_email) "
+                    "VALUES (%s, %s, %s) "
+                    "ON CONFLICT (thread_id) DO UPDATE SET "
+                    "owner_email = CASE WHEN conversations.owner_email = '' "
+                    "THEN EXCLUDED.owner_email ELSE conversations.owner_email END",
+                    (thread_id, name, owner_email),
                 )
         except Exception as exc:  # noqa: BLE001
             logger.warning("create conversation failed: %s", exc)
     return {"thread_id": thread_id, "name": name}
+
+
+async def get_owner(pool, thread_id: str) -> str | None:
+    """Return the owner email for *thread_id*, or None if the thread doesn't
+    exist yet or has no persistence layer (in-memory dev mode)."""
+    if pool is None:
+        return None
+    try:
+        async with pool.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    "SELECT owner_email FROM conversations WHERE thread_id=%s",
+                    (thread_id,),
+                )
+                row = await cur.fetchone()
+        if row is None:
+            return None
+        return row[0] or None
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("get_owner failed: %s", exc)
+        return None
+
+
+async def claim_owner(pool, thread_id: str, owner_email: str) -> None:
+    """Bind *thread_id* to *owner_email*, creating the row if it doesn't exist
+    yet. No-op if the row already has a (different) owner — first claim wins."""
+    if pool is None or not owner_email:
+        return
+    try:
+        async with pool.connection() as conn:
+            await conn.execute(
+                "INSERT INTO conversations (thread_id, owner_email) VALUES (%s, %s) "
+                "ON CONFLICT (thread_id) DO UPDATE SET "
+                "owner_email = CASE WHEN conversations.owner_email = '' "
+                "THEN EXCLUDED.owner_email ELSE conversations.owner_email END",
+                (thread_id, owner_email),
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("claim_owner failed: %s", exc)
 
 
 async def rename(pool, thread_id: str, name: str) -> None:
@@ -122,12 +186,15 @@ async def upsert_run(
     state: dict,
     last_msg: str,
     auto_name: str,
+    owner_email: str = "",
 ) -> None:
     """Upsert conversation after each /agui run completes.
 
     - Creates the row if new (uses auto_name as the initial name).
     - Updates timestamps, last_message, messages_json, state_json on every run.
     - Does NOT overwrite a user-set name (only overwrites 'Untitled').
+    - Claims the row for *owner_email* if it is currently unowned (§0.6); does
+      NOT overwrite an existing (different) owner.
     """
     if pool is None:
         return
@@ -138,8 +205,8 @@ async def upsert_run(
             await conn.execute(
                 """
                 INSERT INTO conversations
-                    (thread_id, name, last_message, messages_json, state_json)
-                VALUES (%s, %s, %s, %s, %s)
+                    (thread_id, name, last_message, messages_json, state_json, owner_email)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT (thread_id) DO UPDATE SET
                     updated_at    = NOW(),
                     last_message  = EXCLUDED.last_message,
@@ -149,6 +216,11 @@ async def upsert_run(
                                         WHEN conversations.name = 'Untitled'
                                         THEN EXCLUDED.name
                                         ELSE conversations.name
+                                    END,
+                    owner_email   = CASE
+                                        WHEN conversations.owner_email = ''
+                                        THEN EXCLUDED.owner_email
+                                        ELSE conversations.owner_email
                                     END
                 """,
                 (
@@ -157,6 +229,7 @@ async def upsert_run(
                     last_msg[:200],
                     json.dumps(messages, ensure_ascii=False),
                     json.dumps(state, ensure_ascii=False),
+                    owner_email,
                 ),
             )
     except Exception as exc:  # noqa: BLE001

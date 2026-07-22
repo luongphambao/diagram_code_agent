@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 
 from backends import resolve_workspace
@@ -23,6 +23,8 @@ from comments import (
     read_comments,
     resolve_comment,
 )
+from security.auth import Identity, require_identity
+from security.ownership import check_owner
 
 router = APIRouter(prefix="/comments", tags=["comments"])
 
@@ -42,22 +44,30 @@ class _CommentResolve(BaseModel):
 
 
 @router.get("")
-async def list_comments(threadId: str = "thread-default"):
+async def list_comments(
+    request: Request, threadId: str = "thread-default",
+    identity: Identity = Depends(require_identity),
+):
+    await check_owner(request.app.state.pool, threadId, identity.email)
     ws = resolve_workspace(threadId)
     return {"comments": [c.model_dump() for c in read_comments(ws)]}
 
 
 @router.post("")
-async def create_comment(body: _CommentCreate):
+async def create_comment(
+    body: _CommentCreate, request: Request,
+    identity: Identity = Depends(require_identity),
+):
     if not body.body.strip():
         return {"error": "empty comment"}
+    await check_owner(request.app.state.pool, body.threadId, identity.email)
     ws = resolve_workspace(body.threadId)
     rec = new_comment_record(
         body.body.strip(),
         seq=next_seq(ws),
         anchor_entity_id=body.anchor_entity_id,
-        author=body.author,
-        role=body.role,
+        author=body.author or identity.email,
+        role=body.role or identity.role,
         timestamp=datetime.now(timezone.utc).isoformat(),
     )
     append_comment(rec, ws)
@@ -65,11 +75,15 @@ async def create_comment(body: _CommentCreate):
 
 
 @router.post("/resolve")
-async def resolve(body: _CommentResolve):
+async def resolve(
+    body: _CommentResolve, request: Request,
+    identity: Identity = Depends(require_identity),
+):
+    await check_owner(request.app.state.pool, body.threadId, identity.email)
     ws = resolve_workspace(body.threadId)
     rec = resolve_comment(
         body.commentId,
-        resolved_by=body.resolved_by,
+        resolved_by=body.resolved_by or identity.email,
         resolved_at=datetime.now(timezone.utc).isoformat(),
         workspace=ws,
     )
