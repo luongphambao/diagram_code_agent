@@ -244,10 +244,24 @@ class TraceLink(BaseModel):
 
 # --- the model ---------------------------------------------------------------
 
+# Improvement plan §1.2: the shape (field set) of SolutionModel, distinct from
+# `revision` (a per-workspace content-change counter). Bump this only when a
+# CHANGE to the field set/entity shape needs migration handling, not on every
+# ordinary edit. Was previously hardcoded separately as a string literal in
+# health_checks.py's version_info() — that now imports this constant instead,
+# so there is exactly one place recording "what shape is a current CSM".
+SCHEMA_VERSION = "1.0"
+
 
 class SolutionModel(BaseModel):
     """The canonical, ID'd solution. Artifacts are projections of / traced to this."""
 
+    # A model loaded from a solution_model.json written before this field
+    # existed simply gets the default here — Pydantic fills missing fields
+    # from their default rather than erroring, so old on-disk snapshots keep
+    # loading (see test_csm.py's schema_version migration test) — no explicit
+    # migration code needed for this particular addition.
+    schema_version: str = SCHEMA_VERSION
     revision: int = 1
     created_at: Optional[str] = None  # injected; excluded from the content hash
 
@@ -287,10 +301,12 @@ class SolutionModel(BaseModel):
 
     # -- content hash / revision --
     def content_hash(self) -> str:
-        """sha256 over the entity content, EXCLUDING volatile fields (created_at,
-        revision). Two runs over the same artifacts produce the same hash, so a
-        change-impact diff can tell "same content" from "real change"."""
-        payload = self.model_dump(exclude={"created_at", "revision"})
+        """sha256 over the entity content, EXCLUDING volatile/metadata fields
+        (created_at, revision, schema_version). Two runs over the same
+        artifacts produce the same hash, so a change-impact diff can tell
+        "same content" from "real change" — a schema_version bump alone must
+        not look like a content change."""
+        payload = self.model_dump(exclude={"created_at", "revision", "schema_version"})
         blob = json.dumps(payload, sort_keys=True, ensure_ascii=False)
         return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 

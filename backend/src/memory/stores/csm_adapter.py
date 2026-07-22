@@ -43,6 +43,36 @@ SOLUTION_MODEL_PREV_NAME = "solution_model.prev.json"
 APPROVED_DIR_NAME = "approved"
 
 
+def load_richest_snapshot(workspace: Path) -> Optional[SolutionModel]:
+    """Load whichever of `solution_model.json` / `solution_model.prev.json` carries
+    the most architecture content (components + requirements + risks).
+
+    Improvement plan §1.2: previously duplicated verbatim in ppt_reporting.py and
+    tools/icon_tools.py — one shared helper now, so both agree on the same rule.
+
+    Normally `solution_model.json` is the current model. But `build_solution_model`
+    can transiently rebuild from an EMPTY projection if the legacy source files are
+    momentarily absent (see its own "guard against clobbering" comment) — when that
+    happens `.prev.json` still holds the last real model, so pick by entity count
+    rather than blindly trusting whichever file has the newer name. Returns None if
+    neither file exists or parses.
+    """
+    best: Optional[SolutionModel] = None
+    best_n = -1
+    for name in (SOLUTION_MODEL_NAME, SOLUTION_MODEL_PREV_NAME):
+        path = workspace / name
+        if not path.exists():
+            continue
+        try:
+            model = SolutionModel.model_validate(json.loads(path.read_text(encoding="utf-8")))
+        except Exception:  # noqa: BLE001
+            continue
+        n = len(model.components) + len(model.requirements) + len(model.risks)
+        if n > best_n:
+            best, best_n = model, n
+    return best
+
+
 def archive_approved_revision(workspace: Optional[Path] = None) -> Optional[Path]:
     """Snapshot the current `solution_model.json` as an immutable approved revision.
 

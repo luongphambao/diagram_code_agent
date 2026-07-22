@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from memory.stores.csm import (
     ID_PREFIX,
+    SCHEMA_VERSION,
     Assumption,
     Component,
     Constraint,

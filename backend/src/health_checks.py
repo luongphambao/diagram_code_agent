@@ -77,15 +77,18 @@ def version_info(*, app_version: str, auth_mode: str) -> dict:
     backend/Dockerfile); locally they fall back to "unknown" rather than
     guessing, since a wrong value is worse than an honest "not set" for a
     field whose whole purpose is pinpointing exactly what's deployed.
-    `solution_schema_version` tracks memory/stores/csm.py's SolutionModel
-    shape — it will move to a real field on that model when §1.2 adds
-    migration support."""
+    `solution_schema_version` now reads memory/stores/csm.py's
+    `SolutionModel.schema_version` field/default directly (improvement plan
+    §1.2) instead of being a second, independently-hardcoded string that
+    could silently drift from the model's own value."""
+    from memory.stores.csm import SCHEMA_VERSION
+
     return {
         "version": app_version,
         "git_sha": os.getenv("GIT_SHA", "unknown"),
         "build_time": os.getenv("BUILD_TIME", "unknown"),
         "api_schema_version": "1",
-        "solution_schema_version": "1.0",
+        "solution_schema_version": SCHEMA_VERSION,
         "auth_mode": auth_mode,
         "sandbox_provider": os.getenv("SANDBOX_PROVIDER", "modal"),
     }

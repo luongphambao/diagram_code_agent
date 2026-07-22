@@ -227,3 +227,45 @@ def test_build_writes_prev_snapshot_only_on_change(tmp_path):
     prev = tmp_path / "solution_model.prev.json"
     assert prev.exists()
     assert json.loads(prev.read_text(encoding="utf-8"))["revision"] == 1  # the prior rev
+
+
+# --- schema_version (improvement plan §1.2) -----------------------------------
+
+
+def test_schema_version_defaults_to_current():
+    m = csm.SolutionModel()
+    assert m.schema_version == csm.SCHEMA_VERSION
+
+
+def test_schema_version_migration_old_snapshot_without_the_field_still_loads():
+    """A solution_model.json written before schema_version existed has no such key
+    at all — Pydantic must fill it from the field default rather than erroring, so
+    every already-deployed workspace's on-disk snapshot keeps loading unmodified."""
+    old_snapshot = {
+        "revision": 3,
+        "created_at": "2026-01-01T00:00:00Z",
+        "requirements": [{"id": "REQ-1", "statement": "OCR extracts text",
+                          "status": "confirmed", "provenance": "human"}],
+    }
+    assert "schema_version" not in old_snapshot
+    model = csm.SolutionModel.model_validate(old_snapshot)
+    assert model.schema_version == csm.SCHEMA_VERSION
+    assert model.revision == 3
+    assert model.by_id("REQ-1") is not None
+
+
+def test_schema_version_is_excluded_from_content_hash():
+    """Bumping schema_version alone must not look like a content change — a
+    change-impact diff (csm_diff) should only fire on real entity edits."""
+    m1 = csm.SolutionModel(schema_version="1.0")
+    m2 = csm.SolutionModel(schema_version="2.0")
+    assert m1.content_hash() == m2.content_hash()
+
+
+def test_health_checks_version_info_reads_the_same_schema_version():
+    """health_checks.version_info() must report the SAME string as
+    csm.SCHEMA_VERSION, not an independently hardcoded literal that could drift."""
+    from health_checks import version_info
+
+    info = version_info(app_version="3.0.0", auth_mode="header")
+    assert info["solution_schema_version"] == csm.SCHEMA_VERSION
