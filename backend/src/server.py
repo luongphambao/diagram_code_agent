@@ -35,7 +35,20 @@ from routers.comments import router as comments_router
 from routers.conversations import router as conversations_router
 from routers.upload import router as upload_router
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(message)s", datefmt="%H:%M:%S")
+# Structured logging context (improvement plan §1.4): every log line carries
+# request/thread/run correlation ids bound by routers/chat.py's bind_context(),
+# defaulting to "-" outside a bound request (startup logs, background tasks).
+from observability import ContextFilter, LOG_FORMAT  # noqa: E402
+
+logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, datefmt="%H:%M:%S")
+# A Filter attached via Logger.addFilter() only runs for records originating
+# from THAT logger, not ones propagated up from a child (e.g. "diagram-agent")
+# — logging.Logger.handle() checks the originating logger's own filters, then
+# hands off to each handler's filters via Handler.handle(), never re-checking
+# ancestor loggers' filters. The filter has to live on the root's HANDLER
+# (what basicConfig() just created) to see every propagated record.
+for _h in logging.getLogger().handlers:
+    _h.addFilter(ContextFilter())
 logger = logging.getLogger("diagram-agent")
 for _noisy in ("httpx", "httpcore", "openai", "urllib3"):
     logging.getLogger(_noisy).setLevel(logging.WARNING)

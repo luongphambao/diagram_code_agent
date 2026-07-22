@@ -22,6 +22,7 @@ from backends import (
 from runtime.safe_path import safe_workspace_path
 from context import SessionContext
 from domain.reporting.reporting import record_report_step
+from observability import new_id, reset_context, set_context
 from security.auth import Identity, require_identity
 from security.ownership import ensure_owner
 from tools import GATE_TOOL_NAMES, allowed_decisions_for, clear_stage_markers
@@ -229,6 +230,12 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
 
     async def stream():
         _ws_token = set_current_workspace(ws)
+        # §1.4: bind correlation ids for every log line this run emits, reset
+        # in the same finally: as the workspace token below (same lifetime —
+        # both scoped to this one streamed /agui run).
+        _ctx_token = set_context(
+            request_id=new_id(), thread_id=thread_id, run_id=run_id
+        )
         _upsert_snap: dict = {}
         run_errored = False
         yield _sse({"type": "RUN_STARTED", "threadId": thread_id, "runId": run_id})
@@ -845,6 +852,7 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
             yield _sse({"type": "RUN_ERROR", "message": str(exc), "code": "internal_error"})
         finally:
             reset_current_workspace(_ws_token)
+            reset_context(_ctx_token)
 
         if _upsert_snap:
             await conv_db.upsert_run(

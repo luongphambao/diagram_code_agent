@@ -8,11 +8,13 @@ pre-computed when the blueprint is approved; audit_diagram_code / plan_style_siz
 from __future__ import annotations
 
 import json
+import logging
 import math
 import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Annotated, Literal, Optional
 
@@ -22,6 +24,7 @@ from pydantic import BaseModel, Field
 
 from backends import OUTPUTS_DIR, current_workspace
 from domain.reporting.reporting import record_artifact_inventory, record_report_step
+from observability import new_id, reset_context, set_context
 from runtime.sandbox.guards import _audit_add, _audit_code
 from runtime.sandbox.provider import get_sandbox_runner
 from .constants import (
@@ -42,6 +45,8 @@ from .stage_markers import (
     reset_render_count,
     _reset_revision_count,
 )
+
+logger = logging.getLogger("diagram-agent")
 
 
 @tool
@@ -121,27 +126,54 @@ def render_diagram(
             p.unlink()
     (current_workspace() / "diagram.py").write_text(code, encoding="utf-8")
 
+    # §1.4: a render_job_id correlates every log line for this one render
+    # attempt (pre-flight through artifact validation), and sandbox_id (once
+    # known) ties it to the specific Modal sandbox that ran it — both useful
+    # for matching a slow/failed render report to sandbox-provider-side logs.
+    render_job_id = new_id()
+    _ctx_token = set_context(render_job_id=render_job_id)
+    _render_started = time.monotonic()
     try:
-        proc = get_sandbox_runner().render(current_workspace(), timeout=RENDER_TIMEOUT_S)
-    except subprocess.TimeoutExpired:
-        return ToolMessage(
-            content=f"Render #{attempt}/{RENDER_HARD_CAP} TIMED OUT after {RENDER_TIMEOUT_S}s. "
-            "Simplify the diagram or fix infinite work.",
-            name="render_diagram",
-            tool_call_id=tool_call_id,
-            status="error",
-        )
+        try:
+            proc = get_sandbox_runner().render(current_workspace(), timeout=RENDER_TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            logger.warning(
+                "render #%d timed out after %.1fs (limit %ds)",
+                attempt, time.monotonic() - _render_started, RENDER_TIMEOUT_S,
+            )
+            return ToolMessage(
+                content=f"Render #{attempt}/{RENDER_HARD_CAP} TIMED OUT after {RENDER_TIMEOUT_S}s. "
+                "Simplify the diagram or fix infinite work.",
+                name="render_diagram",
+                tool_call_id=tool_call_id,
+                status="error",
+            )
 
-    png = current_workspace() / "out.png"
-    if proc.returncode != 0 or not png.exists():
-        err = (proc.stderr or proc.stdout or "").strip()
-        return ToolMessage(
-            content=f"Render #{attempt}/{RENDER_HARD_CAP} FAILED (exit {proc.returncode}). "
-            f"Fix the code and retry only if under budget.\n\n{err[-3000:]}",
-            name="render_diagram",
-            tool_call_id=tool_call_id,
-            status="error",
+        sandbox_id = getattr(proc, "sandbox_id", None)
+        if sandbox_id:
+            set_context(sandbox_id=sandbox_id)
+        duration_s = time.monotonic() - _render_started
+
+        png = current_workspace() / "out.png"
+        if proc.returncode != 0 or not png.exists():
+            err = (proc.stderr or proc.stdout or "").strip()
+            logger.warning(
+                "render #%d failed exit=%s duration=%.1fs sandbox=%s",
+                attempt, proc.returncode, duration_s, sandbox_id or "-",
+            )
+            return ToolMessage(
+                content=f"Render #{attempt}/{RENDER_HARD_CAP} FAILED (exit {proc.returncode}). "
+                f"Fix the code and retry only if under budget.\n\n{err[-3000:]}",
+                name="render_diagram",
+                tool_call_id=tool_call_id,
+                status="error",
+            )
+        logger.info(
+            "render #%d succeeded duration=%.1fs sandbox=%s",
+            attempt, duration_s, sandbox_id or "-",
         )
+    finally:
+        reset_context(_ctx_token)
 
     audit = _layout_audit()
     text = (
