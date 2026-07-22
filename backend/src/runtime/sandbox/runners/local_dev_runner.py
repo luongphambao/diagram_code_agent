@@ -16,7 +16,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from ..contracts import RenderLimits, RenderResult
+from ..artifact_validation import validate_artifact
+from ..contracts import DEFAULT_DIAGRAM_OUTPUTS, RenderLimits, RenderResult
 from ..render_exec import run_render
 
 # Prefixes covering every secret-bearing env var this repo currently reads
@@ -76,13 +77,25 @@ class LocalDevRunner:
         *,
         timeout: int,
         script_name: str = "diagram.py",
+        allowed_outputs: tuple[str, ...] | None = None,
     ) -> RenderResult:
+        outputs = allowed_outputs if allowed_outputs is not None else DEFAULT_DIAGRAM_OUTPUTS
         proc = run_render(
             workspace,
             timeout=timeout,
             script_name=script_name,
             env=_scrubbed_env(),
         )
+        # The script writes directly into `workspace` (no upload/download
+        # step, unlike ModalSandboxRunner) — but its output is exactly as
+        # untrusted, so validate every declared output that actually exists
+        # before this runner is considered a drop-in for the Modal path.
+        # Matches ModalSandboxRunner's behavior: a failing artifact raises
+        # ArtifactValidationError rather than silently returning bad content.
+        for name in outputs:
+            path = workspace / name
+            if path.exists():
+                validate_artifact(name, path.read_bytes())
         return RenderResult(
             returncode=proc.returncode,
             stdout=(proc.stdout or "")[: self._limits.max_log_bytes],

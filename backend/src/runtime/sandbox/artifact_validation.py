@@ -30,6 +30,7 @@ _MAX_PNG_PIXELS = 64_000_000  # ~64 MP, generous for even a dense poster diagram
 _MAX_DRAWIO_DEPTH = 64
 _MAX_DRAWIO_NODES = 20_000
 _MAX_DOT_BYTES = 5_000_000
+_MAX_CSV_BYTES = 25_000_000
 
 
 class ArtifactValidationError(ValueError):
@@ -51,6 +52,8 @@ def validate_artifact(filename: str, data: bytes) -> None:
         _validate_dot(data)
     elif filename.endswith(".json"):
         _validate_json_text(data)
+    elif filename.endswith(".csv"):
+        _validate_csv(data)
 
 
 def _validate_png(data: bytes) -> None:
@@ -136,3 +139,29 @@ def _validate_json_text(data: bytes) -> None:
         json.loads(data.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ArtifactValidationError(f"JSON artifact is not valid JSON: {exc}") from exc
+
+
+def _validate_csv(data: bytes) -> None:
+    """Added for the code-interpreter phase (a code-authored data-analysis
+    tool can declare a ``.csv`` as an output). Deliberately lenient — CSV has
+    no fixed schema, so this only bounds size and confirms the content is
+    parseable tabular text, not that any particular column layout holds. A
+    caller needing a specific shape checks that itself after reading the
+    file back (see the ``allowed_outputs`` docstring in ``runners/base.py``).
+    """
+    if len(data) > _MAX_CSV_BYTES:
+        raise ArtifactValidationError("CSV artifact exceeds the maximum size")
+    try:
+        text = data.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise ArtifactValidationError("CSV artifact is not valid UTF-8") from exc
+
+    import csv as _csv
+    import io as _io
+
+    try:
+        rows = list(_csv.reader(_io.StringIO(text)))
+    except _csv.Error as exc:
+        raise ArtifactValidationError(f"CSV artifact failed to parse: {exc}") from exc
+    if not rows:
+        raise ArtifactValidationError("CSV artifact is empty")

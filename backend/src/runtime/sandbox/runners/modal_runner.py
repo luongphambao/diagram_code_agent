@@ -1,26 +1,33 @@
 """Modal Sandbox runner (improvement plan §0.1 / Modal Sandbox decision).
 
-Executes generated ``diagram.py`` in an isolated, ephemeral Modal Sandbox
-with outbound networking blocked and no application secret in its
-environment — closing the gap the local runner (see ``local_dev_runner.py``
-and ``runtime/sandbox/__init__.py``'s threat-model docstring) cannot: real
+Executes agent-generated Python in an isolated, ephemeral Modal Sandbox with
+outbound networking blocked and no application secret in its environment —
+closing the gap the local runner (see ``local_dev_runner.py`` and
+``runtime/sandbox/__init__.py``'s threat-model docstring) cannot: real
 OS-level isolation, not just a scrubbed environment.
+
+Originally diagram-only (a fixed ``diagram.py`` in, ``out.png``/``out.dot``/
+``out.drawio`` out). Generalized in the improvement plan's code-interpreter
+phase (§B/§C) into a general "run this script, get these declared files
+back" primitive: ``render_diagram`` (``tools/rendering_tools.py``) remains
+one caller, passing its own diagram-output filenames; other tools (WBS
+re-estimation, data-analysis) pass their own via ``allowed_outputs``.
 
 Unlike ``LocalDevRunner`` (which runs *in* the local per-thread workspace
 and needs no file transfer), ``render()`` here:
 
-  1. uploads every file already staged into ``workspace`` (``diagram.py``,
-     the staged ``prettygraph/`` package, any resolved icon/logo assets the
-     script references — see ``tools/stage_markers.py``'s ``_stage_helpers``
-     and ``tools/icon_tools.py``) into a fresh sandbox's filesystem,
+  1. uploads every file already staged into ``workspace`` (the script, plus
+     whatever input data the caller staged there — the ``prettygraph/``
+     package + resolved icon/logo assets for a diagram render, or e.g. an
+     uploaded ``.xlsx``/``wbs.json`` for a data-analysis run) into a fresh
+     sandbox's filesystem,
   2. runs the script inside the sandbox with ``block_network=True``,
      ``secrets=[]``, and explicit CPU/memory/timeout limits,
-  3. downloads back only the allowlisted output filenames into the SAME
-     local workspace path, running each through
-     ``artifact_validation.validate_artifact`` before it is trusted, so every
-     downstream consumer (``export_drawio``, ``_layout_audit``,
-     ``_inspection_image_b64``, ``record_artifact_inventory``,
-     ``_archive_session``, ...) keeps working unmodified,
+  3. downloads back only ``allowed_outputs`` into the SAME local workspace
+     path, running each through ``artifact_validation.validate_artifact``
+     before it is trusted (format-level checks only — a caller needing a
+     specific *shape*, e.g. a Pydantic schema for a JSON result, validates
+     that itself after reading the file back),
   4. always terminates the sandbox, even on error — no sandbox is ever left
      running past a single render.
 
@@ -40,23 +47,9 @@ from pathlib import Path
 import modal
 
 from ..artifact_validation import validate_artifact
-from ..contracts import RenderLimits, RenderResult
+from ..contracts import DEFAULT_DIAGRAM_OUTPUTS, RenderLimits, RenderResult
 
 _REMOTE_WORKDIR = "/workspace"
-
-# Names render_diagram / export_drawio / _layout_audit / _archive_session may
-# look for after a render — mirrors tools/constants.py's _OUT_NAMES plus the
-# JSON side files a render can produce. Anything the script writes outside
-# this list never leaves the sandbox.
-_ALLOWED_OUTPUT_NAMES = (
-    "out.png",
-    "out.body.png",
-    "out.dot",
-    "out.drawio",
-    "out.nodes.json",
-    "out.slide.json",
-    "out.native_stats.json",
-)
 
 # Skipped when staging the local workspace into the sandbox — caches and
 # stage-marker litter the script has no business reading, and any leftover
@@ -90,7 +83,9 @@ class ModalSandboxRunner:
         *,
         timeout: int,
         script_name: str = "diagram.py",
+        allowed_outputs: tuple[str, ...] | None = None,
     ) -> RenderResult:
+        outputs = allowed_outputs if allowed_outputs is not None else DEFAULT_DIAGRAM_OUTPUTS
         source_path = workspace / script_name
         if source_path.exists() and source_path.stat().st_size > self._limits.max_source_bytes:
             raise ValueError(
@@ -119,7 +114,7 @@ class ModalSandboxRunner:
             tags={"service": "diagram-code-agent"},
         )
         try:
-            self._upload_workspace(sandbox, workspace)
+            self._upload_workspace(sandbox, workspace, outputs)
             proc = sandbox.exec(
                 "python",
                 script_name,
@@ -145,7 +140,7 @@ class ModalSandboxRunner:
                     output=stdout,
                     stderr=stderr,
                 )
-            self._download_artifacts(sandbox, workspace)
+            self._download_artifacts(sandbox, workspace, outputs)
             return RenderResult(
                 returncode=returncode,
                 stdout=stdout,
@@ -158,7 +153,7 @@ class ModalSandboxRunner:
             except Exception:  # noqa: BLE001 — never let cleanup mask the real error
                 pass
 
-    def _upload_workspace(self, sandbox: "modal.Sandbox", workspace: Path) -> None:
+    def _upload_workspace(self, sandbox: "modal.Sandbox", workspace: Path, outputs: tuple[str, ...]) -> None:
         fs = sandbox.filesystem
         made_dirs: set[str] = set()
         for path in sorted(workspace.rglob("*")):
@@ -169,7 +164,7 @@ class ModalSandboxRunner:
                 continue
             if path.suffix == ".pyc":
                 continue
-            if path.name in _ALLOWED_OUTPUT_NAMES:
+            if path.name in outputs:
                 # Stale output from a prior render — never re-upload; the
                 # script is expected to produce it fresh.
                 continue
@@ -183,10 +178,12 @@ class ModalSandboxRunner:
 
             fs.write_bytes(path.read_bytes(), remote_path)
 
-    def _download_artifacts(self, sandbox: "modal.Sandbox", workspace: Path) -> None:
+    def _download_artifacts(
+        self, sandbox: "modal.Sandbox", workspace: Path, outputs: tuple[str, ...]
+    ) -> None:
         fs = sandbox.filesystem
         total = 0
-        for name in _ALLOWED_OUTPUT_NAMES:
+        for name in outputs:
             remote_path = f"{_REMOTE_WORKDIR}/{name}"
             try:
                 info = fs.stat(remote_path)

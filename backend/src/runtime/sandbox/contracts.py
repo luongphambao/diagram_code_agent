@@ -57,3 +57,24 @@ class RenderResult:
     stdout: str = ""
     stderr: str = ""
     sandbox_id: str | None = None
+
+
+# Improvement plan's "code-interpreter" phase (§B): SandboxRunner.render() grew
+# an `allowed_outputs` parameter so a caller other than render_diagram (e.g. a
+# future WBS-recompute or data-analysis tool) can declare its own output
+# filenames instead of inheriting the diagram-specific allowlist. This tuple
+# is that diagram-specific allowlist, promoted here (out of modal_runner.py)
+# so every runner shares one definition of "render_diagram's default" instead
+# of each hardcoding its own copy that could silently drift apart. Names
+# render_diagram / export_drawio / _layout_audit / _archive_session may look
+# for after a render — mirrors tools/constants.py's _OUT_NAMES plus the JSON
+# side files a render can produce.
+DEFAULT_DIAGRAM_OUTPUTS: tuple[str, ...] = (
+    "out.png",
+    "out.body.png",
+    "out.dot",
+    "out.drawio",
+    "out.nodes.json",
+    "out.slide.json",
+    "out.native_stats.json",
+)

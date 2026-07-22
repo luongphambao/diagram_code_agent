@@ -24,12 +24,14 @@ import subprocess
 import pytest
 
 from runtime.sandbox.artifact_validation import ArtifactValidationError, validate_artifact
-from runtime.sandbox.contracts import RenderLimits, RenderResult
+from runtime.sandbox.contracts import DEFAULT_DIAGRAM_OUTPUTS, RenderLimits, RenderResult
 from runtime.sandbox.provider import SandboxConfigError, get_sandbox_runner
+from runtime.sandbox.runners.base import SandboxRunner
 from runtime.sandbox.runners.local_dev_runner import LocalDevRunner, _scrubbed_env
 
 
 # --- provider selection: fail-closed -----------------------------------------
+
 
 def test_provider_defaults_to_modal(monkeypatch):
     monkeypatch.delenv("SANDBOX_PROVIDER", raising=False)
@@ -61,6 +63,7 @@ def test_provider_rejects_unknown_provider(monkeypatch):
 
 
 # --- LocalDevRunner: secret scrubbing -----------------------------------------
+
 
 def test_scrubbed_env_removes_known_secrets(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-should-not-leak")
@@ -103,7 +106,89 @@ def test_local_dev_runner_propagates_timeout(tmp_path):
         LocalDevRunner().render(tmp_path, timeout=1)
 
 
+# --- generalized "run code" primitive (improvement plan §B) -------------------
+# render_diagram is one caller of SandboxRunner.render(); allowed_outputs lets
+# a different tool (WBS re-estimation, data-analysis) declare its own output
+# filenames instead of inheriting the diagram-render allowlist.
+
+
+def test_default_diagram_outputs_matches_render_diagram_expectations():
+    # A drift guard: if this list ever changes, render_diagram's explicit
+    # `allowed_outputs=DEFAULT_DIAGRAM_OUTPUTS` pass-through changes with it —
+    # this pins the exact set both runners fall back to.
+    assert DEFAULT_DIAGRAM_OUTPUTS == (
+        "out.png",
+        "out.body.png",
+        "out.dot",
+        "out.drawio",
+        "out.nodes.json",
+        "out.slide.json",
+        "out.native_stats.json",
+    )
+
+
+def test_both_runners_satisfy_the_sandbox_runner_protocol():
+    from runtime.sandbox.runners.modal_runner import ModalSandboxRunner
+
+    assert isinstance(LocalDevRunner(), SandboxRunner)
+    assert isinstance(ModalSandboxRunner(), SandboxRunner)
+
+
+def test_local_dev_runner_default_outputs_unchanged_when_omitted(tmp_path):
+    """Not passing allowed_outputs at all must behave identically to passing
+    DEFAULT_DIAGRAM_OUTPUTS explicitly — the back-compat guarantee every
+    existing caller (render_diagram) relies on."""
+    (tmp_path / "diagram.py").write_text("open('out.png','wb').write(b'not a real png')\n", encoding="utf-8")
+    # out.png is in DEFAULT_DIAGRAM_OUTPUTS, so the fake PNG must fail
+    # validation whether allowed_outputs is omitted or passed explicitly.
+    with pytest.raises(ArtifactValidationError):
+        LocalDevRunner().render(tmp_path, timeout=10)
+    (tmp_path / "diagram.py").write_text("open('out.png','wb').write(b'not a real png')\n", encoding="utf-8")
+    with pytest.raises(ArtifactValidationError):
+        LocalDevRunner().render(tmp_path, timeout=10, allowed_outputs=DEFAULT_DIAGRAM_OUTPUTS)
+
+
+def test_local_dev_runner_validates_a_custom_declared_output(tmp_path):
+    """A non-diagram caller (e.g. a future WBS-recompute tool) declares its
+    own output filename; that file gets the same untrusted-output validation
+    treatment as out.png does today — this is the generalization's whole
+    point, not just a wider allowlist."""
+    (tmp_path / "script.py").write_text(
+        "open('result.json','w').write('{not valid json')\n", encoding="utf-8"
+    )
+    with pytest.raises(ArtifactValidationError):
+        LocalDevRunner().render(
+            tmp_path, timeout=10, script_name="script.py", allowed_outputs=("result.json",)
+        )
+
+
+def test_local_dev_runner_ignores_files_outside_allowed_outputs(tmp_path):
+    """A file the script writes that isn't in allowed_outputs is simply not
+    considered — no validation, no error — matching ModalSandboxRunner's
+    "only allowlisted names ever leave the sandbox" behavior."""
+    (tmp_path / "script.py").write_text(
+        "open('scratch.tmp','w').write('garbage, never validated')\n"
+        "open('result.json','w').write('{\"ok\": true}')\n",
+        encoding="utf-8",
+    )
+    result = LocalDevRunner().render(
+        tmp_path, timeout=10, script_name="script.py", allowed_outputs=("result.json",)
+    )
+    assert result.returncode == 0
+
+
+def test_local_dev_runner_missing_declared_output_is_not_an_error(tmp_path):
+    """A script that doesn't produce every declared output shouldn't itself
+    be a validation failure — the caller (e.g. render_diagram) is
+    responsible for deciding whether a missing out.png means the render
+    failed; the runner only validates what actually exists."""
+    (tmp_path / "diagram.py").write_text("print('no files written')\n", encoding="utf-8")
+    result = LocalDevRunner().render(tmp_path, timeout=10)
+    assert result.returncode == 0
+
+
 # --- artifact_validation: untrusted output ------------------------------------
+
 
 def _minimal_png() -> bytes:
     import io
@@ -125,7 +210,7 @@ def test_validate_artifact_rejects_fake_png():
 
 
 def test_validate_artifact_accepts_minimal_drawio():
-    xml = b'<mxfile><diagram><mxGraphModel><root/></mxGraphModel></diagram></mxfile>'
+    xml = b"<mxfile><diagram><mxGraphModel><root/></mxGraphModel></diagram></mxfile>"
     validate_artifact("out.drawio", xml)  # must not raise
 
 
@@ -152,6 +237,25 @@ def test_validate_artifact_accepts_valid_json():
 def test_validate_artifact_rejects_non_utf8_dot():
     with pytest.raises(ArtifactValidationError):
         validate_artifact("out.dot", b"\xff\xfe not utf8")
+
+
+def test_validate_artifact_accepts_valid_csv():
+    validate_artifact("result.csv", b"role,cost\nbackend,120\nfrontend,80\n")  # must not raise
+
+
+def test_validate_artifact_rejects_non_utf8_csv():
+    with pytest.raises(ArtifactValidationError):
+        validate_artifact("result.csv", b"\xff\xfe not utf8")
+
+
+def test_validate_artifact_rejects_empty_csv():
+    with pytest.raises(ArtifactValidationError, match="empty"):
+        validate_artifact("result.csv", b"")
+
+
+def test_validate_artifact_rejects_oversized_csv():
+    with pytest.raises(ArtifactValidationError, match="maximum size"):
+        validate_artifact("result.csv", b"a" * 25_000_001)
 
 
 # --- ModalSandboxRunner: live isolation check (skipped without credentials) --

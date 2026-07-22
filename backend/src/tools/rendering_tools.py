@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field
 from backends import OUTPUTS_DIR, current_workspace
 from domain.reporting.reporting import record_artifact_inventory, record_report_step
 from observability import new_id, reset_context, set_context
+from runtime.sandbox.contracts import DEFAULT_DIAGRAM_OUTPUTS
 from runtime.sandbox.guards import _audit_add, _audit_code
 from runtime.sandbox.provider import get_sandbox_runner
 from .constants import (
@@ -135,11 +136,22 @@ def render_diagram(
     _render_started = time.monotonic()
     try:
         try:
-            proc = get_sandbox_runner().render(current_workspace(), timeout=RENDER_TIMEOUT_S)
+            proc = get_sandbox_runner().render(
+                current_workspace(),
+                timeout=RENDER_TIMEOUT_S,
+                # Explicit (not relying on the runner's own default) so
+                # render_diagram's output set stays self-documented and
+                # independent of whatever "the default" evolves to mean once
+                # other callers (WBS/data-analysis tools) start passing their
+                # own allowed_outputs — see runners/base.py's docstring.
+                allowed_outputs=DEFAULT_DIAGRAM_OUTPUTS,
+            )
         except subprocess.TimeoutExpired:
             logger.warning(
                 "render #%d timed out after %.1fs (limit %ds)",
-                attempt, time.monotonic() - _render_started, RENDER_TIMEOUT_S,
+                attempt,
+                time.monotonic() - _render_started,
+                RENDER_TIMEOUT_S,
             )
             return ToolMessage(
                 content=f"Render #{attempt}/{RENDER_HARD_CAP} TIMED OUT after {RENDER_TIMEOUT_S}s. "
@@ -159,7 +171,10 @@ def render_diagram(
             err = (proc.stderr or proc.stdout or "").strip()
             logger.warning(
                 "render #%d failed exit=%s duration=%.1fs sandbox=%s",
-                attempt, proc.returncode, duration_s, sandbox_id or "-",
+                attempt,
+                proc.returncode,
+                duration_s,
+                sandbox_id or "-",
             )
             return ToolMessage(
                 content=f"Render #{attempt}/{RENDER_HARD_CAP} FAILED (exit {proc.returncode}). "
@@ -170,7 +185,9 @@ def render_diagram(
             )
         logger.info(
             "render #%d succeeded duration=%.1fs sandbox=%s",
-            attempt, duration_s, sandbox_id or "-",
+            attempt,
+            duration_s,
+            sandbox_id or "-",
         )
     finally:
         reset_context(_ctx_token)
