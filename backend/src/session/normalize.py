@@ -162,3 +162,23 @@ def _normalize_tech_stack(ts) -> dict:
                     "risks": [],
                 }
     return out
+
+
+def _sum_layer_costs(ts: dict) -> dict | None:
+    """Deterministic sum of every layer's ``estimated_monthly_cost_usd`` — never trust
+    an LLM-asserted total (improvement plan §C: tech-stack cost fix). The model was
+    free to state any total_monthly_cost figure independent of what it wrote per layer,
+    and routinely did — a plausible-looking number that silently didn't match summing
+    its own per-layer estimates. Returns None when no layer has a cost estimate (there
+    is nothing to sum, not "$0/mo").
+    """
+    mins: list[int] = []
+    maxs: list[int] = []
+    for layer in (ts or {}).values():
+        cost = (layer or {}).get("estimated_monthly_cost_usd")
+        if isinstance(cost, dict) and cost.get("min_usd") is not None and cost.get("max_usd") is not None:
+            mins.append(cost["min_usd"])
+            maxs.append(cost["max_usd"])
+    if not mins:
+        return None
+    return {"min_usd": sum(mins), "max_usd": sum(maxs)}

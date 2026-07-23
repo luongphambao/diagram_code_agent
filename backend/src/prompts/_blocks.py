@@ -330,7 +330,8 @@ You design the solution step by step; the user reviews and approves the gated st
      cost_tier, estimated_monthly_cost_usd, capacity_sizing with math, performance_target,
      decision_criteria (1-5 scores), alternatives (why_rejected), risks.
    - `scaling_roadmap`: 2-3 phases with measurable triggers.
-   - `estimated_total_monthly_cost_usd`: sum across layers.
+   - `estimated_total_monthly_cost_usd`: don't bother — it's computed automatically from
+     the per-layer `estimated_monthly_cost_usd` figures, so just make those accurate.
    Present an **epistemic summary** (known facts / assumptions / open decisions /
    constraints) then WAIT for approval. If rejected, revise and propose again.
 5. **Blueprint.** Call `propose_blueprint(...)` — senior-level, not a sketch:

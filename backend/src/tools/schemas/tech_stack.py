@@ -269,7 +269,8 @@ class ProposeTechStackArgs(CoercingModel):
     )
     estimated_total_monthly_cost_usd: Optional[CostRange] = Field(
         default=None,
-        description="sum across all layers",
+        description="ignored — always computed as the deterministic sum of each "
+        "layer's estimated_monthly_cost_usd; no need to fill this in",
     )
 
     @model_validator(mode="before")

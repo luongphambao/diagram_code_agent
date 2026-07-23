@@ -99,7 +99,9 @@ def propose_tech_stack(
     explicitly, put unconfirmed ones in confirm_with_customer.
 
     `scaling_roadmap` is a 2-3 phase roadmap with measurable triggers.
-    `estimated_total_monthly_cost_usd` is the sum across all layers.
+    `estimated_total_monthly_cost_usd` is ignored if you pass it — the total is always
+    computed as the deterministic sum of each layer's `estimated_monthly_cost_usd`, so
+    just make sure every layer states its own cost range accurately.
 
     This PAUSES for human approval — only call it once you have analysed the
     requirements. If rejected you get the user's note — revise and propose again.
@@ -128,15 +130,28 @@ def propose_tech_stack(
         for t in tech_stack
     }
 
+    # improvement plan §C: never trust the LLM's own self-reported total — it was free
+    # to state any figure independent of what it wrote per layer, and routinely did.
+    # Sum the per-layer estimates deterministically instead; the `estimated_total_monthly_cost_usd`
+    # parameter is accepted for schema back-compat but its VALUE is ignored below.
+    del estimated_total_monthly_cost_usd
+    layers_with_cost = [t.estimated_monthly_cost_usd for t in tech_stack if t.estimated_monthly_cost_usd]
+    computed_total = (
+        {
+            "min_usd": sum(c.min_usd for c in layers_with_cost),
+            "max_usd": sum(c.max_usd for c in layers_with_cost),
+        }
+        if layers_with_cost
+        else None
+    )
+
     as_dict: dict = {
         "assumptions": assumptions.model_dump() if assumptions else None,
         "layers": layers_dict,
         "scaling_roadmap": [
             p.model_dump() if isinstance(p, ScalingPhase) else p for p in (scaling_roadmap or [])
         ],
-        "estimated_total_monthly_cost_usd": estimated_total_monthly_cost_usd.model_dump()
-        if estimated_total_monthly_cost_usd
-        else None,
+        "estimated_total_monthly_cost_usd": computed_total,
     }
 
     warnings: list[str] = []
@@ -152,24 +167,17 @@ def propose_tech_stack(
 
     layers_without_cost = [t.layer for t in tech_stack if not t.estimated_monthly_cost_usd]
     if layers_without_cost:
-        warnings.append(f"Layers missing cost estimate: {', '.join(layers_without_cost)}.")
-
-    if estimated_total_monthly_cost_usd and assumptions and assumptions.monthly_budget_range_usd:
-        budget_max = assumptions.monthly_budget_range_usd.max_usd
-        if estimated_total_monthly_cost_usd.max_usd > budget_max:
-            warnings.append(
-                f"Total cost ceiling ${estimated_total_monthly_cost_usd.max_usd}/mo exceeds budget "
-                f"${budget_max}/mo — adjust design or re-scope."
-            )
-
-    if estimated_total_monthly_cost_usd:
-        layer_min_sum = sum(
-            t.estimated_monthly_cost_usd.min_usd for t in tech_stack if t.estimated_monthly_cost_usd
+        warnings.append(
+            f"Layers missing cost estimate: {', '.join(layers_without_cost)} "
+            "(excluded from the computed total — it will understate the real cost)."
         )
-        if layer_min_sum > estimated_total_monthly_cost_usd.max_usd:
+
+    if computed_total and assumptions and assumptions.monthly_budget_range_usd:
+        budget_max = assumptions.monthly_budget_range_usd.max_usd
+        if computed_total["max_usd"] > budget_max:
             warnings.append(
-                f"Sum of layer minimums (${layer_min_sum}/mo) exceeds stated total maximum "
-                f"(${estimated_total_monthly_cost_usd.max_usd}/mo) — cost estimates are inconsistent."
+                f"Total cost ceiling ${computed_total['max_usd']}/mo exceeds budget "
+                f"${budget_max}/mo — adjust design or re-scope."
             )
 
     analysis_file = current_workspace() / "architecture_analysis.json"

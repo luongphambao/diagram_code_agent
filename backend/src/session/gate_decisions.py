@@ -15,7 +15,13 @@ from domain.reporting.reporting import DEFAULT_REPORT_SECTIONS
 
 from tool_coercion import _maybe_json
 
-from .normalize import _coerce_assumptions, _coerce_list, _normalize_blueprint, _normalize_tech_stack
+from .normalize import (
+    _coerce_assumptions,
+    _coerce_list,
+    _normalize_blueprint,
+    _normalize_tech_stack,
+    _sum_layer_costs,
+)
 
 _DEFAULT_TZ = "Asia/Ho_Chi_Minh"
 
@@ -120,20 +126,23 @@ def _card_for(val, summary: str):
         ts = _normalize_tech_stack(args.get("tech_stack"))
         scaling_roadmap = _coerce_list(args.get("scaling_roadmap"))
         assumptions = _coerce_assumptions(args.get("assumptions"))
+        # improvement plan §C: never show the human the LLM's own self-reported total —
+        # sum the per-layer figures deterministically instead (see _sum_layer_costs).
+        total_cost = _sum_layer_costs(ts)
         card_data = {
             "type": "techstack_approval",
             "tech_stack": ts,
             "question": "Review the recommended tech stack and its sizing assumptions. Approve, or reject with the changes you want.",
             "assumptions": assumptions,
             "scaling_roadmap": scaling_roadmap,
-            "estimated_total_monthly_cost_usd": args.get("estimated_total_monthly_cost_usd"),
+            "estimated_total_monthly_cost_usd": total_cost,
         }
         state_delta = {
             "tech_stack": ts,
             "tech_stack_draft": args,
             "tech_assumptions": assumptions,
             "tech_scaling_roadmap": scaling_roadmap,
-            "tech_total_cost": args.get("estimated_total_monthly_cost_usd"),
+            "tech_total_cost": total_cost,
         }
         return (card_data, "awaiting_techstack", state_delta)
     if name == "propose_blueprint":
