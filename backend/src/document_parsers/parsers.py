@@ -21,7 +21,15 @@ PDF_EXT = {".pdf"}
 DOCX_EXT = {".docx"}
 TEXT_EXT = {".md", ".markdown", ".txt"}
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
-SUPPORTED_EXT = PDF_EXT | DOCX_EXT | TEXT_EXT | IMAGE_EXT
+# Improvement plan §C-S2: tabular uploads are never flattened to prose (that's the
+# gap S2 closes — a spreadsheet run through the text extractors above turns into
+# lossy, un-recomputable narrative). parse_file() only builds a short preview for
+# these; the RAW file is what gets copied into the agent workspace (routers/upload.py
+# + routers/chat.py) for run_python to load with pandas/openpyxl.
+XLSX_EXT = {".xlsx"}
+CSV_EXT = {".csv"}
+TABULAR_EXT = XLSX_EXT | CSV_EXT
+SUPPORTED_EXT = PDF_EXT | DOCX_EXT | TEXT_EXT | IMAGE_EXT | TABULAR_EXT
 
 # Improvement plan §0.4: per-format ceilings so an unauthenticated upload
 # can't exhaust memory/CPU even after passing the size and content-sniff
@@ -29,6 +37,11 @@ SUPPORTED_EXT = PDF_EXT | DOCX_EXT | TEXT_EXT | IMAGE_EXT
 # pages, and a small PNG can still declare an astronomical resolution.
 MAX_PDF_PAGES = 200
 MAX_IMAGE_PIXELS = 40_000_000  # ~40 MP
+# Preview only — the raw file (already capped at MAX_UPLOAD_BYTES by upload.py) is
+# what run_python actually reads, so this just bounds how much we scan to build the
+# chat preview/shape summary, not what analysis code can see.
+MAX_TABULAR_PREVIEW_ROWS = 20
+MAX_TABULAR_SCAN_ROWS = 100_000
 
 
 @dataclass
@@ -97,6 +110,76 @@ def _extract_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
+def _extract_csv_rows(path: Path) -> tuple[list[str], list[list[str]], int]:
+    import csv
+
+    with path.open(newline="", encoding="utf-8", errors="replace") as f:
+        reader = csv.reader(f)
+        try:
+            header = next(reader)
+        except StopIteration:
+            return [], [], 0
+        preview: list[list[str]] = []
+        total = 0
+        for row in reader:
+            total += 1
+            if len(preview) < MAX_TABULAR_PREVIEW_ROWS:
+                preview.append(row)
+            if total >= MAX_TABULAR_SCAN_ROWS:
+                break
+    return header, preview, total
+
+
+def _extract_xlsx_rows(path: Path) -> tuple[list[str], list[list[str]], int]:
+    import openpyxl
+
+    wb = openpyxl.load_workbook(str(path), read_only=True, data_only=True)
+    try:
+        ws = wb.worksheets[0]
+        rows_iter = ws.iter_rows(values_only=True)
+        try:
+            header = [str(c) if c is not None else "" for c in next(rows_iter)]
+        except StopIteration:
+            return [], [], 0
+        preview: list[list[str]] = []
+        total = 0
+        for row in rows_iter:
+            total += 1
+            if len(preview) < MAX_TABULAR_PREVIEW_ROWS:
+                preview.append([str(c) if c is not None else "" for c in row])
+            if total >= MAX_TABULAR_SCAN_ROWS:
+                break
+    finally:
+        wb.close()
+    return header, preview, total
+
+
+def _extract_tabular(path: Path) -> str:
+    """Build a short markdown PREVIEW (header + a few rows + row count) — never
+    the full dataset. The raw file itself (not this preview) is what a caller
+    copies into the agent workspace for run_python/pandas to analyze exactly.
+    """
+    ext = path.suffix.lower()
+    header, preview_rows, total_rows = _extract_csv_rows(path) if ext in CSV_EXT else _extract_xlsx_rows(path)
+    if not header:
+        # Empty string, not a placeholder message — ParsedDocument.ok checks
+        # bool(text.strip()), same convention every other extractor follows for
+        # "nothing usable was extracted" (see _extract_pdf/_extract_text).
+        return ""
+    lines = [
+        f"**Columns ({len(header)}):** {', '.join(header)}",
+        f"**Rows:** {total_rows}{'+' if total_rows >= MAX_TABULAR_SCAN_ROWS else ''} "
+        f"(showing first {len(preview_rows)})",
+        "",
+        "| " + " | ".join(header) + " |",
+        "| " + " | ".join("---" for _ in header) + " |",
+    ]
+    for row in preview_rows:
+        cells = list(row) + [""] * (len(header) - len(row)) if len(row) < len(header) else row[: len(header)]
+        lines.append("| " + " | ".join(str(c) for c in cells) + " |")
+    return "\n".join(lines)
+
+
 _IMAGE_MIME: dict[str, str] = {
     ".png": "image/png",
     ".jpg": "image/jpeg",
@@ -144,6 +227,8 @@ def parse_file(path: Path) -> ParsedDocument:
         if ext in IMAGE_EXT:
             b64, mime = _extract_image(path)
             return ParsedDocument(path, title, "", "image", image_b64=b64, image_mime=mime)
+        if ext in TABULAR_EXT:
+            return ParsedDocument(path, title, _extract_tabular(path), "tabular")
         return ParsedDocument(path, title, "", "unknown", error=f"unsupported extension '{ext}'")
     except Exception as e:  # noqa: BLE001
         logger.warning("failed to parse %s: %s", path.name, e)

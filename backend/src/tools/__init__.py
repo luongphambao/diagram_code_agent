@@ -239,15 +239,17 @@ from domain.wbs.wbs_tools import (  # noqa: E402
 )
 from .code_interpreter import run_python  # noqa: E402
 
-# improvement plan §C: run_python is attached to wbs_planner ONLY (not the main
-# agent, not other subagents) — its flagship use case is WBS re-estimation via
-# apply_wbs_reestimate, and scoping it to one subagent keeps its blast radius
-# narrow for this first pass rather than exposing sandboxed code-exec broadly.
+# improvement plan §C: run_python started wbs_planner-only for S1 (WBS
+# re-estimation via apply_wbs_reestimate). §C-S2 (tabular upload analysis) is a
+# general capability — "tổng ngân sách theo phòng ban" from an uploaded .xlsx
+# has nothing to do with WBS — so it's also attached to the main agent below.
+# Other subagents (drawer/critic/icon_resolver/ppt_generator) still don't get it.
 WBS_PLANNER_TOOLS = WBS_PLANNER_TOOLS + [run_python]
 
 MAIN_TOOLS = [
     analyze_architecture_requirements,
     propose_diagram_brief,
+    run_python,  # improvement plan §C-S2: analyze uploaded .xlsx/.csv with pandas
     # find_similar_solutions,   # DISABLED: focus on WBS testing
     web_research,  # 10 Tavily calls/session, split per stage (topic=tech_stack/architecture/wbs/evidence)
     record_evidence,  # persist a grounded claim -> evidence_log.json -> CSM Evidence + supports links

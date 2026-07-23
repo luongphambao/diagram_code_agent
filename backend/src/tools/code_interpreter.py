@@ -10,6 +10,14 @@ exactly how these edits are silently miscounted today (see
 ``domain.wbs.wbs_tools``'s docstrings — there is no edit/adjust tool; any
 change means re-emitting the entire item list by hand).
 
+Attached to the main agent AND wbs_planner (improvement plan §C: S1 was
+wbs_planner-only for WBS re-estimation; §C-S2 added the main agent for
+general analysis of uploaded tabular data — e.g. "tổng ngân sách theo phòng
+ban" from an uploaded .xlsx — which has nothing to do with WBS). Both share
+the same per-thread call budget (``INTERPRETER_CALL_HARD_CAP``) since
+``current_workspace()`` resolves to the same thread workspace regardless of
+which agent calls this tool.
+
 "Transform, not derive" (the improvement plan's safety principle): this tool
 only lets code reshape EXISTING data (filter/scale/aggregate rows and
 columns already in the workspace). It is never the source of truth for a

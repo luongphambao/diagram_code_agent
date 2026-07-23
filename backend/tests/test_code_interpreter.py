@@ -31,10 +31,14 @@ def _local(monkeypatch):
     monkeypatch.setenv("APP_ENV", "development")
 
 
-def test_run_python_is_scoped_to_wbs_planner_only():
-    # improvement plan decision: attach run_python to wbs_planner only, not
-    # the main agent — keep sandboxed code-exec's blast radius narrow.
+def test_run_python_is_attached_to_wbs_planner_and_main_agent():
+    # improvement plan §C: S1 (WBS re-estimate) scoped run_python to wbs_planner
+    # only. §C-S2 (analyze uploaded .xlsx/.csv — a general capability unrelated
+    # to WBS) added it to the main agent too. Other subagents still don't get it.
+    from tools import MAIN_TOOLS
+
     assert "run_python" in [t.name for t in WBS_PLANNER_TOOLS]
+    assert "run_python" in [t.name for t in MAIN_TOOLS]
 
 
 def test_run_python_produces_a_declared_output(tmp_path, monkeypatch):

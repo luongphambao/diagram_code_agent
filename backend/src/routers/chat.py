@@ -19,7 +19,7 @@ from backends import (
     reset_current_workspace,
     set_current_workspace,
 )
-from runtime.safe_path import safe_workspace_path
+from runtime.safe_path import safe_filename, safe_workspace_path
 from context import SessionContext
 from domain.reporting.reporting import record_report_step
 from observability import new_id, reset_context, set_context
@@ -295,11 +295,12 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                 )
             else:
                 # Fresh run.
-                from routers.upload import _attached_images, _attached_text
+                from routers.upload import _attached_images, _attached_tabular_files, _attached_text
 
                 desc = _last_user_text(messages)
                 attached = _attached_text(file_ids)
                 image_blocks = _attached_images(file_ids)
+                tabular_files = _attached_tabular_files(file_ids)
                 is_pdf_followup = _is_pdf_followup(desc)
                 is_ppt_followup = _is_ppt_followup(desc)
                 is_wbs_followup = _is_wbs_followup(desc)
@@ -454,6 +455,27 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                     )
                 elif req_file.exists() and not preserve_artifacts:
                     req_file.unlink()
+
+                if tabular_files:
+                    # improvement plan §C-S2: copy the RAW .xlsx/.csv into the thread
+                    # workspace (never flattened to text — that's the gap S2 closes)
+                    # so run_python (main agent + wbs_planner) can load it with
+                    # pandas/openpyxl and compute exact numbers instead of the model
+                    # eyeballing a text preview.
+                    ws.mkdir(parents=True, exist_ok=True)
+                    staged_names: list[str] = []
+                    for display_name, raw_path in tabular_files:
+                        dest = safe_workspace_path(ws, safe_filename(display_name))
+                        dest.write_bytes(raw_path.read_bytes())
+                        staged_names.append(dest.name)
+                    desc = (
+                        (desc + "\n\n" if desc else "")
+                        + "IMPORTANT: the user attached tabular data file(s) — "
+                        f"{', '.join(staged_names)} — saved AS-IS (not flattened to "
+                        "text) in your working directory. Use `run_python` to load "
+                        "them with pandas/openpyxl and compute exact numbers; do NOT "
+                        "estimate or summarize values from the chat preview alone."
+                    )
 
                 if image_blocks:
                     img_note = (

@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from backends import AGENT_SPACE
 from document_parsers import parse_file
 from document_parsers.content_sniff import sniff_mismatch
-from document_parsers.parsers import SUPPORTED_EXT
+from document_parsers.parsers import SUPPORTED_EXT, TABULAR_EXT
 from safe_path import safe_filename
 from security.auth import Identity, require_identity
 
@@ -92,6 +92,25 @@ async def upload(file: UploadFile = File(...), identity: Identity = Depends(requ
             "preview": f"[reference image: {file.filename}]",
             "error": doc.error,
         }
+    if ext in TABULAR_EXT:
+        # improvement plan §C-S2: keep the RAW file (not a flattened-to-text copy) —
+        # run_python needs the actual bytes to load with pandas/openpyxl. raw_path
+        # is already on disk from _stream_to_disk() above; this metadata file just
+        # records its name so _attached_tabular_files() (routers/chat.py) can find
+        # it later and copy it into the thread workspace unmodified.
+        (UPLOADS_DIR / f"{file_id}.tabular.json").write_text(
+            json.dumps({"raw_path": raw_path.name, "filename": file.filename, "kind": ext.lstrip(".")}),
+            encoding="utf-8",
+        )
+        preview = doc.text if doc.ok else ""
+        return {
+            "file_id": file_id,
+            "filename": file.filename,
+            "kind": "tabular",
+            "char_count": len(preview),
+            "preview": preview[:1000],
+            "error": doc.error,
+        }
     text = doc.text if doc.ok else ""
     (UPLOADS_DIR / f"{file_id}.md").write_text(text, encoding="utf-8")
     return {
@@ -138,3 +157,22 @@ def _attached_images(file_ids: list[str]) -> list[dict]:
             except Exception:  # noqa: BLE001
                 pass
     return blocks
+
+
+def _attached_tabular_files(file_ids: list[str]) -> list[tuple[str, Path]]:
+    """Return (display_filename, raw_file_path) for any uploaded .xlsx/.csv —
+    the RAW bytes, never a flattened text version (see upload()'s ``.tabular.json``).
+    Caller (routers/chat.py) copies these into the thread workspace so run_python
+    can load them with pandas/openpyxl."""
+    out: list[tuple[str, Path]] = []
+    for fid in file_ids or []:
+        p = UPLOADS_DIR / f"{fid}.tabular.json"
+        if p.exists():
+            try:
+                meta = json.loads(p.read_text(encoding="utf-8"))
+                raw = UPLOADS_DIR / meta["raw_path"]
+                if raw.exists():
+                    out.append((meta.get("filename") or raw.name, raw))
+            except Exception:  # noqa: BLE001
+                pass
+    return out

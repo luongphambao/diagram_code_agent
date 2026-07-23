@@ -76,6 +76,17 @@ class ModalSandboxRunner:
                 "cairosvg>=2.7,<3",
             )
         )
+        # improvement plan §C-S2: run_python (tools/code_interpreter.py, script_name=
+        # "interpreter_script.py") needs pandas/numpy/openpyxl to analyze uploaded
+        # .xlsx/.csv data — kept OUT of the diagram image above so every diagram
+        # render (the common case) doesn't pay for a data-science toolchain it
+        # never uses. Selected by script_name in render() below.
+        self._interpreter_image = modal.Image.debian_slim(python_version="3.11").pip_install(
+            "pandas>=2.0,<3",
+            "numpy>=1.26,<3",
+            "openpyxl>=3.1,<4",
+            "matplotlib>=3.8,<4",
+        )
 
     def render(
         self,
@@ -92,13 +103,20 @@ class ModalSandboxRunner:
                 f"Generated source exceeds the configured limit ({self._limits.max_source_bytes} bytes)"
             )
 
+        # script_name is the existing, already-distinct signal each caller sets
+        # (render_diagram always passes the default "diagram.py"; run_python always
+        # passes "interpreter_script.py" — tools/code_interpreter.py's _SCRIPT_NAME)
+        # — reused here instead of adding a new "job type" parameter just to pick
+        # an image.
+        image = self._image if script_name == "diagram.py" else self._interpreter_image
+
         app = modal.App.lookup(self._app_name, create_if_missing=True)
 
         sandbox = modal.Sandbox.create(
             "sleep",
             "infinity",
             app=app,
-            image=self._image,
+            image=image,
             workdir=_REMOTE_WORKDIR,
             cpu=self._limits.cpu_cores,
             memory=self._limits.memory_mib,

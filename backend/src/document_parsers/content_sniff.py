@@ -7,8 +7,8 @@ so a renamed executable or a zip bomb wearing a ``.pdf`` extension is
 rejected before ``document_parsers.parsers.parse_file`` ever touches it.
 
 Deliberately dependency-free (no ``python-magic``/libmagic) — the small set
-of formats this repo accepts (PDF, DOCX, PNG/JPEG/WEBP/GIF, plain
-text/Markdown) is fully identifiable from a short byte prefix.
+of formats this repo accepts (PDF, DOCX, XLSX, PNG/JPEG/WEBP/GIF, plain
+text/Markdown/CSV) is fully identifiable from a short byte prefix.
 """
 
 from __future__ import annotations
@@ -22,13 +22,18 @@ _GIF_MAGIC = (b"GIF87a", b"GIF89a")
 _BINARY_MAGIC_EXTENSIONS = {
     ".pdf": (_PDF_MAGIC,),
     ".docx": (_ZIP_MAGIC,),
+    # .xlsx is also a zip (OOXML) container — same weak bar as .docx above (a
+    # short byte prefix can't tell an xlsx from a docx from any other zip; both
+    # only get this coarse check). document_parsers.parsers.parse_file() is what
+    # actually validates the content — openpyxl raises if it isn't real xlsx.
+    ".xlsx": (_ZIP_MAGIC,),
     ".png": (_PNG_MAGIC,),
     ".jpg": (_JPEG_MAGIC,),
     ".jpeg": (_JPEG_MAGIC,),
     ".gif": _GIF_MAGIC,
 }
 # .webp needs a two-part check (RIFF....WEBP), handled separately below.
-# .md/.markdown/.txt have no magic bytes — validated by "looks like text"
+# .md/.markdown/.txt/.csv have no magic bytes — validated by "looks like text"
 # instead (see _looks_like_text).
 
 
@@ -53,7 +58,7 @@ def sniff_mismatch(extension: str, head: bytes) -> str | None:
             return f"file does not start with a valid {ext} signature"
         return None
 
-    if ext in (".md", ".markdown", ".txt"):
+    if ext in (".md", ".markdown", ".txt", ".csv"):
         if not _looks_like_text(head):
             return "file claims to be text but contains binary content"
         return None
