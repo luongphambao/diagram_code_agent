@@ -17,7 +17,8 @@ def _use_workspace(monkeypatch, tmp_path) -> None:
     """
     tmp_path.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(
-        backends, "_current_workspace",
+        backends,
+        "_current_workspace",
         contextvars.ContextVar("current_workspace", default=tmp_path),
     )
 
@@ -27,36 +28,60 @@ def _fake_pdf_renderer(html: str, pdf_path) -> None:
 
 
 def _write_report_inputs(tmp_path) -> None:
-    (tmp_path / "architecture_analysis.json").write_text(json.dumps({
-        "application_type": "web_application",
-        "scale_level": "large",
-        "security_level": "high",
-        "provider_preference": "aws",
-        "detected_capabilities": ["database", "security"],
-        "constraints": ["production_focused"],
-        "concerns": ["Include observability and security boundaries."],
-    }), encoding="utf-8")
-    (tmp_path / "diagram_brief.json").write_text(json.dumps({
-        "objective": "Deliver a customer-facing architecture for the platform.",
-        "functional_requirements": ["Users access the portal", "Application reads relational data"],
-        "non_functional_requirements": ["High availability", "Audit-ready security"],
-        "layout_constraints": ["Keep runtime and operations concerns separate"],
-        "assumptions": ["Traffic volume will be validated during detailed design"],
-    }), encoding="utf-8")
-    (tmp_path / "tech_stack.json").write_text(json.dumps({
-        "frontend": {"choice": "React", "rationale": "Fits SPA delivery", "alternatives": ["Vue"]},
-        "database": {"choice": "PostgreSQL", "rationale": "Relational consistency", "alternatives": ["MySQL"]},
-    }), encoding="utf-8")
-    (tmp_path / "blueprint.json").write_text(json.dumps({
-        "slide_title": "Customer Platform Architecture",
-        "brand": "Acme",
-        "pattern": "three_tier",
-        "pattern_rationale": "A three-tier pattern separates access, application, and data layers.",
-        "key_decisions": ["Use managed database for operational resilience."],
-        "clusters": [{"id": "app", "label": "Application Layer", "tier": "backend"}],
-        "nodes": [{"id": "api", "label": "API Service", "tech": "FastAPI", "cluster": "app"}],
-        "edges": [{"from": "portal", "to": "api", "label": "HTTPS", "protocol": "HTTP"}],
-    }), encoding="utf-8")
+    (tmp_path / "architecture_analysis.json").write_text(
+        json.dumps(
+            {
+                "application_type": "web_application",
+                "scale_level": "large",
+                "security_level": "high",
+                "provider_preference": "aws",
+                "detected_capabilities": ["database", "security"],
+                "constraints": ["production_focused"],
+                "concerns": ["Include observability and security boundaries."],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "diagram_brief.json").write_text(
+        json.dumps(
+            {
+                "objective": "Deliver a customer-facing architecture for the platform.",
+                "functional_requirements": ["Users access the portal", "Application reads relational data"],
+                "non_functional_requirements": ["High availability", "Audit-ready security"],
+                "layout_constraints": ["Keep runtime and operations concerns separate"],
+                "assumptions": ["Traffic volume will be validated during detailed design"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "tech_stack.json").write_text(
+        json.dumps(
+            {
+                "frontend": {"choice": "React", "rationale": "Fits SPA delivery", "alternatives": ["Vue"]},
+                "database": {
+                    "choice": "PostgreSQL",
+                    "rationale": "Relational consistency",
+                    "alternatives": ["MySQL"],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "blueprint.json").write_text(
+        json.dumps(
+            {
+                "slide_title": "Customer Platform Architecture",
+                "brand": "Acme",
+                "pattern": "three_tier",
+                "pattern_rationale": "A three-tier pattern separates access, application, and data layers.",
+                "key_decisions": ["Use managed database for operational resilience."],
+                "clusters": [{"id": "app", "label": "Application Layer", "tier": "backend"}],
+                "nodes": [{"id": "api", "label": "API Service", "tech": "FastAPI", "cluster": "app"}],
+                "edges": [{"from": "portal", "to": "api", "label": "HTTPS", "protocol": "HTTP"}],
+            }
+        ),
+        encoding="utf-8",
+    )
     reporting.record_report_step(tmp_path, "test_step", summary="Evidence captured.")
 
 
@@ -67,6 +92,7 @@ def test_artifacts_includes_pdf_base64(monkeypatch, tmp_path):
     artifacts = server._artifacts(tmp_path)
 
     assert artifacts["pdf_base64"] == base64.b64encode(pdf_bytes).decode("ascii")
+
 
 def test_artifacts_includes_pptx_base64(monkeypatch, tmp_path):
     pptx_bytes = b"PK\x03\x04fake pptx"
@@ -118,6 +144,7 @@ def test_generate_pdf_report_maps_to_hitl_card():
         ],
     }
 
+
 def test_generate_ppt_proposal_maps_to_hitl_card():
     card, step, delta = server._card_for(
         {
@@ -161,7 +188,10 @@ def test_tech_stack_gate_persists_pending_draft(monkeypatch, tmp_path):
     assert step == "awaiting_techstack"
     assert card["type"] == "techstack_approval"
     assert delta["tech_stack_draft"] == args
-    assert json.loads((tmp_path / "pending_gate.json").read_text(encoding="utf-8"))["tool"] == "propose_tech_stack"
+    assert (
+        json.loads((tmp_path / "pending_gate.json").read_text(encoding="utf-8"))["tool"]
+        == "propose_tech_stack"
+    )
     assert json.loads((tmp_path / "tech_stack_draft.json").read_text(encoding="utf-8")) == args
 
 
@@ -181,7 +211,10 @@ def test_blueprint_gate_persists_pending_draft(monkeypatch, tmp_path):
     assert step == "awaiting_blueprint"
     assert card["type"] == "blueprint_approval"
     assert delta["blueprint_draft"] == blueprint
-    assert json.loads((tmp_path / "pending_gate.json").read_text(encoding="utf-8"))["tool"] == "propose_blueprint"
+    assert (
+        json.loads((tmp_path / "pending_gate.json").read_text(encoding="utf-8"))["tool"]
+        == "propose_blueprint"
+    )
     assert json.loads((tmp_path / "blueprint_draft.json").read_text(encoding="utf-8")) == blueprint
 
 
@@ -205,6 +238,7 @@ def test_pdf_followup_detection():
     assert server._is_pdf_followup("tạo báo cáo PDF giúp tôi")
     assert not server._is_pdf_followup("please add redis to the diagram")
 
+
 def test_pdf_followup_does_not_false_positive_on_substrings():
     """Regression test: naive substring matching used to match "doc" inside
     "docker" and "report" inside "reporting", wrongly treating an unrelated
@@ -212,6 +246,7 @@ def test_pdf_followup_does_not_false_positive_on_substrings():
     assert not server._is_pdf_followup("dùng Docker và Kubernetes cho kiến trúc")
     assert not server._is_pdf_followup("add a docker container for the backend")
     assert not server._is_pdf_followup("thêm reporting service vào kiến trúc")
+
 
 def test_ppt_followup_detection():
     assert server._is_ppt_followup("tạo PPT proposal theo template BnK")
@@ -240,6 +275,16 @@ def test_wbs_followup_detects_first_time_creation():
     # unrelated design edits must still NOT match (no false preserve)
     assert not server._is_wbs_followup("please add redis to the diagram")
     assert not server._is_wbs_followup("thêm reporting service vào kiến trúc")
+
+
+def test_wbs_reestimate_followup_detection():
+    """Modification asks ("estimate lại ... bỏ FE/Mobile") must be distinguished from a
+    plain re-export ("xuất lại WBS") — see _wbs_preserve's already_planned semantics."""
+    assert server._is_wbs_reestimate_followup("Estimate lại WBS giúp tôi: bỏ hết FE/Mobile")
+    assert server._is_wbs_reestimate_followup("re-estimate the WBS without FE/Mobile")
+    assert server._is_wbs_reestimate_followup("tính lại effort AI x0.7")
+    assert not server._is_wbs_reestimate_followup("xuất lại file WBS")
+    assert not server._is_wbs_reestimate_followup("gửi WBS cho khách")
 
 
 def test_email_followup_detection():
@@ -281,19 +326,33 @@ def test_wbs_gate_card_coerces_stringified_phases_and_effort():
     still yield real list/dict card fields, else the frontend Array.isArray/entries guards
     drop them and the WBS approval card renders empty."""
     skeleton_card, _, _ = server._card_for(
-        {"action_requests": [{"name": "propose_wbs_skeleton", "args": {
-            "phases": '[{"code":"I","name":"SETUP","modules":[{"code":"I.A","name":"Design"}]}]',
-        }}]},
+        {
+            "action_requests": [
+                {
+                    "name": "propose_wbs_skeleton",
+                    "args": {
+                        "phases": '[{"code":"I","name":"SETUP","modules":[{"code":"I.A","name":"Design"}]}]',
+                    },
+                }
+            ]
+        },
         "",
     )
     assert isinstance(skeleton_card["phases"], list)
     assert skeleton_card["phases"][0]["code"] == "I"
 
     plan_card, _, _ = server._card_for(
-        {"action_requests": [{"name": "propose_wbs", "args": {
-            "effort_by_module": '[{"code":"II.A","name":"Web","total_md":12}]',
-            "effort_by_role": '{"BE": 10, "FE_Mobile": 8}',
-        }}]},
+        {
+            "action_requests": [
+                {
+                    "name": "propose_wbs",
+                    "args": {
+                        "effort_by_module": '[{"code":"II.A","name":"Web","total_md":12}]',
+                        "effort_by_role": '{"BE": 10, "FE_Mobile": 8}',
+                    },
+                }
+            ]
+        },
         "",
     )
     assert isinstance(plan_card["effort_by_module"], list)
@@ -318,6 +377,21 @@ def test_wbs_preserve_reexport_when_wbs_exists():
     )
     assert preserve is True
     assert already is True
+
+
+def test_wbs_preserve_reestimate_does_not_take_the_export_shortcut():
+    """A re-estimate ask on an existing wbs.json must NOT be classified as
+    already_planned — that would make chat.py skip wbs_planner (and its
+    run_python/apply_wbs_reestimate tools) and jump straight to export_wbs_excel(),
+    which cannot change any numbers. See chat.py's wbs_reestimate_requested branch."""
+    preserve, already = server._wbs_preserve(
+        "Estimate lại WBS: bỏ FE/Mobile và giảm effort AI",
+        solution_exists=True,
+        wbs_exists=True,
+        attached=False,
+    )
+    assert preserve is True
+    assert already is False
 
 
 def test_wbs_plan_ready_requires_items_and_rollup(tmp_path):
@@ -375,13 +449,15 @@ def test_clear_stage_markers_can_preserve_existing_wbs(monkeypatch, tmp_path):
 
 def test_wbs_preserve_no_solution_or_attachment_does_not_preserve():
     # No upstream solution yet -> nothing to preserve (genuine fresh run).
-    assert server._wbs_preserve(
-        "tạo WBS", solution_exists=False, wbs_exists=False, attached=False
-    ) == (False, False)
+    assert server._wbs_preserve("tạo WBS", solution_exists=False, wbs_exists=False, attached=False) == (
+        False,
+        False,
+    )
     # A freshly attached document is new-project intake, never a WBS follow-up.
-    assert server._wbs_preserve(
-        "tạo WBS", solution_exists=True, wbs_exists=True, attached=True
-    ) == (False, False)
+    assert server._wbs_preserve("tạo WBS", solution_exists=True, wbs_exists=True, attached=True) == (
+        False,
+        False,
+    )
     # Non-WBS message never preserves via this path.
     assert server._wbs_preserve(
         "add redis to the diagram", solution_exists=True, wbs_exists=True, attached=False
@@ -422,6 +498,7 @@ def test_generate_pdf_report_writes_pdf(monkeypatch, tmp_path):
     assert (tmp_path / "out.pdf").exists()
     assert (tmp_path / "out.pdf").read_bytes().startswith(b"%PDF")
 
+
 def test_generate_ppt_proposal_writes_openable_pptx(monkeypatch, tmp_path):
     from PIL import Image
     from pptx import Presentation
@@ -455,12 +532,7 @@ def test_generate_ppt_proposal_renders_brand_tables(monkeypatch, tmp_path):
     assert "Wrote" in result
     prs = Presentation(str(tmp_path / "out.pptx"))
     # At least one slide must contain a real table (graphic frame), proving table builders ran.
-    tables = [
-        shape
-        for slide in prs.slides
-        for shape in slide.shapes
-        if shape.has_table
-    ]
+    tables = [shape for slide in prs.slides for shape in slide.shapes if shape.has_table]
     assert tables, "expected at least one native table in the proposal"
 
 
@@ -537,6 +609,7 @@ def test_report_data_falls_back_to_rendered_workspace_artifacts(tmp_path):
     assert data["blueprint"]["nodes"][0]["label"] == "Web Users"
     assert "No functional requirements were captured" not in html
     assert "No technology stack was recorded" not in html
+
 
 def test_report_template_escapes_user_text(tmp_path):
     from PIL import Image

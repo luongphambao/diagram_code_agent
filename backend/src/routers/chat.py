@@ -233,9 +233,7 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
         # §1.4: bind correlation ids for every log line this run emits, reset
         # in the same finally: as the workspace token below (same lifetime —
         # both scoped to this one streamed /agui run).
-        _ctx_token = set_context(
-            request_id=new_id(), thread_id=thread_id, run_id=run_id
-        )
+        _ctx_token = set_context(request_id=new_id(), thread_id=thread_id, run_id=run_id)
         _upsert_snap: dict = {}
         run_errored = False
         yield _sse({"type": "RUN_STARTED", "threadId": thread_id, "runId": run_id})
@@ -328,11 +326,19 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                 # and deleted the brief/tech_stack/blueprint that load_solution_context reads,
                 # so the planner reported "No upstream artifacts found" and never started.
                 solution_exists = _wbs_solution_context_exists(ws)
+                wbs_exists_flag = _wbs_plan_ready(ws)
                 preserve_wbs_artifacts, wbs_already_planned = _wbs_preserve(
                     desc,
                     solution_exists=solution_exists,
-                    wbs_exists=_wbs_plan_ready(ws),
+                    wbs_exists=wbs_exists_flag,
                     attached=bool(attached),
+                )
+                # preserve_wbs_artifacts=True + wbs_already_planned=False + wbs.json already
+                # on disk is the one combination _wbs_preserve() can't be plain re-export
+                # (that's wbs_already_planned=True) nor first-time planning (no wbs.json
+                # yet) — it's a re-estimate request (see _is_wbs_reestimate_followup).
+                wbs_reestimate_requested = (
+                    preserve_wbs_artifacts and not wbs_already_planned and wbs_exists_flag
                 )
                 # A request to EMAIL a deliverable is never a regenerate/re-export request,
                 # even when the phrasing also matches "wbs"/"report" (e.g. "gửi file WBS qua
@@ -367,6 +373,31 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                             "(wbs.json). Do NOT re-delegate to wbs_planner or redo the "
                             "skeleton/estimate gates — just call `export_wbs_excel()` "
                             "directly to regenerate the file."
+                        )
+                    elif wbs_reestimate_requested:
+                        # An approved wbs.json already exists AND the user wants to CHANGE
+                        # it (drop/scale/filter items), not just re-export the stale numbers
+                        # or redraft the skeleton from scratch. Point the agent at the
+                        # code-interpreter path built for exactly this (improvement plan §C):
+                        # transform the existing wbs.json with run_python, then commit +
+                        # recompute via apply_wbs_reestimate — never retype numbers by hand.
+                        desc = (
+                            (desc + "\n\n" if desc else "")
+                            + "IMPORTANT: An approved `wbs.json` already exists. The user "
+                            "wants to MODIFY/RE-ESTIMATE it (e.g. drop items/modules, remove "
+                            "columns like fe/mobile, scale effort) — this is NOT a plain "
+                            "re-export and NOT a from-scratch replan. Delegate to "
+                            "`wbs_planner` and instruct it to: read the current `wbs.json`, "
+                            "use `run_python` to write a NEW file with the requested "
+                            "transform applied (never overwrite `wbs.json` directly, never "
+                            "hand-retype `qc`/`pm`/`total` — those get re-derived "
+                            "automatically), then call "
+                            "`apply_wbs_reestimate(source_file=...)` to validate + commit + "
+                            "recompute the rollup/timeline/team/milestones. Do NOT call "
+                            "`draft_wbs_skeleton`/`propose_wbs_skeleton` again — the skeleton "
+                            "is unchanged. Only call `export_wbs_excel()` after the "
+                            "re-estimate is committed, if the user also wants the file "
+                            "regenerated."
                         )
                     elif preserve_wbs_artifacts:
                         # First-time WBS on an existing solution: artifacts are preserved

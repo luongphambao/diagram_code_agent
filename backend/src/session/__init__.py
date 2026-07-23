@@ -31,6 +31,7 @@ from .followups import (
     _is_pdf_followup,
     _is_ppt_followup,
     _is_wbs_followup,
+    _is_wbs_reestimate_followup,
     _last_tool_msg,
     _last_user_text,
     _matches_whole_phrase,

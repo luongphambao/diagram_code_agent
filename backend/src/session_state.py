@@ -44,6 +44,7 @@ from session import (  # noqa: F401 — re-exported for backward compatibility
     _is_pdf_followup,
     _is_ppt_followup,
     _is_wbs_followup,
+    _is_wbs_reestimate_followup,
     _label,
     _last_tool_msg,
     _last_user_text,

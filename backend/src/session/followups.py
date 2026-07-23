@@ -180,6 +180,49 @@ def _is_wbs_followup(text: str) -> bool:
     )
 
 
+def _is_wbs_reestimate_followup(text: str) -> bool:
+    """Detect a request to MODIFY an existing WBS (drop/scale/filter items), as opposed
+    to a plain re-export of the deliverable that already exists.
+
+    This distinction matters: a plain "xuất lại WBS" re-export should skip straight to
+    ``export_wbs_excel()`` (cheap, no replanning). But "estimate lại WBS: bỏ FE/Mobile,
+    bỏ module X, giảm effort AI x0.7" — the real re-estimate ask this app was built for
+    (see ``apply_wbs_reestimate`` in domain/wbs/wbs_tools.py) — must still delegate to
+    ``wbs_planner`` so it can use ``run_python``/``apply_wbs_reestimate`` to transform the
+    existing wbs.json precisely, instead of the agent silently defaulting to a re-export
+    of stale numbers (or refusing outright, since ``export_wbs_excel()`` alone cannot
+    change any figures).
+    """
+    return _matches_whole_phrase(
+        text,
+        (
+            "re-estimate",
+            "reestimate",
+            "recalculate",
+            "recompute",
+            "revise the wbs",
+            "adjust the wbs",
+            "adjust the estimate",
+            "update the estimate",
+            "modify the wbs",
+            "change the wbs",
+            "estimate lại",
+            "uoc luong lai",
+            "ước lượng lại",
+            "tính lại",
+            "tinh lai",
+            "làm lại wbs",
+            "lam lai wbs",
+            "sửa wbs",
+            "sua wbs",
+            "điều chỉnh wbs",
+            "dieu chinh wbs",
+            "cập nhật wbs",
+            "cap nhat wbs",
+        ),
+    )
+
+
 def _wbs_preserve(text: str, *, solution_exists: bool, wbs_exists: bool, attached: bool) -> tuple[bool, bool]:
     """Decide whether a WBS request should preserve on-disk artifacts (vs. a fresh wipe).
 
@@ -190,12 +233,18 @@ def _wbs_preserve(text: str, *, solution_exists: bool, wbs_exists: bool, attache
       was attached (a fresh attachment is new-project intake, not a WBS follow-up). When
       True, chat.py skips ``clear_stage_markers()`` so the WBS planner still has its
       ``diagram_brief.json`` / ``tech_stack.json`` / ``blueprint.json`` inputs to read.
-    - ``already_planned`` is True only when a full ``wbs.json`` already exists — the
-      re-export case, where chat.py tells the agent to call ``export_wbs_excel()``
-      directly instead of re-delegating to ``wbs_planner``. On a FIRST WBS request it is
-      False, so the normal skeleton → estimate delegation runs on the preserved artifacts.
+    - ``already_planned`` is True only when a full ``wbs.json`` already exists AND the
+      message does NOT carry re-estimate intent (see ``_is_wbs_reestimate_followup``) —
+      the plain re-export case, where chat.py tells the agent to call
+      ``export_wbs_excel()`` directly instead of re-delegating to ``wbs_planner``. A
+      re-estimate request keeps ``already_planned`` False even though ``wbs.json``
+      exists, so chat.py still delegates to ``wbs_planner`` (which has ``run_python`` +
+      ``apply_wbs_reestimate`` to transform it) rather than short-circuiting straight to
+      export. On a FIRST WBS request ``already_planned`` is also False, so the normal
+      skeleton → estimate delegation runs on the preserved artifacts.
 
     Pure/side-effect-free so the preserve decision is unit-testable without the endpoint.
     """
     preserve = _is_wbs_followup(text) and solution_exists and not attached
-    return preserve, (preserve and wbs_exists)
+    already_planned = preserve and wbs_exists and not _is_wbs_reestimate_followup(text)
+    return preserve, already_planned
