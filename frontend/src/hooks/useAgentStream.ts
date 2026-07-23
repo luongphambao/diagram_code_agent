@@ -9,6 +9,7 @@ import { AgentState, LogEntry, PendingInterrupt, WireMessage, BACKEND_URL } from
 interface UseAgentStreamOptions {
   threadIdRef: React.MutableRefObject<string>;
   userRoleRef: React.MutableRefObject<string>;
+  diagramKindRef: React.MutableRefObject<string>;
   uploadedFileIds: () => string[];
   agentStateRef: React.MutableRefObject<AgentState>;
   setAgentState: React.Dispatch<React.SetStateAction<AgentState>>;
@@ -39,7 +40,11 @@ interface ActivityPayload {
  * request body while keeping HttpAgent's SSE parsing/state-apply pipeline. */
 class DiagramHttpAgent extends HttpAgent {
   protected requestInit(input: RunAgentInput): RequestInit {
-    const forwarded = (input.forwardedProps ?? {}) as { file_ids?: string[]; userRole?: string };
+    const forwarded = (input.forwardedProps ?? {}) as {
+      file_ids?: string[];
+      userRole?: string;
+      diagramKind?: string;
+    };
     return {
       method: "POST",
       headers: { ...this.headers, "Content-Type": "application/json", Accept: "text/event-stream" },
@@ -49,6 +54,9 @@ class DiagramHttpAgent extends HttpAgent {
         messages: input.messages,
         file_ids: forwarded.file_ids ?? [],
         userRole: forwarded.userRole ?? "",
+        // Typed-diagram foundation: "" (Auto detect) means no override — the
+        // backend keyword classifier + model's own guess decide instead.
+        diagramKind: forwarded.diagramKind ?? "",
       }),
       signal: this.abortController.signal,
     };
@@ -58,6 +66,7 @@ class DiagramHttpAgent extends HttpAgent {
 export function useAgentStream({
   threadIdRef,
   userRoleRef,
+  diagramKindRef,
   uploadedFileIds,
   agentStateRef,
   setAgentState,
@@ -182,7 +191,13 @@ export function useAgentStream({
 
       try {
         await agent.runAgent(
-          { forwardedProps: { file_ids: uploadedFileIds(), userRole: userRoleRef.current } },
+          {
+            forwardedProps: {
+              file_ids: uploadedFileIds(),
+              userRole: userRoleRef.current,
+              diagramKind: diagramKindRef.current,
+            },
+          },
           subscriber,
         );
       } catch (e) {
@@ -200,6 +215,7 @@ export function useAgentStream({
     [
       threadIdRef,
       userRoleRef,
+      diagramKindRef,
       uploadedFileIds,
       agentStateRef,
       setAgentState,

@@ -585,6 +585,16 @@ def build_tree(spec: dict, flat: bool = False, plan: dict | None = None):
     order, per-band grid columns and hub edge bundling. Every plan key is
     optional; plan=None is byte-identical to the unplanned build.
     """
+    from .registry import resolve_native_kind
+
+    _registered_kind = resolve_native_kind(spec)
+    if _registered_kind is not None:
+        # A NEW diagram family (sequence/erd/state_machine/...) that registered
+        # its own tree_builder — never true for existing Blueprint/BPMN specs,
+        # which don't set spec["kind"], so this can't change their behavior.
+        from .registry import RENDERERS
+
+        return RENDERERS[_registered_kind].tree_builder(spec, flat=flat, plan=plan)
     if spec.get("process"):
         # BPMN swimlane process — a distinct diagram family (pool/lane/phase),
         # never routed through the architecture cluster-nesting logic below or
@@ -929,8 +939,16 @@ def build_drawio_from_spec(
     """
     d, _ = build_tree(spec, flat=flat, plan=plan)
     xml = d.mxfile(name)
+    from .registry import resolve_native_kind, RENDERERS
+
+    _registered_kind = resolve_native_kind(spec)
+    _default_style_preset = (
+        RENDERERS[_registered_kind].style_preset_label or _registered_kind
+        if _registered_kind is not None
+        else "icon"
+    )
     stats = {
-        "style_preset": str(spec.get("style_preset") or "icon").lower(),
+        "style_preset": str(spec.get("style_preset") or _default_style_preset).lower(),
         "nodes": len(spec.get("nodes", [])),
         "edges": len(spec.get("edges", [])),
         "native_icons": xml.count("resIcon=mxgraph.aws4."),

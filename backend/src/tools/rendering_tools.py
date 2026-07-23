@@ -20,7 +20,7 @@ from typing import Annotated, Literal, Optional
 
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import InjectedToolCallId, tool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from backends import OUTPUTS_DIR, current_workspace
 from domain.reporting.reporting import record_artifact_inventory, record_report_step
@@ -30,6 +30,7 @@ from runtime.sandbox.guards import _audit_add, _audit_code
 from runtime.sandbox.provider import get_sandbox_runner
 from .constants import (
     _BLUEPRINT_FILE,
+    _BRIEF_FILE,
     _OUT_NAMES,
     RENDER_HARD_CAP,
     RENDER_SOFT_CAP,
@@ -242,6 +243,130 @@ def render_diagram(
         tool_call_id=tool_call_id,
         status="success",
     )
+
+
+_TYPED_DIAGRAM_DSL_IMPORTS: dict[str, str] = {
+    "sequence": "from prettygraph.sequence_dsl import Sequence",
+}
+
+
+@tool(parse_docstring=True)
+def render_typed_diagram(kind: Literal["sequence"], code: str) -> str:
+    """Render a Sequence diagram (ERD/State Machine land in later phases) from
+    a short Python script — the code-first counterpart to render_diagram for
+    non-architecture diagram kinds.
+
+    Write a script using the DSL class for `kind` (currently only "sequence":
+    `from prettygraph.sequence_dsl import Sequence`) and end it with
+    `<builder>.render("out")`. The script only builds the diagram's
+    structure — Pydantic validation, structural lint (dangling participant
+    refs, duplicate order, malformed fragments, ...), and the actual native
+    draw.io rendering all run AFTER your script finishes, server-side, so a
+    structurally invalid script still gets caught before any file is written.
+
+    This is NOT a gate. Call finalize_diagram afterward to submit the result
+    for approval, same as the render_diagram -> finalize_diagram flow for
+    architecture diagrams. No tech-stack or blueprint approval is required
+    first for this diagram kind — only propose_diagram_brief.
+
+    When to use: once the diagram brief is recorded and you know the
+    participants/ordered messages (or entities/states, in later phases) to
+    draw, instead of propose_tech_stack/propose_blueprint.
+
+    Args:
+        kind: which diagram family the script builds. Currently "sequence".
+        code: the complete Python script; it MUST end by calling
+            <builder>.render("out").
+    """
+    if not _BRIEF_FILE.exists():
+        return "Create the diagram brief first by calling propose_diagram_brief."
+    if kind not in _TYPED_DIAGRAM_DSL_IMPORTS:
+        return f"Unsupported kind {kind!r}. Supported: {sorted(_TYPED_DIAGRAM_DSL_IMPORTS)}."
+    if _render_count() >= RENDER_HARD_CAP:
+        return (
+            f"RENDER BUDGET EXHAUSTED ({RENDER_HARD_CAP} renders this round). "
+            "Do NOT keep re-rendering to chase warnings."
+        )
+    attempt = _bump_render_count()
+    _stage_helpers()
+    workspace = current_workspace()
+    spec_file = workspace / "out.typed_spec.json"
+    if spec_file.exists():
+        spec_file.unlink()
+    script_name = "typed_diagram.py"
+    (workspace / script_name).write_text(code, encoding="utf-8")
+
+    render_job_id = new_id()
+    _ctx_token = set_context(render_job_id=render_job_id)
+    _render_started = time.monotonic()
+    try:
+        try:
+            proc = get_sandbox_runner().render(
+                workspace,
+                timeout=RENDER_TIMEOUT_S,
+                script_name=script_name,
+                allowed_outputs=("out.typed_spec.json",),
+            )
+        except subprocess.TimeoutExpired:
+            return (
+                f"Render #{attempt}/{RENDER_HARD_CAP} TIMED OUT after {RENDER_TIMEOUT_S}s. "
+                "Simplify the script or fix infinite work."
+            )
+        duration_s = time.monotonic() - _render_started
+        if proc.returncode != 0 or not spec_file.exists():
+            err = (proc.stderr or proc.stdout or "").strip()
+            logger.warning(
+                "render_typed_diagram #%d failed exit=%s duration=%.1fs", attempt, proc.returncode, duration_s
+            )
+            return (
+                f"Script #{attempt}/{RENDER_HARD_CAP} FAILED (exit {proc.returncode}) or never called "
+                f".render('out'). Fix the code and retry only if under budget.\n\n{err[-3000:]}"
+            )
+    finally:
+        reset_context(_ctx_token)
+
+    try:
+        raw_spec = json.loads(spec_file.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        return f"Script produced an unreadable spec file: {exc}"
+
+    if kind == "sequence":
+        from tools.schemas.sequence import SequenceSpec
+        from tools.analysis.sequence_tools import _build_sequence_render_spec
+
+        try:
+            validated = SequenceSpec(**raw_spec)
+        except ValidationError as exc:
+            return f"Invalid sequence spec produced by the script: {exc}"
+        render_spec = _build_sequence_render_spec(validated)
+        summary_counts = (
+            f"{len(validated.participants)} participants, {len(validated.messages)} messages, "
+            f"{len(validated.fragments)} fragments, {len(validated.activations)} activations"
+        )
+    else:  # pragma: no cover — guarded above
+        return f"Unsupported kind {kind!r}."
+
+    render_spec.setdefault("title", getattr(validated, "title", "") or kind.title())
+    stats = _render_native_from_spec(render_spec, workspace)
+    lint = stats.get("lint") or {}
+    errors = lint.get("errors") or []
+    warnings = lint.get("warnings") or []
+    text = (
+        f"Rendered {kind} diagram (#{attempt} this round): {summary_counts}. "
+        f"Semantic recall: nodes={stats.get('semantic', {}).get('node_recall')}, "
+        f"edges={stats.get('semantic', {}).get('edge_recall')}."
+    )
+    if errors:
+        text += "\nLint ERRORS:\n" + "\n".join(f"- {e['message']}" for e in errors)
+    if warnings:
+        text += "\nLint warnings:\n" + "\n".join(f"- {w['message']}" for w in warnings)
+    record_report_step(
+        current_workspace(),
+        "render_typed_diagram",
+        summary=f"Rendered {kind} diagram on attempt {attempt}: {summary_counts}.",
+        data={"kind": kind, "attempt": attempt, "stats": stats},
+    )
+    return text + "\n\nout.drawio/out.png ready — call finalize_diagram when satisfied."
 
 
 @tool
@@ -637,6 +762,45 @@ def _bake_icon_plan(spec: dict, workspace: Path) -> None:
     spec["_fallback_icons"] = fallback_icons
 
 
+def _render_typed_native(spec: dict, workspace: Path, entry) -> dict:
+    """Generic render path for a NEW native diagram kind registered in
+    prettygraph.native.registry (sequence/erd/state_machine/...) — the same
+    shape as the BPMN branch below (build once, no icon-bake/slide-wrap/
+    band-planning, semantic-preservation + structural lint), generalized via
+    the kind's RendererEntry instead of a hand-written branch per kind.
+    """
+    from prettygraph.native.topology import build_drawio_from_spec
+
+    out = workspace / "out.drawio"
+    name = spec.get("title") or spec.get("diagram_title") or entry.kind.replace("_", " ").title()
+    xml, stats = build_drawio_from_spec(spec, name, flat=False, plan=None)
+    stats["style_preset"] = entry.style_preset_label or entry.kind
+    out.write_text(xml, encoding="utf-8")
+    if entry.semantic_ids_fn is not None:
+        try:
+            from domain.validation.validate_drawio import check_semantic_preservation
+
+            ids, edge_pairs = entry.semantic_ids_fn(spec)
+            _, stats["semantic"] = check_semantic_preservation(ids, edge_pairs, xml)
+        except Exception:  # noqa: BLE001 — advisory; never block a render
+            pass
+    if entry.lint_kind:
+        try:
+            from domain.validation.diagram_lint import lint
+
+            stats["lint"] = lint(entry.lint_kind, spec).to_dict()
+        except Exception:  # noqa: BLE001 — advisory; never block a render
+            pass
+    _render_drawio_png(out, workspace / "out.png")
+    stats["fallback_icons"] = 0
+    try:
+        (workspace / "out.native_stats.json").write_text(json.dumps(stats), encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        pass
+    _reset_drawio_edit_rounds()
+    return stats
+
+
 def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     """Build out.drawio (+ out.png + out.slide.json for slides) from a render_spec
     via the NATIVE engine. Returns fidelity/routing stats. Shared by the
@@ -646,6 +810,14 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
 
     out = workspace / "out.drawio"
     name = spec.get("slide_title") or spec.get("diagram_title") or "Architecture"
+    from prettygraph.native.registry import resolve_native_kind, RENDERERS
+
+    _registered_kind = resolve_native_kind(spec)
+    if _registered_kind is not None:
+        # A NEW diagram family registered its own tree_builder — never true for
+        # existing Blueprint/BPMN specs (they don't set spec["kind"]), so this
+        # can't change existing architecture/BPMN rendering behavior.
+        return _render_typed_native(spec, workspace, RENDERERS[_registered_kind])
     if spec.get("process"):
         # BPMN swimlane process — a standalone diagram family. None of the
         # architecture-diagram machinery below applies: no vendor icons to

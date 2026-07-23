@@ -285,6 +285,17 @@ export type InterruptType =
   | "wbs_approval"
   | "wbs_excel_approval"
   | "delivery_export_approval";
+  // Typed-diagram foundation (improvement plan MVP-3): Sequence/ERD/State
+  // Machine/C4 are authored code-first via render_typed_diagram (a non-gate
+  // tool) and approved through the existing "result_review" card once
+  // out.png exists — same as architecture diagrams. No per-kind interrupt
+  // type needed.
+
+// Diagram family selector (improvement plan: typed-diagram foundation §1.6).
+// Sent on every /agui request as `diagramKind`; "" means "Auto detect" — the
+// backend's deterministic keyword classifier + the model's own DiagramBrief
+// guess decide instead (routers/chat.py::agui_endpoint, tools/schemas/brief.py).
+export type DiagramKind = "" | "architecture" | "bpmn" | "sequence" | "erd" | "state_machine" | "c4";
 
 export interface PendingInterrupt {
   toolCallId: string;

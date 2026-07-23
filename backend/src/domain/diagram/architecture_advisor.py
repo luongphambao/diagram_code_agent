@@ -43,6 +43,82 @@ _CAPABILITIES: dict[str, list[str]] = {
     "multi_region": ["multi-region", "global", "disaster recovery", "dr", "failover"],
 }
 
+# Typed-diagram foundation: deterministic keyword pre-classifier for
+# DiagramBrief.diagram_kind. This only SEEDS a default the brief step can
+# accept, override from an explicit frontend selection, or the LLM can
+# override from the requirement's finer context — same non-binding role as
+# `recommended_density` above. Ordered by keyword specificity: a requirement
+# mentioning "state machine" AND "sequence" should not silently pick whichever
+# dict iterates first, so ties are broken by highest hit count, and an exact
+# phrase ("sequence diagram", "erd", "state machine") outweighs a lone keyword.
+_DIAGRAM_KIND_SIGNALS: dict[str, list[str]] = {
+    "sequence": [
+        "sequence diagram",
+        "lifeline",
+        "activation bar",
+        "calls the backend",
+        "frontend calls",
+        "request flow",
+        "walkthrough",
+        "step by step flow",
+        "api flow",
+        "magic link",
+        "callback",
+    ],
+    "erd": [
+        "erd",
+        "entity relationship",
+        "entity-relationship",
+        "database schema",
+        "db schema",
+        "create table",
+        "foreign key",
+        "primary key",
+        "schema design",
+        "data model",
+        "table structure",
+    ],
+    "state_machine": [
+        "state machine",
+        "state diagram",
+        "lifecycle",
+        "status transition",
+        "workflow status",
+        "order status",
+        "payment status",
+        "approval status",
+        "ticket status",
+        "goes from pending",
+    ],
+    "bpmn": [
+        "bpmn",
+        "swimlane",
+        "business process",
+        "process diagram",
+        "pool and lane",
+    ],
+    "c4": [
+        "c4 diagram",
+        "c4 model",
+        "c4 context",
+        "c4 container",
+        "c4 component",
+    ],
+}
+
+
+def _detect_diagram_kind(text: str) -> tuple[str, str]:
+    """Deterministic diagram_kind suggestion + one-line reason, mirroring
+    `_detect_application_type`'s keyword-hit-count idiom. Defaults to
+    "architecture" (score 0 across the board) — the safe fallback every
+    existing flow already assumes."""
+    scored = {name: _count_hits(text, keys) for name, keys in _DIAGRAM_KIND_SIGNALS.items()}
+    best = max(scored, key=scored.get)
+    if scored[best] == 0:
+        return "architecture", "no sequence/erd/state_machine/bpmn/c4 signal detected"
+    return best, f"{scored[best]} keyword hit(s) for '{best}'"
+
+
 _PROVIDERS: dict[str, list[str]] = {
     "aws": ["aws", "amazon web services", "cloudfront", "s3", "eks", "rds", "aurora", "lambda", "guardduty"],
     "azure": ["azure", "app service", "aks", "cosmos", "entra", "blob storage"],
@@ -345,6 +421,7 @@ def analyze_requirements(requirements: str, provider_preference: str = "") -> di
     constraints = _constraints(text)
     patterns = _suggest_patterns(app_type, scale, security, provider, capabilities, constraints)
     concerns = _concerns(scale, security, capabilities, constraints)
+    diagram_kind, diagram_kind_reason = _detect_diagram_kind(text)
 
     n_capabilities = len(capabilities)
     recommended_density = (
@@ -366,4 +443,6 @@ def analyze_requirements(requirements: str, provider_preference: str = "") -> di
             if recommended_density == "poster"
             else f"scale={scale}, {n_capabilities} capabilities → standard slide"
         ),
+        "suggested_diagram_kind": diagram_kind,
+        "suggested_diagram_kind_reason": diagram_kind_reason,
     }

@@ -66,11 +66,17 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
         "reality_sync",
         "propose_tech_stack",
         "propose_blueprint",
+        # Typed-diagram foundation: Sequence (and later ERD/State Machine) skip
+        # the tech-stack/blueprint gates entirely (proposal §9) and are
+        # authored code-first — render_typed_diagram must be reachable
+        # straight from intake, not just the "blueprint" phase below.
+        "render_typed_diagram",
     },
     "blueprint": _UTILITY_TOOLS
     | {
         "propose_tech_stack",
         "propose_blueprint",
+        "render_typed_diagram",
         "web_research",
         "propose_diagram_brief",
         "apply_compliance_pack",
@@ -84,6 +90,7 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
     | _WBS_DELIVERABLE_TOOLS
     | {
         "finalize_diagram",
+        "render_typed_diagram",
         "list_saved_diagrams",
         "visualize_code_structure",
         "export_adr_pack",

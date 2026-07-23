@@ -31,6 +31,23 @@ from .blueprint import (
     PillarCoverage,
     WAFPillar,
 )
+from .diagram_spec import (
+    ArchitectureSpec,
+    DiagramKind,
+    DiagramPlan,
+    DiagramSpec,
+    ProcessSpec,
+)
+from .sequence import (
+    FragmentKind,
+    MessageKind,
+    ParticipantKind,
+    SequenceActivation,
+    SequenceFragment,
+    SequenceMessage,
+    SequenceParticipant,
+    SequenceSpec,
+)
 
 __all__ = [
     "CoercingModel",
@@ -56,4 +73,17 @@ __all__ = [
     "NFRMapping",
     "PillarCoverage",
     "WAFPillar",
+    "ArchitectureSpec",
+    "DiagramKind",
+    "DiagramPlan",
+    "DiagramSpec",
+    "ProcessSpec",
+    "FragmentKind",
+    "MessageKind",
+    "ParticipantKind",
+    "SequenceActivation",
+    "SequenceFragment",
+    "SequenceMessage",
+    "SequenceParticipant",
+    "SequenceSpec",
 ]

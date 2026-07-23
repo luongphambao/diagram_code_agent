@@ -16,6 +16,18 @@ _TECHSTACK_FILE = WorkspaceFile("tech_stack.json")
 _BLUEPRINT_FILE = WorkspaceFile("blueprint.json")
 _CRITIQUE_FILE = WorkspaceFile("critique.json")
 
+# Typed-diagram foundation (MVP-3): each new diagram kind's canonical spec file,
+# analogous to _BLUEPRINT_FILE for architecture. All kinds still share
+# _RENDER_SPEC_FILE below as the flattened dict the native renderer consumes.
+_SEQUENCE_SPEC_FILE = WorkspaceFile("sequence_spec.json")
+
+# Typed-diagram foundation: an explicit frontend diagram-type selection (sent
+# as `diagramKind` on /agui, see routers/chat.py::agui_endpoint) is persisted
+# here so it outranks both the LLM's own DiagramBrief.diagram_kind and the
+# deterministic keyword suggestion in architecture_analysis.json — "Auto
+# detect" (no override written) leaves this file absent.
+_DIAGRAM_KIND_OVERRIDE_FILE = WorkspaceFile("diagram_kind_override.json")
+
 _RENDER_SPEC_FILE = WorkspaceFile("render_spec.json")
 _RENDER_COUNT_FILE = WorkspaceFile("render_count.json")
 _ICON_SEARCH_BUDGET_FILE = WorkspaceFile("icon_search_budget.json")

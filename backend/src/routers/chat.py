@@ -199,6 +199,7 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
     run_id = body.get("runId", "run-1")
     messages = body.get("messages", [])
     file_ids = body.get("file_ids", [])
+    diagram_kind_override = str(body.get("diagramKind", "") or "").strip().lower()
 
     # §0.6: threadId is client-supplied and was previously unauthenticated — any
     # caller who knew/guessed a thread_id could resume/approve it. The first
@@ -211,6 +212,19 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
     # per-thread /memories/ route — is resolved against this thread's own workspace
     # dir. Only /global-memories/ stays shared across threads — see backends.py.
     ws = resolve_workspace(thread_id)
+
+    # Typed-diagram foundation: an explicit frontend type selection outranks
+    # both the LLM's own DiagramBrief.diagram_kind and the deterministic
+    # keyword suggestion (architecture_analysis.json's suggested_diagram_kind).
+    # "" / "auto" means "Auto detect" — leave no override file, same as today.
+    if diagram_kind_override and diagram_kind_override != "auto":
+        try:
+            ws.mkdir(parents=True, exist_ok=True)
+            (ws / "diagram_kind_override.json").write_text(
+                json.dumps({"diagram_kind": diagram_kind_override}), encoding="utf-8"
+            )
+        except OSError:
+            logger.warning("failed to persist diagram_kind_override for thread %s", thread_id)
 
     config = {
         "configurable": {"thread_id": thread_id},

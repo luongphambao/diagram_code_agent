@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useDiagramAgent } from "./hooks/useDiagramAgent";
 import { useConversations } from "./hooks/useConversations";
 import { AgentProvider } from "./context/AgentContext";
-import type { UserRole } from "./hooks/agent-utils";
+import type { DiagramKind, UserRole } from "./hooks/agent-utils";
 import { loadGateHistory, clearGateHistory } from "./hooks/agent-utils";
 import ChatSidebar from "./components/ChatSidebar";
 import DiagramCanvas from "./components/DiagramCanvas";
@@ -16,6 +16,28 @@ function getStoredRole(): UserRole {
     return r && USER_ROLES.includes(r) ? r : "lead";
   } catch {
     return "lead";
+  }
+}
+
+// Typed-diagram foundation (improvement plan §10): explicit type selection
+// overrides the backend's Auto-detect classifier. "" is the Auto-detect
+// value sent to the backend (routers/chat.py reads it as `diagramKind`).
+const DIAGRAM_KINDS: Array<{ value: DiagramKind; label: string }> = [
+  { value: "", label: "Auto detect" },
+  { value: "architecture", label: "Architecture" },
+  { value: "sequence", label: "Sequence" },
+  { value: "erd", label: "ERD / Database" },
+  { value: "state_machine", label: "State Machine" },
+  { value: "bpmn", label: "BPMN / Swimlane" },
+  { value: "c4", label: "C4" },
+];
+
+function getStoredDiagramKind(): DiagramKind {
+  try {
+    const k = localStorage.getItem("diagram_agent_diagram_kind") as DiagramKind | null;
+    return k && DIAGRAM_KINDS.some((d) => d.value === k) ? k : "";
+  } catch {
+    return "";
   }
 }
 
@@ -46,7 +68,8 @@ function setStoredThreadId(id: string) {
 export default function App() {
   const [threadId, setThreadId] = useState<string>(getStoredThreadId);
   const [userRole, setUserRole] = useState<UserRole>(getStoredRole);
-  const diagramAgent = useDiagramAgent({ threadId, userRole });
+  const [diagramKind, setDiagramKind] = useState<DiagramKind>(getStoredDiagramKind);
+  const diagramAgent = useDiagramAgent({ threadId, userRole, diagramKind });
   const convStore = useConversations();
 
   useEffect(() => {
@@ -56,6 +79,14 @@ export default function App() {
       /* ignore */
     }
   }, [userRole]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("diagram_agent_diagram_kind", diagramKind);
+    } catch {
+      /* ignore */
+    }
+  }, [diagramKind]);
 
   const diagramStep = diagramAgent.agentState.current_step;
   const [chatWidth, setChatWidth] = useState(CHAT_DEFAULT);
@@ -217,6 +248,33 @@ export default function App() {
         </div>
 
         <div className="ml-auto flex items-center gap-3">
+          {/* Diagram-type selector — sent as diagramKind on every request; "Auto
+              detect" (empty value) defers to the backend's deterministic keyword
+              classifier + the model's own guess (improvement plan §10). */}
+          <label
+            className="flex items-center gap-1.5 text-[11px] text-slate-500"
+            title="Diagram type — Auto detect lets the agent classify the request"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="text-slate-500">
+              <path
+                d="M4 5h16M4 12h10M4 19h7"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+            <select
+              value={diagramKind}
+              onChange={(e) => setDiagramKind(e.target.value as DiagramKind)}
+              className="rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[11px] text-slate-300 outline-none hover:border-white/20 focus:border-blue-500/40"
+            >
+              {DIAGRAM_KINDS.map((d) => (
+                <option key={d.value || "auto"} value={d.value} className="bg-surface-base">
+                  {d.label}
+                </option>
+              ))}
+            </select>
+          </label>
           {/* Role selector — sent as userRole on every request; backend enforces gate
               role policy (ROLE_GATE_PERMISSIONS, §8.6). */}
           <label

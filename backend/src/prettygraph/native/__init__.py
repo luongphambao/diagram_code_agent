@@ -17,3 +17,9 @@ from .layout_engine import (  # noqa: F401
     render_tree,
 )
 from .builder import Diagram  # noqa: F401
+
+# Typed-diagram foundation: importing these registers their kind into
+# registry.RENDERERS as a side effect (see each module's `_register()`).
+# Side-effect-only import — no names re-exported, since callers reach the
+# renderer through the registry (topology.build_tree), never this module.
+from . import sequence as _sequence  # noqa: F401

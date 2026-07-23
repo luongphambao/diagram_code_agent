@@ -19,6 +19,7 @@ from ..constants import (
     _BLUEPRINT_FILE,
     _BRIEF_FILE,
     _CRITIQUE_FILE,
+    _DIAGRAM_KIND_OVERRIDE_FILE,
     _ICON_PLAN_FILE,
     _RENDER_SPEC_FILE,
     _REVISION_COUNT_FILE,
@@ -63,13 +64,27 @@ def propose_diagram_brief(brief: DiagramBrief) -> str:
             non-functional requirements, constraints, and assumptions).
     """
     current_workspace().mkdir(parents=True, exist_ok=True)
+    # An explicit frontend diagram-type selection is deterministic and always
+    # wins over the model's own diagram_kind guess — same "don't trust the LLM
+    # for a decision code can make correctly" rule as the tech-stack total.
+    override_note = ""
+    if _DIAGRAM_KIND_OVERRIDE_FILE.exists():
+        try:
+            override = json.loads(_DIAGRAM_KIND_OVERRIDE_FILE.read_text(encoding="utf-8"))
+            override_kind = str(override.get("diagram_kind") or "").strip().lower()
+        except Exception:  # noqa: BLE001
+            override_kind = ""
+        if override_kind and override_kind != brief.diagram_kind:
+            override_note = f" (overriding model-suggested '{brief.diagram_kind}')"
+            brief.diagram_kind = override_kind
     _BRIEF_FILE.write_text(brief.model_dump_json(indent=2), encoding="utf-8")
     record_report_step(
         current_workspace(),
         "propose_diagram_brief",
         summary=(
-            f"Recorded diagram brief with {len(brief.functional_requirements)} functional "
-            f"and {len(brief.non_functional_requirements)} non-functional requirements."
+            f"Recorded diagram brief (kind={brief.diagram_kind}{override_note}) with "
+            f"{len(brief.functional_requirements)} functional and "
+            f"{len(brief.non_functional_requirements)} non-functional requirements."
         ),
         data=brief.model_dump(),
     )

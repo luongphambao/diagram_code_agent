@@ -47,9 +47,11 @@ import type {
 export function useDiagramAgent({
   threadId,
   userRole = "",
+  diagramKind = "",
 }: {
   threadId: string;
   userRole?: string;
+  diagramKind?: string;
 }) {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [agentState, setAgentState] = useState<AgentState>({});
@@ -65,6 +67,7 @@ export function useDiagramAgent({
   const wireMessagesRef = useRef<WireMessage[]>([]);
   const threadIdRef = useRef(threadId);
   const userRoleRef = useRef(userRole);
+  const diagramKindRef = useRef(diagramKind);
   const lastTcIdRef = useRef<string>("");
   const agentStateRef = useRef<AgentState>(agentState);
   const pendingInterruptRef = useRef<PendingInterrupt | null>(null);
@@ -77,6 +80,10 @@ export function useDiagramAgent({
   useEffect(() => {
     userRoleRef.current = userRole;
   }, [userRole]);
+
+  useEffect(() => {
+    diagramKindRef.current = diagramKind;
+  }, [diagramKind]);
 
   useEffect(() => {
     agentStateRef.current = agentState;
@@ -100,6 +107,7 @@ export function useDiagramAgent({
   const { runAgent, abortRun } = useAgentStream({
     threadIdRef,
     userRoleRef,
+    diagramKindRef,
     uploadedFileIds,
     agentStateRef,
     setAgentState,

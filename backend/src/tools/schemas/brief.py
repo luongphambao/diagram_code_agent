@@ -5,11 +5,27 @@ from __future__ import annotations
 from pydantic import Field
 
 from .coercion import CoercingModel
+from .diagram_spec import DiagramKind
 
 
 class DiagramBrief(CoercingModel):
     """Requirements-derived diagram brief used before tech stack and blueprint."""
 
+    diagram_kind: DiagramKind = Field(
+        "architecture",
+        description=(
+            "Which diagram family this request needs — architecture (default) | bpmn "
+            "(business process/workflow) | sequence (runtime interaction walkthrough — "
+            "lifelines, messages, alt/opt/loop) | erd (database schema) | state_machine "
+            "(status/lifecycle transitions) | c4 (formal C4 notation). Set this from the "
+            "requirement's own shape, not from what's easiest to draw: 'user logs in via "
+            "magic link, FE calls BE calls Supabase' -> sequence; 'CREATE TABLE ...' or "
+            "'design the schema' -> erd; 'order goes pending -> paid -> shipped' -> "
+            "state_machine. A diagram_kind_override.json in the workspace (set by an "
+            "explicit frontend type selection) always takes precedence over this field — "
+            "check for one before defaulting to architecture."
+        ),
+    )
     objective: str = Field(description="one concise sentence describing what the diagram must communicate")
     application_type: str = Field(
         "",
