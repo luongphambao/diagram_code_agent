@@ -29,6 +29,7 @@ dependencies = [
     "qdrant-client>=1.9",
     "langchain-qdrant>=0.2",
     "modal>=1.5.2",
+    "sqlglot>=25.0",
 ]
 
 [project.optional-dependencies]

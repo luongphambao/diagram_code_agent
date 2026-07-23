@@ -247,22 +247,29 @@ def render_diagram(
 
 _TYPED_DIAGRAM_DSL_IMPORTS: dict[str, str] = {
     "sequence": "from prettygraph.sequence_dsl import Sequence",
+    "erd": "from prettygraph.erd_dsl import ERD",
+    "state_machine": "from prettygraph.state_machine_dsl import StateMachine",
 }
 
 
 @tool(parse_docstring=True)
-def render_typed_diagram(kind: Literal["sequence"], code: str) -> str:
-    """Render a Sequence diagram (ERD/State Machine land in later phases) from
-    a short Python script — the code-first counterpart to render_diagram for
-    non-architecture diagram kinds.
+def render_typed_diagram(kind: Literal["sequence", "erd", "state_machine"], code: str) -> str:
+    """Render a Sequence diagram, an ERD/database-schema diagram, or a State
+    Machine diagram from a short Python script — the code-first counterpart
+    to render_diagram for non-architecture diagram kinds.
 
-    Write a script using the DSL class for `kind` (currently only "sequence":
-    `from prettygraph.sequence_dsl import Sequence`) and end it with
-    `<builder>.render("out")`. The script only builds the diagram's
-    structure — Pydantic validation, structural lint (dangling participant
-    refs, duplicate order, malformed fragments, ...), and the actual native
+    Write a script using the DSL class for `kind` and end it with
+    `<builder>.render("out")`:
+      sequence      -> from prettygraph.sequence_dsl import Sequence
+      erd           -> from prettygraph.erd_dsl import ERD
+      state_machine -> from prettygraph.state_machine_dsl import StateMachine
+    The script only builds the diagram's structure — Pydantic validation,
+    structural lint (dangling refs, duplicate order/PK-less tables/orphan
+    FKs/unreachable states/exitless loops, ...), and the actual native
     draw.io rendering all run AFTER your script finishes, server-side, so a
     structurally invalid script still gets caught before any file is written.
+    A state_machine render also writes transition_table.csv (deterministic,
+    not LLM-authored) alongside out.drawio.
 
     This is NOT a gate. Call finalize_diagram afterward to submit the result
     for approval, same as the render_diagram -> finalize_diagram flow for
@@ -270,11 +277,13 @@ def render_typed_diagram(kind: Literal["sequence"], code: str) -> str:
     first for this diagram kind — only propose_diagram_brief.
 
     When to use: once the diagram brief is recorded and you know the
-    participants/ordered messages (or entities/states, in later phases) to
-    draw, instead of propose_tech_stack/propose_blueprint.
+    participants/ordered messages (sequence), tables/columns/foreign keys
+    (erd), or states/transitions (state_machine) to draw, instead of
+    propose_tech_stack/propose_blueprint.
 
     Args:
-        kind: which diagram family the script builds. Currently "sequence".
+        kind: which diagram family the script builds — "sequence", "erd", or
+            "state_machine".
         code: the complete Python script; it MUST end by calling
             <builder>.render("out").
     """
@@ -343,6 +352,33 @@ def render_typed_diagram(kind: Literal["sequence"], code: str) -> str:
             f"{len(validated.participants)} participants, {len(validated.messages)} messages, "
             f"{len(validated.fragments)} fragments, {len(validated.activations)} activations"
         )
+    elif kind == "erd":
+        from tools.schemas.erd import ERDSpec
+        from tools.analysis.erd_tools import _build_erd_render_spec
+
+        try:
+            validated = ERDSpec(**raw_spec)
+        except ValidationError as exc:
+            return f"Invalid ERD spec produced by the script: {exc}"
+        render_spec = _build_erd_render_spec(validated)
+        n_cols = sum(len(e.columns) for e in validated.entities)
+        summary_counts = f"{len(validated.entities)} tables, {n_cols} columns, {len(validated.relationships)} relationships"
+    elif kind == "state_machine":
+        from tools.schemas.state_machine import StateMachineSpec
+        from tools.analysis.state_machine_tools import _build_state_machine_render_spec, transition_table_csv
+
+        try:
+            validated = StateMachineSpec(**raw_spec)
+        except ValidationError as exc:
+            return f"Invalid state machine spec produced by the script: {exc}"
+        render_spec = _build_state_machine_render_spec(validated)
+        summary_counts = f"{len(validated.states)} states, {len(validated.transitions)} transitions"
+        try:
+            (workspace / "transition_table.csv").write_text(
+                transition_table_csv(render_spec), encoding="utf-8"
+            )
+        except Exception:  # noqa: BLE001 — advisory extra artifact, never block the render
+            pass
     else:  # pragma: no cover — guarded above
         return f"Unsupported kind {kind!r}."
 

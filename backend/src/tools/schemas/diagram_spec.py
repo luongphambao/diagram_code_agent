@@ -22,8 +22,10 @@ from pydantic import Field
 
 from .blueprint import Blueprint
 from .coercion import CoercingModel
+from .erd import ERDSpec
 from .process import ProcessBlueprint
 from .sequence import SequenceSpec
+from .state_machine import StateMachineSpec
 
 # The full diagram type space. New members are added here as each phase lands
 # its schema (sequence: MVP-3 phase 2, erd: phase 3, state_machine: phase 4);
@@ -57,10 +59,9 @@ class ProcessSpec(ProcessBlueprint):
     kind: Literal["bpmn"] = "bpmn"
 
 
-# Extended by later phases: ERDSpec, StateMachineSpec, ... join this union as
-# their own schemas land (MVP-3 phases 3-4).
 DiagramSpec = Annotated[
-    Union[ArchitectureSpec, ProcessSpec, SequenceSpec], Field(discriminator="kind")
+    Union[ArchitectureSpec, ProcessSpec, SequenceSpec, ERDSpec, StateMachineSpec],
+    Field(discriminator="kind"),
 ]
 
 
@@ -68,10 +69,9 @@ class DiagramPlan(CoercingModel):
     """Top-level typed-diagram envelope (improvement plan §8's `DiagramPlan`).
 
     Not a required call shape for existing tools — `propose_blueprint` keeps
-    taking a bare `Blueprint`. New per-kind gate tools (`propose_sequence`,
-    `propose_erd`, `propose_state_machine`, ...) use this envelope so every
-    typed diagram carries the same title/objective/audience metadata alongside
-    its kind-specific `spec`.
+    taking a bare `Blueprint`, and Sequence/ERD/State Machine are authored
+    code-first (see `render_typed_diagram`), never via this envelope directly.
+    It documents the full type space's shared metadata fields for reference.
     """
 
     kind: DiagramKind = Field("architecture", description="which diagram family this is")

@@ -154,8 +154,10 @@ from .analysis.business_case_tools import propose_business_case
 
 # Side-effect-only import: registers lint_sequence into diagram_lint.LINTERS
 # (no tool exposed here — the LLM authors sequences code-first via
-# render_typed_diagram/prettygraph.sequence_dsl, not a per-kind gate tool).
+# render_typed_diagram, not a per-kind gate tool).
 from .analysis import sequence_tools as _sequence_tools  # noqa: F401
+from .analysis.erd_tools import sql_to_erd_script  # registers lint_erd as a side effect
+from .analysis import state_machine_tools as _state_machine_tools  # noqa: F401
 from .analysis.gates import compare_revisions, query_change_impact
 from .analysis.reporting_gates import (
     PdfReportConfig,
@@ -275,6 +277,7 @@ MAIN_TOOLS = [
     find_diagram_template,
     propose_blueprint,
     render_typed_diagram,  # code-first Sequence/ERD/State Machine — no tech-stack gate needed
+    sql_to_erd_script,  # deterministic SQL DDL -> ERD DSL code generator
     visualize_code_structure,
     list_saved_diagrams,
     finalize_diagram,

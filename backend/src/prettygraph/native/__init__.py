@@ -23,3 +23,5 @@ from .builder import Diagram  # noqa: F401
 # Side-effect-only import — no names re-exported, since callers reach the
 # renderer through the registry (topology.build_tree), never this module.
 from . import sequence as _sequence  # noqa: F401
+from . import erd as _erd  # noqa: F401
+from . import state_machine as _state_machine  # noqa: F401

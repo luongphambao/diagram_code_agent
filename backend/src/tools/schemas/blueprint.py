@@ -208,9 +208,16 @@ class Blueprint(CoercingModel):
         default_factory=list,
         description="3-6 design decisions & trade-offs (data flow, scaling, HA, security, storage, integration), one sentence each",
     )
-    c4_level: Literal["context", "container"] = Field(
+    c4_level: Literal["context", "container", "component"] = Field(
         "container",
-        description="container (default, full components) or context (5-8 nodes, boundaries+actors only)",
+        description=(
+            "container (default, full components) | context (5-8 nodes, boundaries+actors "
+            "only) | component (single-container internals). Only context/container are "
+            "rendered by the native architecture engine; a formal C4-notation diagram "
+            "(all three levels, with stereotypes/dashed relationships) is a separate "
+            "diagram_kind='c4' request handled by the drawer's diagrams.c4 code path, "
+            "not this Blueprint."
+        ),
     )
     pillar_coverage: Optional[PillarCoverage] = Field(
         default=None, description="WAF 6-pillar coverage: addressed_by node IDs + known gaps per pillar"

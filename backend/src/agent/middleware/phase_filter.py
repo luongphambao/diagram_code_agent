@@ -71,12 +71,14 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
         # authored code-first — render_typed_diagram must be reachable
         # straight from intake, not just the "blueprint" phase below.
         "render_typed_diagram",
+        "sql_to_erd_script",
     },
     "blueprint": _UTILITY_TOOLS
     | {
         "propose_tech_stack",
         "propose_blueprint",
         "render_typed_diagram",
+        "sql_to_erd_script",
         "web_research",
         "propose_diagram_brief",
         "apply_compliance_pack",

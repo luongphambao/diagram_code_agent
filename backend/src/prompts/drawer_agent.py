@@ -79,11 +79,28 @@ production path; the mingrammer/Graphviz flow (steps 5-8) is the OLD path.
   automatically and builds a swimlane pool with real `mxgraph.bpmn.*` stencils.
   **SKIP steps 5-8** exactly like an architecture diagram; the mingrammer flow
   has no BPMN shapes and would render generic boxes instead of BPMN notation.
-- **ONLY** for ERD / UML / flowchart / sequence / code-visualization / free-form
-  graphs that are NOT an infrastructure architecture and NOT a BPMN process: use
-  the mingrammer flow (steps 5-8). Graphviz is better for those. Do NOT default
-  to `render_diagram` for an architecture or BPMN diagram — that is the
-  deprecated path and produces generic boxes.
+- **Sequence / ERD / State Machine diagram**: these are NOT drawn by the drawer
+  at all — the MAIN agent calls `render_typed_diagram(kind, code)` directly with
+  a short script against `prettygraph.sequence_dsl.Sequence` /
+  `prettygraph.erd_dsl.ERD` / `prettygraph.state_machine_dsl.StateMachine`, which
+  produces real UML lifelines, crow's-foot ER notation, or semantic state shapes —
+  native, deterministic, validated before rendering. If you (the drawer) are ever
+  invoked for one of these, something upstream mis-routed; do not improvise a
+  mingrammer/Graphviz substitute — report back that this kind belongs to
+  `render_typed_diagram` instead.
+- **C4 diagram** (formal Context/Container/Component notation): use the
+  mingrammer flow (steps 5-8) with the `diagrams.c4` node set — it already
+  produces canonical C4 notation (stereotypes, dashed labeled relationships):
+  `from diagrams.c4 import Person, Container, Database, System, SystemBoundary,
+  Relationship`. Compose one `SystemBoundary` per bounded context, `Person` for
+  actors, `Container`/`System` for services, `Relationship` for the dashed
+  labeled connectors. No native renderer exists for this kind — this IS the
+  production path for C4, not a fallback.
+- **ONLY** for free-form graphs / flowcharts / code-visualization that are NOT an
+  infrastructure architecture, NOT a BPMN process, and NOT one of the typed
+  diagrams above: use the mingrammer flow (steps 5-8). Graphviz is better for
+  those. Do NOT default to `render_diagram` for an architecture or BPMN diagram —
+  that is the deprecated path and produces generic boxes.
 
 ## Your job (execute in order)
 1. Read the relevant skill(s) to understand the API and icon rules. Also read

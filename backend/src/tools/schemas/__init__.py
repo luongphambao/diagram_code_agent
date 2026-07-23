@@ -38,6 +38,8 @@ from .diagram_spec import (
     DiagramSpec,
     ProcessSpec,
 )
+from .erd import Cardinality, ERDColumn, ERDEntity, ERDRelationship, ERDSpec
+from .state_machine import StateKind, StateNode, StateTransition, StateMachineSpec
 from .sequence import (
     FragmentKind,
     MessageKind,
@@ -86,4 +88,13 @@ __all__ = [
     "SequenceMessage",
     "SequenceParticipant",
     "SequenceSpec",
+    "Cardinality",
+    "ERDColumn",
+    "ERDEntity",
+    "ERDRelationship",
+    "ERDSpec",
+    "StateKind",
+    "StateNode",
+    "StateTransition",
+    "StateMachineSpec",
 ]
