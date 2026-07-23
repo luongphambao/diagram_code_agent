@@ -223,6 +223,52 @@ def _is_wbs_reestimate_followup(text: str) -> bool:
     )
 
 
+def _is_business_case_followup(text: str) -> bool:
+    """Detect a request for a financial justification / ROI / business case
+    (improvement plan §C, S3).
+
+    Like a WBS request, a business-case ask is ALWAYS a downstream step from an
+    already-designed solution, never fresh project intake — chat.py must preserve
+    tech_stack.json/wbs.json on disk (propose_business_case's auto-pull inputs)
+    instead of wiping them via clear_stage_markers(). Discovered live: a plain
+    "tôi cần business case (ROI/TCO/payback)" message matched no existing
+    followup detector, so chat.py treated it as a fresh run and deleted
+    tech_stack.json before the agent ever got to read it.
+    """
+    return _matches_whole_phrase(
+        text,
+        (
+            "business case",
+            "roi",
+            "tco",
+            "payback",
+            "return on investment",
+            "cost-benefit",
+            "cost benefit",
+            "financial justification",
+            "business justification",
+            "kinh doanh case",
+            "phân tích roi",
+            "phan tich roi",
+            "hoàn vốn",
+            "hoan von",
+            "lợi tức đầu tư",
+            "loi tuc dau tu",
+            "chi phí lợi ích",
+            "chi phi loi ich",
+            "biện minh tài chính",
+            "bien minh tai chinh",
+        ),
+    )
+
+
+def _business_case_preserve(text: str, *, solution_exists: bool, attached: bool) -> bool:
+    """Whether a business-case request should preserve on-disk artifacts instead of
+    a fresh clear_stage_markers() wipe — same reasoning as _wbs_preserve, simpler
+    return shape since propose_business_case has no skeleton/plan two-stage split."""
+    return _is_business_case_followup(text) and solution_exists and not attached
+
+
 def _wbs_preserve(text: str, *, solution_exists: bool, wbs_exists: bool, attached: bool) -> tuple[bool, bool]:
     """Decide whether a WBS request should preserve on-disk artifacts (vs. a fresh wipe).
 

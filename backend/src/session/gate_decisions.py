@@ -10,6 +10,12 @@ from __future__ import annotations
 
 import json
 
+from domain.reporting.business_case import (
+    BusinessCaseInputs,
+    auto_implementation_cost_usd,
+    auto_operating_cost_usd,
+    compute_business_case,
+)
 from domain.reporting.ppt_reporting import DEFAULT_PPT_SECTIONS
 from domain.reporting.reporting import DEFAULT_REPORT_SECTIONS
 
@@ -291,6 +297,66 @@ def _card_for(val, summary: str):
             },
             "awaiting_wbs_excel",
             {},
+        )
+    if name == "propose_business_case":
+        # improvement plan §C, S3: interrupt_on fires BEFORE propose_business_case's
+        # body runs, so — same fix as propose_tech_stack's cost sum — the approval
+        # card must compute the ROI/TCO/payback figures itself from the raw args
+        # rather than showing whatever the model claims; this is the number the
+        # human actually approves.
+        try:
+            from backends import current_workspace
+
+            ws = current_workspace()
+        except Exception:  # noqa: BLE001
+            ws = None
+
+        impl_cost = args.get("implementation_cost_usd")
+        impl_source = "explicit"
+        if impl_cost is None and ws is not None:
+            impl_cost, impl_source = auto_implementation_cost_usd(ws)
+
+        op_cost = args.get("annual_operating_cost_usd")
+        op_source = "explicit"
+        if op_cost is None and ws is not None:
+            op_cost, op_source = auto_operating_cost_usd(ws)
+        if op_cost is None:
+            op_cost, op_source = 0.0, "no tech_stack.json cost found — defaulted to $0/yr"
+
+        annual_benefit = args.get("annual_benefit_usd") or 0.0
+        horizon = int(args.get("analysis_horizon_years") or 3)
+        ramp = args.get("benefit_ramp_pct_by_year") or None
+
+        computed = None
+        if impl_cost is not None:
+            try:
+                computed = compute_business_case(
+                    BusinessCaseInputs(
+                        implementation_cost_usd=float(impl_cost),
+                        annual_operating_cost_usd=float(op_cost),
+                        annual_benefit_usd=float(annual_benefit),
+                        analysis_horizon_years=horizon,
+                        benefit_ramp_pct_by_year=tuple(ramp) if ramp else None,
+                    )
+                )
+            except Exception:  # noqa: BLE001
+                computed = None
+
+        return (
+            {
+                "type": "business_case_approval",
+                "question": "Review the business case (ROI/TCO/payback) and approve or request changes.",
+                "benefit_basis": args.get("benefit_basis", ""),
+                "implementation_cost_usd": impl_cost,
+                "implementation_cost_source": impl_source,
+                "annual_operating_cost_usd": op_cost,
+                "annual_operating_cost_source": op_source,
+                "annual_benefit_usd": annual_benefit,
+                "analysis_horizon_years": horizon,
+                "computed": computed,
+            },
+            "awaiting_business_case",
+            {"business_case_draft": args, "business_case_computed": computed},
         )
     if name == "export_to_delivery":
         sys_l = str(args.get("system", "")).strip().lower()

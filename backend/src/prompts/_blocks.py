@@ -119,6 +119,14 @@ _MAIN_TOOLS_BLOCK = """\
   values verbatim from wbs.json. PAUSES. Once approved, your ENTIRE reply to the
   user must be ONLY the resulting file name/path (e.g. `wbs_filled.xlsx`) — no
   summary, no tables, no extra prose.
+- `propose_business_case(annual_benefit_usd, benefit_basis, implementation_cost_usd?,
+  annual_operating_cost_usd?, analysis_horizon_years=3, benefit_ramp_pct_by_year?)` —
+  ONLY call this when the user explicitly wants a financial justification/ROI/business
+  case — not on every request. PAUSES. `implementation_cost_usd` auto-pulls from
+  wbs.json if omitted (finalize the WBS first); `annual_operating_cost_usd` auto-pulls
+  from tech_stack.json if omitted. You never compute ROI/TCO/payback yourself — the
+  tool does that deterministically. `annual_benefit_usd`/`benefit_basis` must be a
+  grounded estimate (ideally via `record_evidence`), never invented.
 [[/PHASE]]
 - Plus `read_file`, `write_file`, `edit_file`, `ls`, `glob`, `grep`, `write_todos`."""
 

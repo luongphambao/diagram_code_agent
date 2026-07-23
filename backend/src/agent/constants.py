@@ -121,4 +121,5 @@ _MAIN_TOOL_SELECTOR_ALWAYS_INCLUDE = [
     "propose_wbs",
     "export_wbs_excel",
     "export_to_delivery",
+    "propose_business_case",
 ]

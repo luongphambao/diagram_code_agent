@@ -30,8 +30,10 @@ import session_state as ss
 from session_state import (
     _artifacts,
     _card_for,
+    _business_case_preserve,
     _decision_from_payload,
     _display_subagent,
+    _is_business_case_followup,
     _is_email_followup,
     _is_pdf_followup,
     _is_ppt_followup,
@@ -305,8 +307,13 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                 is_ppt_followup = _is_ppt_followup(desc)
                 is_wbs_followup = _is_wbs_followup(desc)
                 is_email_followup = _is_email_followup(desc)
+                is_business_case_followup = _is_business_case_followup(desc)
                 if (
-                    is_pdf_followup or is_ppt_followup or is_wbs_followup or is_email_followup
+                    is_pdf_followup
+                    or is_ppt_followup
+                    or is_wbs_followup
+                    or is_email_followup
+                    or is_business_case_followup
                 ) and not attached:
                     # Restore before deciding whether a downstream follow-up can
                     # preserve artifacts. A previous run may have wiped the
@@ -347,8 +354,21 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                 # pdf/ppt/wbs branches below inject a "regenerate now" instruction — see the
                 # `preserve_email_artifacts` check ordered first in the if/elif chain.
                 preserve_email_artifacts = is_email_followup and not attached
+                # A business-case ask is ALWAYS a downstream step from an already-designed
+                # solution, never fresh intake (same reasoning as WBS above) — propose_business_case
+                # auto-pulls implementation_cost_usd from wbs.json and annual_operating_cost_usd
+                # from tech_stack.json, so wiping those out from under it defeats the whole point.
+                # Found live: a plain "I need a business case" message matched no other followup
+                # detector, fell through to clear_stage_markers(), and deleted tech_stack.json
+                # before the agent ever read it.
+                preserve_business_case_artifacts = _business_case_preserve(
+                    desc, solution_exists=solution_exists, attached=bool(attached)
+                )
                 preserve_artifacts = (
-                    preserve_diagram_artifacts or preserve_wbs_artifacts or preserve_email_artifacts
+                    preserve_diagram_artifacts
+                    or preserve_wbs_artifacts
+                    or preserve_email_artifacts
+                    or preserve_business_case_artifacts
                 )
                 if not preserve_artifacts:
                     clear_stage_markers(preserve_wbs=(not attached and _wbs_plan_ready(ws)))
@@ -421,6 +441,24 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                             "call `propose_wbs()`, and only after that call "
                             "`export_wbs_excel()`. Do NOT report this as blocked merely "
                             "because `wbs.json` is missing before planning."
+                        )
+                    elif preserve_business_case_artifacts:
+                        # improvement plan §C, S3: point straight at propose_business_case
+                        # instead of letting the model wander (ls/grep/quality_summary) trying
+                        # to figure out cost figures itself — it auto-pulls both from disk.
+                        desc = (
+                            (desc + "\n\n" if desc else "")
+                            + "IMPORTANT: The user wants a business case (ROI/TCO/payback). "
+                            "The approved solution artifacts (wbs.json, tech_stack.json) "
+                            "already exist in the workspace — do NOT redesign or re-run "
+                            "intake. Call `propose_business_case(annual_benefit_usd, "
+                            "benefit_basis, ...)` directly: leave `implementation_cost_usd` "
+                            "and `annual_operating_cost_usd` UNSET so it auto-pulls them from "
+                            "wbs.json/tech_stack.json — do NOT read those files yourself and "
+                            "retype the numbers. Only state `annual_benefit_usd` and "
+                            "`benefit_basis` (a grounded estimate — use `record_evidence`/"
+                            "`web_research` first if you don't already have one from this "
+                            "conversation)."
                         )
                     else:
                         artifact_instruction = (

@@ -6,6 +6,7 @@ _TOOL_LABELS = {
     "analyze_architecture_requirements": "Analyzing architecture requirements",
     "propose_diagram_brief": "Preparing the diagram brief",
     "propose_tech_stack": "Proposing the technology stack",
+    "propose_business_case": "Proposing the business case (ROI/TCO/payback)",
     "propose_blueprint": "Designing the architecture blueprint",
     "render_diagram": "Rendering the diagram",
     "export_drawio": "Exporting the editable .drawio",

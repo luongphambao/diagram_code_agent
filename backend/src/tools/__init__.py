@@ -149,6 +149,7 @@ from .analysis.blueprint_tools import (
     propose_tech_stack,
     submit_critique,
 )
+from .analysis.business_case_tools import propose_business_case
 from .analysis.gates import compare_revisions, query_change_impact
 from .analysis.reporting_gates import (
     PdfReportConfig,
@@ -284,6 +285,7 @@ MAIN_TOOLS = [
     propose_wbs,  # WBS plan/effort approval gate
     export_wbs_excel,  # WBS .xlsx deliverable gate
     query_change_impact,  # report blast radius of a requirement change (CSM diff)
+    propose_business_case,  # improvement plan §C, S3: deterministic ROI/TCO/payback gate
 ]
 
 # Icon resolver subagent tools: node search + icon resolution (runs before drawer).
@@ -336,6 +338,7 @@ GATE_TOOL_NAMES = [
     "propose_wbs",
     "export_wbs_excel",
     "export_to_delivery",
+    "propose_business_case",
 ]
 
 # HITL v2 decision menu (docx §5.3): the trade-off ACTIONS each gate offers the user,
@@ -374,6 +377,13 @@ GATE_DECISIONS: dict[str, list[str]] = {
     "propose_wbs": ["approve", "approve_with_assumptions", "accept_risk", "request_alternative", "reject"],
     "export_wbs_excel": ["approve", "reject"],
     "export_to_delivery": ["approve", "reject"],
+    "propose_business_case": [
+        "approve",
+        "approve_with_assumptions",
+        "accept_risk",
+        "request_evidence",
+        "reject",
+    ],
 }
 
 
@@ -396,6 +406,7 @@ ROLE_GATE_PERMISSIONS: dict[str, set[str]] = {
     "send_email": {"pm", "lead", "admin"},
     "create_client_meeting": {"pm", "lead", "admin"},
     "export_to_delivery": {"pm", "lead", "admin"},
+    "propose_business_case": {"pm", "lead", "architect", "admin"},
 }
 
 

@@ -78,6 +78,7 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
         "reality_sync",
         "visualize_code_structure",
         "finalize_diagram",
+        "propose_business_case",
     },
     "draw": _UTILITY_TOOLS
     | _WBS_DELIVERABLE_TOOLS
@@ -91,12 +92,14 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
         "propose_deck_plan",
         "generate_ppt_proposal",
         "send_email",
+        "propose_business_case",
     },
     "wbs": _UTILITY_TOOLS
     | _WBS_DELIVERABLE_TOOLS
     | {
         "web_research",
         "send_email",
+        "propose_business_case",
     },
     "ppt": _UTILITY_TOOLS
     | _WBS_DELIVERABLE_TOOLS
@@ -104,12 +107,14 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
         "propose_deck_plan",
         "generate_ppt_proposal",
         "send_email",
+        "propose_business_case",
     },
     "report": _UTILITY_TOOLS
     | _WBS_DELIVERABLE_TOOLS
     | {
         "generate_pdf_report",
         "send_email",
+        "propose_business_case",
     },
 }
 
