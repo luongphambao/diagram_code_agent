@@ -285,3 +285,36 @@ def test_modal_sandbox_blocks_network_and_secrets(tmp_path, monkeypatch):
     assert result.returncode == 0, result.stderr
     assert "KEY_ABSENT= True" in result.stdout
     assert "NETWORK_BLOCKED=True" in result.stdout
+
+
+# --- ModalSandboxRunner: prettygraph baked into the image (improvement plan §D) --
+
+
+def test_prettygraph_dir_is_never_uploaded_from_workspace():
+    """`_stage_helpers()` still writes prettygraph/*.py into the LOCAL
+    per-thread workspace (LocalDevRunner needs that copy), but ModalSandboxRunner
+    must skip re-uploading it file-by-file every render now that the same
+    content is baked into the diagram image at build time — a workspace
+    walk that ignored this would silently defeat the whole optimization."""
+    from runtime.sandbox.runners.modal_runner import _SKIP_UPLOAD_DIR_NAMES
+
+    assert "prettygraph" in _SKIP_UPLOAD_DIR_NAMES
+
+
+@pytest.mark.skipif(not _HAS_MODAL_CREDS, reason="MODAL_TOKEN_ID/MODAL_TOKEN_SECRET not set")
+def test_modal_sandbox_diagram_image_has_prettygraph_baked_in(tmp_path):
+    """Live check that the optimization is actually correct, not just fast:
+    a diagram.py that imports prettygraph must still work even though
+    ModalSandboxRunner no longer uploads a workspace/prettygraph/ copy —
+    proving the image-baked copy (add_local_dir in ModalSandboxRunner.__init__)
+    is what the sandbox is actually importing from."""
+    from runtime.sandbox.runners.modal_runner import ModalSandboxRunner
+
+    assert not (tmp_path / "prettygraph").exists()
+    (tmp_path / "diagram.py").write_text(
+        "from prettygraph import Pretty\nprint('IMPORT_OK=', bool(Pretty))\n",
+        encoding="utf-8",
+    )
+    result = ModalSandboxRunner(RenderLimits()).render(tmp_path, timeout=30)
+    assert result.returncode == 0, result.stderr
+    assert "IMPORT_OK= True" in result.stdout

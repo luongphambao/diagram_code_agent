@@ -17,10 +17,11 @@ Unlike ``LocalDevRunner`` (which runs *in* the local per-thread workspace
 and needs no file transfer), ``render()`` here:
 
   1. uploads every file already staged into ``workspace`` (the script, plus
-     whatever input data the caller staged there — the ``prettygraph/``
-     package + resolved icon/logo assets for a diagram render, or e.g. an
-     uploaded ``.xlsx``/``wbs.json`` for a data-analysis run) into a fresh
-     sandbox's filesystem,
+     whatever input data the caller staged there — resolved icon/logo assets
+     for a diagram render, or e.g. an uploaded ``.xlsx``/``wbs.json`` for a
+     data-analysis run — the ``prettygraph/`` package itself is baked into
+     the diagram image at build time instead, see ``_PRETTYGRAPH_SRC_DIR``
+     below, so it is skipped here) into a fresh sandbox's filesystem,
   2. runs the script inside the sandbox with ``block_network=True``,
      ``secrets=[]``, and explicit CPU/memory/timeout limits,
   3. downloads back only ``allowed_outputs`` into the SAME local workspace
@@ -51,12 +52,41 @@ from ..contracts import DEFAULT_DIAGRAM_OUTPUTS, RenderLimits, RenderResult
 
 _REMOTE_WORKDIR = "/workspace"
 
+# improvement plan §D: the top-level prettygraph/*.py files (imported by every
+# generated diagram.py as `from prettygraph import Pretty`) are static repo
+# content, not per-render output — baked into the diagram image below instead
+# of re-uploaded file-by-file on every render. `tools/stage_markers.py`'s
+# `_stage_helpers()` still writes this same content into the LOCAL per-thread
+# workspace (that copy is what LocalDevRunner's subprocess actually runs
+# against), so it is skipped here purely to avoid a redundant upload of
+# content the image already has baked in.
+_SRC_DIR = Path(__file__).resolve().parents[3]
+_PRETTYGRAPH_SRC_DIR = _SRC_DIR / "prettygraph"
+# audit.py/drawio.py/graph_builder.py (all baked above) do `from subprocess_utils
+# import run_graphviz` — a TOP-LEVEL sibling module, not a prettygraph submodule.
+# Live-tested and confirmed: without this, `from prettygraph import Pretty` raises
+# ModuleNotFoundError inside the sandbox (it was never staged into the workspace
+# either, pre-dating this change — the mingrammer render path apparently never
+# ran end-to-end through Modal with a real Pretty-based script before). The shim
+# (`subprocess_utils.py`) re-exports from `runtime.subprocess_utils`, so both
+# come along; `runtime/` itself is otherwise NOT baked (its other submodules,
+# e.g. `runtime.sandbox`, pull in the `modal` SDK and app-config machinery that
+# has no business running inside the sandbox it configures).
+_SUBPROCESS_UTILS_SHIM = _SRC_DIR / "subprocess_utils.py"
+_RUNTIME_SRC_DIR = _SRC_DIR / "runtime"
+
 # Skipped when staging the local workspace into the sandbox — caches and
-# stage-marker litter the script has no business reading, and any leftover
-# file from a *previous* render (cleaned locally before each render anyway,
-# but skipped here defensively so a stale remote copy can never be mistaken
-# for this run's fresh output).
-_SKIP_UPLOAD_DIR_NAMES = frozenset({"__pycache__", "outputs", ".git"})
+# stage-marker litter the script has no business reading, any leftover file
+# from a *previous* render (cleaned locally before each render anyway, but
+# skipped here defensively so a stale remote copy can never be mistaken for
+# this run's fresh output), and "prettygraph"/"runtime" (see above — baked
+# into the image instead).
+_SKIP_UPLOAD_DIR_NAMES = frozenset({"__pycache__", "outputs", ".git", "prettygraph", "runtime"})
+# subprocess_utils.py never was, and still isn't, staged into the local
+# workspace by anything — skipped here by name (not dir) so a same-named file
+# a caller might legitimately stage (unlikely, but this is a top-level name)
+# can't collide silently; it simply won't be re-uploaded now that it's baked.
+_SKIP_UPLOAD_FILE_NAMES = frozenset({"subprocess_utils.py"})
 
 
 class ModalSandboxRunner:
@@ -74,6 +104,30 @@ class ModalSandboxRunner:
                 "diagrams>=0.23,<1",
                 "pillow>=9,<12",
                 "cairosvg>=2.7,<3",
+            )
+            # improvement plan §D: bake the top-level prettygraph/*.py files (the
+            # exact set `tools/stage_markers.py`'s `_stage_helpers()` mirrors into
+            # the local workspace — `native/` is a separate subpackage no
+            # generated diagram.py imports) into the image layer instead of
+            # uploading them via `_upload_workspace` on every single render.
+            .add_local_dir(
+                str(_PRETTYGRAPH_SRC_DIR),
+                remote_path=f"{_REMOTE_WORKDIR}/prettygraph",
+                copy=True,
+                ignore=lambda p: p.suffix != ".py" or (p.parts and p.parts[0] == "native"),
+            )
+            # prettygraph's audit.py/drawio.py/graph_builder.py need this top-level
+            # sibling module (see _SUBPROCESS_UTILS_SHIM's comment above).
+            .add_local_file(
+                str(_SUBPROCESS_UTILS_SHIM),
+                remote_path=f"{_REMOTE_WORKDIR}/subprocess_utils.py",
+                copy=True,
+            )
+            .add_local_dir(
+                str(_RUNTIME_SRC_DIR),
+                remote_path=f"{_REMOTE_WORKDIR}/runtime",
+                copy=True,
+                ignore=lambda p: p.parts != ("__init__.py",) and p.parts != ("subprocess_utils.py",),
             )
         )
         # improvement plan §C-S2: run_python (tools/code_interpreter.py, script_name=
@@ -179,6 +233,8 @@ class ModalSandboxRunner:
                 continue
             rel_parts = path.relative_to(workspace).parts
             if any(part in _SKIP_UPLOAD_DIR_NAMES for part in rel_parts):
+                continue
+            if path.name in _SKIP_UPLOAD_FILE_NAMES:
                 continue
             if path.suffix == ".pyc":
                 continue
