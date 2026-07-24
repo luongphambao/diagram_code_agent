@@ -184,6 +184,17 @@ def _extraction_schema() -> dict:
                 "type": ["string", "null"],
                 "description": "Short label for the commercial model, e.g. 'Milestone 30/30/30/10', 'T&M staff augmentation', 'License-only (no service fee)'.",
             },
+            "wbs_join_index": {
+                "type": ["integer", "null"],
+                "description": "If a WBS CANDIDATES list is provided below, the index (0-based) of the "
+                "candidate that is the SAME real-world project as this deck (same client + same "
+                "solution, just a different naming convention) — not merely a similar domain/tech. "
+                "null if none of the candidates is actually the same project, or if no candidates given.",
+            },
+            "wbs_join_reasoning": {
+                "type": ["string", "null"],
+                "description": "One short sentence justifying the wbs_join_index choice (or why none matched).",
+            },
         },
         "required": [
             "effort_md",
@@ -195,13 +206,17 @@ def _extraction_schema() -> dict:
             "capex_note",
             "opex_annual_usd",
             "pricing_model",
+            "wbs_join_index",
+            "wbs_join_reasoning",
         ],
     }
 
 
-def _extraction_input(md: str) -> str:
+def _extraction_input(md: str, candidates: list[dict]) -> str:
     """The subset of the analysis.md most likely to carry estimate/pricing/team facts —
-    keeps the LLM call cheap and focused instead of sending the whole (often 150-220 line) file."""
+    keeps the LLM call cheap and focused instead of sending the whole (often 150-220 line) file.
+    Appends the WBS join candidates (if any) for the same call to judge same-project identity.
+    """
     parts = []
     for header_res in (
         (r"Team & Timeline",),
@@ -212,7 +227,17 @@ def _extraction_input(md: str) -> str:
             parts.append(body)
     # Header line (Type/Client/Tech) gives useful context even if the two sections above are thin.
     header = "\n".join(md.splitlines()[:4])
-    return header + "\n\n" + "\n\n".join(parts) if parts else header
+    text = header + "\n\n" + "\n\n".join(parts) if parts else header
+
+    if candidates:
+        cand_lines = ["\n\nWBS CANDIDATES (for wbs_join_index — pick one ONLY if it's the same real project):"]
+        for i, c in enumerate(candidates):
+            cand_lines.append(
+                f"  [{i}] name={c['name']!r} client={c['client']!r} "
+                f"domain={c['business_domain']!r} type={c['solution_type']!r}"
+            )
+        text += "\n".join(cand_lines)
+    return text
 
 
 _llm_cache: Any = None
