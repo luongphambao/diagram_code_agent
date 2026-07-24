@@ -720,6 +720,7 @@ def compute_wbs_rollup() -> str:
                 }
             )
     totals = rollup(wbs["items"])
+    totals["benchmark"] = _benchmark_effort_totals(wbs, totals)
     wbs["phases_nested"] = nested
     wbs["effort_by_module"] = by_mod
     wbs["effort_totals"] = totals
