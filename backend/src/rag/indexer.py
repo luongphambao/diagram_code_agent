@@ -200,7 +200,8 @@ def get_retriever(
 
 
 def _build_in_memory_store(embeddings):
-    """Fallback: FAISS in-memory store from project-level docs only."""
+    """Fallback: FAISS in-memory store from the unified solution-memory corpus (falls back
+    further to WBS project-level docs if solution_memory.json hasn't been built yet)."""
     try:
         from langchain_community.vectorstores import FAISS
     except ImportError:
@@ -210,10 +211,16 @@ def _build_in_memory_store(embeddings):
         client = QdrantClient(":memory:")
         return QdrantVectorStore(client=client, collection_name="fallback", embedding=embeddings)
 
-    from wbs_normalizer import load_all_projects, project_to_documents
+    from rag.solution_memory import solution_memory_to_documents
 
-    projects, _ = load_all_projects()
-    docs = [d for p in projects for d in project_to_documents(p) if d["metadata"]["granularity"] == "project"]
+    docs = solution_memory_to_documents()
+    if not docs:
+        from wbs_normalizer import load_all_projects, project_to_documents
+
+        projects, _ = load_all_projects()
+        docs = [
+            d for p in projects for d in project_to_documents(p) if d["metadata"]["granularity"] == "project"
+        ]
 
     if not docs:
         return FAISS.from_texts(["placeholder"], embeddings)
