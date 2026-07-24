@@ -515,15 +515,52 @@ def available_inputs(
 # --- case-study library (built offline from DATA/SLIDE_IMAGES/*/analysis.md) ------------
 
 
-def pick_case_study(model: SolutionModel, library: list[dict]) -> Optional[dict]:
-    """Top-1 past project by domain/tech overlap with the current CSM (None if no overlap)."""
-    if not library:
-        return None
-    hay = " ".join(
+def _csm_query_text(model: SolutionModel) -> str:
+    """Natural-language haystack of the current solution — same signal the keyword scorer
+    below uses, but phrased as a query for the embedding retriever."""
+    return " ".join(
         [c.name for c in model.components]
         + [d.title for d in model.decisions]
         + [r.statement for r in model.requirements]
-    ).lower()
+    )
+
+
+def pick_case_study(model: SolutionModel, library: list[dict]) -> Optional[dict]:
+    """Best past project for the current CSM.
+
+    Tries semantic retrieval over the unified ``bnk_solutions`` corpus first (embeddings +
+    MMR over problem/solution/tech/domain — see ``rag/indexer.py`` + ``rag/solution_memory.py``,
+    built by ``backend/scripts/build_solution_memory.py``), which also carries real WBS
+    estimate/tech where a same-project join was confirmed. Falls back to the original
+    domain/tech keyword-overlap scorer over the legacy ``case_library.json`` (*library* arg)
+    when retrieval is unavailable (no OPENAI_API_KEY, Qdrant unreachable, solution_memory.json
+    not yet built) or returns nothing — so this never regresses below the old behavior.
+    """
+    query = _csm_query_text(model)
+    if query.strip():
+        try:
+            from rag.indexer import get_retriever
+            from rag.solution_memory import load_solution_memory
+
+            docs = get_retriever(top_k=1).invoke(query)
+            if docs:
+                by_slug = {e.get("slug"): e for e in load_solution_memory()}
+                for doc in docs:
+                    entry = by_slug.get(doc.metadata.get("slug"))
+                    if entry:
+                        return entry
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Semantic case-study retrieval unavailable (%s) — using keyword fallback.", exc)
+
+    return _pick_case_study_keyword(model, library)
+
+
+def _pick_case_study_keyword(model: SolutionModel, library: list[dict]) -> Optional[dict]:
+    """Top-1 past project by domain/tech overlap with the current CSM (None if no overlap).
+    Kept as the deterministic fallback for :func:`pick_case_study` — see its docstring."""
+    if not library:
+        return None
+    hay = _csm_query_text(model).lower()
     best, best_score = None, 0
     for entry in library:
         score = sum(1 for t in entry.get("tech", []) if t.lower() in hay)
