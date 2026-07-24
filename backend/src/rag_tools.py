@@ -1,9 +1,12 @@
 """RAG retrieval tools for the diagram agent.
 
-Provides ``find_similar_solutions`` — a tool that searches BnK's internal
-database of 52+ past projects via Qdrant and returns the most similar ones
-to the current requirement. The agent calls this BEFORE propose_tech_stack to
-ground recommendations in real BnK delivery history.
+Provides ``find_similar_solutions`` — a tool that searches BnK's unified solution-memory
+corpus (case-study narrative + real WBS estimate/tech merged — see
+``rag/solution_memory.py`` + ``backend/scripts/build_solution_memory.py``) via Qdrant and
+returns the most similar past projects to the current requirement, one hit answering both
+"what did we solve" (client/problem/solution/outcome) and "what did it cost" (effort MD,
+tech stack, pricing model). The agent calls this BEFORE propose_tech_stack / when estimating
+effort, to ground recommendations in real BnK delivery history instead of guessing.
 """
 
 from __future__ import annotations
