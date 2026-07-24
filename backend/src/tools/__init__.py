@@ -169,6 +169,7 @@ from .analysis.reporting_gates import (
     propose_deck_plan,
 )
 from .analysis.research import web_research
+from rag_tools import find_similar_solutions  # noqa: E402
 from .analysis.findings import (
     add_comment,
     apply_compliance_pack,
