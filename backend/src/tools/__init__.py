@@ -261,6 +261,7 @@ MAIN_TOOLS = [
     propose_diagram_brief,
     run_python,  # improvement plan §C-S2: analyze uploaded .xlsx/.csv with pandas
     find_similar_solutions,  # re-enabled: queries the unified bnk_solutions corpus (rag/solution_memory.py)
+    benchmark_solution,  # deterministic domain-level effort/tech rollup (rag/benchmarks.py) — no embeddings call
     web_research,  # 10 Tavily calls/session, split per stage (topic=tech_stack/architecture/wbs/evidence)
     record_evidence,  # persist a grounded claim -> evidence_log.json -> CSM Evidence + supports links
     waive_finding,  # accept a cross-artifact finding as a trade-off -> findings_log.json
