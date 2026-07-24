@@ -125,6 +125,8 @@ class _DeckEstimate:
         "capex_note",
         "opex_annual_usd",
         "pricing_model",
+        "wbs_join_index",
+        "wbs_join_reasoning",
     )
 
     def __init__(self, **kw: Any) -> None:
@@ -132,7 +134,7 @@ class _DeckEstimate:
             setattr(self, k, kw.get(k))
 
     def as_dict(self) -> dict[str, Any]:
-        return {k: getattr(self, k) for k in self.__slots__}
+        return {k: getattr(self, k) for k in self.__slots__ if not k.startswith("wbs_join")}
 
 
 def _extraction_schema() -> dict:
