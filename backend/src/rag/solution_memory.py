@@ -84,7 +84,7 @@ def entry_to_document(entry: dict[str, Any]) -> dict[str, Any]:
     if est.get("timeline_text"):
         parts.append("Timeline: " + est["timeline_text"])
 
-    effort_md = est.get("effort_md") or wbs.get("total_mandays")
+    effort_md = effective_effort_md(entry)
 
     metadata = {
         "granularity": "solution",
