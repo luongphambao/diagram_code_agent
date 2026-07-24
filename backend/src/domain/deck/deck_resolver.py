@@ -545,13 +545,18 @@ def pick_case_study(model: SolutionModel, library: list[dict]) -> Optional[dict]
             from rag.indexer import get_retriever
             from rag.solution_memory import load_solution_memory
 
-            docs = get_retriever(top_k=1).invoke(query)
+            # top_k>1: a success-story slide needs a NARRATIVE (problem/solution), so among
+            # the top hits we prefer one with a story to tell over a numbers-only wbs_only
+            # entry, even if the latter scored marginally higher on embedding similarity.
+            docs = get_retriever(top_k=3).invoke(query)
             if docs:
                 by_slug = {e.get("slug"): e for e in load_solution_memory()}
-                for doc in docs:
-                    entry = by_slug.get(doc.metadata.get("slug"))
-                    if entry:
+                candidates = [by_slug[s] for d in docs if (s := d.metadata.get("slug")) in by_slug]
+                for entry in candidates:
+                    if entry.get("source") != "wbs_only" and (entry.get("problem") or entry.get("solution")):
                         return entry
+                if candidates:
+                    return candidates[0]  # no narrative among top hits — still the best analog
         except Exception as exc:  # noqa: BLE001
             logger.warning("Semantic case-study retrieval unavailable (%s) — using keyword fallback.", exc)
 
