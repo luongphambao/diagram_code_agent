@@ -63,13 +63,19 @@ def find_similar_solutions(query: str, top_k: int = 3) -> str:
         meta = doc.metadata
         projects.append(
             {
-                "name": meta.get("name", ""),
+                "title": meta.get("title") or meta.get("name", ""),
                 "client": meta.get("client", ""),
                 "business_domain": meta.get("business_domain", ""),
                 "solution_type": meta.get("solution_type", ""),
                 "total_mandays": meta.get("total_mandays") or None,
+                "capex_usd": meta.get("capex_usd") or None,
+                "opex_annual_usd": meta.get("opex_annual_usd") or None,
+                "timeline_months": meta.get("timeline_months") or None,
+                "pricing_model": meta.get("pricing_model") or "",
                 "tech_keywords": meta.get("tech_keywords", ""),
-                "summary_snippet": doc.page_content[:400],
+                "image_ref": meta.get("image_ref") or None,
+                "provenance": meta.get("source") or "",  # "narrative+wbs" | "narrative" | "wbs_only"
+                "summary_snippet": doc.page_content[:500],
             }
         )
 
@@ -79,9 +85,12 @@ def find_similar_solutions(query: str, top_k: int = 3) -> str:
         "count": len(projects),
         "projects": projects,
         "instruction": (
-            "Reference these past BnK projects when proposing the tech stack. "
+            "Reference these past BnK projects when proposing the tech stack and effort estimate. "
             "For each tech choice, note if BnK has used it in a similar project. "
-            "Use total_mandays as a rough effort benchmark for sanity-checking."
+            "Use total_mandays / timeline_months as a real-world benchmark for sanity-checking "
+            "the current estimate — treat provenance='narrative' (no confirmed WBS number) as "
+            "less certain than 'narrative+wbs' or 'wbs_only'. Never present these figures as the "
+            "current project's own numbers — they are reference analogs, cite them as such."
         ),
     }
 
