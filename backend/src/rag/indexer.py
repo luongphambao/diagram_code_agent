@@ -157,7 +157,7 @@ def build_index(data_dir: str | None = None, *, drop: bool = False) -> None:
 
 
 def get_retriever(
-    collection: str = COLLECTION_PROJECTS,
+    collection: str = COLLECTION_SOLUTIONS,
     top_k: int = 5,
     search_type: str = "mmr",
 ) -> "VectorStoreRetriever":
