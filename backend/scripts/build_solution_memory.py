@@ -431,19 +431,36 @@ def build(*, use_llm: bool = True, limit: Optional[int] = None) -> list[dict]:
         solution = _section(md, r"Gi[aả]i ph[aá]p", r"Proposed Solution", r"Solution")
         outcome = _section(md, r"KPIs?", r"Expected", r"Nh[aậ]n x[eé]t", r"Kết quả", r"Results")
 
-        wbs_match, match_score = _match_wbs(folder, client, wbs_projects)
-        if wbs_match:
-            used_wbs_source_files.add(wbs_match["source_file"])
+        candidates = _wbs_candidates(folder, client, wbs_projects)
 
-        # LLM estimate/pricing/team extraction — cached by mtime.
+        # LLM estimate/pricing/team extraction + WBS-join decision — cached by mtime.
         prior = prior_by_folder.get(folder)
+        cache_hit = use_llm and prior and prior.get("_source_mtime") == mtime and prior.get("estimate")
         if not use_llm:
             est = _DeckEstimate()
-        elif prior and prior.get("_source_mtime") == mtime and prior.get("estimate"):
+        elif cache_hit:
             est = _DeckEstimate(**prior["estimate"])
+            # re-derive wbs_join_index from the cached wbs_match (candidates list is
+            # deterministic given the same corpus, so the index is stable across runs).
+            cached_match = prior.get("wbs_match")
+            est.wbs_join_index = None
+            if cached_match:
+                for idx, c in enumerate(candidates):
+                    if c["source_file"] == cached_match.get("source_file"):
+                        est.wbs_join_index = idx
+                        break
         else:
             print(f"[{i}/{len(analyses)}] extracting estimate: {folder}", file=sys.stderr)
-            est = _extract_estimate_llm(md, folder)
+            est = _extract_estimate_llm(md, folder, candidates)
+
+        wbs_match = None
+        if (
+            est.wbs_join_index is not None
+            and isinstance(est.wbs_join_index, int)
+            and 0 <= est.wbs_join_index < len(candidates)
+        ):
+            wbs_match = candidates[est.wbs_join_index]
+            used_wbs_source_files.add(wbs_match["source_file"])
 
         entry = {
             "slug": _slug(folder),
@@ -458,10 +475,10 @@ def build(*, use_llm: bool = True, limit: Optional[int] = None) -> list[dict]:
             "outcome": _clip(outcome, 300),
             "image_ref": _image_ref(analysis.parent),
             "estimate": est.as_dict(),
+            "wbs_join_reasoning": est.wbs_join_reasoning,
             "wbs_match": (
                 {
                     "source_file": wbs_match["source_file"],
-                    "match_score": round(match_score, 2),
                     "project_name": wbs_match["name"],
                     "project_client": wbs_match["client"],
                     "business_domain": wbs_match["business_domain"],
