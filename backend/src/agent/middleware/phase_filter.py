@@ -116,6 +116,12 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
         "web_research",
         "send_email",
         "propose_business_case",
+        # Ad-hoc analog lookup while sizing effort — the automatic benchmark inside
+        # compute_wbs_rollup (wbs_tools._benchmark_effort_totals) already runs
+        # deterministically on every rollup; this lets the agent additionally query
+        # a different/narrower domain on demand.
+        "find_similar_solutions",
+        "benchmark_solution",
     },
     "ppt": _UTILITY_TOOLS
     | _WBS_DELIVERABLE_TOOLS
