@@ -773,12 +773,20 @@ def compute_wbs_rollup() -> str:
     wbs["phases"] = nested
     _write_json(_WBS_FILE, wbs)
     br = totals["effort_by_role"]
+    bench = totals.get("benchmark")
+    bench_msg = ""
+    if bench:
+        bench_msg = (
+            f" Benchmark: {bench['effort_md_sample_size']} past '{bench['domain']}' project(s) "
+            f"ranged {bench['effort_md_min']}-{bench['effort_md_max']} MD "
+            f"(median {bench['effort_md_median']}) — see effort_totals.benchmark for details/examples."
+        )
     return (
         f"Roll-up complete: {totals['total_mandays']} MD "
         f"(~{totals['total_manmonths']} man-months) across {len(by_mod)} modules. "
         f"By role — BE {br['BE']}, FE/Mobile {br['FE_Mobile']}, BA {br['BA']}, "
         f"QC {br['QC']}, PM {br['PM']}. "
-        f"Estimated cost: {totals['total_cost_usd']:,.0f} USD (default rate card)." + cp_msg
+        f"Estimated cost: {totals['total_cost_usd']:,.0f} USD (default rate card)." + cp_msg + bench_msg
     )
 
 
