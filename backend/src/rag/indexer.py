@@ -80,6 +80,7 @@ def build_index(data_dir: str | None = None, *, drop: bool = False) -> None:
     from langchain_qdrant import QdrantVectorStore
     from qdrant_client.http.models import Distance, VectorParams
 
+    from rag.solution_memory import solution_memory_to_documents
     from wbs_normalizer import load_all_projects, project_to_documents
 
     projects, errors = load_all_projects(data_dir)
@@ -108,17 +109,21 @@ def build_index(data_dir: str | None = None, *, drop: bool = False) -> None:
             elif g == "item":
                 item_docs.append(doc)
 
+    solution_docs = solution_memory_to_documents()
+
     logger.info(
-        "Documents — projects: %d, modules: %d, items: %d",
+        "Documents — projects: %d, modules: %d, items: %d, solutions (unified): %d",
         len(project_docs),
         len(module_docs),
         len(item_docs),
+        len(solution_docs),
     )
 
     collections = [
         (COLLECTION_PROJECTS, project_docs),
         (COLLECTION_MODULES, module_docs),
         (COLLECTION_ITEMS, item_docs),
+        (COLLECTION_SOLUTIONS, solution_docs),
     ]
 
     for collection_name, docs in collections:
