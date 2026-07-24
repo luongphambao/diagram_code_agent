@@ -22,12 +22,15 @@ Imports only ``csm`` + ``deck_sections`` (both cycle-free), same discipline as `
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any, Optional
 
 from csm import SolutionModel
 from domain.deck.deck_sections import SECTION_CONTENT_CONTRACTS, SectionContract
 from domain.wbs.wbs_effort import cost_by_role as _cost_by_role
+
+logger = logging.getLogger(__name__)
 
 
 def _clip(text: Any, limit: int = 200) -> str:
