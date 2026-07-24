@@ -42,6 +42,16 @@ def load_solution_memory(path: str | Path | None = None) -> list[dict[str, Any]]
         return []
 
 
+def effective_effort_md(entry: dict[str, Any]) -> float | None:
+    """The best-available effort-MD figure for one entry: the LLM-extracted deck figure if
+    the deck states one, else the confirmed-join WBS project's real total (more trustworthy
+    when both are present, since it's an actual delivered project number, not a proposal
+    estimate) — never invented if neither is present."""
+    est = entry.get("estimate") or {}
+    wbs = entry.get("wbs_match") or {}
+    return wbs.get("total_mandays") or est.get("effort_md")
+
+
 def entry_to_document(entry: dict[str, Any]) -> dict[str, Any]:
     """One solution-memory entry -> one embeddable document (project-granularity).
 
