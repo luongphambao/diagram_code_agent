@@ -263,9 +263,9 @@ def _get_llm():
     return _llm_cache
 
 
-def _extract_estimate_llm(md: str, folder: str) -> _DeckEstimate:
+def _extract_estimate_llm(md: str, folder: str, candidates: list[dict]) -> _DeckEstimate:
     llm = _get_llm()
-    text = _extraction_input(md)
+    text = _extraction_input(md, candidates)
     try:
         result = llm.invoke(
             "Extract estimate/pricing/team facts from this BnK proposal-deck analysis. "
