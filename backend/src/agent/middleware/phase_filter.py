@@ -72,6 +72,11 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
         # straight from intake, not just the "blueprint" phase below.
         "render_typed_diagram",
         "sql_to_erd_script",
+        # Solution-memory retrieval — ground the upcoming tech-stack proposal in real
+        # past BnK delivery history; see rag_tools.py docstrings ("call BEFORE
+        # propose_tech_stack" / "sanity-check a total estimate").
+        "find_similar_solutions",
+        "benchmark_solution",
     },
     "blueprint": _UTILITY_TOOLS
     | {
@@ -87,6 +92,8 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
         "visualize_code_structure",
         "finalize_diagram",
         "propose_business_case",
+        "find_similar_solutions",
+        "benchmark_solution",
     },
     "draw": _UTILITY_TOOLS
     | _WBS_DELIVERABLE_TOOLS
