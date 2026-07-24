@@ -24,8 +24,18 @@ Team&Timeline / Chi phí sections as the only input. Cached in solution_memory.j
 source-mtime, so re-runs only re-extract decks that changed — this stays cheap and mostly
 deterministic in practice (temperature=0, same prompt) even though it isn't pure regex.
 
-The two corpora are joined narrative<->WBS by fuzzy client/name token overlap (best-effort;
-unmatched decks/projects still appear, tagged by ``source``).
+Why the narrative<->WBS join is ALSO LLM-confirmed, not pure token overlap
+-----------------------------------------------------------------------
+Verified empirically: a known-true match ("BnK Solution - GGF VAT Stream 2 Proposal" deck
+<-> "GGF VAT 3.4 - Boom Sprayer Optimization" WBS file — same real project, different naming
+convention) scores only 0.15 Jaccard on client+name tokens. Loosening the threshold enough
+to catch that would also catch false positives (different clients, same generic tokens like
+"platform"/"system"). A wrong join is worse than no join — it silently attaches the wrong
+project's real MD/tech as if it were an analog. So token overlap is used ONLY as a cheap
+candidate generator (top-3, very loose bar); the same per-deck LLM call that extracts
+estimate/pricing also judges, given the candidates' name+client+domain, whether any of them
+is really the same project (or none). Unmatched decks/projects still appear standalone,
+tagged by ``source``.
 
 Run (from backend/, using the project venv which has langchain_openai + the domain package):
     ../.venv/Scripts/python.exe scripts/build_solution_memory.py [--no-llm] [--limit N]
