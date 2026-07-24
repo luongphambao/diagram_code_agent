@@ -361,17 +361,23 @@ def _jaccard(a: set[str], b: set[str]) -> float:
     return inter / union if union else 0.0
 
 
-def _match_wbs(deck_folder: str, deck_client: str, wbs_projects: list[dict]) -> tuple[Optional[dict], float]:
-    """Best WBS project match for one narrative deck, by client+name token Jaccard overlap."""
+_CANDIDATE_MIN_SCORE = 0.05  # deliberately loose — a candidate GENERATOR, not the join decision
+_CANDIDATE_TOP_N = 3
+
+
+def _wbs_candidates(deck_folder: str, deck_client: str, wbs_projects: list[dict]) -> list[dict]:
+    """Top-N loosely-similar WBS projects for one narrative deck (by client+name token
+    Jaccard). Deliberately over-inclusive — the LLM call decides which (if any) is a real
+    same-project match; see module docstring for why pure token overlap can't decide alone."""
     deck_toks = _tokens(deck_folder, deck_client)
-    best, best_score = None, 0.0
+    scored = []
     for wp in wbs_projects:
         wp_toks = _tokens(wp["name"], wp["client"])
-        # weight client-name overlap higher than generic name overlap when both present
         score = _jaccard(deck_toks, wp_toks)
-        if score > best_score:
-            best, best_score = wp, score
-    return (best, best_score) if best_score >= 0.34 else (None, best_score)
+        if score >= _CANDIDATE_MIN_SCORE:
+            scored.append((score, wp))
+    scored.sort(key=lambda t: t[0], reverse=True)
+    return [wp for _, wp in scored[:_CANDIDATE_TOP_N]]
 
 
 # --- main build -----------------------------------------------------------------------------
