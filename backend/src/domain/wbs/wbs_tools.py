@@ -691,6 +691,30 @@ def _assemble_nested(wbs: dict) -> dict:
     return phases_out
 
 
+def _benchmark_effort_totals(wbs: dict, totals: dict) -> Optional[dict]:
+    """Compare the computed total_mandays against real past BnK projects in the same
+    business_domain — a deterministic sanity-check (no LLM call, no agent tool), same
+    "never trust a number that could be wrong without checking" discipline as the CAPEX
+    computation above. Returns None (never raises) when there's nothing to compare against
+    — a project_info.business_domain is missing, or solution_memory.json hasn't been built
+    yet (backend/scripts/build_solution_memory.py), or no analog has an effort figure.
+    """
+    business_domain = ((wbs.get("project_info") or {}).get("business_domain") or "").strip()
+    if not business_domain:
+        return None
+    try:
+        from rag.benchmarks import domain_rollup
+
+        solution_type = (wbs.get("project_info") or {}).get("solution_type") or None
+        bench = domain_rollup(business_domain, solution_type=solution_type)
+    except Exception:  # noqa: BLE001 — benchmarking is best-effort, never blocks the WBS rollup
+        return None
+    if not bench.get("effort_md_sample_size"):
+        return None
+    bench["current_total_mandays"] = totals["total_mandays"]
+    return bench
+
+
 @tool(parse_docstring=True)
 def compute_wbs_rollup() -> str:
     """Roll up all leaf items into module/phase/role totals and assemble the tree.
