@@ -28,6 +28,11 @@ QDRANT_URL_DEFAULT = "http://localhost:6333"
 COLLECTION_PROJECTS = "bnk_projects"
 COLLECTION_MODULES = "bnk_modules"
 COLLECTION_ITEMS = "bnk_wbs_items"
+# Unified corpus (narrative case-study + real WBS estimate/tech in one record) — see
+# rag/solution_memory.py + backend/scripts/build_solution_memory.py. Prefer this collection
+# for new retrieval call sites (find_similar_solutions, pick_case_study); the 3 collections
+# above stay for backward-compat / finer WBS-only granularity (module/item-level MD lookup).
+COLLECTION_SOLUTIONS = "bnk_solutions"
 EMBED_MODEL = "text-embedding-3-small"
 
 
