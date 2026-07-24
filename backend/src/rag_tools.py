@@ -102,3 +102,53 @@ def find_similar_solutions(query: str, top_k: int = 3) -> str:
 def _similar_solutions_file():
     current_workspace().mkdir(parents=True, exist_ok=True)
     return _SIMILAR_SOLUTIONS_FILE
+
+
+@tool(parse_docstring=True)
+def benchmark_solution(domain: str, solution_type: str = "") -> str:
+    """Get real effort/tech benchmarks for a business domain from BnK's project history.
+
+    Unlike find_similar_solutions (semantic search for the closest few projects), this
+    aggregates ALL past projects tagged with the given domain into min/median/max man-day
+    stats and the most common tech choices — use it to sanity-check a total estimate
+    ("is 40 MD reasonable for a banking project?") or to see what BnK typically builds
+    with in a domain, not just the single closest analog. Deterministic — no embeddings
+    call, just a lookup over the offline solution-memory corpus.
+
+    Args:
+        domain: a domain tag, e.g. "banking", "insurance", "document-ai", "logistics",
+            "manufacturing", "healthcare", "retail", "data-platform", "ai-ml",
+            "agriculture" — or a free-text business_domain string (substring-matched).
+        solution_type: optional further narrowing, e.g. "Underwriting Platform" — leave
+            empty to include all solution types in the domain.
+    """
+    from rag.benchmarks import domain_rollup
+
+    try:
+        result = domain_rollup(domain, solution_type=solution_type or None)
+    except Exception as exc:  # noqa: BLE001
+        result = {
+            "status": "ERROR",
+            "error": str(exc)[:300],
+            "instruction": (
+                "Benchmark lookup failed. Run `python backend/scripts/build_solution_memory.py` "
+                "first if backend/data/solution_memory.json doesn't exist yet."
+            ),
+        }
+        return json.dumps(result, indent=2)
+
+    if not result.get("effort_md_sample_size"):
+        result["instruction"] = (
+            f"No past project in '{domain}' has a recorded effort figure "
+            f"({result['matched_count']} matched by domain, 0 with a usable MD number). "
+            "Proceed without a benchmark, or widen/change the domain."
+        )
+    else:
+        result["instruction"] = (
+            "Use effort_md_median as the benchmark reference point and the min-max range as "
+            "the plausible band when sanity-checking an estimate. common_tech reflects what "
+            "BnK has actually shipped in this domain — prefer these choices when equally "
+            "suitable, and note explicitly when you deviate from them."
+        )
+    result["status"] = "OK"
+    return json.dumps(result, ensure_ascii=False, indent=2)
