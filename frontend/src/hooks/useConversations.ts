@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import type { AgentState, ChatMessage } from "./useDiagramAgent";
+import type { AgentState, ChatMessage } from "./agent-utils";
 import { BACKEND_URL } from "./agent-utils";
 
 export interface Conversation {
@@ -40,24 +40,6 @@ export function useConversations() {
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  const create = useCallback(async (threadId: string, name = "Untitled") => {
-    try {
-      const res = await fetch(`${BACKEND_URL}/conversations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ thread_id: threadId, name }),
-      });
-      if (res.ok) {
-        const conv: Conversation = await res.json();
-        setConversations((prev) => [conv, ...prev]);
-        return conv;
-      }
-    } catch {
-      /* ignore */
-    }
-    return null;
   }, []);
 
   const rename = useCallback(async (threadId: string, name: string) => {
