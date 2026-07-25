@@ -29,7 +29,7 @@ export default function CommentThread({ threadId, userRole }: CommentThreadProps
   return (
     <div className="flex flex-1 flex-col overflow-hidden bg-app">
       <div className="flex items-center justify-between border-b border-white/8 px-4 py-2">
-        <span className="text-xs font-medium text-slate-400">
+        <span className="text-xs font-medium text-secondary">
           Comments{" "}
           {comments.length > 0 && <span className="text-muted">· {open.length} open</span>}
         </span>
@@ -96,7 +96,7 @@ export default function CommentThread({ threadId, userRole }: CommentThreadProps
             }}
             placeholder="Add a comment… (⌘/Ctrl+Enter)"
             rows={2}
-            className="flex-1 resize-none rounded-lg border border-white/8 bg-white/4 px-2.5 py-1.5 text-xs text-slate-200 outline-none placeholder:text-slate-700 focus:border-blue-500/40"
+            className="flex-1 resize-none rounded-lg border border-white/8 bg-white/4 px-2.5 py-1.5 text-xs text-fg outline-none placeholder:text-slate-700 focus:border-blue-500/40"
           />
           <button
             onClick={submit}
