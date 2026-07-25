@@ -890,6 +890,55 @@ def _team_slide(
     )
 
 
+def _resolve_asset_path(ref: str | None) -> Path | None:
+    """A ``solution_memory.json`` ``image_ref`` (e.g. 'DATA/SLIDE_IMAGES/.../slide_007.png')
+    is repo-root-relative; resolve it against the repo root so it can be embedded regardless
+    of the current workspace's location."""
+    if not ref:
+        return None
+    p = Path(ref)
+    return p if p.is_absolute() else _repo_root() / p
+
+
+def _case_study_slide(
+    prs: Presentation,
+    params: dict[str, Any],
+    slide_no: int,
+    title: str = "SUCCESS STORY",
+):
+    """One reference past project — text (client/context/outcome/tech/effort) beside an
+    optional screenshot (``image_ref``). ``params`` is a SINGLE case's dict, as shaped by
+    ``deck_resolver._case_to_params`` (a "Success Story" section emits one of these slides
+    per top-k picked project — see ``deck._build_deck_plan_registry``)."""
+    slide = prs.slides.add_slide(_layout(prs, "Detail-01"))
+    _add_title(slide, title)
+
+    bullets: list[str] = []
+    if params.get("client"):
+        bullets.append(f"Client: {params['client']}")
+    if params.get("context_paragraph"):
+        bullets.append(params["context_paragraph"])
+    if params.get("outcome"):
+        bullets.append(f"Outcome: {params['outcome']}")
+    if params.get("tech"):
+        bullets.append("Tech: " + ", ".join(params["tech"][:8]))
+    if params.get("effort_md"):
+        bullets.append(f"Reference effort: {params['effort_md']} MD (past project, not this quote)")
+
+    image_path = _resolve_asset_path(params.get("image_ref"))
+    if image_path and image_path.exists():
+        _add_bullets(slide, bullets, 0.6, 1.3, 6.5, 5.3, font_size=13)
+        try:
+            _image_fit(slide, image_path, 7.35, 1.3, 5.35, 5.3)
+        except Exception:  # noqa: BLE001 — a broken/unreadable image must not break the deck
+            pass
+    elif not _fill_bullets_placeholder(slide, bullets):
+        _add_bullets(slide, bullets, 0.85, 1.35, 11.6, 4.95)
+
+    _add_footer(slide, slide_no)
+    return slide
+
+
 def _tech_bullets(report: dict[str, Any]) -> list[str]:
     items = []
     for item in report.get("tech_items", [])[:8]:
