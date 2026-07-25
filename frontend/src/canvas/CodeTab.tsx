@@ -76,7 +76,7 @@ export default function CodeTab({ code, lang, title }: { code: string; lang: "py
         }`}
       >
         {html ? (
-          // eslint-disable-next-line react/no-danger -- shiki's own sanitized output, no user input
+          // shiki's own sanitized HAST-to-HTML output, not user input.
           <div dangerouslySetInnerHTML={{ __html: html }} />
         ) : (
           <pre className="p-6 font-mono text-code text-secondary">{code}</pre>
