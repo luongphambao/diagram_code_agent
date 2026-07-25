@@ -6,8 +6,9 @@
  * WildcardGateCard.tsx for why a per-name registry isn't possible yet.
  */
 import { useCallback } from "react";
-import { useAgent, useHumanInTheLoop } from "@copilotkit/react-core/v2";
+import { useAgent } from "@copilotkit/react-core/v2";
 import WildcardGateCard from "./WildcardGateCard";
+import { useWildcardHumanInTheLoop } from "./useWildcardHumanInTheLoop";
 import { useDiagramWorkspaceContext } from "../context/AgentContext";
 
 export default function GateHost() {
