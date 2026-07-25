@@ -16,13 +16,6 @@ export interface ConversationHistory {
   state: AgentState;
 }
 
-function wireToChat(wire: ConversationHistory["messages"]): ChatMessage[] {
-  if (!Array.isArray(wire)) return [];
-  return wire
-    .filter((m) => m.role === "user" || m.role === "assistant")
-    .map((m) => ({ id: m.id, role: m.role as "user" | "assistant", content: m.content }));
-}
-
 export function useConversations() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
