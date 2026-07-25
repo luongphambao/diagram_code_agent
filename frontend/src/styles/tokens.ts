@@ -171,9 +171,16 @@ export const CONTRAST_PAIRS: ContrastPair[] = [
   { theme: "light", label: "ink-100 primary fg on ink-900 canvas", fg: light.ink[100], bg: light.ink[900], min: 15 },
   { theme: "light", label: "ink-100 primary fg on ink-850 card (white)", fg: light.ink[100], bg: light.ink[850], min: 15 },
   // Light — accent gets darker, not lighter, per §C.2; must clear AA on white.
-  { theme: "light", label: "accent-500 fill text (white) on accent-500", fg: light.accent.fg, bg: light.accent[500], min: 4.5 },
-  { theme: "light", label: "accent-500 as text on ink-900 canvas", fg: light.accent[500], bg: light.ink[900], min: 4.5 },
-  { theme: "light", label: "accent-500 as text on ink-850 card (white)", fg: light.accent[500], bg: light.ink[850], min: 4.5 },
+  // Found via Stage 1 Playwright visual verification: an earlier version of
+  // this file mapped --color-accent-text to accent[300] in BOTH themes.
+  // accent[300] is `#8FCFE2` in dark (legible light-blue text) but `#E1EFF4`
+  // in light (a near-white tint) — same ramp *position*, opposite *role*.
+  // That made the "AG-UI" pill and the toolbar logo icon vanish in light
+  // mode. `accent.text` is the fix: a theme-stable semantic name whose VALUE
+  // is deliberately accent[500] in light mode, not accent[300].
+  { theme: "light", label: "accent-fg (white) on accent-500 fill", fg: light.accent.fg, bg: light.accent[500], min: 4.5 },
+  { theme: "light", label: "accent-text on ink-900 canvas", fg: light.accent.text, bg: light.ink[900], min: 4.5 },
+  { theme: "light", label: "accent-text on ink-850 card (white)", fg: light.accent.text, bg: light.ink[850], min: 4.5 },
   // Light — semantic text tiers on white/near-white.
   { theme: "light", label: "ok-fg on ink-850 card (white)", fg: light.semantic.okFg, bg: light.ink[850], min: 4.5 },
   { theme: "light", label: "warn-fg on ink-850 card (white)", fg: light.semantic.warnFg, bg: light.ink[850], min: 4.5 },
