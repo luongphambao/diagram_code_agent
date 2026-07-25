@@ -8,6 +8,7 @@ import {
 import type { AbstractAgent, BaseEvent } from "@ag-ui/client";
 import { Observable } from "rxjs";
 import { CONFIG } from "./config.js";
+import { substituteSnapshot, substituteStateDelta } from "./artifact-substitution.js";
 
 interface ConversationHistoryResponse {
   name: string;
