@@ -1,5 +1,6 @@
 import type { AgentState } from "../hooks/agent-utils";
 import { downloadBase64File, downloadBlob, MIME_TYPES } from "../lib/downloadBase64";
+import { isArtifactRef, type Base64OrArtifact } from "../lib/artifacts";
 
 export interface ExportDescriptor {
   id: "png" | "drawio" | "pdf" | "ppt" | "wbs";
@@ -8,7 +9,7 @@ export interface ExportDescriptor {
   ext: string;
   basename: string;
   kind: "base64" | "text";
-  select: (state: AgentState) => string | undefined;
+  select: (state: AgentState) => Base64OrArtifact | undefined;
 }
 
 /**
