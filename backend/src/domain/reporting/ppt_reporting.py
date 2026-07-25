@@ -921,6 +921,24 @@ def _wbs_sheet_image_slide(prs: Presentation, image_path: Path, slide_no: int, t
     return slide
 
 
+def _diagram_image_slide(prs: Presentation, params: dict[str, Any], workspace: Path, slide_no: int, title: str):
+    """A finalized non-architecture diagram (sequence/erd/state_machine/process) from
+    diagram_manifest.json — see deck_resolver._b_additional_diagrams / tools.rendering_tools.
+    finalize_diagram(kind=...)."""
+    slide = prs.slides.add_slide(_layout(prs, "Blank", "Empty"))
+    _add_title(slide, title)
+    ref = params.get("image_ref")
+    path = Path(ref) if ref else None
+    if path is not None and not path.is_absolute():
+        path = workspace / path
+    if path is not None and path.exists():
+        _image_fit(slide, path, 0.55, 1.05, 12.15, 5.55)
+    else:
+        _add_textbox(slide, "Diagram image not available.", 1.0, 2.8, 11.0, 0.4, font_size=16)
+    _add_footer(slide, slide_no)
+    return slide
+
+
 _CLIENT_TEAM_DEFAULT = ["Technical Lead", "Business Analyst", "Project Manager"]
 _BNK_TEAM_DEFAULT = ["Technical Lead", "Developer(s)", "BA / Tester", "Project Manager"]
 
