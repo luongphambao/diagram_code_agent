@@ -84,7 +84,7 @@ const INDICATOR_ROLES: ReadonlyArray<{ key: string }> = [{ key: "drawer" }, { ke
 
 function ToolChip({ name }: { name: string }) {
   return (
-    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-white/4 text-slate-500 border border-white/6">
+    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-white/4 text-secondary border border-white/6">
       {name}
     </span>
   );
@@ -174,7 +174,7 @@ function DelegationCard({ d, index, toolLogs }: DelegationCardProps) {
           </span>
 
           {/* Task description */}
-          <p className="text-[12px] leading-relaxed text-slate-400">
+          <p className="text-[12px] leading-relaxed text-secondary">
             {d.description || "Working…"}
           </p>
 
@@ -185,9 +185,9 @@ function DelegationCard({ d, index, toolLogs }: DelegationCardProps) {
               {d.current_tool ? (
                 <>
                   <span className="font-mono">{d.current_tool}</span>
-                  {d.current_label && <span className="text-slate-600">— {d.current_label}</span>}
+                  {d.current_label && <span className="text-muted">— {d.current_label}</span>}
                   {d.current_detail && (
-                    <span className="truncate text-slate-500">: {d.current_detail}</span>
+                    <span className="truncate text-secondary">: {d.current_detail}</span>
                   )}
                 </>
               ) : d.current_label ? (
@@ -205,7 +205,7 @@ function DelegationCard({ d, index, toolLogs }: DelegationCardProps) {
                 <ToolChip key={i} name={t} />
               ))}
               {hiddenCount > 0 && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] text-slate-700">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] text-muted">
                   +{hiddenCount} more
                 </span>
               )}
@@ -227,9 +227,9 @@ function DelegationCard({ d, index, toolLogs }: DelegationCardProps) {
                   >
                     {l.error ? "error" : l.type === "tool_end" ? "done" : "run"}
                   </span>
-                  <span className="shrink-0 font-mono text-slate-600">{l.tool}</span>
+                  <span className="shrink-0 font-mono text-muted">{l.tool}</span>
                   {l.elapsed_s !== undefined && (
-                    <span className="shrink-0 text-slate-700">{l.elapsed_s}s</span>
+                    <span className="shrink-0 text-muted">{l.elapsed_s}s</span>
                   )}
                   <span className="min-w-0 truncate text-slate-400">
                     {l.error || l.output || l.input}
@@ -243,7 +243,7 @@ function DelegationCard({ d, index, toolLogs }: DelegationCardProps) {
           {hasResult && (
             <div className="pt-0.5">
               <div className="rounded-lg border border-white/8 bg-white/4 p-2.5">
-                <p className="text-[11.5px] leading-relaxed text-slate-500 whitespace-pre-wrap">
+                <p className="text-[11.5px] leading-relaxed text-secondary whitespace-pre-wrap">
                   {expanded || !resultLong ? d.result : d.result!.slice(0, RESULT_PREVIEW) + "…"}
                 </p>
               </div>
@@ -251,7 +251,7 @@ function DelegationCard({ d, index, toolLogs }: DelegationCardProps) {
                 <button
                   type="button"
                   onClick={() => setExpanded((v) => !v)}
-                  className="mt-1 text-[11px] text-slate-700 hover:text-slate-500 transition-colors"
+                  className="mt-1 text-[11px] text-muted hover:text-secondary transition-colors"
                 >
                   {expanded ? "Show less ▲" : "Show more ▼"}
                 </button>
@@ -358,13 +358,13 @@ export default function SubagentPanel({
     logs.filter((l) => l.subagent?.toLowerCase() === subagentKey.toLowerCase());
 
   return (
-    <div className="w-full bg-surface-panel border border-white/8 rounded-2xl overflow-hidden">
+    <div className="w-full bg-raised border border-white/8 rounded-2xl overflow-hidden">
       {/* ── Orchestrator section ────────────────────────────────────────────── */}
       <OrchestratorSection isRunning={isRunning} activity={activity} mainLogs={mainLogs} />
 
       {/* ── Indicator chips row ─────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 px-5 py-2.5 border-b border-white/8 bg-surface-panel">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-700 mr-1">
+      <div className="flex items-center gap-2 px-5 py-2.5 border-b border-white/8 bg-raised">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted mr-1">
           Subagents
         </span>
         {INDICATOR_ROLES.map(({ key }) => {
@@ -390,7 +390,7 @@ export default function SubagentPanel({
       {/* ── Delegation list ─────────────────────────────────────────────────── */}
       <div className="p-4 space-y-2">
         {safeDelegations.length === 0 ? (
-          <p className="text-sm text-slate-700 italic py-2 px-1">Waiting for delegation…</p>
+          <p className="text-sm text-muted italic py-2 px-1">Waiting for delegation…</p>
         ) : (
           safeDelegations.map((d, i) => (
             <DelegationCard key={d.id || i} d={d} index={i} toolLogs={logsBySubagent(d.subagent)} />
