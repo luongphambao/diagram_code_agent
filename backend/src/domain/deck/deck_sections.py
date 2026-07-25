@@ -83,6 +83,7 @@ Block = Literal[
     "kpis",
     "client_info",
     "diagram",  # architecture image slide (Empty layout + asset_ref)
+    "wbs_detail_image",  # the "2. WBS" sheet screenshot (LibreOffice render, WS3)
     "cover",
     "divider",
     "closing",  # structural — no params to generate
