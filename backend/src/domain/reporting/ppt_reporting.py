@@ -101,6 +101,8 @@ VALID_BLOCKS = frozenset(
         "team",
         "gantt",  # rendered via _gantt_slide; not yet dispatched from _render_block's
         # legacy outline path — see deck_resolver._b_master_plan for the params shape.
+        "case_study",  # rendered via _case_study_slide; params come from SlideSpec.params
+        # (one contract emits several slides — see deck._build_deck_plan_registry).
     }
 )
 
