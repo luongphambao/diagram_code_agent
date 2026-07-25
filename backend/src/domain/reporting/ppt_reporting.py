@@ -26,6 +26,7 @@ BNK_FONT = "Calibri"
 
 from domain.reporting.reporting import (
     DEFAULT_REPORT_SECTIONS,
+    _repo_root,
     assemble_report_data,
     normalize_sections,
     read_json_file,
