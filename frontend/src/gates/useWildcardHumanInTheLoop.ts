@@ -78,20 +78,30 @@ export function useWildcardHumanInTheLoop<T extends Record<string, unknown> = Re
   const RenderComponent: ReactToolCallRenderer<T>["render"] = useCallback(
     (props) => {
       const ToolComponent = tool.render;
-      // The one deliberate deviation from the library version: keep
-      // props.name/props.description (the REAL tool call) instead of
-      // overwriting with tool.name/tool.description (which would be "*").
+      // `description` isn't part of the base renderer props at all (only
+      // name/toolCallId/args/status/result are) — that part of the library
+      // wrapper's behavior is legitimate, so it's added from the
+      // registration here same as upstream. The ONE deliberate deviation is
+      // `name`: kept as `props.name` (the REAL tool call name) instead of
+      // being overwritten with `tool.name` (which would be the literal "*").
       if (props.status === ToolCallStatus.InProgress) {
         return React.createElement(ToolComponent, {
           ...props,
+          description: tool.description || "",
           agentId: tool.agentId,
           respond: undefined,
         });
       } else if (props.status === ToolCallStatus.Executing) {
-        return React.createElement(ToolComponent, { ...props, agentId: tool.agentId, respond });
+        return React.createElement(ToolComponent, {
+          ...props,
+          description: tool.description || "",
+          agentId: tool.agentId,
+          respond,
+        });
       } else if (props.status === ToolCallStatus.Complete) {
         return React.createElement(ToolComponent, {
           ...props,
+          description: tool.description || "",
           agentId: tool.agentId,
           respond: undefined,
         });
