@@ -922,6 +922,7 @@ def score_deck_structure(plan: DeckPlan) -> dict:
     for s in plan.slides:
         slide_issues: list[str] = []
         is_section = s.layout in _section_layouts or s.block == "section"
+        self_grounded = s.block in _SELF_GROUNDED_BLOCKS
 
         # Title length
         if len(s.title) > _MAX_TITLE_LEN:
