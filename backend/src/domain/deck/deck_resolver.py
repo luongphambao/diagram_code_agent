@@ -290,6 +290,45 @@ def _b_architecture(model, wbs, nar, meta, lib):
     return {"diagram_image": meta.get("png") or "out.png"}
 
 
+def _b_architecture_explain(model, wbs, nar, meta, lib):
+    decisions = [_clip(d.title, 160) for d in model.decisions]
+    components = [
+        f"{name}: {', '.join(names[:6])}" for name, purpose, names in _components_by_cluster(model) if names
+    ]
+    if not decisions and not components:
+        return {}
+    return {"decisions": decisions, "components": components}
+
+
+_DIAGRAM_KIND_TITLES = {
+    "sequence": "Sequence Diagram",
+    "erd": "Data Model (ERD)",
+    "state_machine": "State Machine",
+    "process": "Process Flow (BPMN)",
+}
+
+
+def _b_additional_diagrams(model, wbs, nar, meta, lib):
+    """One entry per finalized NON-architecture diagram in diagram_manifest.json (WS4) —
+    see tools.rendering_tools.finalize_diagram(kind=...) for how entries get there."""
+    manifest = meta.get("diagram_manifest") or {}
+    items = []
+    for slug, entry in manifest.items():
+        if slug == "architecture" or not isinstance(entry, dict) or not entry.get("png"):
+            continue
+        kind = entry.get("kind") or slug
+        items.append(
+            {
+                "kind": kind,
+                "title": _DIAGRAM_KIND_TITLES.get(kind, str(kind).replace("_", " ").title()),
+                "image_ref": entry["png"],
+            }
+        )
+    if not items:
+        return {}
+    return {"diagrams": items}
+
+
 def _b_sdlc(model, wbs, nar, meta, lib):
     return {"sdlc_phases": [{"phase": p, "in_scope": s, "out_scope": o} for p, s, o in _SDLC_DEFAULT]}
 
