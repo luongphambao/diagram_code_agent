@@ -294,7 +294,6 @@ export interface AgentState {
 }
 
 export type InterruptType =
-  | "brief_approval"
   | "techstack_approval"
   | "blueprint_approval"
   | "result_review"
@@ -306,7 +305,10 @@ export type InterruptType =
   | "wbs_skeleton_approval"
   | "wbs_approval"
   | "wbs_excel_approval"
+  | "business_case_approval"
   | "delivery_export_approval";
+  // "brief_approval" dropped (plan §F): BriefApproval.tsx was never mounted —
+  // no gate_decisions.py::_card_for branch ever produces it.
   // Typed-diagram foundation (improvement plan MVP-3): Sequence/ERD/State
   // Machine/C4 are authored code-first via render_typed_diagram (a non-gate
   // tool) and approved through the existing "result_review" card once
