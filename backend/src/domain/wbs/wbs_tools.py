@@ -1266,6 +1266,16 @@ def export_wbs_excel(
         layout = wbs_excel.build_wbs_workbook(wbs, _WBS_XLSX)
     except Exception as exc:  # noqa: BLE001
         return f"ERROR building WBS workbook: {exc}"
+    # Best-effort: screenshot the real Effort/WBS/Delivery-Plan sheets (LibreOffice
+    # headless) so the proposal deck can embed the actual client-facing Excel look
+    # instead of a re-derived table — see wbs_excel_render module docstring for why
+    # this never raises / never blocks when soffice isn't installed.
+    try:
+        from domain.wbs.wbs_excel_render import render_wbs_sheets
+
+        render_wbs_sheets(_WBS_XLSX, current_workspace())
+    except Exception:  # noqa: BLE001
+        pass
     dly = layout.get("delivery", {})
     et = wbs.get("effort_totals", {})
     msg = (
