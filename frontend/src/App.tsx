@@ -1,20 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useDiagramAgent } from "./hooks/useDiagramAgent";
+import { CopilotKitProvider, CopilotChatConfigurationProvider, useAgent, UseAgentUpdate } from "@copilotkit/react-core/v2";
+import type { Message } from "@ag-ui/client";
 import { useConversations } from "./hooks/useConversations";
-import { AgentProvider } from "./context/AgentContext";
+import { useDiagramWorkspace } from "./hooks/useDiagramWorkspace";
+import { useActivityStream } from "./hooks/useActivityStream";
+import { DiagramWorkspaceProvider } from "./context/AgentContext";
 import type { DiagramKind, UserRole } from "./hooks/agent-utils";
-import { loadGateHistory, clearGateHistory } from "./hooks/agent-utils";
+import { RUNTIME_URL } from "./hooks/agent-utils";
 import { useBreakpoint } from "./lib/useBreakpoint";
 import { usePersistentState, oneOf, numberInRange } from "./lib/usePersistentState";
 import AppShell, { CHAT_DEFAULT, CHAT_MAX, CHAT_MIN } from "./app/AppShell";
 import Toolbar, { type Pane, type ThemePreference } from "./app/Toolbar";
 import StatusStrip from "./app/StatusStrip";
-import ChatSidebar from "./components/ChatSidebar";
+import PropertiesSync from "./app/PropertiesSync";
+import ChatColumn from "./app/ChatColumn";
+import GateHost from "./gates/GateHost";
 import DiagramCanvas from "./components/DiagramCanvas";
 import ConversationSidebar from "./components/ConversationSidebar";
 
 const USER_ROLES: UserRole[] = ["viewer", "pm", "lead", "admin"];
 const USER_ROLE_OPTIONS = USER_ROLES.map((r) => ({ value: r, label: r[0].toUpperCase() + r.slice(1) }));
+const DEFAULT_AGENT_ID = "default"; // matches runtime/src/index.ts's `{ default: agent }` registration
 
 function getStoredRole(): UserRole {
   try {
@@ -75,29 +81,6 @@ export default function App() {
   const [threadId, setThreadId] = useState<string>(getStoredThreadId);
   const [userRole, setUserRole] = useState<UserRole>(getStoredRole);
   const [diagramKind, setDiagramKind] = useState<DiagramKind>(getStoredDiagramKind);
-  const diagramAgent = useDiagramAgent({ threadId, userRole, diagramKind });
-  const convStore = useConversations();
-  const breakpoint = useBreakpoint();
-
-  const [chatWidth, setChatWidth] = usePersistentState("da.ui.chatWidth", CHAT_DEFAULT, isChatWidth);
-  const [theme, setTheme] = usePersistentState<ThemePreference>("da.ui.theme", "system", isThemePreference);
-  const [railOpen, setRailOpen] = useState(false);
-  const [activePane, setActivePane] = usePersistentState<Pane>("da.ui.pane", "chat", isPane);
-
-  // Explicit choice always wins over the OS preference (plan §C.5 layer 3);
-  // "system" removes the attribute so the prefers-color-scheme media query
-  // in tokens.css decides.
-  useEffect(() => {
-    if (theme === "system") document.documentElement.removeAttribute("data-theme");
-    else document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
-
-  // The narrow-mode rail is a drawer; closing it when the viewport widens out
-  // of narrow avoids a stale "open" overlay reappearing if the user later
-  // shrinks back down.
-  useEffect(() => {
-    if (breakpoint !== "narrow") setRailOpen(false);
-  }, [breakpoint]);
 
   useEffect(() => {
     try {
@@ -115,27 +98,89 @@ export default function App() {
     }
   }, [diagramKind]);
 
-  // Keep localStorage in sync whenever threadId changes
   useEffect(() => {
     setStoredThreadId(threadId);
   }, [threadId]);
 
-  // Extract stable function refs — these are created with useCallback([]) inside their
-  // respective hooks, so they never change identity across renders.
-  const { resetToNew, restore } = diagramAgent;
-  const { loadHistory, fetchAll, remove, rename } = convStore;
+  return (
+    // Same-origin runtimeUrl (plan §A.11) — the Node CopilotKit v2 service
+    // (runtime/), not the Python backend directly. `properties` here is only
+    // the INITIAL value (CopilotKitCore is constructed once behind a lazy
+    // ref) — PropertiesSync below keeps it live via copilotkit.setProperties().
+    <CopilotKitProvider
+      runtimeUrl={RUNTIME_URL}
+      properties={{ file_ids: [], userRole, diagramKind }}
+      showDevConsole={false}
+    >
+      {/* One shared threadId resolution for <CopilotChat>, GateHost, and
+          useDiagramWorkspace's useAgent() call — all three read this same
+          context rather than three independently-resolved values. */}
+      <CopilotChatConfigurationProvider agentId={DEFAULT_AGENT_ID} threadId={threadId}>
+        <AppInner
+          threadId={threadId}
+          setThreadId={setThreadId}
+          userRole={userRole}
+          setUserRole={setUserRole}
+          diagramKind={diagramKind}
+          setDiagramKind={setDiagramKind}
+        />
+      </CopilotChatConfigurationProvider>
+    </CopilotKitProvider>
+  );
+}
 
-  // Load conversations on mount. `fetchAll` is stable, so an empty dep array
-  // would also be correct — depending on it explicitly keeps the lint rule honest.
+interface AppInnerProps {
+  threadId: string;
+  setThreadId: (id: string) => void;
+  userRole: UserRole;
+  setUserRole: (r: UserRole) => void;
+  diagramKind: DiagramKind;
+  setDiagramKind: (k: DiagramKind) => void;
+}
+
+function AppInner({
+  threadId,
+  setThreadId,
+  userRole,
+  setUserRole,
+  diagramKind,
+  setDiagramKind,
+}: AppInnerProps) {
+  const workspace = useDiagramWorkspace({ threadId });
+  const activityStream = useActivityStream();
+  // Separate from workspace's own OnStateChanged-only subscription: this is
+  // what makes AppInner re-render (and therefore read fresh agent.isRunning)
+  // when a run starts/stops/errors.
+  const { agent } = useAgent({ updates: [UseAgentUpdate.OnRunStatusChanged] });
+  const convStore = useConversations();
+  const breakpoint = useBreakpoint();
+
+  const [chatWidth, setChatWidth] = usePersistentState("da.ui.chatWidth", CHAT_DEFAULT, isChatWidth);
+  const [theme, setTheme] = usePersistentState<ThemePreference>("da.ui.theme", "system", isThemePreference);
+  const [railOpen, setRailOpen] = useState(false);
+  const [activePane, setActivePane] = usePersistentState<Pane>("da.ui.pane", "chat", isPane);
+
+  useEffect(() => {
+    if (theme === "system") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
+
+  useEffect(() => {
+    if (breakpoint !== "narrow") setRailOpen(false);
+  }, [breakpoint]);
+
+  const { fetchAll, remove, rename, loadHistory } = convStore;
+
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
 
+  const { restore, resetToNew } = workspace;
+
   const handleNewConversation = useCallback(() => {
-    const tid = newThreadId();
-    setThreadId(tid);
+    setThreadId(newThreadId());
     resetToNew();
-  }, [resetToNew]);
+  }, [setThreadId, resetToNew]);
 
   const handleSelectConversation = useCallback(
     async (tid: string) => {
@@ -143,34 +188,27 @@ export default function App() {
       const hist = await loadHistory(tid);
       setThreadId(tid);
       if (hist) {
-        restore(hist.state, hist.chatMessages, hist.wireMessages as never, loadGateHistory(tid));
+        restore(hist.state, hist.wireMessages as unknown as Message[], []);
       } else {
         resetToNew();
       }
     },
-    [threadId, loadHistory, restore, resetToNew],
+    [threadId, loadHistory, setThreadId, restore, resetToNew],
   );
 
-  // Conversation deletion also drops its persisted gate-history entry so
-  // localStorage doesn't accumulate orphaned per-thread keys.
   const handleDeleteConversation = useCallback(
     (tid: string) => {
-      clearGateHistory(tid);
       remove(tid);
     },
     [remove],
   );
 
-  // After each agent run finishes, refresh the conversation list so the sidebar
-  // shows the latest name/preview. Use the stable `fetchAll` ref to avoid
-  // running this effect on every render (convStore object changes every render).
+  // After each run finishes, refresh the conversation list (name/preview).
   const prevRunning = useRef(false);
   useEffect(() => {
-    if (prevRunning.current && !diagramAgent.isRunning) {
-      fetchAll();
-    }
-    prevRunning.current = diagramAgent.isRunning;
-  }, [diagramAgent.isRunning, fetchAll]);
+    if (prevRunning.current && !agent.isRunning) fetchAll();
+    prevRunning.current = agent.isRunning;
+  }, [agent.isRunning, fetchAll]);
 
   const handleRenameTitle = useCallback((name: string) => rename(threadId, name), [rename, threadId]);
 
@@ -189,50 +227,52 @@ export default function App() {
     />
   );
 
-  const chat = <ChatSidebar />;
-
   const canvas = (
     <DiagramCanvas
-      agentState={diagramAgent.agentState}
-      pendingInterrupt={diagramAgent.pendingInterrupt}
-      isRunning={diagramAgent.isRunning}
-      activeSubagent={diagramAgent.activeSubagent}
-      activity={diagramAgent.activity}
+      agentState={workspace.agentState}
+      pendingInterrupt={null}
+      isRunning={agent.isRunning}
+      activeSubagent={activityStream.activeSubagent}
+      activity={activityStream.activity}
       threadId={threadId}
       userRole={userRole}
     />
   );
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-app">
-      <Toolbar
-        breakpoint={breakpoint}
-        title={conversationTitle}
-        onRenameTitle={handleRenameTitle}
-        currentStep={diagramAgent.agentState.current_step}
-        iteration={diagramAgent.agentState.iteration}
-        isRunning={diagramAgent.isRunning}
-        onStop={diagramAgent.abortRun}
-        error={diagramAgent.error}
-        diagramKind={diagramKind}
-        diagramKinds={DIAGRAM_KINDS}
-        onDiagramKindChange={(v) => setDiagramKind(v as DiagramKind)}
-        userRole={userRole}
-        userRoles={USER_ROLE_OPTIONS}
-        onUserRoleChange={(v) => setUserRole(v as UserRole)}
-        theme={theme}
-        onThemeChange={setTheme}
-        railOpen={railOpen}
-        onToggleRail={() => setRailOpen((v) => !v)}
-        activePane={activePane}
-        onPaneChange={setActivePane}
-      />
+    <DiagramWorkspaceProvider value={workspace}>
+      <PropertiesSync file_ids={workspace.fileIds} userRole={userRole} diagramKind={diagramKind} />
+      <GateHost />
 
-      <AgentProvider value={diagramAgent}>
+      <div className="flex h-screen w-screen flex-col bg-app">
+        <Toolbar
+          breakpoint={breakpoint}
+          title={conversationTitle}
+          onRenameTitle={handleRenameTitle}
+          currentStep={workspace.agentState.current_step}
+          iteration={workspace.agentState.iteration}
+          isRunning={agent.isRunning}
+          onStop={() => agent.abortRun()}
+          error={activityStream.error?.message ?? null}
+          errorCode={activityStream.error?.code}
+          diagramKind={diagramKind}
+          diagramKinds={DIAGRAM_KINDS}
+          onDiagramKindChange={(v) => setDiagramKind(v as DiagramKind)}
+          userRole={userRole}
+          userRoles={USER_ROLE_OPTIONS}
+          onUserRoleChange={(v) => setUserRole(v as UserRole)}
+          theme={theme}
+          onThemeChange={setTheme}
+          railOpen={railOpen}
+          onToggleRail={() => setRailOpen((v) => !v)}
+          activePane={activePane}
+          onPaneChange={setActivePane}
+        />
+
         <AppShell
           breakpoint={breakpoint}
           rail={rail}
-          chat={chat}
+          chat={<ChatColumn />}
           canvas={canvas}
           chatWidth={chatWidth}
           onChatWidthChange={setChatWidth}
@@ -240,14 +280,14 @@ export default function App() {
           onCloseRail={() => setRailOpen(false)}
           activePane={activePane}
         />
-      </AgentProvider>
 
-      <StatusStrip
-        isRunning={diagramAgent.isRunning}
-        activity={diagramAgent.activity}
-        error={diagramAgent.error}
-        modelCalls={diagramAgent.agentState.run_metrics?.model_calls}
-      />
-    </div>
+        <StatusStrip
+          isRunning={agent.isRunning}
+          activity={activityStream.activity}
+          error={activityStream.error?.message ?? null}
+          modelCalls={workspace.agentState.run_metrics?.model_calls}
+        />
+      </div>
+    </DiagramWorkspaceProvider>
   );
 }
