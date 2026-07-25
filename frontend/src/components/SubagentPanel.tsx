@@ -290,11 +290,11 @@ function OrchestratorSection({ isRunning, activity, mainLogs }: OrchestratorSect
   const recentTools = dedupedTools.slice(-MAX_ORCHESTRATOR_CHIPS);
 
   return (
-    <div className="px-5 py-4 border-b border-white/8 bg-[#0d1118]">
+    <div className="px-5 py-4 border-b border-line bg-raised">
       {/* Header */}
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2.5">
-          <span className="text-[13px] font-semibold text-slate-200">🤖 Orchestrator</span>
+          <span className="text-[13px] font-semibold text-fg">🤖 Orchestrator</span>
           {isRunning ? (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-300 text-[10px] font-semibold uppercase tracking-[0.1em]">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
