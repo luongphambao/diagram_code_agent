@@ -1311,9 +1311,9 @@ def _render_block(
     elif block == "pricing":
         _pricing_slide(prs, report, slide_no, title or "PRICING | CAPEX")
     elif block == "milestones":
-        _payment_milestones_slide(prs, slide_no, title or "PRICING | Payment Milestones")
+        _payment_milestones_slide(prs, workspace, slide_no, title or "PRICING | Payment Milestones")
     elif block == "team":
-        _team_slide(prs, report, slide_no, title or "PROJECT DELIVERY | Team Structure")
+        _team_slide(prs, workspace, slide_no, title or "PROJECT DELIVERY | Team Structure")
     else:  # safety net
         _detail_slide(prs, title, [], slide_no)
 
