@@ -5,6 +5,13 @@ import ActivityRow from "./ActivityRow";
 import SubagentPanel from "../SubagentPanel";
 import QualityPanel from "./QualityPanel";
 import CommentThread from "./CommentThread";
+import TabBar, { type TabBarItem } from "../../ui/TabBar";
+import Button from "../../ui/Button";
+import EmptyState from "../../ui/EmptyState";
+import Lightbox from "../../canvas/Lightbox";
+import CodeTab from "../../canvas/CodeTab";
+import CanvasSummaryBar from "../../canvas/CanvasSummaryBar";
+import { useExport } from "../../canvas/useExport";
 
 type Tab =
   "preview" | "pdf" | "ppt" | "wbs" | "quality" | "code" | "activity" | "agents" | "comments";
@@ -17,6 +24,8 @@ interface ArtifactTabsProps {
   threadId: string;
   userRole: string;
 }
+
+const PANEL_ID = "artifact";
 
 export default function ArtifactTabs({
   agentState,
@@ -47,6 +56,8 @@ export default function ArtifactTabs({
   const hasWbs = !!wbs_summary || !!wbs_xlsx_base64;
   const hasQuality = !!quality || !!compliance || !!drift;
 
+  const { download, isAvailable, openDrawio } = useExport(agentState);
+
   const tabs: Tab[] = [
     ...(png_base64 ? (["preview"] as Tab[]) : []),
     ...(pdf_base64 ? (["pdf"] as Tab[]) : []),
@@ -64,6 +75,7 @@ export default function ArtifactTabs({
   // (e.g. a WBS-only conversation).
   const [tab, setTabState] = useState<Tab>(tabs[0]);
   const [lightbox, setLightbox] = useState(false);
+  const [codeView, setCodeView] = useState<"code" | "drawio">("code");
   // `tabs` is recomputed every render, so the mount-time `tabs[0]` snapshot goes stale
   // when an artifact (e.g. WBS) arrives AFTER mount: the new tab shows in the bar but
   // stays unselected, and if the active tab ever leaves `tabs` the content area renders
@@ -84,544 +96,288 @@ export default function ArtifactTabs({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabsKey]);
 
-  const downloadPng = () => {
-    if (!png_base64) return;
-    const a = document.createElement("a");
-    a.href = `data:image/png;base64,${png_base64}`;
-    a.download = `diagram${iteration && iteration > 1 ? `_v${iteration}` : ""}.png`;
-    a.click();
-  };
+  // Count semantics (plan §G): Activity's count is COMPLETED steps
+  // (tool_end), not tool_start (which double-counts a still-running step and
+  // treats an errored step as a success). A separate danger-colored count
+  // surfaces failures — what an operator actually scans for.
+  const completedCount = logs ? logs.filter((l) => l.type === "tool_end").length : 0;
+  const errorCount = logs ? logs.filter((l) => l.type === "tool_end" && (l.error || l.ok === false)).length : 0;
 
-  const downloadDrawio = () => {
-    if (!drawio) return;
-    const blob = new Blob([drawio], { type: "application/xml" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `diagram${iteration && iteration > 1 ? `_v${iteration}` : ""}.drawio`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const downloadPdf = () => {
-    if (!pdf_base64) return;
-    const bytes = Uint8Array.from(atob(pdf_base64), (c) => c.charCodeAt(0));
-    const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `architecture_report${iteration && iteration > 1 ? `_v${iteration}` : ""}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const downloadWbsXlsx = () => {
-    if (!wbs_xlsx_base64) return;
-    const bytes = Uint8Array.from(atob(wbs_xlsx_base64), (c) => c.charCodeAt(0));
-    const url = URL.createObjectURL(
-      new Blob([bytes], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      }),
-    );
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `wbs${iteration && iteration > 1 ? `_v${iteration}` : ""}.xlsx`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const downloadPptx = () => {
-    if (!pptx_base64) return;
-    const bytes = Uint8Array.from(atob(pptx_base64), (c) => c.charCodeAt(0));
-    const url = URL.createObjectURL(
-      new Blob([bytes], {
-        type: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      }),
-    );
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `architecture_proposal${iteration && iteration > 1 ? `_v${iteration}` : ""}.pptx`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const openInDrawio = () => {
-    if (!drawio) return;
-    window.open(`https://app.diagrams.net/?src=about#U${encodeURIComponent(drawio)}`, "_blank");
-  };
+  const tabItems: TabBarItem[] = tabs.map((t): TabBarItem => {
+    if (t === "activity") {
+      return {
+        id: t,
+        label: "Activity",
+        count: logs && logs.length > 0 ? (errorCount > 0 ? errorCount : completedCount) : undefined,
+        countVariant: errorCount > 0 ? "danger" : isRunning ? "accent" : "neutral",
+      };
+    }
+    if (t === "agents") {
+      return {
+        id: t,
+        label: "Agents",
+        count: hasDelegations ? delegations!.length : undefined,
+        countVariant: isRunning && hasLiveAgentWork ? "accent" : "neutral",
+      };
+    }
+    const LABELS: Partial<Record<Tab, string>> = { pdf: "PDF", ppt: "PPT", wbs: "WBS" };
+    return { id: t, label: LABELS[t] ?? t.charAt(0).toUpperCase() + t.slice(1) };
+  });
 
   return (
     <>
-      <div className="flex flex-1 flex-col overflow-hidden bg-surface-canvas">
+      <div className="flex flex-1 flex-col overflow-hidden bg-surface">
         {/* Toolbar */}
-        <div className="flex items-center gap-2 border-b border-white/8 bg-surface-panel px-5 py-2.5">
+        <div className="flex items-center gap-2 border-b border-line bg-raised px-5 py-2.5">
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <span className="h-2 w-2 flex-shrink-0 rounded-full bg-emerald-400 shadow-sm shadow-emerald-500/40" />
+            <span className="h-2 w-2 flex-shrink-0 rounded-full bg-ok shadow-sm" />
             {iteration && iteration > 1 && (
-              <span className="flex-shrink-0 rounded-full bg-white/8 px-2 py-0.5 text-[11px] text-slate-600">
-                v{iteration}
-              </span>
+              <span className="flex-shrink-0 rounded-sm bg-well px-2 py-0.5 text-2xs text-muted">v{iteration}</span>
             )}
-            <span className="truncate text-xs text-slate-600">
-              {summary || "Diagram generated"}
-            </span>
+            <span className="truncate text-xs text-muted">{summary || "Diagram generated"}</span>
           </div>
 
-          {/* Tabs */}
-          <div className="flex items-center rounded-lg border border-white/8 bg-white/4 p-0.5">
-            {tabs.map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`rounded-md px-3 py-1 text-[11px] font-medium capitalize transition-colors ${
-                  tab === t ? "bg-white/10 text-slate-200" : "text-slate-600 hover:text-slate-400"
-                }`}
-              >
-                {t === "activity" && logs && logs.length > 0
-                  ? `Activity (${logs.filter((e) => e.type === "tool_start").length})`
-                  : t === "agents" && delegations && delegations.length > 0
-                    ? `Agents (${delegations.length})`
-                    : t === "pdf"
-                      ? "PDF"
-                      : t === "ppt"
-                        ? "PPT"
-                        : t === "wbs"
-                          ? "WBS"
-                          : t.charAt(0).toUpperCase() + t.slice(1)}
-              </button>
-            ))}
-          </div>
+          <TabBar items={tabItems} active={tab} onSelect={(id) => setTab(id as Tab)} panelId={PANEL_ID} label="Artifact tabs" />
 
           {/* Download group */}
           <div className="flex items-center gap-2">
-            {(["PNG", ".drawio", "PDF", "PPT", "WBS"] as const).map((label) => {
-              if (label === "WBS" && !hasWbs) return null;
-              const disabled =
-                label === "PNG"
-                  ? !png_base64
-                  : label === ".drawio"
-                    ? !drawio
-                    : label === "PDF"
-                      ? !pdf_base64
-                      : label === "PPT"
-                        ? !pptx_base64
-                        : !wbs_xlsx_base64;
-              const handler =
-                label === "PNG"
-                  ? downloadPng
-                  : label === ".drawio"
-                    ? downloadDrawio
-                    : label === "PDF"
-                      ? downloadPdf
-                      : label === "PPT"
-                        ? downloadPptx
-                        : downloadWbsXlsx;
+            {(["png", "drawio", "pdf", "ppt", "wbs"] as const).map((id) => {
+              if (id === "wbs" && !hasWbs) return null;
               return (
-                <button
-                  key={label}
-                  onClick={handler}
-                  disabled={disabled}
-                  className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/4 px-3 py-1.5 text-xs font-medium text-slate-400 transition-colors hover:bg-white/8 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30"
-                >
-                  <svg
-                    className="h-3 w-3"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                    />
+                <Button key={id} variant="secondary" size="sm" disabled={!isAvailable(id)} onClick={() => download(id)}>
+                  <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  {label}
-                </button>
+                  {id === "drawio" ? ".drawio" : id.toUpperCase()}
+                </Button>
               );
             })}
-            <button
-              onClick={openInDrawio}
-              disabled={!drawio}
-              className="flex items-center gap-1.5 rounded-lg border border-blue-500/25 bg-blue-500/8 px-3 py-1.5 text-xs font-medium text-blue-400 transition-colors hover:bg-blue-500/15 disabled:cursor-not-allowed disabled:opacity-30"
-            >
-              <svg
-                className="h-3 w-3"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                />
+            <Button variant="secondary" size="sm" disabled={!drawio} onClick={openDrawio} className="border-accent/30 bg-accent/10 text-accent-text hover:bg-accent/20">
+              <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
               Draw.io
-            </button>
+            </Button>
             {tab === "preview" && (
-              <button
-                onClick={() => setLightbox(true)}
-                className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/4 px-3 py-1.5 text-xs font-medium text-slate-400 transition-colors hover:bg-white/8 hover:text-slate-200"
-              >
-                <svg
-                  className="h-3 w-3"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-                  />
+              <Button variant="secondary" size="sm" onClick={() => setLightbox(true)}>
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                 </svg>
                 Zoom
-              </button>
+              </Button>
             )}
           </div>
         </div>
 
+        {(hasQuality || hasWbs) && <CanvasSummaryBar agentState={agentState} onSelectTab={(t) => setTab(t as Tab)} />}
+
         {/* Tab content */}
-        {tab === "preview" && (
-          <div
-            className="flex flex-1 cursor-zoom-in items-center justify-center overflow-auto p-8"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px)",
-              backgroundSize: "20px 20px",
-            }}
-            onClick={() => setLightbox(true)}
-          >
-            <img
-              src={`data:image/png;base64,${png_base64}`}
-              alt="Generated architecture diagram"
-              className="max-h-full max-w-full rounded-xl object-contain shadow-2xl ring-1 ring-white/8 transition-transform hover:scale-[1.01]"
-            />
-          </div>
-        )}
-
-        {tab === "code" && (
-          <div className="flex flex-1 flex-col overflow-hidden">
-            {code ? (
-              <pre className="flex-1 overflow-auto bg-surface-base p-6 font-mono text-xs leading-relaxed text-slate-300">
-                {code}
-              </pre>
-            ) : (
-              <div className="flex flex-1 items-center justify-center">
-                <p className="text-sm text-slate-700">No code available</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {tab === "pdf" && (
-          <div className="flex flex-1 flex-col overflow-hidden bg-surface-base">
-            {pdf_base64 ? (
-              <>
-                <div className="flex items-center justify-between border-b border-white/8 px-4 py-2">
-                  <span className="text-xs font-medium text-slate-400">PDF report preview</span>
-                  <button
-                    onClick={downloadPdf}
-                    className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/4 px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-white/8"
-                  >
-                    <svg
-                      className="h-3 w-3"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                      />
-                    </svg>
-                    Download
-                  </button>
-                </div>
-                <iframe
-                  title="PDF report preview"
-                  src={`data:application/pdf;base64,${pdf_base64}`}
-                  className="h-full w-full flex-1 border-0 bg-white"
-                />
-              </>
-            ) : (
-              <div className="flex flex-1 items-center justify-center">
-                <p className="text-sm text-slate-700">No PDF report available</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {tab === "ppt" && (
-          <div className="flex flex-1 flex-col overflow-hidden bg-surface-base">
-            <div className="flex items-center justify-between border-b border-white/8 px-4 py-2">
-              <span className="text-xs font-medium text-slate-400">BnK PowerPoint proposal</span>
-              <button
-                onClick={downloadPptx}
-                disabled={!pptx_base64}
-                className="flex items-center gap-1.5 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-xs font-medium text-orange-200 transition-colors hover:bg-orange-500/20 disabled:cursor-not-allowed disabled:opacity-30"
-              >
-                <svg
-                  className="h-3 w-3"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                  />
-                </svg>
-                Download .pptx
-              </button>
+        <div id={`${PANEL_ID}-panel-${tab}`} role="tabpanel" aria-labelledby={`${PANEL_ID}-tab-${tab}`} className="flex flex-1 flex-col overflow-hidden">
+          {tab === "preview" && (
+            <div
+              className="flex flex-1 cursor-zoom-in items-center justify-center overflow-auto p-8"
+              style={{ backgroundImage: "radial-gradient(circle, color-mix(in srgb, var(--ink-100) 3%, transparent) 1px, transparent 1px)", backgroundSize: "20px 20px" }}
+              onClick={() => setLightbox(true)}
+            >
+              <img
+                src={`data:image/png;base64,${png_base64}`}
+                alt="Generated architecture diagram"
+                className="max-h-full max-w-full rounded-md object-contain shadow-2xl ring-1 ring-line transition-transform hover:scale-[1.01]"
+              />
             </div>
-            <div className="flex flex-1 items-center justify-center p-8">
-              <div className="rounded-xl border border-orange-500/20 bg-orange-500/8 px-6 py-5 text-center">
-                <p className="text-sm font-semibold text-orange-100">Editable PowerPoint ready</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  PowerPoint preview is not available in-browser. Download the deck to inspect and
-                  edit it.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+          )}
 
-        {tab === "wbs" && (
-          <div className="flex flex-1 flex-col overflow-hidden bg-surface-base">
-            <div className="flex items-center justify-between border-b border-white/8 px-4 py-2">
-              <span className="text-xs font-medium text-slate-400">Work Breakdown Structure</span>
-              <button
-                onClick={downloadWbsXlsx}
-                disabled={!wbs_xlsx_base64}
-                className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-200 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-30"
-              >
-                <svg
-                  className="h-3 w-3"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                  />
-                </svg>
-                Download .xlsx
-              </button>
-            </div>
-            {wbs_summary ? (
-              <div className="flex-1 space-y-5 overflow-y-auto p-6">
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    {
-                      val: fmtMd(wbs_summary.total_mandays) + " MD",
-                      cls: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
-                    },
-                    {
-                      val: fmtMd(wbs_summary.total_manmonths) + " MM",
-                      cls: "border-teal-500/30 bg-teal-500/10 text-teal-300",
-                    },
-                    {
-                      val: wbs_summary.months + " months",
-                      cls: "border-sky-500/30 bg-sky-500/10 text-sky-300",
-                    },
-                    {
-                      val: wbs_summary.weeks + " weeks",
-                      cls: "border-slate-500/30 bg-slate-500/10 text-slate-300",
-                    },
-                  ].map(({ val, cls }) => (
-                    <span
-                      key={val}
-                      className={`rounded-full border px-3 py-1 text-xs font-semibold ${cls}`}
-                    >
-                      {val}
-                    </span>
-                  ))}
-                </div>
-                {Object.keys(wbs_summary.effort_by_role).length > 0 && (
-                  <div>
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                      Effort by Role
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {Object.entries(wbs_summary.effort_by_role).map(([role, md]) => (
-                        <span
-                          key={role}
-                          className="rounded border border-white/8 bg-white/5 px-2.5 py-1 text-xs text-slate-300"
+          {tab === "code" && (
+            <div className="flex flex-1 flex-col overflow-hidden">
+              {code || drawio ? (
+                <>
+                  {code && drawio && (
+                    <div className="flex items-center gap-1 border-b border-line bg-raised px-4 pt-2">
+                      {(["code", "drawio"] as const).map((v) => (
+                        <button
+                          key={v}
+                          onClick={() => setCodeView(v)}
+                          className={`rounded-t-sm px-3 py-1.5 text-xs font-medium ${codeView === v ? "border-b-2 border-accent text-fg" : "text-muted hover:text-secondary"}`}
                         >
-                          <span className="font-semibold text-white">{role}</span> {fmtMd(md)} MD
-                        </span>
+                          {v === "code" ? "Diagram Code" : "Draw.io XML"}
+                        </button>
                       ))}
                     </div>
-                  </div>
-                )}
-                {wbs_summary.effort_by_module.length > 0 && (
-                  <div>
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                      Effort by Module
-                    </p>
-                    <table className="w-full text-xs">
-                      <tbody>
-                        {wbs_summary.effort_by_module.map((m) => (
-                          <tr key={m.code} className="border-b border-white/5">
-                            <td className="py-1.5 pr-3 font-mono text-slate-500">{m.code}</td>
-                            <td className="py-1.5 pr-3 text-slate-300">{m.name}</td>
-                            <td className="py-1.5 text-right font-semibold text-emerald-300">
-                              {fmtMd(m.total_md)} MD
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-1 items-center justify-center">
-                <p className="text-sm text-slate-700">No WBS summary available</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {tab === "quality" && (
-          <div className="flex flex-1 flex-col overflow-hidden bg-surface-base">
-            <div className="flex items-center justify-between border-b border-white/8 px-4 py-2">
-              <span className="text-xs font-medium text-slate-400">Governance &amp; quality</span>
-              {quality?.solution_revision != null && (
-                <span className="text-[11px] text-slate-600">
-                  CSM rev {quality.solution_revision}
-                </span>
+                  )}
+                  <CodeTab
+                    code={codeView === "code" && code ? code : drawio || code || ""}
+                    lang={codeView === "code" && code ? "python" : "xml"}
+                    title={codeView === "code" && code ? "Diagram source" : "Draw.io XML"}
+                  />
+                </>
+              ) : (
+                <EmptyState title="No code available" />
               )}
             </div>
-            <QualityPanel quality={quality} compliance={compliance} drift={drift} />
-          </div>
-        )}
+          )}
 
-        {tab === "comments" && <CommentThread threadId={threadId} userRole={userRole} />}
+          {tab === "pdf" && (
+            <div className="flex flex-1 flex-col overflow-hidden bg-app">
+              {pdf_base64 ? (
+                <>
+                  <div className="flex items-center justify-between border-b border-line px-4 py-2">
+                    <span className="text-xs font-medium text-secondary">PDF report preview</span>
+                    <Button variant="secondary" size="sm" onClick={() => download("pdf")}>
+                      Download
+                    </Button>
+                  </div>
+                  <iframe title="PDF report preview" src={`data:application/pdf;base64,${pdf_base64}`} className="h-full w-full flex-1 border-0 bg-white" />
+                </>
+              ) : (
+                <EmptyState title="No PDF report available" />
+              )}
+            </div>
+          )}
 
-        {tab === "activity" && (
-          <div className="flex flex-1 flex-col overflow-hidden bg-surface-base">
-            {logs && logs.length > 0 ? (
-              <div className="flex-1 space-y-1.5 overflow-y-auto p-4">
-                {logs.map((entry: LogEntry, i) => (
-                  <ActivityRow key={i} entry={entry} />
-                ))}
+          {tab === "ppt" && (
+            <div className="flex flex-1 flex-col overflow-hidden bg-app">
+              <div className="flex items-center justify-between border-b border-line px-4 py-2">
+                <span className="text-xs font-medium text-secondary">BnK PowerPoint proposal</span>
+                <Button variant="secondary" size="sm" disabled={!pptx_base64} onClick={() => download("ppt")}>
+                  Download .pptx
+                </Button>
               </div>
-            ) : (
-              <div className="flex flex-1 items-center justify-center">
-                <p className="text-sm text-slate-700">No activity log available</p>
+              <div className="flex flex-1 items-center justify-center p-8">
+                <div className="rounded-md border border-line bg-well px-6 py-5 text-center">
+                  <p className="text-sm font-semibold text-fg">Editable PowerPoint ready</p>
+                  <p className="mt-1 text-xs text-secondary">
+                    PowerPoint preview is not available in-browser. Download the deck to inspect and edit it.
+                  </p>
+                </div>
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
 
-        {tab === "agents" && (
-          <div className="flex flex-1 flex-col overflow-hidden bg-surface-base">
-            {hasLiveAgentWork ? (
-              <div className="flex-1 overflow-y-auto p-4">
-                <SubagentPanel
-                  delegations={delegations ?? []}
-                  activeSubagent={activeSubagent ?? null}
-                  isRunning={isRunning}
-                  logs={logs}
-                  activity={activity}
-                />
+          {tab === "wbs" && (
+            <div className="flex flex-1 flex-col overflow-hidden bg-app">
+              <div className="flex items-center justify-between border-b border-line px-4 py-2">
+                <span className="text-xs font-medium text-secondary">Work Breakdown Structure</span>
+                <Button variant="secondary" size="sm" disabled={!wbs_xlsx_base64} onClick={() => download("wbs")}>
+                  Download .xlsx
+                </Button>
               </div>
-            ) : (
-              <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-                <p className="text-sm text-slate-600">No subagent delegations yet</p>
-                <p className="text-xs text-slate-700">
-                  Drawer &amp; critic agents appear once the blueprint is approved and rendering
-                  begins.
-                </p>
+              {wbs_summary ? (
+                <div className="flex-1 space-y-5 overflow-y-auto p-6">
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      `${fmtMd(wbs_summary.total_mandays)} MD`,
+                      `${fmtMd(wbs_summary.total_manmonths)} MM`,
+                      `${wbs_summary.months} months`,
+                      `${wbs_summary.weeks} weeks`,
+                    ].map((val) => (
+                      <span key={val} className="tnum rounded-sm border border-line bg-well px-3 py-1 text-xs font-semibold text-fg">
+                        {val}
+                      </span>
+                    ))}
+                  </div>
+                  {Object.keys(wbs_summary.effort_by_role).length > 0 && (
+                    <div>
+                      <p className="label-caps mb-2 text-2xs font-semibold text-muted">Effort by Role</p>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(wbs_summary.effort_by_role).map(([role, md]) => (
+                          <span key={role} className="tnum rounded-sm border border-line bg-well px-2.5 py-1 text-xs text-secondary">
+                            <span className="font-semibold text-fg">{role}</span> {fmtMd(md)} MD
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {wbs_summary.effort_by_module.length > 0 && (
+                    <div>
+                      <p className="label-caps mb-2 text-2xs font-semibold text-muted">Effort by Module</p>
+                      <table className="w-full text-xs">
+                        <tbody>
+                          {wbs_summary.effort_by_module.map((m) => (
+                            <tr key={m.code} className="border-b border-line">
+                              <td className="py-1.5 pr-3 font-mono text-muted">{m.code}</td>
+                              <td className="py-1.5 pr-3 text-secondary">{m.name}</td>
+                              <td className="tnum py-1.5 text-right font-semibold text-accent-text">{fmtMd(m.total_md)} MD</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <EmptyState title="No WBS summary available" />
+              )}
+            </div>
+          )}
+
+          {tab === "quality" && (
+            <div className="flex flex-1 flex-col overflow-hidden bg-app">
+              <div className="flex items-center justify-between border-b border-line px-4 py-2">
+                <span className="text-xs font-medium text-secondary">Governance &amp; quality</span>
+                {quality?.solution_revision != null && <span className="text-2xs text-muted">CSM rev {quality.solution_revision}</span>}
               </div>
-            )}
-          </div>
-        )}
+              <QualityPanel quality={quality} compliance={compliance} drift={drift} />
+            </div>
+          )}
+
+          {tab === "comments" && <CommentThread threadId={threadId} userRole={userRole} />}
+
+          {tab === "activity" && (
+            <div className="flex flex-1 flex-col overflow-hidden bg-app">
+              {logs && logs.length > 0 ? (
+                <div className="flex-1 space-y-1.5 overflow-y-auto p-4">
+                  {logs.map((entry: LogEntry, i) => (
+                    <ActivityRow key={i} entry={entry} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState title="No activity log available" />
+              )}
+            </div>
+          )}
+
+          {tab === "agents" && (
+            <div className="flex flex-1 flex-col overflow-hidden bg-app">
+              {hasLiveAgentWork ? (
+                <div className="flex-1 overflow-y-auto p-4">
+                  <SubagentPanel delegations={delegations ?? []} activeSubagent={activeSubagent ?? null} isRunning={isRunning} logs={logs} activity={activity} />
+                </div>
+              ) : (
+                <EmptyState title="No subagent delegations yet" hint="Drawer & critic agents appear once the blueprint is approved and rendering begins." />
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Lightbox */}
-      {lightbox && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
-          onClick={() => setLightbox(false)}
-        >
-          <button
-            className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition-colors hover:bg-white/20"
-            onClick={() => setLightbox(false)}
-          >
-            <svg
-              className="h-5 w-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-          <div className="absolute right-5 top-16 flex flex-col gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                downloadPng();
-              }}
-              className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs font-medium text-white hover:bg-white/20"
-            >
+      <Lightbox
+        open={lightbox}
+        onClose={() => setLightbox(false)}
+        imageSrc={`data:image/png;base64,${png_base64}`}
+        alt="Diagram fullscreen preview"
+        actions={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => download("png")}>
               ↓ PNG
-            </button>
+            </Button>
             {drawio && (
               <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    downloadDrawio();
-                  }}
-                  className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs font-medium text-white hover:bg-white/20"
-                >
+                <Button variant="secondary" size="sm" onClick={() => download("drawio")}>
                   ↓ .drawio
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openInDrawio();
-                  }}
-                  className="flex items-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/20 px-3 py-2 text-xs font-medium text-blue-300 hover:bg-blue-500/30"
-                >
+                </Button>
+                <Button variant="secondary" size="sm" onClick={openDrawio} className="border-accent/30 bg-accent/10 text-accent-text">
                   ↗ Draw.io
-                </button>
+                </Button>
               </>
             )}
             {pdf_base64 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  downloadPdf();
-                }}
-                className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs font-medium text-white hover:bg-white/20"
-              >
+              <Button variant="secondary" size="sm" onClick={() => download("pdf")}>
                 PDF
-              </button>
+              </Button>
             )}
-          </div>
-          <img
-            src={`data:image/png;base64,${png_base64}`}
-            alt="Diagram fullscreen preview"
-            className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
+          </>
+        }
+      />
     </>
   );
 }
