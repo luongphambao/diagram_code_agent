@@ -577,10 +577,11 @@ def _add_table(
     if col_widths and len(col_widths) == n_cols:
         for i, cw in enumerate(col_widths):
             table.columns[i].width = Inches(cw)
+    pal = _palette()
     for c, head in enumerate(headers):
-        _style_cell(table.cell(0, c), str(head), fill=BNK_BLUE, color=BNK_WHITE, bold=True, size=header_size)
+        _style_cell(table.cell(0, c), str(head), fill=pal["blue"], color=BNK_WHITE, bold=True, size=header_size)
     for r, row in enumerate(rows, start=1):
-        fill = BNK_LIGHT if r % 2 == 0 else BNK_WHITE
+        fill = pal["light"] if r % 2 == 0 else BNK_WHITE
         for c in range(n_cols):
             value = row[c] if c < len(row) else ""
             _style_cell(table.cell(r, c), str(value), fill=fill, color=BNK_TEXT, bold=False, size=body_size)
