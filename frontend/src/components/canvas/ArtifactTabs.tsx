@@ -182,7 +182,7 @@ export default function ArtifactTabs({
               onClick={() => setLightbox(true)}
             >
               <img
-                src={`data:image/png;base64,${png_base64}`}
+                src={resolveSrc(png_base64, MIME_TYPES.png)}
                 alt="Generated architecture diagram"
                 className="max-h-full max-w-full rounded-md object-contain shadow-2xl ring-1 ring-line transition-transform hover:scale-[1.01]"
               />
