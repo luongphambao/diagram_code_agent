@@ -1197,8 +1197,20 @@ def _render_block(
     report: dict[str, Any],
     workspace: Path,
     slide_no: int,
+    *,
+    spec: dict[str, Any] | None = None,
 ) -> None:
-    """Render a structured (table-based) BnK slide from a block type."""
+    """Render a structured (table-based) BnK slide from a block type.
+
+    ``spec`` is the raw SlideSpec dict for THIS slide (title/bullets/asset_ref/params) —
+    most blocks below ignore it and re-derive their data from ``report``/``workspace``
+    (a single global source per deck), but a block that can appear MULTIPLE times per deck
+    with different content each time (e.g. "case_study" — one contract emits several slides,
+    see deck._build_deck_plan_registry) needs its own per-slide params instead.
+    """
+    if block == "case_study":
+        _case_study_slide(prs, (spec or {}).get("params") or {}, slide_no, title or "SUCCESS STORY")
+        return
     if block == "tech_stack_table":
         _tech_stack_table_slide(
             prs, report, slide_no, title or "PROPOSED SOLUTION | Technical Stack", workspace=workspace
