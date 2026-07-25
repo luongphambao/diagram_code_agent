@@ -20,6 +20,10 @@ export default defineConfig({
         target: "http://localhost:3001",
         changeOrigin: true,
       },
+      "/api/artifacts": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+      },
       "/api/backend": {
         target: "http://localhost:8001",
         changeOrigin: true,
