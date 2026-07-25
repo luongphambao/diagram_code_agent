@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import type { AgentState, ChatMessage } from "./agent-utils";
+import type { AgentState } from "./agent-utils";
 import { BACKEND_URL } from "./agent-utils";
 
 export interface Conversation {
