@@ -61,28 +61,36 @@ export class PassthroughRunner extends AgentRunner {
    * runner keeps itself (it keeps none; see the class doc comment).
    *
    * This is NOT optional polish — found live (Stage 3 Playwright verification
-   * against the real backend): `copilotkit.connectAgent()`
-   * (@copilotkit/core/src/core/run-handler.ts:281-283) unconditionally does
-   * `agent.setMessages([]); agent.setState({})` on every "fresh restore" (any
-   * thread switch), on the assumption that the runner's `connect()` stream
-   * will replay history to repopulate them. `<CopilotChat>` calls
-   * `connectAgent()` itself whenever `hasExplicitThreadId` is true — i.e. on
-   * every thread switch in this app. Returning `EMPTY` here (the original
-   * design, reasoning that Python already persists history so the runner
-   * doesn't need to) meant every conversation switch silently wiped the chat
-   * to blank: CopilotKit's OWN clear ran, and nothing ever repopulated it.
+   * against the real backend), in two layers:
+   *
+   * 1. `copilotkit.connectAgent()` (@copilotkit/core/src/core/run-handler.ts:
+   *    281-283) unconditionally does `agent.setMessages([]); agent.setState({})`
+   *    on every "fresh restore" (any thread switch), expecting the runner's
+   *    `connect()` stream to replay history and repopulate them.
+   *    `<CopilotChat>` calls `connectAgent()` whenever `hasExplicitThreadId`
+   *    is true — every thread switch in this app. Returning `EMPTY` (the
+   *    original design, reasoning that Python already persists history so
+   *    the runner doesn't need to) meant every conversation switch silently
+   *    wiped the chat to blank.
+   * 2. `@ag-ui/client`'s event-order verifier rejects ANY stream — run() or
+   *    connect() alike — that doesn't open with RUN_STARTED (or RUN_ERROR):
+   *    "AGUIError: First event must be 'RUN_STARTED'". A first attempt at
+   *    this fix emitting MESSAGES_SNAPSHOT first failed exactly that check;
+   *    connect() must look like a complete, well-formed run.
    */
   connect(request: AgentRunnerConnectRequest): Observable<BaseEvent> {
     return new Observable<BaseEvent>((subscriber) => {
       const headers: Record<string, string> = { ...(request.headers ?? {}) };
       const url = `${CONFIG.backendUrl}/conversations/${encodeURIComponent(request.threadId)}/history`;
+      const runId = `connect-${Date.now()}`;
+
+      subscriber.next({ type: "RUN_STARTED", threadId: request.threadId, runId } as unknown as BaseEvent);
 
       fetch(url, { headers })
         .then(async (res) => {
           if (res.status === 404) {
             // A genuinely new thread (never run) — nothing to replay, matches
-            // the pre-fix EMPTY behavior for this specific case.
-            subscriber.complete();
+            // the pre-fix EMPTY-stream behavior for this specific case.
             return;
           }
           if (!res.ok) {
@@ -95,12 +103,14 @@ export class PassthroughRunner extends AgentRunner {
           if (history.state && Object.keys(history.state).length > 0) {
             subscriber.next({ type: "STATE_SNAPSHOT", snapshot: history.state } as unknown as BaseEvent);
           }
-          subscriber.complete();
         })
         .catch((error: unknown) => {
           // A transient backend hiccup shouldn't hard-error the whole chat
-          // mount — complete with nothing replayed rather than reject.
+          // mount — finish the run with nothing replayed rather than reject.
           console.error(`[runtime] connect() history replay failed for ${request.threadId}:`, error);
+        })
+        .finally(() => {
+          subscriber.next({ type: "RUN_FINISHED", threadId: request.threadId, runId } as unknown as BaseEvent);
           subscriber.complete();
         });
 
