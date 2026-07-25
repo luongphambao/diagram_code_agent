@@ -10,4 +10,5 @@ from memory.stores.csm_adapter import (
     archive_approved_revision,
     build_solution_model,
     from_artifacts,
+    load_richest_snapshot,
 )
