@@ -107,14 +107,23 @@ describe("PassthroughRunner", () => {
     // conversation switch silently wiped the chat to blank — CopilotKit's
     // own clear ran, and nothing ever refilled it. This suite locks in the
     // fix: connect() fetches the backend's history REST endpoint and
-    // replays it as MESSAGES_SNAPSHOT + STATE_SNAPSHOT.
+    // replays it as MESSAGES_SNAPSHOT + STATE_SNAPSHOT — bracketed by
+    // RUN_STARTED/RUN_FINISHED, since @ag-ui/client's event-order verifier
+    // rejects ANY stream (run or connect) that doesn't open with
+    // RUN_STARTED ("AGUIError: First event must be 'RUN_STARTED'") — found
+    // on the first attempt at this same fix, which emitted the snapshots
+    // unbracketed.
 
     const originalFetch = global.fetch;
     afterEach(() => {
       global.fetch = originalFetch;
     });
 
-    it("replays history as MESSAGES_SNAPSHOT + STATE_SNAPSHOT on a 200 response", async () => {
+    function eventTypes(events: unknown[]): string[] {
+      return events.map((e) => (e as { type: string }).type);
+    }
+
+    it("replays history as RUN_STARTED, MESSAGES_SNAPSHOT, STATE_SNAPSHOT, RUN_FINISHED on a 200 response", async () => {
       const messages = [{ id: "u1", role: "user", content: "hello" }];
       const state = { current_step: "done" };
       global.fetch = vi.fn(
@@ -128,22 +137,26 @@ describe("PassthroughRunner", () => {
       const runner = new PassthroughRunner();
       const received = await firstValueFrom(runner.connect({ threadId: "thread-1" }).pipe(toArray()));
 
-      expect(received).toEqual([
-        { type: "MESSAGES_SNAPSHOT", messages },
-        { type: "STATE_SNAPSHOT", snapshot: state },
+      expect(eventTypes(received)).toEqual([
+        "RUN_STARTED",
+        "MESSAGES_SNAPSHOT",
+        "STATE_SNAPSHOT",
+        "RUN_FINISHED",
       ]);
+      expect(received[1]).toEqual({ type: "MESSAGES_SNAPSHOT", messages });
+      expect(received[2]).toEqual({ type: "STATE_SNAPSHOT", snapshot: state });
     });
 
-    it("completes with no events on a 404 (genuinely new thread, nothing to replay)", async () => {
+    it("still opens/closes with RUN_STARTED/RUN_FINISHED on a 404 (genuinely new thread)", async () => {
       global.fetch = vi.fn(async () => new Response("not found", { status: 404 })) as unknown as typeof fetch;
 
       const runner = new PassthroughRunner();
       const received = await firstValueFrom(runner.connect({ threadId: "brand-new" }).pipe(toArray()));
 
-      expect(received).toEqual([]);
+      expect(eventTypes(received)).toEqual(["RUN_STARTED", "RUN_FINISHED"]);
     });
 
-    it("completes (does not throw) when the backend is unreachable", async () => {
+    it("still opens/closes with RUN_STARTED/RUN_FINISHED (does not throw) when the backend is unreachable", async () => {
       global.fetch = vi.fn(async () => {
         throw new Error("ECONNREFUSED");
       }) as unknown as typeof fetch;
@@ -151,7 +164,7 @@ describe("PassthroughRunner", () => {
       const runner = new PassthroughRunner();
       const received = await firstValueFrom(runner.connect({ threadId: "t1" }).pipe(toArray()));
 
-      expect(received).toEqual([]);
+      expect(eventTypes(received)).toEqual(["RUN_STARTED", "RUN_FINISHED"]);
     });
 
     it("forwards the connect request's headers to the history fetch", async () => {
