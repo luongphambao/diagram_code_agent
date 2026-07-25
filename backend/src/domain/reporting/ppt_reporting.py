@@ -1116,10 +1116,13 @@ def _delivery_effort_slide(
     headers = ["Code", "Module", "Effort (MD)"]
     rows: list[list[Any]] = []
     effort_by_role: dict[str, float] = {}
+    totals: dict[str, Any] = {}
+    n_modules = 0
     if isinstance(wbs, dict) and wbs:
         for mod in _as_list(wbs.get("effort_by_module"))[:10]:
             if isinstance(mod, dict):
                 rows.append([mod.get("code", ""), mod.get("name", "Module"), mod.get("total_md", 0)])
+                n_modules += 1
         totals = wbs.get("effort_totals") or {}
         if totals:
             rows.append(["", "TOTAL", totals.get("total_mandays", 0)])
@@ -1127,21 +1130,46 @@ def _delivery_effort_slide(
     if not rows:
         rows = [["", "Effort will be finalized after WBS approval.", ""]]
 
+    pal = _palette()
+    show_stats = pal.get("card_shadow", False) and bool(totals)
+    content_y = _CONTENT_Y + (0.7 if show_stats else 0)
+    content_h = _CONTENT_H - (0.7 if show_stats else 0)
+
     if not effort_by_role:
-        return _table_slide(prs, title, headers, rows, slide_no, col_widths=[1.6, 7.5, 3.0])
+        slide = prs.slides.add_slide(_layout(prs, "Detail-01"))
+        _add_title(slide, title)
+        if show_stats:
+            _add_effort_stat_row(slide, totals, n_modules)
+        _add_table(slide, headers, rows, x=_CONTENT_X, y=content_y, w=_CONTENT_W, h=content_h, col_widths=[1.6, 7.5, 3.0])
+        _add_footer(slide, slide_no)
+        return slide
 
     # A donut of effort-by-role fits alongside the module table — table takes the left
     # ~58%, chart the remaining right column (mirrors the WS2 case-study two-column shape).
     slide = prs.slides.add_slide(_layout(prs, "Detail-01"))
     _add_title(slide, title)
+    if show_stats:
+        _add_effort_stat_row(slide, totals, n_modules)
     table_w = _CONTENT_W * 0.56
-    _add_table(slide, headers, rows, x=_CONTENT_X, y=_CONTENT_Y, w=table_w, h=_CONTENT_H)
+    _add_table(slide, headers, rows, x=_CONTENT_X, y=content_y, w=table_w, h=content_h)
     chart_x = _CONTENT_X + table_w + 0.3
     _add_donut_chart(
-        slide, effort_by_role, chart_x, _CONTENT_Y, _CONTENT_W - table_w - 0.3, _CONTENT_H, "Effort by Role (MD)"
+        slide, effort_by_role, chart_x, content_y, _CONTENT_W - table_w - 0.3, content_h, "Effort by Role (MD)"
     )
     _add_footer(slide, slide_no)
     return slide
+
+
+def _add_effort_stat_row(slide, totals: dict[str, Any], n_modules: int) -> None:
+    """3 stat callouts (Total MD / Total MM / Modules) above the effort table — vip only."""
+    stats = [
+        (f"{totals.get('total_mandays', 0):g}", "Total Man-Days"),
+        (f"{totals.get('total_manmonths', 0):g}", "Total Man-Months"),
+        (str(n_modules), "Modules"),
+    ]
+    col_w = _CONTENT_W / len(stats)
+    for i, (number, label) in enumerate(stats):
+        _add_stat_block(slide, number, label, _CONTENT_X + i * col_w, 1.0, col_w, 0.65)
 
 
 def _pricing_slide(prs: Presentation, report: dict[str, Any], slide_no: int, title: str = "PRICING | CAPEX"):
