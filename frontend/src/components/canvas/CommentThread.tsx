@@ -52,7 +52,7 @@ export default function CommentThread({ threadId, userRole }: CommentThreadProps
             <div className="mb-1 flex items-center gap-2">
               <span className="text-[11px] font-semibold text-slate-300">{c.author || "user"}</span>
               {c.role && (
-                <span className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] capitalize text-slate-500">
+                <span className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] capitalize text-secondary">
                   {c.role}
                 </span>
               )}
@@ -61,7 +61,7 @@ export default function CommentThread({ threadId, userRole }: CommentThreadProps
                   {c.anchor_entity_id}
                 </span>
               )}
-              <span className="ml-auto font-mono text-[10px] text-slate-700">{c.id}</span>
+              <span className="ml-auto font-mono text-[10px] text-muted">{c.id}</span>
             </div>
             <p className="text-xs leading-relaxed text-slate-300">{c.body}</p>
             {!c.resolved ? (
