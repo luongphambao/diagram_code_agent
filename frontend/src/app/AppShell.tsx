@@ -57,7 +57,11 @@ export default function AppShell({
         <div className={`flex min-w-0 flex-1 flex-col overflow-hidden ${activePane === "chat" ? "" : "hidden"}`}>
           {chat}
         </div>
-        <div className={`min-w-0 flex-1 overflow-hidden ${activePane === "canvas" ? "" : "hidden"}`}>{canvas}</div>
+        <div
+          className={`flex min-w-0 flex-1 flex-col overflow-hidden ${activePane === "canvas" ? "" : "hidden"}`}
+        >
+          {canvas}
+        </div>
       </main>
     );
   }
@@ -72,7 +76,13 @@ export default function AppShell({
         {chat}
       </div>
       <Splitter width={chatWidth} min={CHAT_MIN} max={CHAT_MAX} onChange={onChatWidthChange} />
-      <div className="min-w-0 flex-1 overflow-hidden">{canvas}</div>
+      {/* `flex flex-col` here is load-bearing: DiagramCanvas's root divs use
+          `flex flex-1` internally, which only fills height inside an actual
+          flex container. A plain block wrapper (found via Stage 1 Playwright
+          visual verification — the canvas empty-state didn't fill the pane,
+          leaving a visibly different-colored strip below it) silently breaks
+          that fill. */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">{canvas}</div>
     </main>
   );
 }
