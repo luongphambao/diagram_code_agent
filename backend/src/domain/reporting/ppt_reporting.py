@@ -1586,7 +1586,7 @@ def generate_ppt_proposal_file(
             slide_no += 1
             _delivery_effort_slide(prs, workspace, slide_no)
             slide_no += 1
-            _team_slide(prs, report, slide_no)
+            _team_slide(prs, workspace, slide_no)
             slide_no += 1
         if "pricing" in sections:
             sec += 1
@@ -1594,7 +1594,7 @@ def generate_ppt_proposal_file(
             slide_no += 1
             _pricing_slide(prs, report, slide_no)
             slide_no += 1
-            _payment_milestones_slide(prs, slide_no)
+            _payment_milestones_slide(prs, workspace, slide_no)
             slide_no += 1
         if "risks" in sections:
             risk_bullets = [
