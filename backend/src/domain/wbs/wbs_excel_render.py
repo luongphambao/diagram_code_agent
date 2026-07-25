@@ -183,6 +183,10 @@ def render_wbs_sheets(
                 dest_name = f"wbs_sheet_{kind}.png"
                 dest = Path(workspace) / dest_name
                 shutil.copyfile(src, dest)
+                try:
+                    _autocrop(dest)
+                except Exception:  # noqa: BLE001 — an uncropped screenshot still renders fine
+                    pass
                 manifest[kind] = dest_name
 
             if manifest:
