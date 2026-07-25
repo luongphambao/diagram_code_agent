@@ -225,6 +225,7 @@ def create_pptx(
     subtitle: str = "",
     brand: str = "",
     include_sections: list[str] | None = None,
+    deck_style: str = "corporate",
 ) -> str:
     """Write out.pptx from the approved workspace artifacts.
 
@@ -240,6 +241,7 @@ def create_pptx(
         subtitle: Subtitle / kicker line.
         brand: Client brand name shown on the cover.
         include_sections: Section keys to render; leave empty for all sections.
+        deck_style: Visual style preset — 'corporate' (default), 'modern', or 'minimal'.
     """
     try:
         pptx_path, sections, unrecognized = generate_ppt_proposal_file(
@@ -248,6 +250,7 @@ def create_pptx(
             subtitle=subtitle,
             brand=brand,
             include_sections=include_sections or None,
+            deck_style=deck_style,
         )
     except FileNotFoundError as exc:
         return f"ERROR: {exc}"
