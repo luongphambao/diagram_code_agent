@@ -902,7 +902,7 @@ def _tech_stack_icon_slide(
         for r in p.runs:
             r.font.size = Pt(11)
             r.font.bold = True
-            r.font.name = BNK_FONT
+            r.font.name = _palette().get("font", BNK_FONT)
             r.font.color.rgb = _palette()["blue"]
         x = 3.15
         for it in icons:
