@@ -103,8 +103,8 @@ export default function ConversationSidebar({
 
   return (
     <div
-      className="flex flex-col border-r border-white/8 bg-[#0d1017]"
-      style={{ width: 220, minWidth: 220 }}
+      className="flex flex-col border-r border-line bg-raised"
+      style={{ width: 248, minWidth: 248 }}
     >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-white/8 px-3 py-2.5">
