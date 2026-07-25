@@ -15,7 +15,7 @@ import sys
 
 from google import genai
 
-MODEL = "gemini-3.1-flash-image"
+MODEL = "gemini-2.5-flash-image"
 OUTPUT_PATH = "aws_sample_diagram.jpg"
 
 PROMPT = (
