@@ -191,6 +191,7 @@ def generate_ppt_proposal(
             subtitle=subtitle,
             brand=brand,
             include_sections=include_sections,
+            deck_style=deck_style,
         )
     except FileNotFoundError as exc:
         return str(exc)
