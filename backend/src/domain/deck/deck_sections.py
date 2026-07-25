@@ -489,6 +489,26 @@ SECTION_CONTENT_CONTRACTS: tuple[SectionContract, ...] = (
         "(same screenshot the user showed) — same schedule model, not a re-derivation.",
     ),
     SectionContract(
+        key="delivery_wbs_detail",
+        section="delivery_plan",
+        kind="content",
+        title="PROJECT DELIVERY | WBS Breakdown",
+        role="effort",
+        layout="Empty",
+        block="wbs_detail_image",
+        data_source="wbs_filled.xlsx '2. WBS' sheet, screenshotted via LibreOffice headless "
+        "(wbs_excel_render.py -> wbs_sheet_images.json)",
+        status="new_block",
+        params=(_p("sheet_kind", "Fixed 'wbs' — which rendered sheet image to embed.", required=False),),
+        required_inputs=("wbs.sheet_images.wbs",),
+        slide_count=(0, 1),
+        optional=True,
+        notes="The full itemized WBS table as a real Excel screenshot — no native-table "
+        "equivalent exists today (delivery_effort only shows the per-module rollup, not "
+        "every task). Skips cleanly when export_wbs_excel hasn't run / LibreOffice isn't "
+        "installed (no wbs_sheet_images.json 'wbs' entry).",
+    ),
+    SectionContract(
         key="delivery_risk",
         section="risks",
         kind="content",
