@@ -231,7 +231,7 @@ function DelegationCard({ d, index, toolLogs }: DelegationCardProps) {
                   {l.elapsed_s !== undefined && (
                     <span className="shrink-0 text-muted">{l.elapsed_s}s</span>
                   )}
-                  <span className="min-w-0 truncate text-slate-400">
+                  <span className="min-w-0 truncate text-secondary">
                     {l.error || l.output || l.input}
                   </span>
                 </div>
