@@ -1,11 +1,10 @@
-import type { AgentState, PendingInterrupt } from "../hooks/useDiagramAgent";
+import type { AgentState } from "../hooks/useDiagramAgent";
 import AgentStatus from "./AgentStatus";
 import SubagentPanel from "./SubagentPanel";
 import ArtifactTabs from "./canvas/ArtifactTabs";
 
 interface DiagramCanvasProps {
   agentState: AgentState;
-  pendingInterrupt: PendingInterrupt | null;
   isRunning: boolean;
   activeSubagent?: string | null;
   activity?: string | null;
@@ -15,7 +14,6 @@ interface DiagramCanvasProps {
 
 export default function DiagramCanvas({
   agentState,
-  pendingInterrupt,
   isRunning,
   activeSubagent,
   activity,
@@ -40,10 +38,10 @@ export default function DiagramCanvas({
   // Empty / idle
   if (!current_step && !isRunning && !hasArtifact && !error && !pendingInterrupt) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 bg-surface-canvas">
+      <div className="flex flex-1 flex-col items-center justify-center gap-5 bg-surface">
         <div className="flex h-24 w-24 items-center justify-center rounded-3xl border border-white/8 bg-white/4">
           <svg
-            className="h-12 w-12 text-slate-800"
+            className="h-12 w-12 text-muted"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -57,8 +55,8 @@ export default function DiagramCanvas({
           </svg>
         </div>
         <div className="text-center">
-          <p className="text-base font-semibold text-slate-600">Diagram will appear here</p>
-          <p className="mt-1.5 text-sm text-slate-800">Start a conversation in the chat panel</p>
+          <p className="text-base font-semibold text-muted">Diagram will appear here</p>
+          <p className="mt-1.5 text-sm text-muted">Start a conversation in the chat panel</p>
         </div>
       </div>
     );
@@ -80,7 +78,7 @@ export default function DiagramCanvas({
 
   // In-progress / waiting
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto bg-surface-canvas p-10">
+    <div className="flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto bg-surface p-10">
       {(isRunning || current_step) && (
         <AgentStatus
           step={current_step ?? (isRunning ? "planning" : "done")}
@@ -99,7 +97,7 @@ export default function DiagramCanvas({
       </div>
 
       {isRunning && (
-        <p className="text-xs text-slate-800">
+        <p className="text-xs text-muted">
           This usually takes 1–3 minutes depending on complexity.
         </p>
       )}
