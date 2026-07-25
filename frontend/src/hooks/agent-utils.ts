@@ -389,7 +389,10 @@ export type DecisionAction =
   | "request_evidence"
   | "request_alternative";
 
-// Payload posted back to the gate for a HITL v2 action.
+// Payload posted back to the gate for a HITL v2 action. Carries an index
+// signature so it interoperates with the generic `Record<string, unknown>`
+// payload shape gate cards build for plain approve/reject (both end up
+// JSON.stringify'd into the same wire tool-result content either way).
 export interface DecisionPayload {
   action: DecisionAction;
   approved?: boolean;
@@ -402,6 +405,7 @@ export interface DecisionPayload {
   source_expectation?: string;
   option_comparison?: string;
   constraint_change?: string;
+  [key: string]: unknown;
 }
 
 export interface UploadedFile {
