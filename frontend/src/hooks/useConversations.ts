@@ -79,27 +79,5 @@ export function useConversations() {
     }
   }, []);
 
-  // Insert or update a conversation in the local list (called after each agent run).
-  const upsertLocal = useCallback((conv: Partial<Conversation> & { thread_id: string }) => {
-    setConversations((prev) => {
-      const idx = prev.findIndex((c) => c.thread_id === conv.thread_id);
-      if (idx >= 0) {
-        const updated = [...prev];
-        updated[idx] = { ...updated[idx], ...conv };
-        return updated;
-      }
-      return [
-        {
-          name: "Untitled",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          last_message: "",
-          ...conv,
-        },
-        ...prev,
-      ];
-    });
-  }, []);
-
-  return { conversations, loading, fetchAll, create, rename, remove, loadHistory, upsertLocal };
+  return { conversations, loading, fetchAll, rename, remove, loadHistory };
 }
