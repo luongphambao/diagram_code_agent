@@ -12,6 +12,8 @@ import Lightbox from "../../canvas/Lightbox";
 import CodeTab from "../../canvas/CodeTab";
 import CanvasSummaryBar from "../../canvas/CanvasSummaryBar";
 import { useExport } from "../../canvas/useExport";
+import { resolveSrc } from "../../lib/artifacts";
+import { MIME_TYPES } from "../../lib/downloadBase64";
 
 type Tab =
   "preview" | "pdf" | "ppt" | "wbs" | "quality" | "code" | "activity" | "agents" | "comments";
