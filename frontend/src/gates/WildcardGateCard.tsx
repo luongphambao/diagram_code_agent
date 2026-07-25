@@ -77,7 +77,7 @@ export default function WildcardGateCard({ name, args, status, respond }: Wildca
   const label = GATE_LABELS[name] ?? name;
   const question = typeof args.question === "string" ? args.question : "Review and approve to continue.";
 
-  if (status === "Complete") {
+  if (status === ToolCallStatus.Complete) {
     return (
       <Card className="relative mt-2 max-w-lg overflow-hidden p-4 pl-5">
         <Stripe severity="ok" />
