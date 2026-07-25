@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 from pathlib import Path
 from typing import Any, Iterable, Literal, Optional
@@ -40,12 +41,24 @@ from typing import Any, Iterable, Literal, Optional
 from pydantic import BaseModel, Field
 
 from csm import Deliverable, SolutionModel, SourceRef, TraceLink, mint_id
+from domain.deck.deck_resolver import available_inputs, csm_to_slide_params
+from domain.deck.deck_sections import (
+    IMPLEMENTED_BLOCKS,
+    SECTION_CONTENT_CONTRACTS,
+    SectionContract,
+    plannable_contracts,
+)
+
+logger = logging.getLogger(__name__)
 
 DECK_PLAN_NAME = "deck_plan.json"
 DECK_QA_NAME = "deck_qa_result.json"
 
 # Layout / block names MUST match ppt_reporting.VALID_LAYOUTS / VALID_BLOCKS. Kept as
 # literal strings here (not imported) so deck.py stays free of a ppt_reporting cycle.
+# The last 4 (case_study/kpis/client_info/advice) are the deck_sections.Role superset —
+# not rendered by the registry-driven builder until WS2/WS3 add their block renderer, but
+# declared here now so a future SlideSpec carrying one of them validates cleanly.
 NarrativeRole = Literal[
     "context",
     "objective",
@@ -56,6 +69,10 @@ NarrativeRole = Literal[
     "timeline",
     "risk",
     "pricing",
+    "case_study",
+    "kpis",
+    "client_info",
+    "advice",
 ]
 
 # Roles the storyboard MUST cover for a complete proposal (docx §7.1 deck gate).
