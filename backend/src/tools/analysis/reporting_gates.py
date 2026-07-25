@@ -487,9 +487,24 @@ def propose_deck_plan(title: str = "", subtitle: str = "", brand: str = "") -> s
         summary=f"Proposed deck storyboard: {len(plan.slides)} slides (revision {plan.revision}).",
         data={"slides": [s.model_dump() for s in plan.slides]},
     )
+
+    case_note = ""
+    case_slides = [s for s in plan.slides if s.narrative_role == "case_study"]
+    if case_slides:
+        case_lines = [
+            f"  • {s.title} — client: {s.params.get('client') or 'n/a'}"
+            f" (slug: {s.params.get('slug') or '?'})"
+            for s in case_slides
+        ]
+        case_note = (
+            "\n\nSUCCESS STORY — auto-picked past project(s), tell me to swap any that "
+            "aren't a good fit:\n" + "\n".join(case_lines)
+        )
+
     return (
         "DECK STORYBOARD — review the narrative & trade-offs before the file is rendered:\n"
         + "\n".join(lines)
+        + case_note
         + _deck_qa_note(model)
         + _epistemic_note(model)
         + "\n\nApprove to render the deck from this plan, or tell me what to change in the storyboard."
