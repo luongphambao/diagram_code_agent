@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { firstValueFrom, toArray } from "rxjs";
 import type { AbstractAgent, BaseEvent } from "@ag-ui/client";
 import { DiagramHttpAgent } from "../diagram-agent.js";
