@@ -430,6 +430,7 @@ def _add_textbox(
     for run in p.runs:
         run.font.size = Pt(font_size)
         run.font.bold = bold
+        run.font.name = _palette().get("font", BNK_FONT)
 
 
 def _add_bullets(
