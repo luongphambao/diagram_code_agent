@@ -269,6 +269,11 @@ def _refresh_deck_plan(title: str = "", subtitle: str = "", brand: str = ""):
     sheet_images = _read_json_file(current_workspace() / "wbs_sheet_images.json", {}) or {}
     if sheet_images:
         meta = {**meta, "wbs_sheet_images": sheet_images}
+    # diagram_manifest.json (WS4) — every diagram finalize_diagram(kind=...) has snapshotted
+    # this session (architecture + any additional sequence/erd/state_machine/process ones).
+    diagram_manifest = _read_json_file(current_workspace() / "diagram_manifest.json", {}) or {}
+    if diagram_manifest:
+        meta = {**meta, "diagram_manifest": diagram_manifest}
     # business_narrative.json is a new, optional artifact (case_study/value_props/kpis/...)
     # — absent in every workspace today; every builder degrades gracefully without it.
     narrative = _read_json_file(current_workspace() / "business_narrative.json", {}) or {}
