@@ -21,7 +21,5 @@ export function useExport(agentState: AgentState) {
 
   const openDrawio = useCallback(() => openInDrawio(agentState), [agentState]);
 
-  const visibleExports = useMemo(() => EXPORTS.filter((d) => isAvailable(d.id) || d.id === "png" || d.id === "drawio"), [isAvailable]);
-
-  return { exports: EXPORTS, visibleExports, download, isAvailable, openDrawio };
+  return { exports: EXPORTS, download, isAvailable, openDrawio };
 }
