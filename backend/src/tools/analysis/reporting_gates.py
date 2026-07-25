@@ -262,6 +262,13 @@ def _refresh_deck_plan(title: str = "", subtitle: str = "", brand: str = ""):
     # real workspace (diagram_brief.json carries none of these) — the registry-driven
     # builder's cover/solution_name/architecture contracts read from `meta`, not `brief`.
     meta = _read_json_file(current_workspace() / "out.slide.json", {}) or {}
+    # wbs_sheet_images.json (WS3) — the LibreOffice-rendered Effort/WBS/Delivery-Plan sheet
+    # screenshots (see wbs_excel_render.py, written by export_wbs_excel). Merged into meta
+    # rather than threaded as a new build_deck_plan parameter — deck_resolver's builders
+    # already read ad-hoc keys off meta (png/screens/...), so this stays a pure addition.
+    sheet_images = _read_json_file(current_workspace() / "wbs_sheet_images.json", {}) or {}
+    if sheet_images:
+        meta = {**meta, "wbs_sheet_images": sheet_images}
     # business_narrative.json is a new, optional artifact (case_study/value_props/kpis/...)
     # — absent in every workspace today; every builder degrades gracefully without it.
     narrative = _read_json_file(current_workspace() / "business_narrative.json", {}) or {}
