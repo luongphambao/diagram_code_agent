@@ -872,6 +872,32 @@ _MAX_BULLETS = 8  # more → "wall of text"
 _MAX_TITLE_LEN = 80  # characters
 _MIN_BULLETS_CONTENT = 1  # section covers + cover may have 0 bullets legitimately
 
+# Blocks that render their OWN structured content (table/chart/image) instead of prose
+# bullets, and typically ground themselves some other way than CSM source_refs (a rendered
+# Excel sheet, a diagram file, a picked case study) — a slide using one of these is fully
+# populated even with bullets=[] and source_refs=[]; only a "bullets" slide actually needs
+# them to have real content. Without this, every one of these legitimate slide types was
+# double-penalized ("no bullets and no asset_ref" + "no source_refs") purely because the
+# registry path derives their real data at RENDER time (from wbs.json / workspace files),
+# not into SlideSpec.bullets/source_refs — confirmed via a real generated deck's score
+# dropping each time a new one of these was added (WS1's tech_stack_table/pricing/etc. had
+# the same gap; WS2-4's case_study/wbs_detail_image/diagram_image made it worse).
+_SELF_GROUNDED_BLOCKS: frozenset[str] = frozenset(
+    {
+        "tech_stack_table",
+        "func_nfr",
+        "sdlc",
+        "delivery_effort",
+        "gantt",
+        "pricing",
+        "milestones",
+        "team",
+        "case_study",
+        "wbs_detail_image",
+        "diagram_image",
+    }
+)
+
 
 def score_deck_structure(plan: DeckPlan) -> dict:
     """Rule-based structural quality score (0-100).
