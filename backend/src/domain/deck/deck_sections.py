@@ -757,6 +757,7 @@ IMPLEMENTED_BLOCKS: frozenset[str] = frozenset(
         "gantt",  # _gantt_slide — real renderer, was missing from this set (registry bug)
         "case_study",  # _case_study_slide (WS2) — one slide per picked past project
         "diagram",
+        "wbs_detail_image",  # _wbs_sheet_image_slide (WS3) — the "2. WBS" sheet screenshot
         "cover",
         "divider",
         "closing",  # structural — handled without a block renderer
