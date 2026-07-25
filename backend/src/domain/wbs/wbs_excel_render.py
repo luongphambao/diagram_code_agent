@@ -66,18 +66,49 @@ def _fit_to_one_landscape_page(ws) -> None:
 
 
 def _prepare_render_copy(xlsx_path: Path, dest_path: Path) -> list[str]:
-    """Clone ``xlsx_path`` keeping only :data:`SHEET_KINDS`' sheets, each set to print as
-    one landscape page. Returns the kept sheet names in their final (PDF page) order."""
+    """Clone ``xlsx_path``, HIDING (never deleting) every sheet outside
+    :data:`SHEET_KINDS`, each of which is set to print as one landscape page. Returns
+    the kept sheet names in their final (PDF page) order.
+
+    Hiding, not deleting: "1. Effort" and "3. Delivery Plan" hold live VLOOKUP formulas
+    against "4. Master Data" (the rate-card ratios) — deleting that sheet broke those
+    formulas on LibreOffice's open-time recalc (#REF!/#NAME? instead of real numbers,
+    confirmed visually). A hidden sheet keeps the same cross-sheet references intact
+    while still being skipped by PDF export the same way a deleted one would be.
+    """
     wb = load_workbook(xlsx_path)
-    for name in list(wb.sheetnames):
+    for name in wb.sheetnames:
         if name not in SHEET_KINDS:
-            del wb[name]
+            wb[name].sheet_state = "hidden"
     kept = [name for name in SHEET_KINDS if name in wb.sheetnames]
     for name in kept:
         _fit_to_one_landscape_page(wb[name])
-    wb.active = 0
+    if kept:
+        wb.active = wb.sheetnames.index(kept[0])
     wb.save(dest_path)
     return kept
+
+
+def _autocrop(png_path: Path, *, background: tuple[int, int, int] = (255, 255, 255), margin: int = 24) -> None:
+    """Crop away the dead whitespace print-to-PDF leaves around small sheets.
+
+    "Fit to 1 page" only ever SHRINKS a print range that's larger than one page — it does
+    not enlarge a range that's already smaller (confirmed visually: a ~10-row Effort sheet
+    rendered as a small table pinned to the page's top-left corner with the rest blank).
+    Rather than fight that scaling semantic, crop each rendered PNG to its actual content
+    bounding box (plus a small margin) so the embedded slide image has no dead space,
+    regardless of how large the sheet's page-fit scale ends up being.
+    """
+    img = Image.open(png_path).convert("RGB")
+    bg = Image.new("RGB", img.size, background)
+    diff = ImageChops.difference(img, bg).convert("L").point(lambda p: 255 if p > 10 else 0)
+    bbox = diff.getbbox()
+    if bbox is None:
+        return  # the page is entirely blank — nothing usable to crop to
+    left, top, right, bottom = bbox
+    left, top = max(0, left - margin), max(0, top - margin)
+    right, bottom = min(img.width, right + margin), min(img.height, bottom + margin)
+    img.crop((left, top, right, bottom)).save(png_path)
 
 
 def render_wbs_sheets(
