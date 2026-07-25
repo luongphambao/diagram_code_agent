@@ -512,13 +512,22 @@ def _add_title(slide, title: str) -> None:
 
     if eyebrow_text:
         if ph is not None:
-            # The Detail-01/Overview-01 title placeholder is a THIN box (~0.45" tall) that
-            # the template bottom-anchors and lets overflow well above its nominal top —
-            # drawing the eyebrow just above that nominal top collides with the actual
-            # (larger, overflowing) glyph. Push the placeholder itself down to make real
-            # room, then draw the eyebrow in the space it vacated.
+            # The Detail-01 title placeholder is a THIN box (~0.45" tall, 39pt default
+            # font, noAutofit) sitting close above the body placeholder (~0.3" gap) — there
+            # is no room to just draw an eyebrow above it without colliding with either the
+            # overflowing headline glyph or the body content below. Make the headline
+            # itself smaller and explicitly top-anchored (deterministic, no overflow above
+            # the box) and nudge it down slightly, freeing just enough room for the eyebrow.
             orig_top = ph.top
-            ph.top = orig_top + Inches(0.42)
+            ph.top = orig_top + Inches(0.2)
+            try:
+                ph.text_frame.vertical_anchor = MSO_ANCHOR.TOP
+            except Exception:  # noqa: BLE001 — cosmetic only
+                pass
+            for p in ph.text_frame.paragraphs:
+                for run in p.runs:
+                    if run.font.size is None or run.font.size > Pt(28):
+                        run.font.size = Pt(28)
             _add_eyebrow(slide, eyebrow_text, ph.left / 914400, orig_top / 914400, ph.width / 914400)
         else:
             _add_eyebrow(slide, eyebrow_text, 0.65, 0.12, 12.0)
