@@ -652,7 +652,13 @@ def _clone_slide(prs: Presentation, source_index: int):
 
 def _section_slide(prs: Presentation, title: str, slide_no: int):
     slide = prs.slides.add_slide(_layout(prs, "Head Page", "Head-01"))
+    pal = _palette()
+    gradient = pal.get("divider_gradient")
+    if gradient:
+        _add_gradient_background(slide, gradient[0], gradient[1], angle=135.0)
     _add_title(slide, title)
+    if gradient:
+        _style_placeholder_text(slide, 0, color=BNK_WHITE, size=36, bold=True)
     _add_footer(slide, slide_no)
     return slide
 
