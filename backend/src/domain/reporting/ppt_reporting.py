@@ -1445,8 +1445,12 @@ def _case_study_slide(
     if params.get("effort_md"):
         bullets.append(f"Reference effort: {params['effort_md']} MD (past project, not this quote)")
 
+    pal = _palette()
     image_path = _resolve_asset_path(params.get("image_ref"))
     if image_path and image_path.exists():
+        if pal.get("card_shadow", False):
+            _add_card(slide, 0.45, 1.15, 6.75, 5.6, fill=pal.get("light"))
+            _add_card(slide, 7.2, 1.15, 5.65, 5.6, fill=BNK_WHITE)
         _add_bullets(slide, bullets, 0.6, 1.3, 6.5, 5.3, font_size=13)
         try:
             _image_fit(slide, image_path, 7.35, 1.3, 5.35, 5.3)
