@@ -447,7 +447,7 @@ _BUILDERS = {
     "agenda": _b_agenda,
     "exec_summary_overview": _b_exec_overview,
     "exec_summary_goals_value": _b_goals_value,
-    "success_story": _b_success_story,
+    "success_story": _b_success_stories,
     "solution_name": _b_solution_name,
     "solution_overview": _b_solution_overview,
     "solution_feature_list": _b_feature_list,
