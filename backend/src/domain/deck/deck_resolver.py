@@ -506,6 +506,8 @@ _BUILDERS = {
     "solution_feature_list": _b_feature_list,
     "solution_tech_stack": _b_tech_stack,
     "solution_architecture": _b_architecture,
+    "solution_architecture_explanation": _b_architecture_explain,
+    "solution_additional_diagrams": _b_additional_diagrams,
     "scope_sdlc": _b_sdlc,
     "scope_change_request": _b_change_request,
     "delivery_effort": _b_delivery_effort,
