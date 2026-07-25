@@ -164,6 +164,7 @@ def generate_ppt_proposal(
     brand: str = "",
     include_sections: list[str] | None = None,
     reason_for_subset: str = "",
+    deck_style: str = "corporate",
 ) -> str:
     """Generate an editable BnK PowerPoint proposal from approved artifacts.
 
