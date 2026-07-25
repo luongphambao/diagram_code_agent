@@ -230,7 +230,6 @@ function AppInner({
   const canvas = (
     <DiagramCanvas
       agentState={workspace.agentState}
-      pendingInterrupt={null}
       isRunning={agent.isRunning}
       activeSubagent={activityStream.activeSubagent}
       activity={activityStream.activity}
