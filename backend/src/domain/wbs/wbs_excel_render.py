@@ -36,6 +36,7 @@ from typing import Optional
 
 from openpyxl import load_workbook
 from openpyxl.worksheet.properties import PageSetupProperties
+from PIL import Image, ImageChops
 
 logger = logging.getLogger(__name__)
 
