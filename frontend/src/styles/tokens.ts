@@ -148,8 +148,10 @@ export const CONTRAST_PAIRS: ContrastPair[] = [
   { theme: "dark", label: "ink-100 primary fg on ink-900 canvas", fg: dark.ink[100], bg: dark.ink[900], min: 14 },
   { theme: "dark", label: "ink-500 muted fg on ink-850 raised", fg: dark.ink[500], bg: dark.ink[850], min: 4.5 },
   { theme: "dark", label: "ink-100 primary fg on ink-850 raised", fg: dark.ink[100], bg: dark.ink[850], min: 13 },
-  // Dark — accent.
-  { theme: "dark", label: "accent-300 text on ink-900 canvas", fg: dark.accent[300], bg: dark.ink[900], min: 10 },
+  // Dark — accent. Tests `accent.text`, the semantic role — NOT the numbered
+  // ramp step directly, since that step's role flips between themes (see the
+  // `text` field's doc comment on ThemeTokens.accent).
+  { theme: "dark", label: "accent-text on ink-900 canvas", fg: dark.accent.text, bg: dark.ink[900], min: 10 },
   // Corrected from an initial (unverified) design-brief claim of "13.9:1" — that
   // figure was narrative, not computed. 4.5:1 is the real, defensible WCAG AA bar
   // for normal-size text on a filled control; a mid-lightness accent fill cannot
