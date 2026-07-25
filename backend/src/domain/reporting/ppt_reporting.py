@@ -495,10 +495,33 @@ def _add_title(slide, title: str) -> None:
     headline = title
     if pal.get("eyebrow") and title and " | " in title:
         eyebrow_text, headline = title.split(" | ", 1)
-    if not _set_placeholder_text(slide, 0, headline):
+
+    ph = None
+    for shape in slide.placeholders:
+        try:
+            if shape.placeholder_format.idx == 0:
+                ph = shape
+                break
+        except Exception:
+            continue
+
+    if ph is not None:
+        ph.text = headline
+    else:
         _add_textbox(slide, headline, 0.65, 0.35, 12.0, 0.55, font_size=28, bold=True)
+
     if eyebrow_text:
-        _add_eyebrow(slide, eyebrow_text, 0.65, 0.14, 12.0)
+        if ph is not None:
+            # The Detail-01/Overview-01 title placeholder is a THIN box (~0.45" tall) that
+            # the template bottom-anchors and lets overflow well above its nominal top —
+            # drawing the eyebrow just above that nominal top collides with the actual
+            # (larger, overflowing) glyph. Push the placeholder itself down to make real
+            # room, then draw the eyebrow in the space it vacated.
+            orig_top = ph.top
+            ph.top = orig_top + Inches(0.42)
+            _add_eyebrow(slide, eyebrow_text, ph.left / 914400, orig_top / 914400, ph.width / 914400)
+        else:
+            _add_eyebrow(slide, eyebrow_text, 0.65, 0.12, 12.0)
 
 
 def _add_footer(slide, slide_no: int) -> None:
