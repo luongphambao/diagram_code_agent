@@ -23,6 +23,7 @@ export type {
   LogEntry,
   PendingInterrupt,
   ResolvedGate,
+  RunMetrics,
   ScalingPhase,
   SolutionAssumptions,
   TeamAssumptions,
