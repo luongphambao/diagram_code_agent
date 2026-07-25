@@ -2282,22 +2282,83 @@ def visualize_code_structure(
         return f"visualize_code_structure error: {exc}"
 
 
-@tool
-def finalize_diagram() -> str:
+_DIAGRAM_MANIFEST_NAME = "diagram_manifest.json"
+
+
+def _snapshot_diagram(workspace: Path, kind: str) -> dict:
+    """Copy the just-finalized out.png/out.drawio into out.<kind>.png/.drawio and record
+    it in diagram_manifest.json (docx WS4 — multi-diagram deck embedding).
+
+    render_typed_diagram/render_diagram always write to the SAME out.png/out.drawio
+    regardless of kind (see their docstrings) — the next render call overwrites whatever
+    is there. Snapshotting at finalize_diagram time (once per diagram the user actually
+    approves) lets a project accumulate several finalized diagrams — e.g. architecture,
+    then a sequence diagram, then an ERD — each preserved under its own kind, so the
+    proposal deck can embed every one of them as its own slide (see
+    deck_resolver._b_additional_diagrams) instead of only ever the single latest render.
+    Best-effort: any failure here never blocks finalize_diagram itself.
+    """
+    import shutil
+
+    slug = re.sub(r"[^a-z0-9_]+", "_", kind.strip().lower()).strip("_") or "architecture"
+    manifest_path = workspace / _DIAGRAM_MANIFEST_NAME
+    manifest: dict = {}
+    if manifest_path.exists():
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            manifest = {}
+    entry: dict = {"kind": kind}
+    png = workspace / "out.png"
+    if png.exists():
+        dest_png = workspace / f"out.{slug}.png"
+        shutil.copyfile(png, dest_png)
+        entry["png"] = dest_png.name
+    drawio = workspace / "out.drawio"
+    if drawio.exists():
+        dest_drawio = workspace / f"out.{slug}.drawio"
+        shutil.copyfile(drawio, dest_drawio)
+        entry["drawio"] = dest_drawio.name
+    manifest[slug] = entry
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    return manifest
+
+
+@tool(parse_docstring=True)
+def finalize_diagram(kind: str = "architecture") -> str:
     """Submit the rendered diagram for the user's final review and approval.
 
     PAUSES for human review. Call this only AFTER render_diagram succeeded and
     export_drawio produced out.drawio.
+
+    Snapshots the current out.png/out.drawio into diagram_manifest.json under `kind`, so
+    a project can finalize SEVERAL diagrams over the course of a session — e.g. call
+    render_diagram -> finalize_diagram() for the architecture diagram, then
+    render_typed_diagram(kind="sequence", ...) -> finalize_diagram(kind="sequence") for a
+    sequence diagram of the main flow, then render_typed_diagram(kind="erd", ...) ->
+    finalize_diagram(kind="erd") for the data model — each snapshot is preserved even
+    though the next render overwrites out.png/out.drawio. The proposal deck embeds every
+    finalized kind on file as its own slide.
+
+    Args:
+        kind: which diagram this is — "architecture" (default), "sequence", "erd",
+            "state_machine", "process", or any short label. Only matters when finalizing
+            more than one diagram for the same project; the default is correct for the
+            common single-diagram case.
     """
     if not (current_workspace() / "out.png").exists():
         return "No rendered diagram yet — call render_diagram (and export_drawio) first."
+    try:
+        _snapshot_diagram(current_workspace(), kind)
+    except Exception:  # noqa: BLE001 — advisory; never block finalization
+        pass
     record_report_step(
         current_workspace(),
         "finalize_diagram",
-        summary="Diagram finalized and approved by the user.",
-        data={"artifacts": record_artifact_inventory(current_workspace())},
+        summary=f"Diagram ({kind}) finalized and approved by the user.",
+        data={"kind": kind, "artifacts": record_artifact_inventory(current_workspace())},
     )
-    return "Diagram finalized and approved by the user."
+    return f"Diagram ({kind}) finalized and approved by the user."
 
 
 class GridSection(BaseModel):
