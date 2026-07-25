@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "check-contrast": "node scripts/check-contrast.mjs"
   },
   "dependencies": {
     "@ag-ui/client": "0.0.57",
