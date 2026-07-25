@@ -323,8 +323,8 @@ def _build_deck_plan_registry(
             continue
 
         params = csm_to_slide_params(model, wbs, contract, narrative=narrative, meta=meta, library=library)
-        if contract.required_inputs and not params:
-            continue  # the builder found nothing usable at render time either
+        if not _has_real_content(params):
+            continue  # the builder found nothing usable — skip, never render blank/{placeholder}
 
         block, asset_ref = contract.block, None
         if block == "diagram":
@@ -339,7 +339,7 @@ def _build_deck_plan_registry(
             SlideSpec(
                 slide_no=len(slides) + 1,
                 section=contract.section,
-                title=contract.title,
+                title=_contract_title(contract, params),
                 layout=contract.layout,
                 block=block,
                 bullets=_contract_bullets(contract.key, params),
