@@ -919,14 +919,34 @@ def _wbs_sheet_image_slide(prs: Presentation, image_path: Path, slide_no: int, t
     return slide
 
 
+_CLIENT_TEAM_DEFAULT = ["Technical Lead", "Business Analyst", "Project Manager"]
+_BNK_TEAM_DEFAULT = ["Technical Lead", "Developer(s)", "BA / Tester", "Project Manager"]
+
+
 def _team_slide(
-    prs: Presentation, report: dict[str, Any], slide_no: int, title: str = "PROJECT DELIVERY | Team Structure"
+    prs: Presentation,
+    workspace: Path,
+    slide_no: int,
+    title: str = "PROJECT DELIVERY | Team Structure",
 ):
+    """BnK-side roles from the real wbs.json team_composition (role + real MD/headcount)
+    when available; the client-side column has no WBS-derivable source so it keeps the
+    standard template roles. Previously ALWAYS the fully-generic template on both sides,
+    even when wbs.json had a real team_composition on file."""
+    wbs = read_json_file(workspace / "wbs.json", {})
+    bnk_rows: list[str] = []
+    for m in _as_list(wbs.get("team_composition")) if isinstance(wbs, dict) else []:
+        if not isinstance(m, dict):
+            continue
+        md, hc = m.get("total_md"), m.get("est_headcount")
+        if md:
+            bnk_rows.append(f"{m.get('role', 'Role')}: {md} MD" + (f" (~{hc} HC)" if hc else ""))
+    bnk_rows = bnk_rows or list(_BNK_TEAM_DEFAULT)
+    client_rows = list(_CLIENT_TEAM_DEFAULT)
+    n = max(len(client_rows), len(bnk_rows))
     rows = [
-        ["Technical Lead", "Technical Lead"],
-        ["Business Analyst", "Developer(s)"],
-        ["Project Manager", "BA / Tester"],
-        ["", "Project Manager"],
+        [client_rows[i] if i < len(client_rows) else "", bnk_rows[i] if i < len(bnk_rows) else ""]
+        for i in range(n)
     ]
     return _table_slide(
         prs,
