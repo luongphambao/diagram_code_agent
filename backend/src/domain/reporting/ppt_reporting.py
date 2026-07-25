@@ -486,8 +486,20 @@ def _add_bullets(
 
 
 def _add_title(slide, title: str) -> None:
-    if not _set_placeholder_text(slide, 0, title):
-        _add_textbox(slide, title, 0.65, 0.35, 12.0, 0.55, font_size=28, bold=True)
+    """Set the slide title. Under a preset with ``eyebrow=True``, a title in the existing
+    "SECTION | Sub-topic" convention (every WS1-era contract already emits this — see
+    _OUTLINE_SYSTEM_PROMPT's TITLE FORMAT section) is split: "SECTION" renders as a small
+    bold uppercase eyebrow label above the headline, "Sub-topic" becomes the headline
+    itself. Titles without " | " (e.g. Head Page dividers) are unaffected."""
+    pal = _palette()
+    eyebrow_text = None
+    headline = title
+    if pal.get("eyebrow") and title and " | " in title:
+        eyebrow_text, headline = title.split(" | ", 1)
+    if not _set_placeholder_text(slide, 0, headline):
+        _add_textbox(slide, headline, 0.65, 0.35, 12.0, 0.55, font_size=28, bold=True)
+    if eyebrow_text:
+        _add_eyebrow(slide, eyebrow_text, 0.65, 0.14, 12.0)
 
 
 def _add_footer(slide, slide_no: int) -> None:
