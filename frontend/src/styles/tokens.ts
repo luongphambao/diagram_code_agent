@@ -77,6 +77,7 @@ export const dark: ThemeTokens = {
     400: "#59AECA",
     300: "#8FCFE2",
     fg: "#04141B",
+    text: "#8FCFE2", // == 300 here — the light step reads fine as text on a near-black ground
   },
   semantic: {
     ok: "#2F8F63",
