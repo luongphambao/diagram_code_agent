@@ -561,6 +561,76 @@ _TECH_META_KEYS = frozenset(
 )
 
 
+def _icon_plan_lookup(workspace: Path) -> dict[str, str]:
+    """{normalized_key: absolute_icon_path} from icon_plan.json — the diagram's ALREADY
+    resolved icons (see tools.rendering_tools._bake_icon_plan). Reusing this for the
+    tech-stack slide keeps its logos visually consistent with the diagram's and skips a
+    second icon search entirely (explicit product direction: tech-stack icons must come
+    from the diagram step, never a fresh resolve — resolve_tech_stack_icons/tech_icons.json
+    is only a fallback for when no diagram has been rendered yet)."""
+    path = workspace / "icon_plan.json"
+    if not path.exists():
+        return {}
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return {}
+
+    from backends import LOCAL_ICONS
+
+    root = Path(LOCAL_ICONS)
+
+    def _abs(rel_or_abs: str) -> str:
+        p = Path(rel_or_abs)
+        return str(p if p.is_absolute() else root / p)
+
+    def _key(s: object) -> str:
+        return re.sub(r"[^a-z0-9]+", "", str(s or "").lower())
+
+    out: dict[str, str] = {}
+    if isinstance(raw, dict):  # {node_id: [rel_paths]} — blueprint.py pre-seed shape
+        for k, v in raw.items():
+            rel = v[0] if isinstance(v, list) and v else v if isinstance(v, str) else None
+            if rel and _key(k):
+                out[_key(k)] = _abs(rel)
+    elif isinstance(raw, list):  # icon_resolver subagent's fuller {label,id,path,status} shape
+        for entry in raw:
+            if not isinstance(entry, dict) or entry.get("status") == "NOT_FOUND":
+                continue
+            # Prefer the portable `icon` field over `path`, which icon_resolver writes as a
+            # container-absolute path (mirrors _bake_icon_plan's own preference exactly).
+            rel = entry.get("icon") or entry.get("path")
+            if not rel:
+                continue
+            for key in (entry.get("id"), entry.get("label"), entry.get("name")):
+                if key and _key(key):
+                    out[_key(key)] = _abs(rel)
+    return out
+
+
+def _tech_icons_from_icon_plan(workspace: Path, tech_items: list[dict]) -> dict[str, list[dict]]:
+    """tech_icons.json-shaped ``{layer: [{name, path}, ...]}``, sourced from the diagram's
+    icon_plan.json instead of a fresh icon search. Only includes a layer when at least one
+    of its technologies actually matched an already-resolved icon."""
+    lookup = _icon_plan_lookup(workspace)
+    if not lookup:
+        return {}
+
+    def _key(s: object) -> str:
+        return re.sub(r"[^a-z0-9]+", "", str(s or "").lower())
+
+    result: dict[str, list[dict]] = {}
+    for item in tech_items:
+        layer = item.get("layer") or "Layer"
+        if str(layer).strip().lower() in _TECH_META_KEYS:
+            continue
+        names = [n.strip() for n in str(item.get("choice") or "").split(",") if n.strip()]
+        icons = [{"name": n, "path": lookup[_key(n)]} for n in names if _key(n) in lookup]
+        if icons:
+            result[layer] = icons
+    return result
+
+
 def _tech_stack_table_slide(
     prs: Presentation,
     report: dict[str, Any],
@@ -568,8 +638,13 @@ def _tech_stack_table_slide(
     title: str = "PROPOSED SOLUTION | Technical Stack",
     workspace: Path | None = None,
 ):
-    # Prefer a logo-per-technology layout when resolve_tech_stack_icons has run.
+    # Prefer reusing the diagram's already-resolved icons (icon_plan.json); fall back to
+    # a logo-per-technology layout from a fresh resolve_tech_stack_icons run when no
+    # diagram has been rendered yet; plain table as the last resort.
     if workspace is not None:
+        reused_icons = _tech_icons_from_icon_plan(workspace, report.get("tech_items") or [])
+        if reused_icons:
+            return _tech_stack_icon_slide(prs, reused_icons, slide_no, title)
         tech_icons = read_json_file(workspace / "tech_icons.json", {})
         if isinstance(tech_icons, dict) and any(tech_icons.values()):
             return _tech_stack_icon_slide(prs, tech_icons, slide_no, title)
