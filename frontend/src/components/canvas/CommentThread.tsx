@@ -27,18 +27,18 @@ export default function CommentThread({ threadId, userRole }: CommentThreadProps
   const done = comments.filter((c) => c.resolved);
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden bg-surface-base">
+    <div className="flex flex-1 flex-col overflow-hidden bg-app">
       <div className="flex items-center justify-between border-b border-white/8 px-4 py-2">
         <span className="text-xs font-medium text-slate-400">
           Comments{" "}
-          {comments.length > 0 && <span className="text-slate-600">· {open.length} open</span>}
+          {comments.length > 0 && <span className="text-muted">· {open.length} open</span>}
         </span>
-        {loading && <span className="text-[11px] text-slate-600">loading…</span>}
+        {loading && <span className="text-[11px] text-muted">loading…</span>}
       </div>
 
       <div className="flex-1 space-y-2.5 overflow-y-auto p-4">
         {comments.length === 0 && (
-          <p className="px-1 py-6 text-center text-xs text-slate-700">
+          <p className="px-1 py-6 text-center text-xs text-muted">
             No comments yet. Leave a note for the team below.
           </p>
         )}
