@@ -28,7 +28,7 @@ export default function GateHost() {
     [agent, recordResolvedGate],
   );
 
-  useHumanInTheLoop({
+  useWildcardHumanInTheLoop({
     name: "*",
     description: "Diagram Agent approval gate",
     // `name: "*"` is a genuine wildcard EXECUTION path (verified against
@@ -36,6 +36,12 @@ export default function GateHost() {
     // display fallback — respond() here really does resolve the backend's
     // pending interrupt. No `parameters` schema: the card shape varies per
     // gate type and there is nothing to validate against up front.
+    //
+    // Uses our own useWildcardHumanInTheLoop, NOT the library's
+    // useHumanInTheLoop — found live (Stage 3 verification against the real
+    // backend) that the library version overwrites `name` with the
+    // registration's own static name ("*") on every render, clobbering the
+    // real gate type. See useWildcardHumanInTheLoop.ts for the full story.
     render: (props) => (
       <WildcardGateCard
         {...props}
