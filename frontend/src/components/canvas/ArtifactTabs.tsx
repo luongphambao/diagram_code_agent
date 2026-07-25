@@ -228,7 +228,7 @@ export default function ArtifactTabs({
                       Download
                     </Button>
                   </div>
-                  <iframe title="PDF report preview" src={`data:application/pdf;base64,${pdf_base64}`} className="h-full w-full flex-1 border-0 bg-white" />
+                  <iframe title="PDF report preview" src={resolveSrc(pdf_base64, MIME_TYPES.pdf)} className="h-full w-full flex-1 border-0 bg-white" />
                 </>
               ) : (
                 <EmptyState title="No PDF report available" />
