@@ -271,10 +271,14 @@ export interface AgentState {
   current_step?: string;
   iteration?: number;
   run_metrics?: RunMetrics;
-  png_base64?: string;
-  pdf_base64?: string;
-  pptx_base64?: string;
-  wbs_xlsx_base64?: string;
+  // Stage 6 (plan §A.6): the runtime substitutes these with a small
+  // {__artifact, mime, filename} descriptor once offloaded, so callers must
+  // go through lib/artifacts.ts's resolveSrc()/isArtifactRef() rather than
+  // assuming a raw base64 string.
+  png_base64?: Base64OrArtifact;
+  pdf_base64?: Base64OrArtifact;
+  pptx_base64?: Base64OrArtifact;
+  wbs_xlsx_base64?: Base64OrArtifact;
   wbs_summary?: WbsSummary;
   drawio?: string;
   code?: string;
