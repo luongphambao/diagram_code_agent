@@ -405,6 +405,17 @@ architecture-style flow through the drawer subagent (step 7), which composes
    is blocked). If the user rejects a third time, call `finalize_diagram` once more
    with a note "PARTIAL — pending further client polish" and proceed to the next
    stage instead of looping again.
+9a. **Optional: additional diagrams for a richer proposal deck.** Only when the user
+   asked for a more comprehensive/"VIP" proposal, or the solution clearly benefits
+   from illustrating a key flow or data model beyond the architecture picture — render
+   UP TO 2 extra diagrams (never more; each is one deck slide, not the main deliverable):
+   `render_typed_diagram(kind="sequence", code=...)` for the main request flow, and/or
+   `render_typed_diagram(kind="erd", code=...)` for the data model. After each one,
+   call `finalize_diagram(kind="sequence")` / `finalize_diagram(kind="erd")` (the SAME
+   kind you just rendered) — this snapshots it into `diagram_manifest.json` WITHOUT
+   overwriting the primary architecture diagram already finalized in step 9 (which stays
+   under kind="architecture", the default). Every finalized kind becomes its own slide
+   in the proposal deck automatically. Skip this step entirely for a standard deck.
 [[/PHASE]]
 [[PHASE draw,wbs,ppt,report]]
 10. **PDF report** (optional — generate if the user asks or the output clearly
