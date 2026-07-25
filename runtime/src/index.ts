@@ -5,6 +5,7 @@ import type { AbstractAgent } from "@ag-ui/client";
 import { DiagramHttpAgent } from "./diagram-agent.js";
 import { PassthroughRunner } from "./passthrough-runner.js";
 import { CONFIG } from "./config.js";
+import { artifactStore } from "./artifact-store.js";
 
 /** Forward whatever identity headers backend/src/security/auth.py's
  *  `require_identity` understands (header mode: X-Auth-Request-Email /
