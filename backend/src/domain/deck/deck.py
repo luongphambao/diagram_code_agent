@@ -152,6 +152,282 @@ def _wbs_totals(wbs: Optional[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+# --- registry-driven storyboard (deck_sections.SECTION_CONTENT_CONTRACTS) -----
+
+_ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
+
+
+def _roman(n: int) -> str:
+    return _ROMAN_NUMERALS[n - 1] if 1 <= n <= len(_ROMAN_NUMERALS) else str(n)
+
+
+# Contracts whose slide is client-facing (cites pricing/versions) and therefore wants an
+# Evidence source_ref behind it — mirrors _build_deck_plan_legacy's own client_facing=True
+# slides exactly (technical_stack / pricing CAPEX).
+_CLIENT_FACING_KEYS = frozenset({"solution_tech_stack", "pricing_capex"})
+
+
+def _contract_bullets(key: str, params: dict[str, Any]) -> list[str]:
+    """Shape a builder's params dict into the plain bullet list the layout-driven
+    ('block'=='bullets') renderer consumes. Only the handful of "bullets"-block content
+    contracts the registry builder actually surfaces need an entry here — everything else
+    renders via its own structured block (func_nfr/sdlc/delivery_effort/...) and never
+    reads SlideSpec.bullets at all."""
+    if key == "exec_summary_overview":
+        bullets = [params["intro_paragraph"]] if params.get("intro_paragraph") else []
+        return bullets + list(params.get("key_objectives") or [])
+    if key == "solution_name":
+        return [params["subtitle"]] if params.get("subtitle") else []
+    return []
+
+
+def _contract_source_refs(
+    contract: SectionContract,
+    *,
+    comp_ids: list[str],
+    dec_ids: list[str],
+    evd_ids: list[str],
+    wbs_ids: list[str],
+    req_ids_by_kind: dict[str, list[str]],
+) -> list[str]:
+    """Grounding ids for validate_deck's traceability/evidence checks — mirrors what
+    _build_deck_plan_legacy attached to the equivalent slide, so switching builders does
+    not regress the QA layer for the contracts both paths share."""
+    key = contract.key
+    if key == "exec_summary_overview":
+        return req_ids_by_kind["business"] or req_ids_by_kind["functional"]
+    if key == "solution_overview":  # the func_nfr slide
+        return req_ids_by_kind["functional"] + req_ids_by_kind["nfr"]
+    if key == "solution_architecture":
+        return comp_ids
+    if key == "solution_tech_stack":
+        return dec_ids + evd_ids
+    if key in ("delivery_effort", "delivery_master_plan"):
+        return wbs_ids
+    if key == "pricing_capex":
+        return wbs_ids + evd_ids
+    return []
+
+
+def _is_plan_healthy(plan: "DeckPlan") -> bool:
+    """A sanity floor for the registry-driven plan — same bar validate_deck/
+    score_deck_structure already enforce, checked BEFORE writing so a broken registry
+    walk falls back to the legacy sequence instead of shipping a thin deck."""
+    return len(plan.slides) >= 5 and set(REQUIRED_ROLES) <= plan.roles()
+
+
+def _build_deck_plan_registry(
+    model: SolutionModel,
+    *,
+    wbs: dict[str, Any],
+    narrative: dict[str, Any],
+    meta: dict[str, Any],
+    library: list[dict[str, Any]],
+    has_diagram: bool,
+    title: str,
+    subtitle: str,
+    brand: str,
+) -> DeckPlan:
+    """Assemble the storyboard by walking ``deck_sections.SECTION_CONTENT_CONTRACTS``
+    instead of a hand-written sequence. Each content contract's params are resolved via
+    ``deck_resolver.csm_to_slide_params``; a contract with unmet ``required_inputs`` is
+    skipped (never rendered thin — the fix for the "no content" bug the registry exists
+    for). Only contracts whose ``block`` is already in ``deck_sections.IMPLEMENTED_BLOCKS``
+    are emitted — the rest (methodology, risk_table, case_study, opex, ...) are picked up
+    automatically the moment a later workstream adds their ppt_reporting renderer and adds
+    the block name to IMPLEMENTED_BLOCKS; nothing here needs to change when that happens.
+
+    A section divider is buffered and only actually emitted once at least one content
+    contract in the same section survives (missing-input skip / unimplemented-block skip
+    would otherwise leave an orphaned "II. Success Story" header with nothing behind it) —
+    and roman numerals are assigned at emit time, so a fully-skipped section doesn't burn
+    a numeral and leave a visible I/II/IV gap.
+    """
+    avail = available_inputs(model, wbs, narrative=narrative, meta=meta, has_diagram=has_diagram)
+
+    comp_ids = [c.id for c in model.components]
+    dec_ids = [d.id for d in model.decisions]
+    evd_ids = [e.id for e in model.evidence]
+    wbs_ids = [w.id for w in model.work_items]
+    req_ids_by_kind = {
+        "business": [r.id for r in model.requirements if r.kind == "business"],
+        "functional": [r.id for r in model.requirements if r.kind == "functional"],
+        "nfr": [r.id for r in model.requirements if r.kind == "nfr"],
+    }
+
+    slides: list[SlideSpec] = []
+    roman_counter = 0
+    pending_divider: Optional[dict[str, Any]] = None
+
+    def flush_pending_divider() -> None:
+        nonlocal pending_divider, roman_counter
+        if pending_divider is None:
+            return
+        roman_counter += 1
+        slides.append(
+            SlideSpec(
+                slide_no=len(slides) + 1,
+                section=pending_divider["section"],
+                title=pending_divider["title"].replace("{roman}", _roman(roman_counter)),
+                layout=pending_divider["layout"],
+                block="bullets",
+                narrative_role=pending_divider["role"],
+            )
+        )
+        pending_divider = None
+
+    for contract, missing in plannable_contracts(avail, include_optional=True):
+        if contract.kind == "closing":
+            continue  # _append_thank_you handles this unconditionally, always
+        if contract.kind == "divider":
+            pending_divider = {
+                "title": contract.title,
+                "section": contract.section,
+                "role": contract.role,
+                "layout": contract.layout,
+            }
+            continue
+        if contract.kind == "content" and missing:
+            continue  # required input unmet — skip cleanly, never render thin
+        if contract.block not in IMPLEMENTED_BLOCKS:
+            continue  # no renderer yet for this block — auto-included once one lands
+
+        if contract.kind == "cover":
+            slides.append(
+                SlideSpec(
+                    slide_no=len(slides) + 1,
+                    section=contract.section,
+                    title="",
+                    layout=contract.layout,
+                    block="bullets",
+                    narrative_role=contract.role,
+                )
+            )
+            continue
+
+        params = csm_to_slide_params(model, wbs, contract, narrative=narrative, meta=meta, library=library)
+        if contract.required_inputs and not params:
+            continue  # the builder found nothing usable at render time either
+
+        block, asset_ref = contract.block, None
+        if block == "diagram":
+            # Drive through the EXISTING asset_ref-based dispatch in ppt_reporting._render_slide
+            # (Empty layout + asset_ref=="architecture_diagram") — zero ppt_reporting changes
+            # needed for the registry path to reach the same diagram-embed code legacy uses.
+            block, asset_ref = "bullets", "architecture_diagram"
+
+        flush_pending_divider()
+
+        slides.append(
+            SlideSpec(
+                slide_no=len(slides) + 1,
+                section=contract.section,
+                title=contract.title,
+                layout=contract.layout,
+                block=block,
+                bullets=_contract_bullets(contract.key, params),
+                asset_ref=asset_ref,
+                narrative_role=contract.role,
+                source_refs=_contract_source_refs(
+                    contract,
+                    comp_ids=comp_ids,
+                    dec_ids=dec_ids,
+                    evd_ids=evd_ids,
+                    wbs_ids=wbs_ids,
+                    req_ids_by_kind=req_ids_by_kind,
+                ),
+                client_facing=contract.key in _CLIENT_FACING_KEYS,
+                params=params,
+            )
+        )
+
+    return DeckPlan(
+        title=title or str(meta.get("title") or meta.get("diagram_title") or ""),
+        subtitle=subtitle or str(meta.get("kicker") or ""),
+        brand=brand or str(meta.get("brand") or ""),
+        slides=slides,
+    )
+
+
+def build_deck_plan(
+    model: SolutionModel,
+    *,
+    wbs: Optional[dict[str, Any]] = None,
+    brief: Optional[dict[str, Any]] = None,
+    meta: Optional[dict[str, Any]] = None,
+    narrative: Optional[dict[str, Any]] = None,
+    library: Optional[list[dict[str, Any]]] = None,
+    has_diagram: bool = False,
+    title: str = "",
+    subtitle: str = "",
+    brand: str = "",
+) -> DeckPlan:
+    """Assemble the BnK storyboard from the CSM (deterministic, no LLM, no I/O).
+
+    Drives ``deck_sections.SECTION_CONTENT_CONTRACTS`` (the canonical registry) via
+    :func:`_build_deck_plan_registry` — content whose required inputs are unmet is
+    skipped, never rendered thin. Falls back to :func:`_build_deck_plan_legacy` (the
+    original hand-written sequence) if the registry path errors or produces an unhealthy
+    plan (too few slides / missing a required narrative role) — a defensive net while the
+    registry's renderer coverage is still growing (see ``deck_sections.IMPLEMENTED_BLOCKS``).
+
+    New optional inputs beyond the legacy signature:
+      * ``meta`` — ``out.slide.json`` (title/kicker/brand/diagram png ref); the legacy
+        function actually reads these off ``brief`` even though real workspaces write
+        them to ``out.slide.json``, not ``diagram_brief.json`` — this param is the fix.
+      * ``narrative`` — ``business_narrative.json`` (case_study/value_props/kpis/...),
+        absent in most workspaces today; every builder degrades gracefully without it.
+      * ``library`` — the legacy case_library.json keyword-fallback corpus for
+        ``pick_case_study``; optional because the primary semantic-retrieval path
+        (``rag.solution_memory``) needs no library at all.
+    """
+    wbs = wbs or {}
+    brief = brief or {}
+    meta = meta or {}
+    narrative = narrative or {}
+    library = library or []
+
+    plan: Optional[DeckPlan] = None
+    try:
+        plan = _build_deck_plan_registry(
+            model,
+            wbs=wbs,
+            narrative=narrative,
+            meta=meta,
+            library=library,
+            has_diagram=has_diagram,
+            title=title,
+            subtitle=subtitle,
+            brand=brand,
+        )
+    except Exception:  # noqa: BLE001 — a registry regression must never block deck generation
+        logger.exception("Registry-driven deck plan build failed — falling back to the legacy sequence.")
+        plan = None
+
+    if plan is not None:
+        if _is_plan_healthy(plan):
+            return plan
+        logger.warning(
+            "Registry-driven deck plan looked unhealthy (%d slides, roles=%s) — "
+            "falling back to the legacy sequence.",
+            len(plan.slides),
+            sorted(plan.roles()),
+        )
+
+    return _build_deck_plan_legacy(
+        model,
+        wbs=wbs,
+        brief=brief,
+        has_diagram=has_diagram,
+        title=title,
+        subtitle=subtitle,
+        brand=brand,
+    )
+        "months": timeline.get("months") or 0,
+        "sprints": timeline.get("sprints") or 0,
+    }
+
+
 def _build_deck_plan_legacy(
     model: SolutionModel,
     *,
