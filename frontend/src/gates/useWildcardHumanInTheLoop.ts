@@ -109,7 +109,7 @@ export function useWildcardHumanInTheLoop<T extends Record<string, unknown> = Re
       const exhaustiveCheck: never = props;
       return exhaustiveCheck;
     },
-    [tool.render, tool.agentId, respond],
+    [tool.render, tool.description, tool.agentId, respond],
   );
 
   const frontendTool: ReactFrontendTool<T> = {
