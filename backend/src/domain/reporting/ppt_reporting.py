@@ -786,12 +786,66 @@ def _sdlc_scope_slide(
     )
 
 
+def _add_donut_chart(
+    slide, data: dict[str, float], x: float, y: float, w: float, h: float, chart_title: str = ""
+):
+    """A native (editable) python-pptx donut chart — e.g. effort MD by role."""
+    from pptx.chart.data import CategoryChartData
+    from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
+
+    items = [(k, float(v)) for k, v in data.items() if v]
+    if not items:
+        return None
+    chart_data = CategoryChartData()
+    chart_data.categories = [k for k, _ in items]
+    chart_data.add_series("MD", [v for _, v in items])
+    gframe = slide.shapes.add_chart(
+        XL_CHART_TYPE.DOUGHNUT, Inches(x), Inches(y), Inches(w), Inches(h), chart_data
+    )
+    chart = gframe.chart
+    chart.has_legend = True
+    chart.legend.position = XL_LEGEND_POSITION.RIGHT
+    chart.legend.include_in_layout = False
+    chart.legend.font.size = Pt(9)
+    chart.has_title = bool(chart_title)
+    if chart_title:
+        chart.chart_title.text_frame.text = chart_title
+    return chart
+
+
+def _add_bar_chart(
+    slide, categories: list[str], values: list[float], x: float, y: float, w: float, h: float, chart_title: str = ""
+):
+    """A native (editable) python-pptx clustered-column chart — e.g. cost USD by module."""
+    from pptx.chart.data import CategoryChartData
+    from pptx.enum.chart import XL_CHART_TYPE
+
+    pairs = [(c, float(v)) for c, v in zip(categories, values) if v]
+    if not pairs:
+        return None
+    chart_data = CategoryChartData()
+    chart_data.categories = [_clip(c, 24) for c, _ in pairs]
+    chart_data.add_series("USD", [v for _, v in pairs])
+    gframe = slide.shapes.add_chart(
+        XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(x), Inches(y), Inches(w), Inches(h), chart_data
+    )
+    chart = gframe.chart
+    chart.has_legend = False
+    chart.has_title = bool(chart_title)
+    if chart_title:
+        chart.chart_title.text_frame.text = chart_title
+    plot = chart.plots[0]
+    plot.has_data_labels = False
+    return chart
+
+
 def _delivery_effort_slide(
     prs: Presentation, workspace: Path, slide_no: int, title: str = "PROJECT DELIVERY | Estimated Effort"
 ):
     wbs = read_json_file(workspace / "wbs.json", {})
     headers = ["Code", "Module", "Effort (MD)"]
     rows: list[list[Any]] = []
+    effort_by_role: dict[str, float] = {}
     if isinstance(wbs, dict) and wbs:
         for mod in _as_list(wbs.get("effort_by_module"))[:10]:
             if isinstance(mod, dict):
@@ -799,16 +853,25 @@ def _delivery_effort_slide(
         totals = wbs.get("effort_totals") or {}
         if totals:
             rows.append(["", "TOTAL", totals.get("total_mandays", 0)])
+            effort_by_role = totals.get("effort_by_role") or {}
     if not rows:
         rows = [["", "Effort will be finalized after WBS approval.", ""]]
-    return _table_slide(
-        prs,
-        title,
-        headers,
-        rows,
-        slide_no,
-        col_widths=[1.6, 7.5, 3.0],
+
+    if not effort_by_role:
+        return _table_slide(prs, title, headers, rows, slide_no, col_widths=[1.6, 7.5, 3.0])
+
+    # A donut of effort-by-role fits alongside the module table — table takes the left
+    # ~58%, chart the remaining right column (mirrors the WS2 case-study two-column shape).
+    slide = prs.slides.add_slide(_layout(prs, "Detail-01"))
+    _add_title(slide, title)
+    table_w = _CONTENT_W * 0.56
+    _add_table(slide, headers, rows, x=_CONTENT_X, y=_CONTENT_Y, w=table_w, h=_CONTENT_H)
+    chart_x = _CONTENT_X + table_w + 0.3
+    _add_donut_chart(
+        slide, effort_by_role, chart_x, _CONTENT_Y, _CONTENT_W - table_w - 0.3, _CONTENT_H, "Effort by Role (MD)"
     )
+    _add_footer(slide, slide_no)
+    return slide
 
 
 def _pricing_slide(prs: Presentation, report: dict[str, Any], slide_no: int, title: str = "PRICING | CAPEX"):
@@ -819,14 +882,28 @@ def _pricing_slide(prs: Presentation, report: dict[str, Any], slide_no: int, tit
         rows: list[list[Any]] = [[r["module"], f"${int(r['cost']):,}"] for r in capex_rows[:12]]
         total = report.get("capex_total") or sum(r["cost"] for r in capex_rows)
         rows.append(["Total (NET, excluding taxes/VAT)", f"${int(total):,}"])
-        return _table_slide(
-            prs,
-            title,
-            ["Module", "Cost (USD)"],
-            rows,
-            slide_no,
-            col_widths=[8.5, 3.6],
+        if len(capex_rows) < 2:
+            return _table_slide(prs, title, ["Module", "Cost (USD)"], rows, slide_no, col_widths=[8.5, 3.6])
+        # A bar-by-module chart only makes sense with >=2 modules to compare.
+        slide = prs.slides.add_slide(_layout(prs, "Detail-01"))
+        _add_title(slide, title)
+        table_w = _CONTENT_W * 0.56
+        _add_table(
+            slide, ["Module", "Cost (USD)"], rows, x=_CONTENT_X, y=_CONTENT_Y, w=table_w, h=_CONTENT_H
         )
+        chart_x = _CONTENT_X + table_w + 0.3
+        _add_bar_chart(
+            slide,
+            [r["module"] for r in capex_rows[:8]],
+            [r["cost"] for r in capex_rows[:8]],
+            chart_x,
+            _CONTENT_Y,
+            _CONTENT_W - table_w - 0.3,
+            _CONTENT_H,
+            "Cost by Module (USD)",
+        )
+        _add_footer(slide, slide_no)
+        return slide
     total = report.get("tech_total_cost")
     rows = []
     for item in report.get("tech_items", [])[:8]:
