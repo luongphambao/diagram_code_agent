@@ -65,12 +65,12 @@ export default function ConversationSidebar({
   if (collapsed) {
     return (
       <div
-        className="flex flex-col items-center border-r border-white/8 bg-[#0d1017] py-3"
-        style={{ width: 40, minWidth: 40 }}
+        className="flex flex-col items-center border-r border-line bg-raised py-3"
+        style={{ width: 56, minWidth: 56 }}
       >
         <button
           onClick={() => setCollapsed(false)}
-          className="flex h-7 w-7 items-center justify-center rounded text-slate-500 hover:text-slate-300 hover:bg-white/6 transition-colors"
+          className="flex h-7 w-7 items-center justify-center rounded text-secondary hover:text-slate-300 hover:bg-white/6 transition-colors"
           title="Expand conversations"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -85,7 +85,7 @@ export default function ConversationSidebar({
         </button>
         <button
           onClick={onNew}
-          className="mt-2 flex h-7 w-7 items-center justify-center rounded text-slate-500 hover:text-blue-400 hover:bg-white/6 transition-colors"
+          className="mt-2 flex h-7 w-7 items-center justify-center rounded text-secondary hover:text-blue-400 hover:bg-white/6 transition-colors"
           title="New conversation"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -108,13 +108,13 @@ export default function ConversationSidebar({
     >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-white/8 px-3 py-2.5">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-secondary">
           Conversations
         </span>
         <div className="flex items-center gap-1">
           <button
             onClick={onNew}
-            className="flex h-6 w-6 items-center justify-center rounded text-slate-500 hover:text-blue-400 hover:bg-white/6 transition-colors"
+            className="flex h-6 w-6 items-center justify-center rounded text-secondary hover:text-blue-400 hover:bg-white/6 transition-colors"
             title="New conversation"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
@@ -128,7 +128,7 @@ export default function ConversationSidebar({
           </button>
           <button
             onClick={() => setCollapsed(true)}
-            className="flex h-6 w-6 items-center justify-center rounded text-slate-500 hover:text-slate-300 hover:bg-white/6 transition-colors"
+            className="flex h-6 w-6 items-center justify-center rounded text-secondary hover:text-slate-300 hover:bg-white/6 transition-colors"
             title="Collapse"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
@@ -147,10 +147,10 @@ export default function ConversationSidebar({
       {/* List */}
       <div className="flex-1 overflow-y-auto py-1">
         {loading && conversations.length === 0 && (
-          <div className="px-3 py-4 text-[11px] text-slate-600">Loading…</div>
+          <div className="px-3 py-4 text-[11px] text-muted">Loading…</div>
         )}
         {!loading && conversations.length === 0 && (
-          <div className="px-3 py-4 text-[11px] text-slate-600">No conversations yet.</div>
+          <div className="px-3 py-4 text-[11px] text-muted">No conversations yet.</div>
         )}
         {conversations.map((conv) => {
           const isActive = conv.thread_id === activeThreadId;
@@ -197,7 +197,7 @@ export default function ConversationSidebar({
                       e.stopPropagation();
                       onDelete(conv.thread_id);
                     }}
-                    className="flex-shrink-0 flex h-4 w-4 items-center justify-center rounded text-slate-600 hover:text-red-400 transition-colors"
+                    className="flex-shrink-0 flex h-4 w-4 items-center justify-center rounded text-muted hover:text-red-400 transition-colors"
                     title="Delete"
                   >
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
@@ -217,13 +217,13 @@ export default function ConversationSidebar({
                 <div className="mt-0.5 flex items-center gap-1.5 min-w-0">
                   {conv.last_message && (
                     <span
-                      className="flex-1 truncate text-[10px] text-slate-600"
+                      className="flex-1 truncate text-[10px] text-muted"
                       title={conv.last_message}
                     >
                       {conv.last_message}
                     </span>
                   )}
-                  <span className="flex-shrink-0 text-[10px] text-slate-700">
+                  <span className="flex-shrink-0 text-[10px] text-muted">
                     {timeAgo(conv.updated_at)}
                   </span>
                 </div>
