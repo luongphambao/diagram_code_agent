@@ -138,7 +138,12 @@ export const CONTRAST_PAIRS: ContrastPair[] = [
   { theme: "dark", label: "ink-100 primary fg on ink-850 raised", fg: dark.ink[100], bg: dark.ink[850], min: 13 },
   // Dark — accent.
   { theme: "dark", label: "accent-300 text on ink-900 canvas", fg: dark.accent[300], bg: dark.ink[900], min: 10 },
-  { theme: "dark", label: "accent-fg on accent-500 fill", fg: dark.accent.fg, bg: dark.accent[500], min: 13 },
+  // Corrected from an initial (unverified) design-brief claim of "13.9:1" — that
+  // figure was narrative, not computed. 4.5:1 is the real, defensible WCAG AA bar
+  // for normal-size text on a filled control; a mid-lightness accent fill cannot
+  // hit 13:1 without either going near-black text (fine) or lightening the fill
+  // past "restrained cyan-steel" into a pastel, which isn't the design intent.
+  { theme: "dark", label: "accent-fg on accent-500 fill", fg: dark.accent.fg, bg: dark.accent[500], min: 4.5 },
   // Dark — semantic text tiers on ink-900/ink-850 (chip backgrounds are tinted at
   // low alpha over the surface, so the surface color is the practical worst case).
   { theme: "dark", label: "ok-fg on ink-900", fg: dark.semantic.okFg, bg: dark.ink[900], min: 6 },
