@@ -112,10 +112,9 @@ export function useWildcardHumanInTheLoop<T extends Record<string, unknown> = Re
 
   useFrontendTool(frontendTool);
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks -- mirrors the
-  // library version's unmount cleanup, not a conditional hook call.
-  const unmountCleanup = useCallback(() => {
-    copilotkit.removeHookRenderToolCall(tool.name, tool.agentId);
+  // Mirrors the library version: HITL renderers remove themselves on
+  // unmount since they can no longer respond to user interaction.
+  useEffect(() => {
+    return () => copilotkit.removeHookRenderToolCall(tool.name, tool.agentId);
   }, [copilotkit, tool.name, tool.agentId]);
-  React.useEffect(() => unmountCleanup, [unmountCleanup]);
 }
