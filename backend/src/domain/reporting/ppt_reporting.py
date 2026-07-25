@@ -466,6 +466,133 @@ def _add_footer(slide, slide_no: int) -> None:
     _add_textbox(slide, str(slide_no), 12.25, 6.9, 0.45, 0.2, font_size=8, align=PP_ALIGN.RIGHT)
 
 
+# --------------------------------------------------------------------------- #
+# VIP visual primitives (deck_style="vip") — gradient backgrounds, cards with a
+# soft shadow, eyebrow labels, and stat-number callouts. All are palette-driven so
+# calling them under a non-"vip" preset degrades gracefully (flat fill, no shadow).
+# --------------------------------------------------------------------------- #
+
+
+def _add_gradient_background(slide, c1: RGBColor, c2: RGBColor, angle: float = 45.0) -> None:
+    """Paint the WHOLE slide with a 2-stop linear gradient (hero cover/divider bg)."""
+    fill = slide.background.fill
+    fill.gradient()
+    stops = fill.gradient_stops
+    stops[0].color.rgb = c1
+    stops[0].position = 0.0
+    stops[-1].color.rgb = c2
+    stops[-1].position = 1.0
+    fill.gradient_angle = angle
+
+
+def _add_soft_shadow(
+    shape, *, blur_pt: float = 14.0, dist_pt: float = 5.0, color: str = "0B1A2F", alpha_pct: int = 28
+) -> None:
+    """Best-effort navy-tinted soft outer shadow via raw OOXML — python-pptx's public
+    ShadowFormat API only exposes ``.inherit``, no way to configure blur/distance/color, so
+    this injects ``<a:effectLst><a:outerShdw/></a:effectLst>`` directly into the shape's
+    ``spPr``. Wrapped so a failure here NEVER blocks the render (same pattern as every other
+    best-effort helper in this module)."""
+    try:
+        from pptx.oxml import parse_xml
+
+        emu_blur = int(blur_pt * 12700)
+        emu_dist = int(dist_pt * 12700)
+        alpha_val = int(max(0, min(100, alpha_pct)) * 1000)
+        xml = (
+            '<a:effectLst xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+            f'<a:outerShdw blurRad="{emu_blur}" dist="{emu_dist}" dir="5400000" rotWithShape="0">'
+            f'<a:srgbClr val="{color}"><a:alpha val="{alpha_val}"/></a:srgbClr>'
+            "</a:outerShdw></a:effectLst>"
+        )
+        shape._element.spPr.append(parse_xml(xml))  # noqa: SLF001 - no public spPr-effect API
+    except Exception:  # noqa: BLE001 — a missing shadow must never break the deck
+        pass
+
+
+def _add_card(
+    slide,
+    x: float,
+    y: float,
+    w: float,
+    h: float,
+    *,
+    fill: RGBColor | None = None,
+    radius: float = 0.08,
+    shadow: bool | None = None,
+):
+    """A rounded-rectangle background card. Call BEFORE adding the text/table/image that
+    sits on top of it (z-order follows shape-add order). ``shadow=None`` defers to the
+    active preset's ``card_shadow`` flag; pass True/False to override per call."""
+    from pptx.enum.shapes import MSO_SHAPE
+
+    pal = _palette()
+    shape = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(x), Inches(y), Inches(w), Inches(h))
+    try:
+        shape.adjustments[0] = radius
+    except Exception:  # noqa: BLE001 — cosmetic only
+        pass
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = fill if fill is not None else pal.get("light", BNK_WHITE)
+    shape.line.fill.background()
+    shape.shadow.inherit = False
+    use_shadow = pal.get("card_shadow", False) if shadow is None else shadow
+    if use_shadow:
+        _add_soft_shadow(shape)
+    return shape
+
+
+def _add_eyebrow(slide, text: str, x: float, y: float, w: float, *, color: RGBColor | None = None) -> None:
+    """A small, bold, uppercase label above a headline (the "SECTION" part of a title)."""
+    pal = _palette()
+    box = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(0.32))
+    tf = box.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    p.text = str(text or "").upper()
+    for run in p.runs:
+        run.font.size = Pt(11)
+        run.font.bold = True
+        run.font.name = pal.get("font", BNK_FONT)
+        run.font.color.rgb = color if color is not None else pal.get("cyan", BNK_ACCENT)
+
+
+def _add_stat_block(
+    slide,
+    number_text: str,
+    label_text: str,
+    x: float,
+    y: float,
+    w: float,
+    h: float,
+    *,
+    color: RGBColor | None = None,
+) -> None:
+    """A big bold number with a small caption underneath (approximates the reference
+    deck's gradient-text "stat" callouts — python-pptx has no public text-gradient API,
+    so this uses a solid, bold, large accent-colored number instead)."""
+    pal = _palette()
+    box = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
+    tf = box.text_frame
+    tf.word_wrap = True
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    p = tf.paragraphs[0]
+    p.text = str(number_text)
+    p.alignment = PP_ALIGN.CENTER
+    for run in p.runs:
+        run.font.size = Pt(32)
+        run.font.bold = True
+        run.font.name = pal.get("font", BNK_FONT)
+        run.font.color.rgb = color if color is not None else pal.get("cyan", BNK_ACCENT)
+    p2 = tf.add_paragraph()
+    p2.text = str(label_text)
+    p2.alignment = PP_ALIGN.CENTER
+    for run in p2.runs:
+        run.font.size = Pt(10)
+        run.font.name = pal.get("font", BNK_FONT)
+        run.font.color.rgb = pal.get("text", BNK_TEXT)
+
+
 def _image_fit(slide, image_path: Path, x: float, y: float, w: float, h: float) -> None:
     from PIL import Image
 
