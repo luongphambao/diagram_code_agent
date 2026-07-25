@@ -72,7 +72,7 @@ export default function CommentThread({ threadId, userRole }: CommentThreadProps
                 Resolve
               </button>
             ) : (
-              <p className="mt-1.5 text-[10px] text-slate-600">
+              <p className="mt-1.5 text-[10px] text-muted">
                 resolved{c.resolved_by ? ` by ${c.resolved_by}` : ""}
               </p>
             )}
