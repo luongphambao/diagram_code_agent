@@ -81,7 +81,7 @@ export default function ChatInput({
           </svg>
         </button>
       </div>
-      <p className="mt-2 px-1 text-[11px] text-slate-800">
+      <p className="mt-2 px-1 text-[11px] text-muted">
         Enter to send · Shift+Enter for new line
       </p>
     </div>
