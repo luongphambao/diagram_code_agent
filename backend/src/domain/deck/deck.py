@@ -167,6 +167,23 @@ def _roman(n: int) -> str:
 _CLIENT_FACING_KEYS = frozenset({"solution_tech_stack", "pricing_capex"})
 
 
+def _has_real_content(params: dict[str, Any]) -> bool:
+    """True when at least one resolved param actually carries data. An empty dict, or a
+    dict whose every value is itself empty/falsy (e.g. ``{"screens": []}``), means the
+    builder found nothing usable — the contract is skipped rather than rendered with a
+    blank body / an unreplaced ``{placeholder}`` in the title."""
+    return any(v for v in params.values())
+
+
+def _contract_title(contract: SectionContract, params: dict[str, Any]) -> str:
+    """Most contracts show their fixed template title; a couple resolve the REAL title
+    from params (e.g. solution_name's big Overview-01 heading is the project's actual
+    name, not the literal string "Solution Proposal")."""
+    if contract.key == "solution_name" and params.get("solution_name"):
+        return str(params["solution_name"])
+    return contract.title
+
+
 def _contract_bullets(key: str, params: dict[str, Any]) -> list[str]:
     """Shape a builder's params dict into the plain bullet list the layout-driven
     ('block'=='bullets') renderer consumes. Only the handful of "bullets"-block content
