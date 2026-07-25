@@ -57,7 +57,7 @@ const GATE_LABELS: Record<string, string> = {
 
 export default function WildcardGateCard({ name, args, status, respond }: WildcardGateCardProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const isOpen = status === "Executing" && !!respond;
+  const isOpen = status === ToolCallStatus.Executing && !!respond;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -65,7 +65,7 @@ export default function WildcardGateCard({ name, args, status, respond }: Wildca
     ref.current?.focus({ preventScroll: true });
   }, [isOpen]);
 
-  if (status === "InProgress") {
+  if (status === ToolCallStatus.InProgress) {
     return (
       <Card className="relative mt-2 max-w-lg overflow-hidden p-4 pl-5 animate-pulse motion-reduce:animate-none">
         <Stripe severity="neutral" />
