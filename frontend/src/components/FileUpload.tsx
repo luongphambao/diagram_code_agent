@@ -1,5 +1,6 @@
 import { useRef } from "react";
-import type { UploadedFile } from "../hooks/useDiagramAgent";
+import type { UploadedFile } from "../hooks/agent-utils";
+import Chip from "../ui/Chip";
 
 interface FileUploadProps {
   uploadedFiles: UploadedFile[];
@@ -10,18 +11,12 @@ interface FileUploadProps {
 
 const ACCEPTED = ".pdf,.docx,.doc,.md,.txt";
 
-export default function FileUpload({
-  uploadedFiles,
-  isUploading,
-  onUpload,
-  onClear,
-}: FileUploadProps) {
+export default function FileUpload({ uploadedFiles, isUploading, onUpload, onClear }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const files = Array.from(e.dataTransfer.files);
-    files.forEach(onUpload);
+    Array.from(e.dataTransfer.files).forEach(onUpload);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,64 +26,44 @@ export default function FileUpload({
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Drop zone */}
+      {/* Drop zone — role="button"+tabIndex+onKeyDown so it's reachable and
+          operable without a mouse (plan §D.7/§E.6: "dropzone is click-only"
+          was a real a11y gap, not just cosmetic). */}
       <div
+        role="button"
+        tabIndex={0}
+        aria-label="Upload a requirements document (PDF, DOCX, or text)"
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
         onClick={() => inputRef.current?.click()}
-        className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/3 px-4 py-3 transition-colors hover:border-orange-500/30 hover:bg-orange-500/5"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
+        className="flex cursor-pointer flex-col items-center gap-2 rounded-sm border border-dashed border-line bg-well px-4 py-3 transition-colors hover:border-accent-hi/50 hover:bg-app"
       >
-        <input
-          ref={inputRef}
-          type="file"
-          accept={ACCEPTED}
-          multiple
-          onChange={handleChange}
-          className="hidden"
-        />
+        <input ref={inputRef} type="file" accept={ACCEPTED} multiple onChange={handleChange} className="hidden" tabIndex={-1} />
         {isUploading ? (
           <div className="flex items-center gap-2">
-            <svg
-              className="h-3.5 w-3.5 animate-spin text-orange-400"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-              />
+            <svg className="h-3.5 w-3.5 animate-spin text-accent" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
             </svg>
-            <span className="text-[11px] text-secondary">Uploading...</span>
+            <span className="text-xs text-secondary">Uploading…</span>
           </div>
         ) : (
           <>
-            <svg
-              className="h-5 w-5 text-muted"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
+            <svg className="h-5 w-5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
               />
             </svg>
-            <p className="text-[11px] text-muted">
-              Drop PDF/DOCX/TXT or{" "}
-              <span className="font-medium text-accent-text underline-offset-2 hover:underline">
-                click to browse
-              </span>
+            <p className="text-xs text-muted">
+              Drop PDF/DOCX/TXT or <span className="font-medium text-accent-text underline-offset-2 hover:underline">click to browse</span>
             </p>
           </>
         )}
@@ -98,17 +73,8 @@ export default function FileUpload({
       {uploadedFiles.length > 0 && (
         <div className="flex flex-col gap-1.5">
           {uploadedFiles.map((f) => (
-            <div
-              key={f.file_id}
-              className="flex items-center gap-2 rounded-lg border border-white/8 bg-white/4 px-3 py-2"
-            >
-              <svg
-                className="h-3.5 w-3.5 flex-shrink-0 text-orange-400"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
+            <div key={f.file_id} className="flex items-center gap-2 rounded-sm border border-line bg-well px-3 py-2">
+              <svg className="h-3.5 w-3.5 flex-shrink-0 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -116,20 +82,15 @@ export default function FileUpload({
                 />
               </svg>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[11px] font-medium text-slate-300">{f.filename}</p>
-                <p className="text-[10px] text-muted">
+                <p className="truncate text-xs font-medium text-fg">{f.filename}</p>
+                <p className="text-2xs text-muted">
                   {f.kind.toUpperCase()} · {f.char_count.toLocaleString()} chars
                 </p>
               </div>
-              <span className="flex-shrink-0 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-400">
-                ready
-              </span>
+              <Chip variant="ok">ready</Chip>
             </div>
           ))}
-          <button
-            onClick={onClear}
-            className="self-end text-[10px] text-muted hover:text-secondary"
-          >
+          <button onClick={onClear} className="self-end text-2xs text-muted hover:text-secondary">
             Clear files
           </button>
         </div>
