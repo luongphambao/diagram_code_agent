@@ -471,6 +471,7 @@ _BUILDERS = {
     "scope_change_request": _b_change_request,
     "delivery_effort": _b_delivery_effort,
     "delivery_master_plan": _b_master_plan,
+    "delivery_wbs_detail": _b_wbs_detail,
     "delivery_risk": _b_risk,
     "delivery_methodology": _b_methodology,
     "delivery_post_launch": _b_post_launch,
