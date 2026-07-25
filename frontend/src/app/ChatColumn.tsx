@@ -45,17 +45,10 @@ export default function ChatColumn() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      {(uploadedFiles.length > 0 || isUploading) && (
-        <div className="border-b border-line px-4 py-3">
-          <FileUpload uploadedFiles={uploadedFiles} isUploading={isUploading} onUpload={uploadFile} onClear={clearFiles} />
-        </div>
-      )}
+      <div className="border-b border-line px-4 py-2.5">
+        <FileUpload uploadedFiles={uploadedFiles} isUploading={isUploading} onUpload={uploadFile} onClear={clearFiles} />
+      </div>
       <CopilotChat className="h-full min-h-0 flex-1" />
-      {uploadedFiles.length === 0 && !isUploading && (
-        <div className="border-t border-line px-4 py-2">
-          <FileUpload uploadedFiles={uploadedFiles} isUploading={isUploading} onUpload={uploadFile} onClear={clearFiles} />
-        </div>
-      )}
     </div>
   );
 }
