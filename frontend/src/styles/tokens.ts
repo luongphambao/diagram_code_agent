@@ -89,7 +89,7 @@ export const light: ThemeTokens = {
     850: "#FFFFFF",
     800: "#EDF2F7",
     700: "#DBE2EA",
-    500: "#68778A",
+    500: "#67707E", // tuned to clear 4.5:1 on the FAFCFD canvas — see CONTRAST_PAIRS
     300: "#48566A",
     100: "#141C27",
   },
