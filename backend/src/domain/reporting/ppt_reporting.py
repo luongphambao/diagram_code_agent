@@ -1057,12 +1057,13 @@ def _gantt_slide(
     for i in range(n_cols):
         table.columns[i + 1].width = Inches(col_w)
 
-    _style_cell(table.cell(0, 0), "Module", fill=BNK_BLUE, color=BNK_WHITE, bold=True, size=10)
+    pal = _palette()
+    _style_cell(table.cell(0, 0), "Module", fill=pal["blue"], color=BNK_WHITE, bold=True, size=10)
     for i in range(n_cols):
         _style_cell(
             table.cell(0, i + 1),
             label(i),
-            fill=BNK_BLUE,
+            fill=pal["blue"],
             color=BNK_WHITE,
             bold=True,
             size=7,
@@ -1085,7 +1086,7 @@ def _gantt_slide(
             _style_cell(
                 table.cell(r, i + 1),
                 "",
-                fill=BNK_CYAN if active else BNK_WHITE,
+                fill=pal["cyan"] if active else BNK_WHITE,
                 color=BNK_WHITE,
                 bold=False,
                 size=1,
