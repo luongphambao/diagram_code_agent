@@ -274,15 +274,20 @@ SECTION_CONTENT_CONTRACTS: tuple[SectionContract, ...] = (
         status="new_block+new_data",
         params=(
             _p("case_title", "Short name of the reference case, e.g. 'Smart Agriculture'."),
+            _p("client", "Client name for the reference case.", required=False),
             _p("context_paragraph", "Context: who the client was and what problem they had."),
             _p("outcome", "What BnK delivered and the measurable outcome.", required=False),
+            _p("tech", "Key technologies used, as a quick tech-fit signal.", required=False),
+            _p("effort_md", "Reference effort in man-days, when a real figure is on file.", required=False),
             _p("image_ref", "Optional screenshot/photo of the reference solution.", required=False),
         ),
         required_inputs=("business_narrative.case_study",),
-        slide_count=(0, 2),
+        slide_count=(0, 3),
         optional=True,
         notes="Reuses Detail-01 + _image_fit (case studies are just Detail-01 with pictures — "
-        "no dedicated template layout). Skip cleanly if no case study is on file.",
+        "no dedicated template layout). Emits ONE slide per picked project (top-k, see "
+        "deck_resolver.pick_case_studies) — auto 2-3 analogs unless a business_narrative "
+        "override pins a single one. Skip cleanly if no case study is on file.",
     ),
     # ---- III. Solution Proposal -------------------------------------------
     SectionContract(
