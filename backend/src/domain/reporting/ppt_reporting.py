@@ -28,10 +28,13 @@ BNK_FONT = "Calibri"
 
 # Selectable visual presets (docx WS5 — mirrors the diagram engine's
 # style_preset="refined"/"icon" pattern). Each preset is a richer object now (WS "VIP" —
-# added font/text/accent_light/card_shadow/eyebrow/divider_gradient on top of the original
-# 3 colors): the 3 pre-existing presets set the new keys to their "off" defaults (Calibri,
-# no shadow, no eyebrow parsing, no gradient background) so their rendered output is
-# unchanged; only "vip" turns the new visual language on.
+# added font/text/accent_light/card_shadow/eyebrow on top of the original 3 colors): the 3
+# pre-existing presets set the new keys to their "off" defaults (Calibri, no shadow, no
+# eyebrow parsing) so their rendered output is unchanged; only "vip" turns the new visual
+# language on. NOTE: there is deliberately no "gradient background" key — the BnK
+# template's Cover-01/Head Page layouts already have opaque full-bleed artwork baked in,
+# so a slide-background override renders invisibly beneath it (see _cover_slide/
+# _section_slide for what actually IS visually effective on those two layouts).
 _STYLE_PRESETS: dict[str, dict[str, Any]] = {
     "corporate": {  # the original BnK default — unchanged from before deck_style existed
         "blue": RGBColor(0x1F, 0x4E, 0x78),
@@ -42,7 +45,6 @@ _STYLE_PRESETS: dict[str, dict[str, Any]] = {
         "font": BNK_FONT,
         "card_shadow": False,
         "eyebrow": False,
-        "divider_gradient": None,
     },
     "modern": {  # cooler slate + teal, higher contrast
         "blue": RGBColor(0x10, 0x2A, 0x43),
@@ -53,7 +55,6 @@ _STYLE_PRESETS: dict[str, dict[str, Any]] = {
         "font": BNK_FONT,
         "card_shadow": False,
         "eyebrow": False,
-        "divider_gradient": None,
     },
     "minimal": {  # near-monochrome charcoal + a single muted accent
         "blue": RGBColor(0x2B, 0x2B, 0x2B),
@@ -64,7 +65,6 @@ _STYLE_PRESETS: dict[str, dict[str, Any]] = {
         "font": BNK_FONT,
         "card_shadow": False,
         "eyebrow": False,
-        "divider_gradient": None,
     },
     "vip": {  # navy/teal premium look — modeled on the FMCG Storybook reference deck
         "blue": RGBColor(0x0B, 0x1A, 0x2F),  # deep navy — table headers, eyebrow-on-dark
@@ -75,7 +75,6 @@ _STYLE_PRESETS: dict[str, dict[str, Any]] = {
         "font": "Inter",
         "card_shadow": True,
         "eyebrow": True,
-        "divider_gradient": (RGBColor(0x0B, 0x1A, 0x2F), RGBColor(0x19, 0xA8, 0x87)),
     },
 }
 DECK_STYLES: tuple[str, ...] = tuple(_STYLE_PRESETS)
