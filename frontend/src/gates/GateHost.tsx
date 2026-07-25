@@ -18,6 +18,7 @@ import { useAgent, useHumanInTheLoop } from "@copilotkit/react-core/v2";
 import { ToolCallStatus } from "@copilotkit/core";
 import { GATE_TYPES, GATE_REGISTRY, type GateType } from "./registry";
 import { parseGatePayload } from "./parseGatePayload";
+import GateFrame from "./GateFrame";
 import UnknownGateCard from "./UnknownGateCard";
 import WildcardGateCard from "./WildcardGateCard";
 import { useWildcardHumanInTheLoop } from "./useWildcardHumanInTheLoop";
