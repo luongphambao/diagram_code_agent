@@ -14,11 +14,21 @@
  * Markdown streaming, autoscroll, and per-token render performance (defects
  * 1/5/3) are all solved by adoption — no custom code needed for those.
  *
- * No slot overrides yet: Stage 4 adds the branded welcome screen and a
- * custom composer once the gate registry (which the composer's context
- * depends on) exists. GateHost — the wildcard HITL handler — is mounted at
- * the CopilotKitProvider level (App.tsx), not here, since HITL registration
- * is global per agentId, not scoped to a chat view instance.
+ * No welcome-screen/toolCallsView slot overrides — CopilotChat's defaults
+ * are correct for this app (plan §E lists only the slots worth overriding;
+ * the rest render fine as-is). GateHost — the per-gate HITL handlers — is
+ * mounted at the CopilotKitProvider level (App.tsx), not here, since HITL
+ * registration is global per agentId, not scoped to a chat view instance.
+ *
+ * The file-upload strip is a sibling ABOVE `<CopilotChat>`, not a slot
+ * override of its composer: re-implementing CopilotChat's own send/
+ * run-serialization logic just to inject a dropzone would be strictly
+ * riskier than leaving its composer untouched and bolting the existing
+ * `FileUpload` + `file_ids` flow (plan §B.1 — deliberately NOT CopilotChat's
+ * own attachment queue) on as a plain sibling that shares the same
+ * workspace context. This was flagged but deliberately deferred at Stage 3
+ * ("no slot overrides yet") until the gate registry existed; wiring it now
+ * closes that gap — file upload was otherwise unreachable in the rebuilt UI.
  *
  * Deliberately does NOT pass its own `threadId`/`agentId` props — App.tsx
  * wraps this (and GateHost, and useDiagramWorkspace's useAgent() call) in
@@ -27,11 +37,25 @@
  * independently-resolved values that could drift.
  */
 import { CopilotChat } from "@copilotkit/react-core/v2";
+import FileUpload from "../components/FileUpload";
+import { useDiagramWorkspaceContext } from "../context/AgentContext";
 
 export default function ChatColumn() {
+  const { uploadedFiles, isUploading, uploadFile, clearFiles } = useDiagramWorkspaceContext();
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      {(uploadedFiles.length > 0 || isUploading) && (
+        <div className="border-b border-line px-4 py-3">
+          <FileUpload uploadedFiles={uploadedFiles} isUploading={isUploading} onUpload={uploadFile} onClear={clearFiles} />
+        </div>
+      )}
       <CopilotChat className="h-full min-h-0 flex-1" />
+      {uploadedFiles.length === 0 && !isUploading && (
+        <div className="border-t border-line px-4 py-2">
+          <FileUpload uploadedFiles={uploadedFiles} isUploading={isUploading} onUpload={uploadFile} onClear={clearFiles} />
+        </div>
+      )}
     </div>
   );
 }
