@@ -5,7 +5,6 @@ import GateFrame from "../GateFrame";
 import DecisionBar from "../DecisionBar";
 import Chip from "../../ui/Chip";
 import Button from "../../ui/Button";
-import { colorForKey } from "../ColorScale";
 import type { GateCardProps } from "../types";
 
 type KeyDecision = string | { decision?: unknown; rationale?: unknown; tradeoffs?: unknown };
