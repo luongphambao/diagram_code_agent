@@ -166,8 +166,8 @@ export default function ConversationSidebar({
               onDoubleClick={(e) => startEdit(conv, e)}
               className={`group relative mx-1 my-0.5 flex cursor-pointer flex-col rounded px-2 py-1.5 transition-colors ${
                 isActive
-                  ? "bg-blue-600/15 text-blue-100"
-                  : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                  ? "bg-accent/15 text-accent-text"
+                  : "text-slate-400 hover:bg-well hover:text-fg"
               }`}
             >
               {/* Name row */}
