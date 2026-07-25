@@ -14,6 +14,7 @@ from pathlib import Path
 
 _BACKEND = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_BACKEND / "src"))
+sys.path.insert(0, str(_BACKEND / "src" / "domain" / "deck"))
 sys.path.insert(0, str(_BACKEND))
 
 from csm import Evidence  # noqa: E402
