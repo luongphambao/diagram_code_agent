@@ -777,8 +777,28 @@ _DEFAULT_MILESTONES = [
 ]
 
 
-def _payment_milestones_slide(prs: Presentation, slide_no: int, title: str = "PRICING | Payment Milestones"):
-    rows = [[n, name, pct] for (n, name, pct) in _DEFAULT_MILESTONES]
+def _payment_milestones_slide(
+    prs: Presentation,
+    workspace: Path,
+    slide_no: int,
+    title: str = "PRICING | Payment Milestones",
+):
+    """Payment milestones — real names from wbs.json when the WBS states them, always
+    paired with the standard BnK invoicing split (30/30/30/10 for the usual 4-milestone
+    shape; evenly split otherwise). Falls back to the fully-generic template when the WBS
+    has no milestones on file — this was previously ALWAYS the generic template, ignoring
+    a real wbs.milestones list entirely."""
+    wbs = read_json_file(workspace / "wbs.json", {})
+    names = [m.get("name") for m in _as_list(wbs.get("milestones")) if isinstance(m, dict) and m.get("name")]
+    if names and len(names) == len(_DEFAULT_MILESTONES):
+        rows = [[str(i + 1), name, pct] for i, (name, (_, _, pct)) in enumerate(zip(names, _DEFAULT_MILESTONES))]
+    elif names:
+        base = 100 // len(names)
+        pcts = [base] * len(names)
+        pcts[-1] += 100 - base * len(names)
+        rows = [[str(i + 1), name, f"{pct}%"] for i, (name, pct) in enumerate(zip(names, pcts))]
+    else:
+        rows = [[n, name, pct] for (n, name, pct) in _DEFAULT_MILESTONES]
     return _table_slide(
         prs,
         title,
