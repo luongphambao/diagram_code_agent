@@ -1,5 +1,7 @@
 /** Pure utilities and shared types for the diagram agent hooks. */
 
+import type { Base64OrArtifact } from "../lib/artifacts";
+
 // Same-origin by default (plan §A.11): nginx.conf proxies /api/backend/ ->
 // backend:8001 and /api/copilotkit/ -> copilot-runtime:3001, so nothing is
 // baked into the image at build time and the same image runs in dev,
