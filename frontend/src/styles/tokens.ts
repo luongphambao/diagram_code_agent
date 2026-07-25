@@ -108,8 +108,9 @@ export const light: ThemeTokens = {
     600: "#134E64",
     500: "#1B6580",
     400: "#2A7E9C",
-    300: "#E1EFF4", // becomes the *tint* in light — accent text is dark here, see CONTRAST_PAIRS
+    300: "#E1EFF4", // pale tint step — background use only (e.g. a future accent-tint chip fill)
     fg: "#FFFFFF",
+    text: "#1B6580", // == 500 here — 300 is illegibly pale as text on a light ground
   },
   semantic: {
     ok: "#1F7A50",
