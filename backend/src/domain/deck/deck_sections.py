@@ -780,6 +780,7 @@ IMPLEMENTED_BLOCKS: frozenset[str] = frozenset(
         "case_study",  # _case_study_slide (WS2) — one slide per picked past project
         "diagram",
         "wbs_detail_image",  # _wbs_sheet_image_slide (WS3) — the "2. WBS" sheet screenshot
+        "diagram_image",  # generic finalized-diagram embed (WS4)
         "cover",
         "divider",
         "closing",  # structural — handled without a block renderer
