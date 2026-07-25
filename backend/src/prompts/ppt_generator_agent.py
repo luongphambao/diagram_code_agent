@@ -28,8 +28,8 @@ Workspace at `{workdir}`. Context files you may read:
    decisions, components, WBS effort and risks.
 3. Call `create_pptx(title, subtitle, brand, include_sections, deck_style)` ONCE. It
    renders from `deck_plan.json` when present. `deck_style` is 'corporate' (default),
-   'modern', or 'minimal' — pass it ONLY if the main agent told you the user picked one;
-   otherwise omit it.
+   'modern', 'minimal', or 'vip' (premium navy/teal look) — pass it ONLY if the main
+   agent told you the user picked one; otherwise omit it.
 4. Return a SHORT status (≤5 lines): confirmed title/subtitle/brand, slide count,
    path to out.pptx, any warnings.
 
