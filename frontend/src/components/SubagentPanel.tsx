@@ -311,7 +311,7 @@ function OrchestratorSection({ isRunning, activity, mainLogs }: OrchestratorSect
 
       {/* Live activity label */}
       {activity && isRunning && (
-        <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mb-2">
+        <div className="flex items-center gap-1.5 text-[11px] text-secondary mb-2">
           <span className="h-1 w-1 rounded-full bg-blue-400 animate-pulse flex-shrink-0" />
           <span className="truncate">{activity}</span>
         </div>
