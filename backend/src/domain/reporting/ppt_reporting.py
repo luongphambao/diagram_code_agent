@@ -27,27 +27,55 @@ BNK_TEXT = RGBColor(0x33, 0x33, 0x33)
 BNK_FONT = "Calibri"
 
 # Selectable visual presets (docx WS5 — mirrors the diagram engine's
-# style_preset="refined"/"icon" pattern). Only the 3 colors below vary; layout/spacing/
-# imagery are identical across presets for now — a deliberate v1 scope: the deck's fixed
-# 20-30 slide template shape (Cover-01/Head Page/Detail-01/... from the BnK .pptx
-# template) genuinely constrains layout variation far more than color does, so a palette
-# swap is the highest-value, lowest-risk first step; a future preset could vary
-# font/spacing too without changing this contract.
-_STYLE_PRESETS: dict[str, dict[str, RGBColor]] = {
+# style_preset="refined"/"icon" pattern). Each preset is a richer object now (WS "VIP" —
+# added font/text/accent_light/card_shadow/eyebrow/divider_gradient on top of the original
+# 3 colors): the 3 pre-existing presets set the new keys to their "off" defaults (Calibri,
+# no shadow, no eyebrow parsing, no gradient background) so their rendered output is
+# unchanged; only "vip" turns the new visual language on.
+_STYLE_PRESETS: dict[str, dict[str, Any]] = {
     "corporate": {  # the original BnK default — unchanged from before deck_style existed
         "blue": RGBColor(0x1F, 0x4E, 0x78),
         "cyan": RGBColor(0x00, 0x9F, 0xDF),
         "light": RGBColor(0xE9, 0xF0, 0xF7),
+        "text": BNK_TEXT,
+        "accent_light": RGBColor(0xE9, 0xF0, 0xF7),
+        "font": BNK_FONT,
+        "card_shadow": False,
+        "eyebrow": False,
+        "divider_gradient": None,
     },
     "modern": {  # cooler slate + teal, higher contrast
         "blue": RGBColor(0x10, 0x2A, 0x43),
         "cyan": RGBColor(0x14, 0xB8, 0xA6),
         "light": RGBColor(0xE6, 0xF7, 0xF5),
+        "text": BNK_TEXT,
+        "accent_light": RGBColor(0xE6, 0xF7, 0xF5),
+        "font": BNK_FONT,
+        "card_shadow": False,
+        "eyebrow": False,
+        "divider_gradient": None,
     },
     "minimal": {  # near-monochrome charcoal + a single muted accent
         "blue": RGBColor(0x2B, 0x2B, 0x2B),
         "cyan": RGBColor(0x6B, 0x7A, 0x8F),
         "light": RGBColor(0xF2, 0xF2, 0xF2),
+        "text": BNK_TEXT,
+        "accent_light": RGBColor(0xF2, 0xF2, 0xF2),
+        "font": BNK_FONT,
+        "card_shadow": False,
+        "eyebrow": False,
+        "divider_gradient": None,
+    },
+    "vip": {  # navy/teal premium look — modeled on the FMCG Storybook reference deck
+        "blue": RGBColor(0x0B, 0x1A, 0x2F),  # deep navy — table headers, eyebrow-on-dark
+        "cyan": RGBColor(0x19, 0xA8, 0x87),  # primary teal — accents, stat numbers
+        "light": RGBColor(0xE9, 0xF7, 0xF2),  # pale teal tint — card backgrounds
+        "text": RGBColor(0x1D, 0x3C, 0x47),  # ink navy — body text
+        "accent_light": RGBColor(0xC8, 0xEB, 0xDD),  # card border / secondary tint
+        "font": "Inter",
+        "card_shadow": True,
+        "eyebrow": True,
+        "divider_gradient": (RGBColor(0x0B, 0x1A, 0x2F), RGBColor(0x19, 0xA8, 0x87)),
     },
 }
 DECK_STYLES: tuple[str, ...] = tuple(_STYLE_PRESETS)
@@ -60,7 +88,7 @@ DECK_STYLES: tuple[str, ...] = tuple(_STYLE_PRESETS)
 _deck_style_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("deck_style", default="corporate")
 
 
-def _palette() -> dict[str, RGBColor]:
+def _palette() -> dict[str, Any]:
     return _STYLE_PRESETS.get(_deck_style_ctx.get(), _STYLE_PRESETS["corporate"])
 
 
