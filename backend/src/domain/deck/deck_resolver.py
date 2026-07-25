@@ -224,9 +224,11 @@ def _case_to_params(cs: dict[str, Any]) -> dict[str, Any]:
     effort_md = wbs_match.get("total_mandays") or est.get("effort_md")
     return {
         # Kept short: "SUCCESS STORY | " (16 chars) + this must still fit the template's
-        # single-line title box — a 60-char clip here wrapped to 2 lines and collided with
-        # the corner logo (confirmed visually); 40 chars matches real deck titles' length.
-        "case_title": _clip(cs.get("title"), 40),
+        # single-line title box — confirmed visually that >~44 total chars wraps to a
+        # 2nd line and collides with the corner logo; 28 chars keeps the combined title
+        # at/under that bound (real solution_memory titles run long, e.g. "BnK Solution -
+        # GGF VAT Stream 2 Proposal 20230912 1").
+        "case_title": _clip(cs.get("title"), 28),
         "client": _clip(cs.get("client"), 80),
         "context_paragraph": _clip(cs.get("problem") or cs.get("context"), 320),
         "outcome": _clip(cs.get("outcome") or cs.get("solution"), 260),
