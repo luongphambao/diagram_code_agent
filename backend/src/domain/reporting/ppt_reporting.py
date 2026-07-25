@@ -367,6 +367,28 @@ def _set_placeholder_text(slide, idx: int, text: str) -> bool:
     return False
 
 
+def _style_placeholder_text(
+    slide, idx: int, *, color: RGBColor, size: int | None = None, bold: bool | None = None
+) -> None:
+    """Restyle an already-populated placeholder's runs (e.g. force white/bold on a
+    gradient hero background). No-op if the placeholder doesn't exist or has no runs yet
+    (python-pptx only creates runs once text has been assigned)."""
+    for shape in slide.placeholders:
+        try:
+            if shape.placeholder_format.idx != idx:
+                continue
+        except Exception:
+            continue
+        for p in shape.text_frame.paragraphs:
+            for run in p.runs:
+                run.font.color.rgb = color
+                if size is not None:
+                    run.font.size = Pt(size)
+                if bold is not None:
+                    run.font.bold = bold
+        return
+
+
 def _body_placeholder(slide):
     """Return the slide's BODY/content placeholder (idx 13 in Detail-01) if present."""
     from pptx.enum.shapes import PP_PLACEHOLDER
