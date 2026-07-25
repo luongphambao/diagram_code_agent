@@ -236,6 +236,8 @@ def _contract_source_refs(
         return req_ids_by_kind["functional"] + req_ids_by_kind["nfr"]
     if key == "solution_architecture":
         return comp_ids
+    if key == "solution_architecture_explanation":
+        return dec_ids + comp_ids
     if key == "solution_tech_stack":
         return dec_ids + evd_ids
     if key in ("delivery_effort", "delivery_master_plan"):
