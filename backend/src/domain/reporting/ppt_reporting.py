@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextvars
 import datetime as dt
 import json
 import re
@@ -16,13 +17,59 @@ from pptx.enum.text import PP_ALIGN, MSO_AUTO_SIZE, MSO_ANCHOR
 from pptx.util import Inches, Pt
 
 # --- BnK brand palette (Calibri + corporate blue, from template style guide) ---
-BNK_BLUE = RGBColor(0x1F, 0x4E, 0x78)  # primary corporate blue (header rows, dividers)
-BNK_CYAN = RGBColor(0x00, 0x9F, 0xDF)  # secondary accent
-BNK_LIGHT = RGBColor(0xE9, 0xF0, 0xF7)  # light tint for alternating table rows
+# BNK_ACCENT/BNK_WHITE/BNK_TEXT/BNK_FONT are style-invariant (every preset shares them);
+# BNK_BLUE/BNK_CYAN/BNK_LIGHT are the only 3 colors that actually vary by deck_style (see
+# _STYLE_PRESETS below) — kept as module "constants" here purely as the default/fallback
+# value, but every render call site reads them through _palette() instead, not by name.
 BNK_ACCENT = RGBColor(0xC0, 0x3A, 0x2B)  # red accent (required/important)
 BNK_WHITE = RGBColor(0xFF, 0xFF, 0xFF)
 BNK_TEXT = RGBColor(0x33, 0x33, 0x33)
 BNK_FONT = "Calibri"
+
+# Selectable visual presets (docx WS5 — mirrors the diagram engine's
+# style_preset="refined"/"icon" pattern). Only the 3 colors below vary; layout/spacing/
+# imagery are identical across presets for now — a deliberate v1 scope: the deck's fixed
+# 20-30 slide template shape (Cover-01/Head Page/Detail-01/... from the BnK .pptx
+# template) genuinely constrains layout variation far more than color does, so a palette
+# swap is the highest-value, lowest-risk first step; a future preset could vary
+# font/spacing too without changing this contract.
+_STYLE_PRESETS: dict[str, dict[str, RGBColor]] = {
+    "corporate": {  # the original BnK default — unchanged from before deck_style existed
+        "blue": RGBColor(0x1F, 0x4E, 0x78),
+        "cyan": RGBColor(0x00, 0x9F, 0xDF),
+        "light": RGBColor(0xE9, 0xF0, 0xF7),
+    },
+    "modern": {  # cooler slate + teal, higher contrast
+        "blue": RGBColor(0x10, 0x2A, 0x43),
+        "cyan": RGBColor(0x14, 0xB8, 0xA6),
+        "light": RGBColor(0xE6, 0xF7, 0xF5),
+    },
+    "minimal": {  # near-monochrome charcoal + a single muted accent
+        "blue": RGBColor(0x2B, 0x2B, 0x2B),
+        "cyan": RGBColor(0x6B, 0x7A, 0x8F),
+        "light": RGBColor(0xF2, 0xF2, 0xF2),
+    },
+}
+DECK_STYLES: tuple[str, ...] = tuple(_STYLE_PRESETS)
+
+# contextvars, not a plain module global: generate_ppt_proposal_file can run for
+# different threads/users concurrently within the same process (per-thread workspace
+# isolation elsewhere in this backend — see backends.py §4.10), so the active style must
+# be request-scoped, never shared mutable state. Mirrors observability.set_context's
+# established pattern in this codebase for the same class of problem.
+_deck_style_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("deck_style", default="corporate")
+
+
+def _palette() -> dict[str, RGBColor]:
+    return _STYLE_PRESETS.get(_deck_style_ctx.get(), _STYLE_PRESETS["corporate"])
+
+
+def set_deck_style(style: str) -> contextvars.Token:
+    """Activate ``style`` for the CURRENT request/task only. Returns a token — pass it to
+    ``_deck_style_ctx.reset(token)`` when the render finishes, so a later request on a
+    reused thread never inherits a prior request's style. Unknown names fall back to
+    "corporate" rather than raising, since a bad deck_style must never block a render."""
+    return _deck_style_ctx.set(style if style in _STYLE_PRESETS else "corporate")
 
 from domain.reporting.reporting import (
     DEFAULT_REPORT_SECTIONS,
