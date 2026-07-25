@@ -1,8 +1,6 @@
 import { useState, useCallback } from "react";
 import type { AgentState, ChatMessage } from "./useDiagramAgent";
-
-const BACKEND_URL =
-  (import.meta.env.VITE_BACKEND_URL as string | undefined) ?? "http://localhost:8001";
+import { BACKEND_URL } from "./agent-utils";
 
 export interface Conversation {
   thread_id: string;
