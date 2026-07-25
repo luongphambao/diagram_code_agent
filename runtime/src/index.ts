@@ -59,11 +59,33 @@ const listener = createCopilotNodeListener({
   cors: CONFIG.allowedOrigins.length > 0 ? { origin: CONFIG.allowedOrigins } : true,
 });
 
+const ARTIFACTS_PREFIX = "/api/artifacts/";
+
 const server = createServer((req, res) => {
   if (req.url === "/healthz") {
     res.writeHead(200, { "Content-Type": "text/plain" }).end("ok");
     return;
   }
+
+  // Serves the offloaded artifacts (plan §A.6) substituted into STATE_DELTA/
+  // STATE_SNAPSHOT by PassthroughRunner. The lookup key is content-hashed
+  // (artifact-store.ts), so a cache hit is safe to mark immutable.
+  if (req.method === "GET" && req.url?.startsWith(ARTIFACTS_PREFIX)) {
+    const key = decodeURIComponent(req.url.slice(ARTIFACTS_PREFIX.length).split("?")[0]);
+    const entry = artifactStore.get(key);
+    if (!entry) {
+      res.writeHead(404, { "Content-Type": "text/plain" }).end("artifact not found or expired");
+      return;
+    }
+    res.writeHead(200, {
+      "Content-Type": entry.mime,
+      "Content-Length": entry.bytes.length,
+      "Cache-Control": "private, max-age=1800, immutable",
+    });
+    res.end(entry.bytes);
+    return;
+  }
+
   listener(req, res);
 });
 
