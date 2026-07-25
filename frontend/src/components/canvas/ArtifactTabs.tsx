@@ -355,7 +355,7 @@ export default function ArtifactTabs({
       <Lightbox
         open={lightbox}
         onClose={() => setLightbox(false)}
-        imageSrc={`data:image/png;base64,${png_base64}`}
+        imageSrc={resolveSrc(png_base64, MIME_TYPES.png) ?? ""}
         alt="Diagram fullscreen preview"
         actions={
           <>
