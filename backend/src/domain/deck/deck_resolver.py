@@ -223,7 +223,10 @@ def _case_to_params(cs: dict[str, Any]) -> dict[str, Any]:
     wbs_match = cs.get("wbs_match") or {}
     effort_md = wbs_match.get("total_mandays") or est.get("effort_md")
     return {
-        "case_title": _clip(cs.get("title"), 60),
+        # Kept short: "SUCCESS STORY | " (16 chars) + this must still fit the template's
+        # single-line title box — a 60-char clip here wrapped to 2 lines and collided with
+        # the corner logo (confirmed visually); 40 chars matches real deck titles' length.
+        "case_title": _clip(cs.get("title"), 40),
         "client": _clip(cs.get("client"), 80),
         "context_paragraph": _clip(cs.get("problem") or cs.get("context"), 320),
         "outcome": _clip(cs.get("outcome") or cs.get("solution"), 260),
