@@ -117,7 +117,10 @@ export class PassthroughRunner extends AgentRunner {
             subscriber.next({ type: "MESSAGES_SNAPSHOT", messages: history.messages } as unknown as BaseEvent);
           }
           if (history.state && Object.keys(history.state).length > 0) {
-            subscriber.next({ type: "STATE_SNAPSHOT", snapshot: history.state } as unknown as BaseEvent);
+            subscriber.next({
+              type: "STATE_SNAPSHOT",
+              snapshot: substituteSnapshot(request.threadId, history.state),
+            } as unknown as BaseEvent);
           }
         })
         .catch((error: unknown) => {
