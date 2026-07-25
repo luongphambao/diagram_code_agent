@@ -66,6 +66,7 @@ export default function TabBar({
             id={`${panelId}-tab-${item.id}`}
             aria-selected={selected}
             aria-controls={`${panelId}-panel-${item.id}`}
+            aria-label={item.count != null ? `${item.label}, ${item.count} items` : undefined}
             tabIndex={selected ? 0 : -1}
             onClick={() => onSelect(item.id)}
             onKeyDown={(e) => onKeyDown(e, i)}
@@ -80,7 +81,7 @@ export default function TabBar({
               <Chip
                 variant={item.countVariant === "danger" ? "danger" : selected ? "accent" : "neutral"}
                 numeric
-                aria-label={`${item.count} items`}
+                aria-hidden="true"
               >
                 {item.count}
               </Chip>
