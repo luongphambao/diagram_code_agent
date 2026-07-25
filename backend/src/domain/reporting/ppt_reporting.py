@@ -921,7 +921,7 @@ def _tech_stack_icon_slide(
             lp.text = str(it.get("name", ""))[:16]
             for r in lp.runs:
                 r.font.size = Pt(6.5)
-                r.font.name = BNK_FONT
+                r.font.name = _palette().get("font", BNK_FONT)
                 r.font.color.rgb = BNK_TEXT
             x += 1.5
         y += row_h
