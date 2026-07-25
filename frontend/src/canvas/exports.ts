@@ -34,6 +34,18 @@ export function downloadExport(descriptor: ExportDescriptor, state: AgentState):
   const value = descriptor.select(state);
   if (!value) return;
   const filename = versionedName(descriptor.basename, descriptor.ext, state.iteration);
+
+  // An offloaded artifact is already a real same-origin URL (plan §A.6) — a
+  // plain anchor click with `download` needs no client-side fetch/blob at
+  // all, unlike the base64 path below.
+  if (isArtifactRef(value)) {
+    const a = document.createElement("a");
+    a.href = value.__artifact;
+    a.download = value.filename || filename;
+    a.click();
+    return;
+  }
+
   if (descriptor.kind === "text") {
     downloadBlob(new Blob([value], { type: descriptor.mime }), filename);
   } else {
