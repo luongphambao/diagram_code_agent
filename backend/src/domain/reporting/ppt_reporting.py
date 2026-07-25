@@ -395,12 +395,14 @@ def _fill_bullets_placeholder(slide, items: list[Any], *, font_size: int = 16, l
     bullets = [_clip(item, 180) for item in items[:limit] if str(item or "").strip()]
     if not bullets:
         bullets = ["Details will be confirmed during proposal review."]
+    font_name = _palette().get("font", BNK_FONT)
     for i, item in enumerate(bullets):
         p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
         p.text = item
         p.level = 0
         for run in p.runs:
             run.font.size = Pt(font_size)
+            run.font.name = font_name
     return True
 
 
