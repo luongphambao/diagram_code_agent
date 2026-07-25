@@ -338,6 +338,15 @@ def _b_master_plan(model, wbs, nar, meta, lib):
     }
 
 
+def _b_wbs_detail(model, wbs, nar, meta, lib):
+    """The "2. WBS" sheet screenshot — only satisfiable once export_wbs_excel has run
+    wbs_excel_render (see reporting_gates._refresh_deck_plan, which merges
+    wbs_sheet_images.json into ``meta["wbs_sheet_images"]`` before this builder runs)."""
+    if not (meta.get("wbs_sheet_images") or {}).get("wbs"):
+        return {}
+    return {"sheet_kind": "wbs"}
+
+
 def _b_risk(model, wbs, nar, meta, lib):
     return {
         "risks": [
