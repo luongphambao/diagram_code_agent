@@ -47,7 +47,8 @@ describe("flow-full-design.json", () => {
   });
 
   it("the pdf-followup step's last message is role=user, not a tool resume", () => {
-    const last = steps[4].request.messages.at(-1) as { role: string; content: string };
+    const msgs = steps[4].request.messages;
+    const last = msgs[msgs.length - 1] as { role: string; content: string };
     expect(last.role).toBe("user");
     expect(last.content).toContain("báo cáo");
   });
