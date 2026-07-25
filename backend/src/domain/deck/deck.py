@@ -940,13 +940,15 @@ def score_deck_structure(plan: DeckPlan) -> dict:
             deduct += 2.0
 
         # Empty content slides
-        if not is_section and n_bullets < _MIN_BULLETS_CONTENT and not s.asset_ref:
+        if not is_section and not self_grounded and n_bullets < _MIN_BULLETS_CONTENT and not s.asset_ref:
             msg = f"slide {s.slide_no}: content slide has no bullets and no asset_ref"
             issues.append(msg)
             slide_issues.append(msg)
             deduct += 1.0
 
-        # Ungrounded client-facing slide
+        # Ungrounded client-facing slide — checked regardless of self_grounded: a
+        # client-facing slide (tech_stack_table/pricing) still needs a real Evidence trail
+        # if it ever loses its source_refs, self-rendering content or not.
         if s.client_facing and not s.source_refs:
             msg = f"slide {s.slide_no}: client-facing slide has no source_refs (ungrounded)"
             issues.append(msg)
@@ -954,7 +956,7 @@ def score_deck_structure(plan: DeckPlan) -> dict:
             deduct += 5.0
 
         # Non-section slide without any source_refs
-        elif not is_section and not s.source_refs:
+        elif not is_section and not self_grounded and not s.source_refs:
             msg = f"slide {s.slide_no}: content slide has no source_refs"
             issues.append(msg)
             slide_issues.append(msg)
