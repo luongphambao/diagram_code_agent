@@ -1266,6 +1266,12 @@ def _gantt_slide(
     grid_w = _CONTENT_W - name_w
     col_w = grid_w / n_cols
     n_rows = min(len(rows), 16) + 1
+    pal = _palette()
+    if pal.get("card_shadow", False):
+        pad = 0.12
+        _add_card(
+            slide, _CONTENT_X - pad, _CONTENT_Y - pad, _CONTENT_W + 2 * pad, _CONTENT_H + 2 * pad, fill=pal.get("light")
+        )
     gfx = slide.shapes.add_table(
         n_rows, n_cols + 1, Inches(_CONTENT_X), Inches(_CONTENT_Y), Inches(_CONTENT_W), Inches(_CONTENT_H)
     )
@@ -1276,7 +1282,6 @@ def _gantt_slide(
     for i in range(n_cols):
         table.columns[i + 1].width = Inches(col_w)
 
-    pal = _palette()
     _style_cell(table.cell(0, 0), "Module", fill=pal["blue"], color=BNK_WHITE, bold=True, size=10)
     for i in range(n_cols):
         _style_cell(
