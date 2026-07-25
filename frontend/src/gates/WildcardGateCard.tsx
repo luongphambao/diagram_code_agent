@@ -17,7 +17,7 @@
  * `props.args` is the raw card JSON directly — no unwrapping needed.
  */
 import { useEffect, useRef } from "react";
-import type { ToolCallStatus } from "@copilotkit/core";
+import { ToolCallStatus } from "@copilotkit/core";
 import Button from "../ui/Button";
 import Card from "../ui/Card";
 import Chip from "../ui/Chip";
