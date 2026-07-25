@@ -873,6 +873,32 @@ def _gantt_slide(
     return slide
 
 
+def _wbs_sheet_image_path(workspace: Path, kind: str) -> Path | None:
+    """Resolve ``wbs_sheet_images.json``'s ``kind`` entry ("effort"/"wbs"/"delivery") to an
+    existing PNG path, or None — the "prefer the LibreOffice screenshot over the native
+    table" check every WBS-derived slide below shares (mirrors the existing tech_icons.json
+    "prefer icon grid over table" pattern in _tech_stack_table_slide)."""
+    manifest = read_json_file(workspace / "wbs_sheet_images.json", {})
+    if not isinstance(manifest, dict):
+        return None
+    ref = manifest.get(kind)
+    if not ref:
+        return None
+    p = Path(ref)
+    p = p if p.is_absolute() else workspace / p
+    return p if p.exists() else None
+
+
+def _wbs_sheet_image_slide(prs: Presentation, image_path: Path, slide_no: int, title: str):
+    """A full-bleed embed of one rendered wbs_filled.xlsx sheet (the real, brand-styled,
+    client-facing Excel look — see wbs_excel_render.py)."""
+    slide = prs.slides.add_slide(_layout(prs, "Blank", "Empty"))
+    _add_title(slide, title)
+    _image_fit(slide, image_path, 0.55, 1.05, 12.15, 5.55)
+    _add_footer(slide, slide_no)
+    return slide
+
+
 def _team_slide(
     prs: Presentation, report: dict[str, Any], slide_no: int, title: str = "PROJECT DELIVERY | Team Structure"
 ):
