@@ -1362,6 +1362,8 @@ def _diagram_image_slide(prs: Presentation, params: dict[str, Any], workspace: P
     if path is not None and not path.is_absolute():
         path = workspace / path
     if path is not None and path.exists():
+        if _palette().get("card_shadow", False):
+            _add_card(slide, 0.4, 0.9, 12.45, 5.85, fill=BNK_WHITE)
         _image_fit(slide, path, 0.55, 1.05, 12.15, 5.55)
     else:
         _add_textbox(slide, "Diagram image not available.", 1.0, 2.8, 11.0, 0.4, font_size=16)
