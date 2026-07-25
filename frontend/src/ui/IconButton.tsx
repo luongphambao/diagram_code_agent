@@ -33,7 +33,3 @@ const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconB
 });
 
 export default IconButton;
-
-export function IconButtonHiddenLabel({ children }: { children: ReactNode }) {
-  return <span className="sr-only">{children}</span>;
-}
