@@ -754,6 +754,7 @@ IMPLEMENTED_BLOCKS: frozenset[str] = frozenset(
         "milestones",
         "team",  # ppt_reporting.VALID_BLOCKS
         "gantt",  # _gantt_slide — real renderer, was missing from this set (registry bug)
+        "case_study",  # _case_study_slide (WS2) — one slide per picked past project
         "diagram",
         "cover",
         "divider",
