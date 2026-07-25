@@ -1312,13 +1312,20 @@ def _gantt_slide(
     col_w = grid_w / n_cols
     n_rows = min(len(rows), 16) + 1
     pal = _palette()
-    if pal.get("card_shadow", False):
+    show_stats = pal.get("card_shadow", False)
+    content_y = _CONTENT_Y + (0.7 if show_stats else 0)
+    content_h = _CONTENT_H - (0.7 if show_stats else 0)
+    if show_stats:
+        stats = [(str(weeks), "Weeks"), (str(months), "Months"), (str(sprints), "Sprints")]
+        stat_w = _CONTENT_W / len(stats)
+        for i, (number, lbl) in enumerate(stats):
+            _add_stat_block(slide, number, lbl, _CONTENT_X + i * stat_w, 1.0, stat_w, 0.65)
         pad = 0.12
         _add_card(
-            slide, _CONTENT_X - pad, _CONTENT_Y - pad, _CONTENT_W + 2 * pad, _CONTENT_H + 2 * pad, fill=pal.get("light")
+            slide, _CONTENT_X - pad, content_y - pad, _CONTENT_W + 2 * pad, content_h + 2 * pad, fill=pal.get("light")
         )
     gfx = slide.shapes.add_table(
-        n_rows, n_cols + 1, Inches(_CONTENT_X), Inches(_CONTENT_Y), Inches(_CONTENT_W), Inches(_CONTENT_H)
+        n_rows, n_cols + 1, Inches(_CONTENT_X), Inches(content_y), Inches(_CONTENT_W), Inches(content_h)
     )
     table = gfx.table
     table.first_row = False
