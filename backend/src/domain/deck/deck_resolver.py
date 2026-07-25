@@ -549,16 +549,18 @@ def _csm_query_text(model: SolutionModel) -> str:
     )
 
 
-def pick_case_study(model: SolutionModel, library: list[dict]) -> Optional[dict]:
-    """Best past project for the current CSM.
+def pick_case_studies(model: SolutionModel, library: list[dict], k: int = 3) -> list[dict]:
+    """Top-``k`` past projects for the current CSM (for a "Success Story" section with
+    several analogs, not just one — see ``deck_resolver._b_success_stories``).
 
     Tries semantic retrieval over the unified ``bnk_solutions`` corpus first (embeddings +
     MMR over problem/solution/tech/domain — see ``rag/indexer.py`` + ``rag/solution_memory.py``,
     built by ``backend/scripts/build_solution_memory.py``), which also carries real WBS
     estimate/tech where a same-project join was confirmed. Falls back to the original
-    domain/tech keyword-overlap scorer over the legacy ``case_library.json`` (*library* arg)
-    when retrieval is unavailable (no OPENAI_API_KEY, Qdrant unreachable, solution_memory.json
-    not yet built) or returns nothing — so this never regresses below the old behavior.
+    domain/tech keyword-overlap scorer over the legacy ``case_library.json`` (*library* arg,
+    top-1 only) when retrieval is unavailable (no OPENAI_API_KEY, Qdrant unreachable,
+    solution_memory.json not yet built) or returns nothing — so this never regresses below
+    the old behavior.
     """
     query = _csm_query_text(model)
     if query.strip():
@@ -566,22 +568,39 @@ def pick_case_study(model: SolutionModel, library: list[dict]) -> Optional[dict]
             from rag.indexer import get_retriever
             from rag.solution_memory import load_solution_memory
 
-            # top_k>1: a success-story slide needs a NARRATIVE (problem/solution), so among
-            # the top hits we prefer one with a story to tell over a numbers-only wbs_only
-            # entry, even if the latter scored marginally higher on embedding similarity.
-            docs = get_retriever(top_k=3).invoke(query)
+            # Retrieve more than k: a success-story slide needs a NARRATIVE (problem/solution),
+            # so among the top hits we prefer ones with a story to tell over numbers-only
+            # wbs_only entries, even if the latter scored marginally higher on similarity.
+            docs = get_retriever(top_k=max(k * 2, 6)).invoke(query)
             if docs:
                 by_slug = {e.get("slug"): e for e in load_solution_memory()}
-                candidates = [by_slug[s] for d in docs if (s := d.metadata.get("slug")) in by_slug]
-                for entry in candidates:
-                    if entry.get("source") != "wbs_only" and (entry.get("problem") or entry.get("solution")):
-                        return entry
-                if candidates:
-                    return candidates[0]  # no narrative among top hits — still the best analog
+                seen: set[str] = set()
+                candidates: list[dict] = []
+                for d in docs:
+                    slug = d.metadata.get("slug")
+                    entry = by_slug.get(slug)
+                    if entry is not None and slug not in seen:
+                        seen.add(slug)
+                        candidates.append(entry)
+                narrated = [
+                    e for e in candidates if e.get("source") != "wbs_only" and (e.get("problem") or e.get("solution"))
+                ]
+                rest = [e for e in candidates if e not in narrated]
+                ordered = (narrated + rest)[:k]
+                if ordered:
+                    return ordered
         except Exception as exc:  # noqa: BLE001
             logger.warning("Semantic case-study retrieval unavailable (%s) — using keyword fallback.", exc)
 
-    return _pick_case_study_keyword(model, library)
+    top1 = _pick_case_study_keyword(model, library)
+    return [top1] if top1 else []
+
+
+def pick_case_study(model: SolutionModel, library: list[dict]) -> Optional[dict]:
+    """Best single past project for the current CSM — thin top-1 wrapper over
+    :func:`pick_case_studies`, kept for callers that only want one analog."""
+    picks = pick_case_studies(model, library, k=1)
+    return picks[0] if picks else None
 
 
 def _pick_case_study_keyword(model: SolutionModel, library: list[dict]) -> Optional[dict]:
