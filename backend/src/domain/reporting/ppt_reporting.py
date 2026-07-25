@@ -951,6 +951,7 @@ def _tech_stack_icon_slide(
         _add_footer(slide, slide_no)
         return slide
 
+    pal = _palette()
     y = 1.25
     row_h = min(0.62, (6.6 - 1.25) / max(1, len(layers)))
     icon_sz = min(0.34, row_h - 0.16)
@@ -963,12 +964,14 @@ def _tech_stack_icon_slide(
         for r in p.runs:
             r.font.size = Pt(11)
             r.font.bold = True
-            r.font.name = _palette().get("font", BNK_FONT)
-            r.font.color.rgb = _palette()["blue"]
+            r.font.name = pal.get("font", BNK_FONT)
+            r.font.color.rgb = pal["blue"]
         x = 3.15
         for it in icons:
             if x > 12.6:
                 break
+            if pal.get("card_shadow", False):
+                _add_card(slide, x - 0.08, y + 0.02, 1.42, row_h - 0.06, radius=0.2)
             path = it.get("path")
             if path and Path(path).exists():
                 try:
