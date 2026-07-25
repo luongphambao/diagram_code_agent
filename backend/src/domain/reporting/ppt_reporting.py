@@ -704,7 +704,7 @@ def _style_cell(
     for run in p.runs:
         run.font.size = Pt(size)
         run.font.bold = bold
-        run.font.name = BNK_FONT
+        run.font.name = _palette().get("font", BNK_FONT)
         run.font.color.rgb = color
 
 
