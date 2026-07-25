@@ -22,7 +22,7 @@
  * 13 real per-gate-name registrations, where the library's own
  * `useHumanInTheLoop` works correctly and this workaround is no longer needed.
  */
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import React from "react";
 import { useFrontendTool, useCopilotKit } from "@copilotkit/react-core/v2";
 import type { ReactFrontendTool, ReactToolCallRenderer } from "@copilotkit/react-core/v2";
