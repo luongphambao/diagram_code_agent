@@ -92,6 +92,12 @@ class SlideSpec(BaseModel):
     narrative_role: NarrativeRole = "solution"
     source_refs: list[str] = Field(default_factory=list)  # CSM entity ids this slide is grounded in
     client_facing: bool = False  # external-facing claim => must be evidence-backed
+    # Full params dict resolved by deck_resolver.csm_to_slide_params for this contract —
+    # today's renderers (ppt_reporting._render_block) still derive their own data from
+    # `report`/`workspace` and ignore this field (harmless extra key on model_dump()); it
+    # exists so a NEW block renderer (case_study, methodology, ...) has a clean single
+    # source to read from instead of re-deriving CSM/WBS data itself.
+    params: dict[str, Any] = Field(default_factory=dict)
 
 
 class DeckPlan(BaseModel):
