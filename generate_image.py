@@ -16,7 +16,7 @@ import sys
 from google import genai
 
 MODEL = "gemini-3.1-flash-image"
-OUTPUT_PATH = "aws_sample_diagram.png"
+OUTPUT_PATH = "aws_sample_diagram.jpg"
 
 PROMPT = (
     "A clean, professional AWS cloud architecture diagram in the style of official "
