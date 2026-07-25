@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --port 5173",
-    "build": "tsc && vite build",
+    "build-tokens": "node scripts/build-tokens.mjs",
+    "dev": "npm run build-tokens && vite --port 5173",
+    "build": "npm run build-tokens && tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
