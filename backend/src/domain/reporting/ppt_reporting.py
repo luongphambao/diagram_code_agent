@@ -683,12 +683,21 @@ def _overview_slide(prs: Presentation, title: str, subtitle: str, slide_no: int)
 
 def _cover_slide(prs: Presentation, report: dict[str, Any], slide_no: int):
     slide = prs.slides.add_slide(_layout(prs, "Cover-01"))
+    pal = _palette()
+    gradient = pal.get("divider_gradient")
+    if gradient:
+        _add_gradient_background(slide, gradient[0], gradient[1], angle=45.0)
     _set_placeholder_text(slide, 0, report["title"])
     _set_placeholder_text(slide, 1, report["subtitle"])
+    if gradient:
+        _style_placeholder_text(slide, 0, color=BNK_WHITE, size=40, bold=True)
+        _style_placeholder_text(slide, 1, color=pal.get("accent_light", BNK_WHITE), size=18, bold=False)
     date_text = dt.datetime.now().strftime("%B %d, %Y")
-    _add_textbox(slide, date_text, 0.75, 6.45, 4.4, 0.3, font_size=13)
+    _add_textbox(slide, date_text, 0.75, 6.45, 4.4, 0.3, font_size=13, color=BNK_WHITE if gradient else None)
     if report.get("brand"):
-        _add_textbox(slide, str(report["brand"]), 0.75, 5.95, 4.4, 0.3, font_size=12)
+        _add_textbox(
+            slide, str(report["brand"]), 0.75, 5.95, 4.4, 0.3, font_size=12, color=BNK_WHITE if gradient else None
+        )
     _add_footer(slide, slide_no)
     return slide
 
