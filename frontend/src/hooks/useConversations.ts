@@ -62,11 +62,7 @@ export function useConversations() {
       const res = await fetch(`${BACKEND_URL}/conversations/${threadId}/history`);
       if (!res.ok) return null;
       const hist: ConversationHistory = await res.json();
-      return {
-        state: hist.state,
-        chatMessages: wireToChat(hist.messages),
-        wireMessages: hist.messages,
-      };
+      return { state: hist.state, wireMessages: hist.messages };
     } catch {
       return null;
     }
