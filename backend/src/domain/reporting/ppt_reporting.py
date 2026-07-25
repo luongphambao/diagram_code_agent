@@ -1159,7 +1159,7 @@ def _render_slide(
 
     # Structured content blocks take precedence over the plain layout dispatch.
     if block != "bullets":
-        _render_block(prs, block, title, report, workspace, slide_no)
+        _render_block(prs, block, title, report, workspace, slide_no, spec=spec)
         return
 
     if layout == "Cover-01":
