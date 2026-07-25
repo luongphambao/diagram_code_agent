@@ -107,15 +107,47 @@ services:
       # Host-visible per-session artifact folders (./artifacts/<threadId>/...).
       - ./artifacts:/app/artifacts
 
+  # CopilotKit v2 Node runtime (runtime/) — proxies the browser's AG-UI chat
+  # traffic to backend:8001/agui via a flat-body DiagramHttpAgent subclass
+  # (see plan §A). Backend stays 100% untouched; this is a pure sibling hop.
+  # Not yet exercised by the frontend (CopilotKitProvider lands in Stage 3),
+  # but wired up now so nginx's same-origin proxying is correct end to end
+  # ahead of that.
+  copilot-runtime:
+    build:
+      context: .
+      dockerfile: runtime/Dockerfile
+    environment:
+      # Server-to-server inside the compose network — NOT the browser URL.
+      BACKEND_URL: http://backend:8001
+      PORT: "3001"
+      ALLOWED_ORIGINS: "http://localhost:5173"
+      NODE_OPTIONS: "--max-old-space-size=512"
+      # Anonymous telemetry is ON by default in @copilotkit/runtime — this is
+      # an internal tool behind auth, so it must be off (verified via a live
+      # /api/copilotkit/info check: telemetryDisabled flips true/false with
+      # this var).
+      COPILOTKIT_TELEMETRY_DISABLED: "true"
+    depends_on:
+      backend:
+        condition: service_started
+    # No host port needed — nginx proxies it. Uncomment for local debugging:
+    # ports: ["3001:3001"]
+
   frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
       args:
-        # The URL the BROWSER uses to reach the backend (baked at build time).
-        VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:8001}
+        # Same-origin by default now (plan §A.11) — nginx.conf proxies
+        # /api/backend/ -> backend:8001 and /api/copilotkit/ -> copilot-runtime:3001,
+        # so nothing needs to be baked in at build time anymore. Kept as an
+        # override (accepting "") for one release so a pinned compose
+        # override that still sets VITE_BACKEND_URL doesn't break.
+        VITE_BACKEND_URL: ${VITE_BACKEND_URL:-}
     depends_on:
       - backend
+      - copilot-runtime
     ports:
       - "5173:80"
 
