@@ -201,6 +201,17 @@ def _contract_bullets(key: str, params: dict[str, Any]) -> list[str]:
         return [params["subtitle"]] if params.get("subtitle") else []
     if key == "delivery_effort":
         return [params["total_md"]] if params.get("total_md") else []
+    if key == "success_story":
+        # `params` here is ONE case's dict (_build_deck_plan_registry calls this per-case,
+        # not with the {"cases": [...]} wrapper _b_success_stories returns).
+        bullets = []
+        if params.get("context_paragraph"):
+            bullets.append(params["context_paragraph"])
+        if params.get("outcome"):
+            bullets.append(f"Outcome: {params['outcome']}")
+        if params.get("tech"):
+            bullets.append("Tech: " + ", ".join(params["tech"][:8]))
+        return bullets
     return []
 
 
