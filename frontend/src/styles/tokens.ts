@@ -27,8 +27,18 @@ export interface ThemeTokens {
     600: string; // pressed
     500: string; // primary fill, active tab
     400: string; // hover, focus ring, live indicator
-    300: string; // accent text on dark/light ground
+    300: string; // pale tint ramp step — background use only, NOT text (see `text` below)
     fg: string; // text on an accent fill
+    // A stable SEMANTIC role ("legible accent-colored text on this theme's
+    // surface"), deliberately NOT tied to a fixed ramp step — that step's
+    // actual role flips between themes (dark: the lightest step reads as
+    // text; light: that same light step is illegibly pale on a white
+    // ground, so light mode needs a DARKER step for the same job instead).
+    // Bug found via Playwright visual verification (Stage 1): mapping
+    // --color-accent-text straight to accent[300] made the "AG-UI" pill and
+    // logo icon vanish in light mode. Always read `text`, never `300`, when
+    // you need accent-colored copy.
+    text: string;
   };
   semantic: {
     ok: string;
