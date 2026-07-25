@@ -423,9 +423,6 @@ def build_deck_plan(
         subtitle=subtitle,
         brand=brand,
     )
-        "months": timeline.get("months") or 0,
-        "sprints": timeline.get("sprints") or 0,
-    }
 
 
 def _build_deck_plan_legacy(
