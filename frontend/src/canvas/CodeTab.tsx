@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
+import type { HighlighterGeneric } from "shiki";
 import Button from "../ui/Button";
 import { usePersistentState } from "../lib/usePersistentState";
 
-type Highlighter = { codeToHtml: (code: string, opts: Record<string, unknown>) => string };
+type Highlighter = HighlighterGeneric<"python" | "xml", "github-dark" | "github-light">;
 
 // Module-level singleton — one highlighter instance shared across every
 // mount of this tab (diagram code + drawio XML both use it), not
 // re-initialized per tab switch. Narrow bundle (2 langs, 2 themes) so this
 // stays a small dynamic import rather than landing in the initial chunk
-// (plan §G: shiki via a narrow, lazily-imported bundle).
+// (plan §G: shiki via a narrow, lazily-imported bundle). Only the TYPE
+// import above is eager — `import type` is erased at build time, so it
+// carries no runtime bundle cost.
 let highlighterPromise: Promise<Highlighter> | null = null;
 function getHighlighter(): Promise<Highlighter> {
   if (!highlighterPromise) {
