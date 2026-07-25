@@ -1,7 +1,22 @@
 /** Pure utilities and shared types for the diagram agent hooks. */
 
-export const BACKEND_URL =
-  (import.meta.env.VITE_BACKEND_URL as string | undefined) ?? "http://localhost:8001";
+// Same-origin by default (plan §A.11): nginx.conf proxies /api/backend/ ->
+// backend:8001 and /api/copilotkit/ -> copilot-runtime:3001, so nothing is
+// baked into the image at build time and the same image runs in dev,
+// staging and prod. `vite.config.ts`'s dev-server proxy mirrors this exactly
+// so `npm run dev` and the built image resolve identically.
+// VITE_BACKEND_URL is kept only as a `vite dev`-outside-docker escape hatch
+// (e.g. pointing at a backend on a different host) — accepting "" is
+// intentional for one release so a pinned compose override with an empty
+// build arg doesn't break (see docker-compose.yml comment on the frontend
+// service's build args).
+export const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL as string | undefined) || "/api/backend";
+
+// The Node CopilotKit v2 runtime service (runtime/), added in the
+// CopilotKit migration (plan §A). Unused until Stage 3 wires
+// CopilotKitProvider — present now so the same-origin addressing story is
+// consistent end to end before that lands.
+export const RUNTIME_URL = (import.meta.env.VITE_RUNTIME_URL as string | undefined) || "/api/copilotkit";
 
 // ---- Shared domain types ---- //
 
