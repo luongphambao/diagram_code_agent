@@ -1344,6 +1344,8 @@ def _wbs_sheet_image_slide(prs: Presentation, image_path: Path, slide_no: int, t
     client-facing Excel look — see wbs_excel_render.py)."""
     slide = prs.slides.add_slide(_layout(prs, "Blank", "Empty"))
     _add_title(slide, title)
+    if _palette().get("card_shadow", False):
+        _add_card(slide, 0.4, 0.9, 12.45, 5.85, fill=BNK_WHITE)
     _image_fit(slide, image_path, 0.55, 1.05, 12.15, 5.55)
     _add_footer(slide, slide_no)
     return slide
