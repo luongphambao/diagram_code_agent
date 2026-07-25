@@ -439,6 +439,7 @@ def _add_textbox(
     font_size: int = 16,
     bold: bool = False,
     align: PP_ALIGN | None = None,
+    color: RGBColor | None = None,
 ) -> None:
     box = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
     tf = box.text_frame
@@ -453,6 +454,8 @@ def _add_textbox(
         run.font.size = Pt(font_size)
         run.font.bold = bold
         run.font.name = _palette().get("font", BNK_FONT)
+        if color is not None:
+            run.font.color.rgb = color
 
 
 def _add_bullets(
