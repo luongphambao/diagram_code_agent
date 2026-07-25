@@ -152,7 +152,7 @@ def _wbs_totals(wbs: Optional[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def build_deck_plan(
+def _build_deck_plan_legacy(
     model: SolutionModel,
     *,
     wbs: Optional[dict[str, Any]] = None,
@@ -162,10 +162,15 @@ def build_deck_plan(
     subtitle: str = "",
     brand: str = "",
 ) -> DeckPlan:
-    """Assemble the fixed BnK storyboard from the CSM (deterministic, no LLM, no I/O).
+    """The original hand-written storyboard sequence (deterministic, no LLM, no I/O).
 
     Bullets and `source_refs` are derived from the CSM entities a slide presents, so a
     claim is grounded by construction; `validate_deck` then enforces that grounding.
+
+    Kept as the defensive fallback for :func:`build_deck_plan` — see that function's
+    docstring. Prefer extending ``deck_sections.SECTION_CONTENT_CONTRACTS`` +
+    ``deck_resolver`` over this function; it exists only so a registry regression never
+    takes deck generation down with it.
     """
     brief = brief or {}
     totals = _wbs_totals(wbs)
