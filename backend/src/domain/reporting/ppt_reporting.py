@@ -35,7 +35,9 @@ from domain.reporting.reporting import (
 
 DEFAULT_PPT_SECTIONS = [
     "cover",
+    "agenda",
     "executive_summary",
+    "success_story",
     "solution_overview",
     "scope",
     "architecture_diagram",
