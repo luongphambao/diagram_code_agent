@@ -535,7 +535,15 @@ def _add_soft_shadow(
     best-effort helper in this module)."""
     try:
         from pptx.oxml import parse_xml
+        from pptx.oxml.ns import qn
 
+        spPr = shape._element.spPr  # noqa: SLF001 - no public spPr-effect API
+        # CT_ShapeProperties allows at most ONE effectLst — shape.shadow.inherit = False
+        # (used by _add_card) already inserts an empty <a:effectLst/>; a second one is
+        # invalid OOXML that python-pptx happily writes/re-reads but LibreOffice/PowerPoint
+        # reject, so any existing one must be removed before appending ours.
+        for existing in spPr.findall(qn("a:effectLst")):
+            spPr.remove(existing)
         emu_blur = int(blur_pt * 12700)
         emu_dist = int(dist_pt * 12700)
         alpha_val = int(max(0, min(100, alpha_pct)) * 1000)
@@ -545,7 +553,7 @@ def _add_soft_shadow(
             f'<a:srgbClr val="{color}"><a:alpha val="{alpha_val}"/></a:srgbClr>'
             "</a:outerShdw></a:effectLst>"
         )
-        shape._element.spPr.append(parse_xml(xml))  # noqa: SLF001 - no public spPr-effect API
+        spPr.append(parse_xml(xml))
     except Exception:  # noqa: BLE001 — a missing shadow must never break the deck
         pass
 
