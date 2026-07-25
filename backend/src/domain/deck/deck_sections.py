@@ -84,6 +84,8 @@ Block = Literal[
     "client_info",
     "diagram",  # architecture image slide (Empty layout + asset_ref)
     "wbs_detail_image",  # the "2. WBS" sheet screenshot (LibreOffice render, WS3)
+    "diagram_image",  # a finalized non-architecture diagram (sequence/erd/state_machine/
+    # process) from diagram_manifest.json (WS4)
     "cover",
     "divider",
     "closing",  # structural — no params to generate
