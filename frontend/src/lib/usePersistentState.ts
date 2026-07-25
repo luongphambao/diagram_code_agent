@@ -36,7 +36,6 @@ export function usePersistentState<T>(
       /* ignore — quota exceeded or storage disabled; the preference just
        * won't persist across reloads, which is a harmless degradation. */
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, state]);
 
   const set = useCallback((value: T | ((prev: T) => T)) => {
