@@ -185,16 +185,22 @@ def _contract_title(contract: SectionContract, params: dict[str, Any]) -> str:
 
 
 def _contract_bullets(key: str, params: dict[str, Any]) -> list[str]:
-    """Shape a builder's params dict into the plain bullet list the layout-driven
-    ('block'=='bullets') renderer consumes. Only the handful of "bullets"-block content
-    contracts the registry builder actually surfaces need an entry here — everything else
-    renders via its own structured block (func_nfr/sdlc/delivery_effort/...) and never
-    reads SlideSpec.bullets at all."""
+    """Shape a builder's params dict into the plain bullet list some consumers read.
+
+    The renderer for most structured blocks (func_nfr/sdlc/gantt/pricing/team/...) ignores
+    SlideSpec.bullets entirely — it re-derives its data straight from wbs.json/report at
+    render time. But `validate_deck`'s consistency check greps the delivery_effort slide's
+    *bullets* text for the stated WBS total (it has no other way to know what the slide
+    will say), so that one block's params ARE mirrored into bullets even though the
+    renderer itself won't read them — keeps the QA layer meaningful for the registry path.
+    """
     if key == "exec_summary_overview":
         bullets = [params["intro_paragraph"]] if params.get("intro_paragraph") else []
         return bullets + list(params.get("key_objectives") or [])
     if key == "solution_name":
         return [params["subtitle"]] if params.get("subtitle") else []
+    if key == "delivery_effort":
+        return [params["total_md"]] if params.get("total_md") else []
     return []
 
 
