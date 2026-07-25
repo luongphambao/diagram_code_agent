@@ -258,6 +258,13 @@ def _refresh_deck_plan(title: str = "", subtitle: str = "", brand: str = ""):
     model = build_solution_model(current_workspace())
     wbs = _read_json_file(current_workspace() / "wbs.json", {}) or {}
     brief = _read_json_file(current_workspace() / "diagram_brief.json", {}) or {}
+    # out.slide.json is where title/kicker/brand/diagram-png metadata actually live in a
+    # real workspace (diagram_brief.json carries none of these) — the registry-driven
+    # builder's cover/solution_name/architecture contracts read from `meta`, not `brief`.
+    meta = _read_json_file(current_workspace() / "out.slide.json", {}) or {}
+    # business_narrative.json is a new, optional artifact (case_study/value_props/kpis/...)
+    # — absent in every workspace today; every builder degrades gracefully without it.
+    narrative = _read_json_file(current_workspace() / "business_narrative.json", {}) or {}
     has_diagram = (current_workspace() / "out.body.png").exists() or (
         current_workspace() / "out.png"
     ).exists()
@@ -265,6 +272,8 @@ def _refresh_deck_plan(title: str = "", subtitle: str = "", brand: str = ""):
         model,
         wbs=wbs,
         brief=brief,
+        meta=meta,
+        narrative=narrative,
         has_diagram=has_diagram,
         title=title,
         subtitle=subtitle,
