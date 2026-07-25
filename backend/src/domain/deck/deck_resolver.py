@@ -218,16 +218,37 @@ def _b_goals_value(model, wbs, nar, meta, lib):
     }
 
 
-def _b_success_story(model, wbs, nar, meta, lib):
-    cs = nar.get("case_study") or (pick_case_study(model, lib) if lib else None)
-    if not cs:
-        return {}
+def _case_to_params(cs: dict[str, Any]) -> dict[str, Any]:
+    est = cs.get("estimate") or {}
+    wbs_match = cs.get("wbs_match") or {}
+    effort_md = wbs_match.get("total_mandays") or est.get("effort_md")
     return {
         "case_title": _clip(cs.get("title"), 60),
-        "context_paragraph": _clip(cs.get("problem") or cs.get("context"), 300),
-        "outcome": _clip(cs.get("outcome") or cs.get("solution"), 240),
+        "client": _clip(cs.get("client"), 80),
+        "context_paragraph": _clip(cs.get("problem") or cs.get("context"), 320),
+        "outcome": _clip(cs.get("outcome") or cs.get("solution"), 260),
+        "tech": list((cs.get("tech") or [])[:8]),
+        "effort_md": effort_md,
         "image_ref": cs.get("image_ref"),
+        "slug": cs.get("slug") or "",
     }
+
+
+def _b_success_stories(model, wbs, nar, meta, lib):
+    """Top-k reference projects (docx WS2: "Success Story" needs 2-3 analogs, not 1).
+
+    A narrative override (``business_narrative.case_study``) always wins and yields exactly
+    one slide (the user picked it deliberately); otherwise auto-pick via ``pick_case_studies``
+    (semantic retrieval over solution_memory, falling back to the keyword scorer) so the deck
+    shows several real past projects instead of a single generic analog.
+    """
+    if nar.get("case_study"):
+        cases = [nar["case_study"]]
+    else:
+        cases = pick_case_studies(model, lib, k=3)
+    if not cases:
+        return {}
+    return {"cases": [_case_to_params(c) for c in cases]}
 
 
 def _b_solution_name(model, wbs, nar, meta, lib):
