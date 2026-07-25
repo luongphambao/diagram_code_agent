@@ -98,11 +98,79 @@ describe("PassthroughRunner", () => {
     expect(await runner.stop({ threadId: "never-ran" })).toBe(false);
   });
 
-  it("connect() returns an empty stream — no server-side replay (plan §A.5/R7)", async () => {
-    const runner = new PassthroughRunner();
-    // RxJS's EMPTY completes immediately with zero emissions; toArray() still
-    // emits exactly one value on completion — the accumulated (empty) array.
-    const received = await firstValueFrom(runner.connect({ threadId: "t1" }).pipe(toArray()));
-    expect(received).toEqual([]);
+  describe("connect()", () => {
+    // Found live (Stage 3 Playwright verification against the real backend):
+    // @copilotkit/core's connectAgent() unconditionally clears agent
+    // messages/state on every "fresh restore" (any thread switch), expecting
+    // the runner's connect() stream to replay history and repopulate them.
+    // connect() returning EMPTY (the original design) meant every
+    // conversation switch silently wiped the chat to blank — CopilotKit's
+    // own clear ran, and nothing ever refilled it. This suite locks in the
+    // fix: connect() fetches the backend's history REST endpoint and
+    // replays it as MESSAGES_SNAPSHOT + STATE_SNAPSHOT.
+
+    const originalFetch = global.fetch;
+    afterEach(() => {
+      global.fetch = originalFetch;
+    });
+
+    it("replays history as MESSAGES_SNAPSHOT + STATE_SNAPSHOT on a 200 response", async () => {
+      const messages = [{ id: "u1", role: "user", content: "hello" }];
+      const state = { current_step: "done" };
+      global.fetch = vi.fn(
+        async () =>
+          new Response(JSON.stringify({ name: "t", messages, state }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ) as unknown as typeof fetch;
+
+      const runner = new PassthroughRunner();
+      const received = await firstValueFrom(runner.connect({ threadId: "thread-1" }).pipe(toArray()));
+
+      expect(received).toEqual([
+        { type: "MESSAGES_SNAPSHOT", messages },
+        { type: "STATE_SNAPSHOT", snapshot: state },
+      ]);
+    });
+
+    it("completes with no events on a 404 (genuinely new thread, nothing to replay)", async () => {
+      global.fetch = vi.fn(async () => new Response("not found", { status: 404 })) as unknown as typeof fetch;
+
+      const runner = new PassthroughRunner();
+      const received = await firstValueFrom(runner.connect({ threadId: "brand-new" }).pipe(toArray()));
+
+      expect(received).toEqual([]);
+    });
+
+    it("completes (does not throw) when the backend is unreachable", async () => {
+      global.fetch = vi.fn(async () => {
+        throw new Error("ECONNREFUSED");
+      }) as unknown as typeof fetch;
+
+      const runner = new PassthroughRunner();
+      const received = await firstValueFrom(runner.connect({ threadId: "t1" }).pipe(toArray()));
+
+      expect(received).toEqual([]);
+    });
+
+    it("forwards the connect request's headers to the history fetch", async () => {
+      const fetchMock = vi.fn(
+        async () => new Response(JSON.stringify({ name: "t", messages: [], state: {} }), { status: 200 }),
+      );
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      const runner = new PassthroughRunner();
+      await firstValueFrom(
+        runner
+          .connect({ threadId: "t1", headers: { authorization: "Bearer xyz" } })
+          .pipe(toArray()),
+      );
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining("/conversations/t1/history"),
+        expect.objectContaining({ headers: { authorization: "Bearer xyz" } }),
+      );
+    });
   });
 });
