@@ -392,6 +392,52 @@ SECTION_CONTENT_CONTRACTS: tuple[SectionContract, ...] = (
         notes="Emit ONLY when a rendered diagram exists (has_diagram). Often preceded by a "
         "Head-01 'Architecture Overview' sub-header.",
     ),
+    SectionContract(
+        key="solution_architecture_explanation",
+        section="architecture_diagram",
+        kind="content",
+        title="PROPOSED SOLUTION | Architecture Explanation",
+        role="architecture",
+        layout="Detail-01",
+        block="bullets",  # reuses the plain bullets renderer — no new block needed
+        data_source="blueprint.json.key_decisions + CSM components (deck_resolver._components_by_cluster)",
+        status="ready",
+        params=(
+            _p("decisions", "Key architecture/technology decisions and their rationale.", required=False),
+            _p("components", "Component groups the diagram shows, one line per cluster.", required=False),
+        ),
+        required_inputs=("out.png",),
+        slide_count=(0, 1),
+        optional=True,
+        notes="Pairs with solution_architecture right after it — explains WHY the diagram "
+        "looks the way it does instead of just showing the picture. Skips cleanly when "
+        "there's no diagram, or the CSM has neither decisions nor components to cite.",
+    ),
+    SectionContract(
+        key="solution_additional_diagrams",
+        section="architecture_diagram",
+        kind="content",
+        title="PROPOSED SOLUTION | {diagram_title}",
+        role="architecture",
+        layout="Empty",
+        block="diagram_image",
+        data_source="diagram_manifest.json — other finalized diagrams (sequence/erd/state_machine/"
+        "process), see tools.rendering_tools.finalize_diagram(kind=...)",
+        status="new_block",
+        params=(
+            _p("kind", "Diagram kind (sequence/erd/state_machine/process/...).", required=False),
+            _p("title", "Slide title for this diagram kind.", required=False),
+            _p("image_ref", "Path to the rendered diagram PNG.", required=False),
+        ),
+        required_inputs=("diagram_manifest.additional",),
+        slide_count=(0, 4),
+        optional=True,
+        notes="One slide per finalized NON-architecture diagram on file (a project may "
+        "finalize an architecture diagram, then a sequence diagram of its main flow, then "
+        "an ERD of its data model — each via finalize_diagram(kind=...), each preserved "
+        "instead of the next render overwriting the last). Skips cleanly when only the "
+        "primary architecture diagram has been finalized.",
+    ),
     # ---- IV. Scope of Work (rendered under Solution or its own section) ----
     SectionContract(
         key="scope_sdlc",
