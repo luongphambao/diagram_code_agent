@@ -35,7 +35,11 @@ function GateRegistrar({ type, onDecision }: { type: GateType; onDecision: OnDec
     available: false,
     render: (props) => {
       if (props.status === ToolCallStatus.InProgress) {
-        return <def.Card toolCallId={props.toolCallId} args={{}} status={props.status} respond={undefined} />;
+        return (
+          <GateFrame label={def.label} tone={def.tone} status={props.status}>
+            {null}
+          </GateFrame>
+        );
       }
 
       const parsed = parseGatePayload(type, props.args);
