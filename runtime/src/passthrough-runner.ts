@@ -32,7 +32,22 @@ export class PassthroughRunner extends AgentRunner {
       this.inflight.set(request.threadId, request.agent);
 
       const subscription = request.agent.subscribe({
-        onEvent: ({ event }) => subscriber.next(event),
+        // Offload the big base64 artifact fields (plan §A.6) as they stream
+        // down, so the BROWSER's own agent.state never holds the multi-MB
+        // strings that `handle-run.ts` would otherwise post right back to
+        // this runtime on the next turn.
+        onEvent: ({ event }) => {
+          const e = event as unknown as { type: string; delta?: unknown; snapshot?: unknown };
+          if (e.type === "STATE_DELTA") {
+            subscriber.next({ ...event, delta: substituteStateDelta(request.threadId, e.delta) } as BaseEvent);
+            return;
+          }
+          if (e.type === "STATE_SNAPSHOT") {
+            subscriber.next({ ...event, snapshot: substituteSnapshot(request.threadId, e.snapshot) } as BaseEvent);
+            return;
+          }
+          subscriber.next(event);
+        },
       });
 
       request.agent
