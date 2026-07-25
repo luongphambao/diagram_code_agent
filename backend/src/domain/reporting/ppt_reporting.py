@@ -1685,8 +1685,31 @@ def generate_ppt_proposal_file(
     subtitle: str = "",
     brand: str = "",
     include_sections: list[str] | None = None,
+    deck_style: str = "corporate",
 ) -> tuple[Path, list[str], list[str]]:
-    """Return (pptx_path, sections_rendered, unrecognized_section_names)."""
+    """Return (pptx_path, sections_rendered, unrecognized_section_names).
+
+    ``deck_style`` selects the brand palette (see DECK_STYLES / _STYLE_PRESETS) for THIS
+    call only — set/reset around the actual render so a concurrent call for a different
+    workspace/style is never affected.
+    """
+    token = set_deck_style(deck_style)
+    try:
+        return _generate_ppt_proposal_file_body(
+            workspace, title=title, subtitle=subtitle, brand=brand, include_sections=include_sections
+        )
+    finally:
+        _deck_style_ctx.reset(token)
+
+
+def _generate_ppt_proposal_file_body(
+    workspace: Path,
+    *,
+    title: str = "",
+    subtitle: str = "",
+    brand: str = "",
+    include_sections: list[str] | None = None,
+) -> tuple[Path, list[str], list[str]]:
     template = _template_path()
     if not template.exists():
         raise PPTProposalError(f"BnK template not found: {template}")
