@@ -297,7 +297,7 @@ describe("malformed payload fallback (parseGatePayload)", () => {
     const { unmount } = render(
       <UnknownGateCard label="Tech Stack Recommendation" reason="tech_stack is missing." rawArgs={{ question: "x" }} status={ToolCallStatus.Executing} respond={approveRespond} />,
     );
-    await user.click(within(screen.getByRole("group")).getByRole("button", { name: /approve anyway/i }));
+    await user.click(screen.getByRole("button", { name: /approve anyway/i }));
     expect(approveRespond).toHaveBeenCalledWith({ action: "approve", approved: true });
     unmount();
 
