@@ -1,0 +1,49 @@
+{
+  "description": "Section B.4 of the plan (giao-dien-thiet-ke-jaunty-rain.md): the runtime's sanitizeMessages()/requestInit() must deliver each `lastUserMessage` to backend/src/routers/chat.py byte-identical, because _last_user_text() -> the phrase-matchers in backend/src/session/followups.py decide whether clear_stage_markers() wipes tech_stack.json/blueprint.json/wbs.json. This table is consumed by runtime/src/__tests__/message-integrity.test.ts (Stage 2) -- it asserts requestInit(input).body's messages array contains `lastUserMessage` verbatim for every case, and that `mustNotMatchSubstring` truly does not match the whole-word regex semantics of _matches_whole_phrase (backend/src/session/followups.py:24-33).",
+  "cases": [
+    {
+      "label": "Vietnamese PDF follow-up with diacritics",
+      "priorMessages": [
+        { "id": "m1", "role": "user", "content": "Thiết kế kiến trúc microservices cho hệ thống thanh toán." },
+        { "id": "m2", "role": "assistant", "content": "Đã tạo sơ đồ kiến trúc. Bạn cần thêm gì không?" }
+      ],
+      "lastUserMessage": "tạo báo cáo pdf cho kiến trúc này",
+      "expectedBranch": "_is_pdf_followup -> True (matches whole-word phrase 'tạo báo cáo')",
+      "backendFunction": "_is_pdf_followup",
+      "backendFile": "backend/src/session/followups.py:36-52",
+      "mustPreserveDiacritics": true
+    },
+    {
+      "label": "English business-case request",
+      "priorMessages": [
+        { "id": "m1", "role": "user", "content": "Design a 3-tier web app on AWS." },
+        { "id": "m2", "role": "assistant", "content": "Diagram is ready." }
+      ],
+      "lastUserMessage": "I need a business case",
+      "expectedBranch": "_is_business_case_followup -> True (matches whole-word phrase 'business case')",
+      "backendFunction": "_is_business_case_followup",
+      "backendFile": "backend/src/session/followups.py:226-262"
+    },
+    {
+      "label": "Vietnamese request mentioning 'docker' -- must NOT match 'doc'",
+      "priorMessages": [],
+      "lastUserMessage": "vẽ sơ đồ cho hệ thống docker",
+      "expectedBranch": "_is_pdf_followup -> False (substring 'doc' inside 'docker' must not match the \\b-anchored regex)",
+      "backendFunction": "_is_pdf_followup",
+      "backendFile": "backend/src/session/followups.py:24-33,36-52",
+      "mustNotMatchSubstring": "doc",
+      "note": "This is the exact false-positive _matches_whole_phrase's docstring warns about: plain substring matching would wrongly flag this as a PDF follow-up and skip clear_stage_markers(), silently reusing a stale tech_stack.json for what is actually a brand new design request."
+    },
+    {
+      "label": "Vietnamese WBS-via-email request -- email must win over wbs detector",
+      "priorMessages": [
+        { "id": "m1", "role": "user", "content": "Thiết kế hệ thống và ước lượng effort." },
+        { "id": "m2", "role": "assistant", "content": "WBS đã sẵn sàng." }
+      ],
+      "lastUserMessage": "gửi file WBS qua email",
+      "expectedBranch": "_is_email_followup -> True (send verb 'gửi' + email channel 'email' co-occur) -- must be CHECKED BEFORE _is_wbs_followup in chat.py's dispatch order, else the 'wbs' substring would misroute this into a re-export/regenerate instead of send-what-exists",
+      "backendFunction": "_is_email_followup",
+      "backendFile": "backend/src/session/followups.py:104-126"
+    }
+  ]
+}
