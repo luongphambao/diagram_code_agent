@@ -1180,14 +1180,28 @@ def _pricing_slide(prs: Presentation, report: dict[str, Any], slide_no: int, tit
         rows: list[list[Any]] = [[r["module"], f"${int(r['cost']):,}"] for r in capex_rows[:12]]
         total = report.get("capex_total") or sum(r["cost"] for r in capex_rows)
         rows.append(["Total (NET, excluding taxes/VAT)", f"${int(total):,}"])
+
+        pal = _palette()
+        show_stats = pal.get("card_shadow", False)
+        content_y = _CONTENT_Y + (0.7 if show_stats else 0)
+        content_h = _CONTENT_H - (0.7 if show_stats else 0)
+
         if len(capex_rows) < 2:
-            return _table_slide(prs, title, ["Module", "Cost (USD)"], rows, slide_no, col_widths=[8.5, 3.6])
+            slide = prs.slides.add_slide(_layout(prs, "Detail-01"))
+            _add_title(slide, title)
+            if show_stats:
+                _add_stat_block(slide, f"${int(total):,}", "Total Estimated Cost", _CONTENT_X, 1.0, _CONTENT_W, 0.65)
+            _add_table(slide, ["Module", "Cost (USD)"], rows, x=_CONTENT_X, y=content_y, w=_CONTENT_W, h=content_h, col_widths=[8.5, 3.6])
+            _add_footer(slide, slide_no)
+            return slide
         # A bar-by-module chart only makes sense with >=2 modules to compare.
         slide = prs.slides.add_slide(_layout(prs, "Detail-01"))
         _add_title(slide, title)
+        if show_stats:
+            _add_stat_block(slide, f"${int(total):,}", "Total Estimated Cost", _CONTENT_X, 1.0, _CONTENT_W, 0.65)
         table_w = _CONTENT_W * 0.56
         _add_table(
-            slide, ["Module", "Cost (USD)"], rows, x=_CONTENT_X, y=_CONTENT_Y, w=table_w, h=_CONTENT_H
+            slide, ["Module", "Cost (USD)"], rows, x=_CONTENT_X, y=content_y, w=table_w, h=content_h
         )
         chart_x = _CONTENT_X + table_w + 0.3
         _add_bar_chart(
@@ -1195,9 +1209,9 @@ def _pricing_slide(prs: Presentation, report: dict[str, Any], slide_no: int, tit
             [r["module"] for r in capex_rows[:8]],
             [r["cost"] for r in capex_rows[:8]],
             chart_x,
-            _CONTENT_Y,
+            content_y,
             _CONTENT_W - table_w - 0.3,
-            _CONTENT_H,
+            content_h,
             "Cost by Module (USD)",
         )
         _add_footer(slide, slide_no)
