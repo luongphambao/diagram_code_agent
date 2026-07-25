@@ -100,9 +100,9 @@ describe("PassthroughRunner", () => {
 
   it("connect() returns an empty stream — no server-side replay (plan §A.5/R7)", async () => {
     const runner = new PassthroughRunner();
-    const received = await firstValueFrom(runner.connect({ threadId: "t1" }).pipe(toArray()), {
-      defaultValue: "EMPTY_COMPLETED" as const,
-    });
-    expect(received).toBe("EMPTY_COMPLETED");
+    // RxJS's EMPTY completes immediately with zero emissions; toArray() still
+    // emits exactly one value on completion — the accumulated (empty) array.
+    const received = await firstValueFrom(runner.connect({ threadId: "t1" }).pipe(toArray()));
+    expect(received).toEqual([]);
   });
 });
