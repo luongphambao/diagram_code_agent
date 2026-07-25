@@ -206,9 +206,9 @@ def audit_pptx_deterministic(pptx_path: str | Path) -> DeckVisualAuditResult:
                     shape.has_text_frame and shape.text_frame.text.strip() for shape in slide.shapes
                 )
                 if not has_text:
-                    # Check for image/table — those are OK
+                    # Check for image/table/chart — those are OK
                     has_content = any(
-                        shape.shape_type in (13, 19)  # MSO_SHAPE_TYPE.PICTURE, TABLE
+                        shape.shape_type in (13, 19, 3)  # MSO_SHAPE_TYPE.PICTURE, TABLE, CHART
                         for shape in slide.shapes
                     )
                     if not has_content:
