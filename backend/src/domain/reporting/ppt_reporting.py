@@ -1239,6 +1239,13 @@ def _render_block(
     if block == "case_study":
         _case_study_slide(prs, (spec or {}).get("params") or {}, slide_no, title or "SUCCESS STORY")
         return
+    if block == "wbs_detail_image":
+        img = _wbs_sheet_image_path(workspace, "wbs")
+        if img:
+            _wbs_sheet_image_slide(prs, img, slide_no, title or "PROJECT DELIVERY | WBS Breakdown")
+        else:
+            _detail_slide(prs, title, ["WBS breakdown screenshot not yet available."], slide_no)
+        return
     if block == "tech_stack_table":
         _tech_stack_table_slide(
             prs, report, slide_no, title or "PROPOSED SOLUTION | Technical Stack", workspace=workspace
@@ -1248,14 +1255,19 @@ def _render_block(
     elif block == "sdlc":
         _sdlc_scope_slide(prs, report, workspace, slide_no, title or "SCOPE OF WORK | SDLC Phases")
     elif block == "delivery_effort":
-        _delivery_effort_slide(prs, workspace, slide_no, title or "PROJECT DELIVERY | Estimated Effort")
+        effort_title = title or "PROJECT DELIVERY | Estimated Effort"
+        effort_img = _wbs_sheet_image_path(workspace, "effort")
+        if effort_img:
+            _wbs_sheet_image_slide(prs, effort_img, slide_no, effort_title)
+        else:
+            _delivery_effort_slide(prs, workspace, slide_no, effort_title)
     elif block == "gantt":
-        _gantt_slide(
-            prs,
-            _gantt_params_from_wbs(workspace),
-            slide_no,
-            title or "PROJECT DELIVERY | Master Plan & Milestones",
-        )
+        gantt_title = title or "PROJECT DELIVERY | Master Plan & Milestones"
+        delivery_img = _wbs_sheet_image_path(workspace, "delivery")
+        if delivery_img:
+            _wbs_sheet_image_slide(prs, delivery_img, slide_no, gantt_title)
+        else:
+            _gantt_slide(prs, _gantt_params_from_wbs(workspace), slide_no, gantt_title)
     elif block == "pricing":
         _pricing_slide(prs, report, slide_no, title or "PRICING | CAPEX")
     elif block == "milestones":
