@@ -136,7 +136,7 @@ export default function BlueprintCard({ args, status, respond }: GateCardProps) 
                 {grouped.map(({ cluster, nodes: cNodes }) => (
                   <div key={cluster.id} className="rounded-sm border border-line bg-well px-3 py-2">
                     <div className="mb-1.5 flex items-center gap-1.5">
-                      <span className={`h-1.5 w-1.5 rounded-full bg-${colorForKey(cluster.tier ?? "") === "neutral" ? "muted" : "accent"}`} />
+                      <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
                       <span className="text-xs font-semibold text-fg">{cluster.label}</span>
                     </div>
                     <div className="flex flex-wrap gap-1">
