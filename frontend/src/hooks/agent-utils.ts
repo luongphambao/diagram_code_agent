@@ -246,9 +246,16 @@ export interface LastMeeting {
   meet_link: string;
 }
 
+export interface RunMetrics {
+  model_calls?: number;
+  tool_counts?: Record<string, number>;
+  tool_budget_summary?: Record<string, unknown>;
+}
+
 export interface AgentState {
   current_step?: string;
   iteration?: number;
+  run_metrics?: RunMetrics;
   png_base64?: string;
   pdf_base64?: string;
   pptx_base64?: string;
