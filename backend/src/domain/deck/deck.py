@@ -343,6 +343,29 @@ def _build_deck_plan_registry(
         if not _has_real_content(params):
             continue  # the builder found nothing usable — skip, never render blank/{placeholder}
 
+        if contract.key == "success_story":
+            # One contract, MANY slides: _b_success_stories returns top-k picked past
+            # projects as {"cases": [...]}; each case gets its own slide (its own title,
+            # bullets, and params for _case_study_slide to render) instead of the generic
+            # one-contract-one-slide path below.
+            flush_pending_divider()
+            for cs in (params.get("cases") or [])[:3]:
+                slides.append(
+                    SlideSpec(
+                        slide_no=len(slides) + 1,
+                        section=contract.section,
+                        title=contract.title.replace(
+                            "{case_title}", cs.get("case_title") or "Reference Project"
+                        ),
+                        layout=contract.layout,
+                        block=contract.block,
+                        bullets=_contract_bullets(contract.key, cs),
+                        narrative_role=contract.role,
+                        params=cs,
+                    )
+                )
+            continue
+
         block, asset_ref = contract.block, None
         if block == "diagram":
             # Drive through the EXISTING asset_ref-based dispatch in ppt_reporting._render_slide
