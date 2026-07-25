@@ -151,8 +151,9 @@ class PptProposalConfig(BaseModel):
         "corporate",
         description=(
             "Visual style preset for the whole deck: 'corporate' (default BnK blue), "
-            "'modern' (slate + teal), or 'minimal' (near-monochrome charcoal). Ask the "
-            "user which they prefer when they want a distinct look; otherwise leave default."
+            "'modern' (slate + teal), 'minimal' (near-monochrome charcoal), or 'vip' "
+            "(premium navy/teal look with gradient dividers, cards, and stat callouts). "
+            "Ask the user which they prefer when they want a distinct look; otherwise leave default."
         ),
     )
 
