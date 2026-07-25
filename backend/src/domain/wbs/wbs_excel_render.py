@@ -107,11 +107,16 @@ def render_wbs_sheets(
             if not kept_sheets:
                 return {}
 
+            # A per-call UserInstallation profile avoids soffice's shared-profile lock,
+            # which would otherwise serialize (or fail) concurrent renders from different
+            # per-thread workspaces (this is a multi-tenant agent backend — see backends.py
+            # §4.10 per-thread isolation).
             subprocess.run(
                 [
                     "soffice",
                     "--headless",
                     "--norestore",
+                    f"-env:UserInstallation=file://{tmp_dir / 'lo_profile'}",
                     "--convert-to",
                     "pdf",
                     "--outdir",
