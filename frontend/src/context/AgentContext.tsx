@@ -1,16 +1,24 @@
 import { createContext, useContext } from "react";
-import type { useDiagramAgent } from "../hooks/useDiagramAgent";
+import type { useDiagramWorkspace } from "../hooks/useDiagramWorkspace";
 
-export type AgentContextValue = ReturnType<typeof useDiagramAgent>;
+/**
+ * Carries useDiagramWorkspace's return value (plan §E.1 replaced
+ * useDiagramAgent — chatMessages/pendingInterrupt/resolveGate/sendMessage
+ * are gone; CopilotKit's <CopilotChat> + useHumanInTheLoop own message
+ * transport now). GateHost reads `recordResolvedGate` from here so the
+ * resolved-gate audit trail stays populated without every gate card needing
+ * its own prop-drilled reference to the workspace hook.
+ */
+export type DiagramWorkspaceContextValue = ReturnType<typeof useDiagramWorkspace>;
 
-const AgentContext = createContext<AgentContextValue | null>(null);
+const DiagramWorkspaceContext = createContext<DiagramWorkspaceContextValue | null>(null);
 
-export const AgentProvider = AgentContext.Provider;
+export const DiagramWorkspaceProvider = DiagramWorkspaceContext.Provider;
 
-export function useAgentContext(): AgentContextValue {
-  const ctx = useContext(AgentContext);
+export function useDiagramWorkspaceContext(): DiagramWorkspaceContextValue {
+  const ctx = useContext(DiagramWorkspaceContext);
   if (!ctx) {
-    throw new Error("useAgentContext must be used within an <AgentProvider>");
+    throw new Error("useDiagramWorkspaceContext must be used within a <DiagramWorkspaceProvider>");
   }
   return ctx;
 }
