@@ -57,7 +57,7 @@ export const dark: ThemeTokens = {
     850: "#131922",
     800: "#1A212C",
     700: "#26313F",
-    500: "#5D6C80",
+    500: "#7E8795", // tuned to clear 4.5:1 on BOTH ink-900 and ink-850 (the harder case) — see CONTRAST_PAIRS
     300: "#9AA8BB",
     100: "#DDE4ED",
   },
