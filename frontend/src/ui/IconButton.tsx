@@ -1,4 +1,4 @@
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { forwardRef, type ButtonHTMLAttributes } from "react";
 
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   label: string; // required — icon-only controls must always have an accessible name
@@ -8,8 +8,7 @@ interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 /**
  * Icon-only control (theme toggle, sidebar collapse, zoom, etc.). `label` is
- * mandatory and rendered via aria-label + a VisuallyHidden fallback for
- * browsers/AT combinations that don't reliably expose aria-label on <button>.
+ * mandatory and doubles as aria-label + title (tooltip).
  */
 const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
   { label, active = false, size = "md", className = "", children, ...rest },
