@@ -36,7 +36,7 @@ export default function DiagramCanvas({
     !!png_base64 || !!pdf_base64 || !!pptx_base64 || !!wbs_summary || !!wbs_xlsx_base64;
 
   // Empty / idle
-  if (!current_step && !isRunning && !hasArtifact && !error && !pendingInterrupt) {
+  if (!current_step && !isRunning && !hasArtifact && !error) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-5 bg-surface">
         <div className="flex h-24 w-24 items-center justify-center rounded-3xl border border-white/8 bg-white/4">
