@@ -773,8 +773,18 @@ def _add_table(
     header_size: int = 13,
     body_size: int = 11,
     max_rows: int = 12,
+    card: bool | None = None,
 ):
-    """Add a brand-styled, editable table. Header row = BnK blue; alternate body tint."""
+    """Add a brand-styled, editable table. Header row = BnK blue; alternate body tint.
+
+    When the active preset has ``card_shadow`` (vip), a soft-shadowed card frame is drawn
+    behind the table (``card=True``/``False`` overrides the preset default).
+    """
+    pal = _palette()
+    use_card = pal.get("card_shadow", False) if card is None else card
+    if use_card:
+        pad = 0.12
+        _add_card(slide, x - pad, y - pad, w + 2 * pad, h + 2 * pad, fill=pal.get("light"))
     rows = [r for r in rows if any(str(c or "").strip() for c in r)][:max_rows]
     if not rows:
         rows = [["—"] * len(headers)]
