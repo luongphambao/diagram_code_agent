@@ -1,4 +1,4 @@
-import { createServer, type IncomingMessage } from "node:http";
+import { createServer } from "node:http";
 import { CopilotRuntime } from "@copilotkit/runtime/v2";
 import { createCopilotNodeListener } from "@copilotkit/runtime/v2/node";
 import type { AbstractAgent } from "@ag-ui/client";
@@ -12,12 +12,18 @@ import { CONFIG } from "./config.js";
  *  transparent to whichever auth mode is deployed. Belt-and-braces:
  *  CopilotRuntime's own `forwardHeaders` denylist already lets custom `x-*`
  *  and `authorization` through by default — this sets them directly on the
- *  per-request agent instance regardless of that policy. */
-function pickAuthHeaders(request: IncomingMessage): Record<string, string> {
+ *  per-request agent instance regardless of that policy.
+ *
+ *  `AgentFactoryContext.request` is verified as a standard Web Fetch `Request`
+ *  (CopilotKit/packages/runtime/src/v2/runtime/core/runtime.ts:88-91) — the
+ *  Node bridge (createCopilotNodeHandler) converts the raw IncomingMessage
+ *  before this factory ever sees it, so `.headers.get(...)`, not
+ *  `.headers[...]`. */
+function pickAuthHeaders(request: Request): Record<string, string> {
   const out: Record<string, string> = {};
   for (const key of ["authorization", "x-auth-request-email", "x-auth-request-role"]) {
-    const value = request.headers[key];
-    if (typeof value === "string" && value) out[key] = value;
+    const value = request.headers.get(key);
+    if (value) out[key] = value;
   }
   return out;
 }
@@ -29,7 +35,7 @@ const runtime = new CopilotRuntime({
   agents: ({ request }) => {
     const agent = new DiagramHttpAgent({
       url: `${CONFIG.backendUrl}/agui`,
-      headers: pickAuthHeaders(request as unknown as IncomingMessage),
+      headers: pickAuthHeaders(request),
     });
     // @copilotkit/runtime@1.63.2 declares `agents` as
     // Record<string, AbstractAgent> against its own bundled @ag-ui/client
