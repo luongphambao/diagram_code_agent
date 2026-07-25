@@ -67,12 +67,12 @@ export default function FileUpload({
                 d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
               />
             </svg>
-            <span className="text-[11px] text-slate-500">Uploading...</span>
+            <span className="text-[11px] text-secondary">Uploading...</span>
           </div>
         ) : (
           <>
             <svg
-              className="h-5 w-5 text-slate-700"
+              className="h-5 w-5 text-muted"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -84,8 +84,11 @@ export default function FileUpload({
                 d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
               />
             </svg>
-            <p className="text-[11px] text-slate-700">
-              Drop PDF/DOCX/TXT or <span className="text-orange-500/70">click to browse</span>
+            <p className="text-[11px] text-muted">
+              Drop PDF/DOCX/TXT or{" "}
+              <span className="font-medium text-accent-text underline-offset-2 hover:underline">
+                click to browse
+              </span>
             </p>
           </>
         )}
@@ -114,7 +117,7 @@ export default function FileUpload({
               </svg>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[11px] font-medium text-slate-300">{f.filename}</p>
-                <p className="text-[10px] text-slate-700">
+                <p className="text-[10px] text-muted">
                   {f.kind.toUpperCase()} · {f.char_count.toLocaleString()} chars
                 </p>
               </div>
@@ -125,7 +128,7 @@ export default function FileUpload({
           ))}
           <button
             onClick={onClear}
-            className="self-end text-[10px] text-slate-700 hover:text-slate-500"
+            className="self-end text-[10px] text-muted hover:text-secondary"
           >
             Clear files
           </button>
