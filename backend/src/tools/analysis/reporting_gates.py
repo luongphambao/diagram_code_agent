@@ -242,7 +242,7 @@ def create_pptx(
         subtitle: Subtitle / kicker line.
         brand: Client brand name shown on the cover.
         include_sections: Section keys to render; leave empty for all sections.
-        deck_style: Visual style preset — 'corporate' (default), 'modern', or 'minimal'.
+        deck_style: Visual style preset — 'corporate' (default), 'modern', 'minimal', or 'vip'.
     """
     try:
         pptx_path, sections, unrecognized = generate_ppt_proposal_file(
