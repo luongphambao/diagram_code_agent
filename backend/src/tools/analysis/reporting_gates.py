@@ -147,6 +147,14 @@ class PptProposalConfig(BaseModel):
             "exact words that requested omitting sections. Leave empty when calling with all sections."
         ),
     )
+    deck_style: str = Field(
+        "corporate",
+        description=(
+            "Visual style preset for the whole deck: 'corporate' (default BnK blue), "
+            "'modern' (slate + teal), or 'minimal' (near-monochrome charcoal). Ask the "
+            "user which they prefer when they want a distinct look; otherwise leave default."
+        ),
+    )
 
 
 @tool(args_schema=PptProposalConfig)
