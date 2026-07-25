@@ -506,22 +506,13 @@ def _add_footer(slide, slide_no: int) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# VIP visual primitives (deck_style="vip") — gradient backgrounds, cards with a
-# soft shadow, eyebrow labels, and stat-number callouts. All are palette-driven so
-# calling them under a non-"vip" preset degrades gracefully (flat fill, no shadow).
+# VIP visual primitives (deck_style="vip") — cards with a soft shadow, eyebrow labels,
+# and stat-number callouts. All are palette-driven so calling them under a non-"vip"
+# preset degrades gracefully (flat fill, no shadow). NOTE: there is no slide-background
+# gradient primitive — the two layouts that would want one (Cover-01, Head Page) already
+# have opaque full-bleed artwork baked into the template, so a background-fill override
+# would render invisibly beneath it (verified during V6 visual QA).
 # --------------------------------------------------------------------------- #
-
-
-def _add_gradient_background(slide, c1: RGBColor, c2: RGBColor, angle: float = 45.0) -> None:
-    """Paint the WHOLE slide with a 2-stop linear gradient (hero cover/divider bg)."""
-    fill = slide.background.fill
-    fill.gradient()
-    stops = fill.gradient_stops
-    stops[0].color.rgb = c1
-    stops[0].position = 0.0
-    stops[-1].color.rgb = c2
-    stops[-1].position = 1.0
-    fill.gradient_angle = angle
 
 
 def _add_soft_shadow(
