@@ -745,7 +745,7 @@ def _tech_stack_icon_slide(
             r.font.size = Pt(11)
             r.font.bold = True
             r.font.name = BNK_FONT
-            r.font.color.rgb = BNK_BLUE
+            r.font.color.rgb = _palette()["blue"]
         x = 3.15
         for it in icons:
             if x > 12.6:
