@@ -102,12 +102,6 @@ export default function DiagramCanvas({
         </p>
       )}
 
-      {pendingInterrupt && !isRunning && (
-        <p className="text-xs text-blue-500/80">
-          ← Review this step in the chat panel to continue.
-        </p>
-      )}
-
       {error && (
         <div className="w-full max-w-lg rounded-2xl border border-red-500/20 bg-red-500/8 p-5">
           <p className="text-sm font-semibold text-red-400">Generation failed</p>
