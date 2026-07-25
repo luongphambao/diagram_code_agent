@@ -1299,6 +1299,9 @@ def _render_block(
     if block == "case_study":
         _case_study_slide(prs, (spec or {}).get("params") or {}, slide_no, title or "SUCCESS STORY")
         return
+    if block == "diagram_image":
+        _diagram_image_slide(prs, (spec or {}).get("params") or {}, workspace, slide_no, title or "Diagram")
+        return
     if block == "wbs_detail_image":
         img = _wbs_sheet_image_path(workspace, "wbs")
         if img:
