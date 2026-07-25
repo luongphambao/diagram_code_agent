@@ -62,7 +62,7 @@ export default function ChatInput({
       >
         <textarea
           ref={textareaRef}
-          className="flex-1 resize-none bg-transparent text-sm leading-relaxed text-slate-200 placeholder:text-slate-700 focus:outline-none"
+          className="flex-1 resize-none bg-transparent text-sm leading-relaxed text-fg placeholder:text-slate-700 focus:outline-none"
           rows={1}
           placeholder="Describe your architecture..."
           value={draft}
