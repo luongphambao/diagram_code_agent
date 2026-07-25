@@ -513,22 +513,22 @@ def _add_title(slide, title: str) -> None:
     if eyebrow_text:
         if ph is not None:
             # The Detail-01 title placeholder is a THIN box (~0.45" tall, 39pt default
-            # font, noAutofit) sitting close above the body placeholder (~0.3" gap) — there
-            # is no room to just draw an eyebrow above it without colliding with either the
-            # overflowing headline glyph or the body content below. Make the headline
-            # itself smaller and explicitly top-anchored (deterministic, no overflow above
-            # the box) and nudge it down slightly, freeing just enough room for the eyebrow.
-            orig_top = ph.top
-            ph.top = orig_top + Inches(0.2)
+            # font, noAutofit — so it overflows rather than shrinks) with a fixed decorative
+            # underline shape from the LAYOUT sitting just 0.14" below its nominal bottom,
+            # and the body placeholder only ~0.3" further down — there is no slack to move
+            # the box itself without colliding with one or the other. Instead, shrink the
+            # headline and force top-anchoring so it renders (nearly) within its own
+            # nominal box with no upward overflow, leaving the sliver above it safe for the
+            # eyebrow without touching anything else.
             try:
                 ph.text_frame.vertical_anchor = MSO_ANCHOR.TOP
             except Exception:  # noqa: BLE001 — cosmetic only
                 pass
             for p in ph.text_frame.paragraphs:
                 for run in p.runs:
-                    if run.font.size is None or run.font.size > Pt(28):
-                        run.font.size = Pt(28)
-            _add_eyebrow(slide, eyebrow_text, ph.left / 914400, orig_top / 914400, ph.width / 914400)
+                    if run.font.size is None or run.font.size > Pt(24):
+                        run.font.size = Pt(24)
+            _add_eyebrow(slide, eyebrow_text, ph.left / 914400, 0.05, ph.width / 914400)
         else:
             _add_eyebrow(slide, eyebrow_text, 0.65, 0.12, 12.0)
 
