@@ -548,6 +548,8 @@ def available_inputs(
         a |= {"tech_stack.opex", "tech_stack.cost"}  # OPEX derivable from module cost
     # pricing (CAPEX) is always derivable from wbs.effort_totals + the default rate card —
     # never blocked on a business-narrative rate_card override.
+    if (meta.get("wbs_sheet_images") or {}).get("wbs"):
+        a.add("wbs.sheet_images.wbs")
     return a
 
 
