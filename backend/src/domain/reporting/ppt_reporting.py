@@ -671,14 +671,14 @@ def _clone_slide(prs: Presentation, source_index: int):
 
 
 def _section_slide(prs: Presentation, title: str, slide_no: int):
+    # NOTE: the BnK template's "Head Page"/"Head-01" layouts already bake in a full-slide
+    # dark navy background + bold bright-teal title styling (verified by inspecting the
+    # template: a full-bleed navy Rectangle shape on the layout itself) — this is already
+    # the premium look the vip preset is going for, so there is deliberately no deck_style
+    # override here (an earlier gradient-background attempt was invisible, since it sits
+    # BELOW the template's own opaque background shape in z-order).
     slide = prs.slides.add_slide(_layout(prs, "Head Page", "Head-01"))
-    pal = _palette()
-    gradient = pal.get("divider_gradient")
-    if gradient:
-        _add_gradient_background(slide, gradient[0], gradient[1], angle=135.0)
     _add_title(slide, title)
-    if gradient:
-        _style_placeholder_text(slide, 0, color=BNK_WHITE, size=36, bold=True)
     _add_footer(slide, slide_no)
     return slide
 
