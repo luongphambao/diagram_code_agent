@@ -368,6 +368,26 @@ def _build_deck_plan_registry(
                 )
             continue
 
+        if contract.key == "solution_additional_diagrams":
+            # One contract, one slide per finalized non-architecture diagram on file
+            # (see deck_resolver._b_additional_diagrams / tools.rendering_tools.
+            # finalize_diagram(kind=...)) — same one-contract-many-slides shape as
+            # success_story above.
+            flush_pending_divider()
+            for d in (params.get("diagrams") or [])[:4]:
+                slides.append(
+                    SlideSpec(
+                        slide_no=len(slides) + 1,
+                        section=contract.section,
+                        title=contract.title.replace("{diagram_title}", d.get("title") or "Diagram"),
+                        layout=contract.layout,
+                        block=contract.block,
+                        narrative_role=contract.role,
+                        params=d,
+                    )
+                )
+            continue
+
         block, asset_ref = contract.block, None
         if block == "diagram":
             # Drive through the EXISTING asset_ref-based dispatch in ppt_reporting._render_slide
