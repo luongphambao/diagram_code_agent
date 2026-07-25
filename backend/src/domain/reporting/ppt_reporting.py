@@ -103,6 +103,8 @@ VALID_BLOCKS = frozenset(
         # legacy outline path — see deck_resolver._b_master_plan for the params shape.
         "case_study",  # rendered via _case_study_slide; params come from SlideSpec.params
         # (one contract emits several slides — see deck._build_deck_plan_registry).
+        "wbs_detail_image",  # the "2. WBS" sheet screenshot — no native equivalent exists,
+        # rendered ONLY when wbs_excel_render has produced it (see _wbs_sheet_image_path).
     }
 )
 
