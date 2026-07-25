@@ -748,6 +748,7 @@ IMPLEMENTED_BLOCKS: frozenset[str] = frozenset(
         "pricing",
         "milestones",
         "team",  # ppt_reporting.VALID_BLOCKS
+        "gantt",  # _gantt_slide — real renderer, was missing from this set (registry bug)
         "diagram",
         "cover",
         "divider",
