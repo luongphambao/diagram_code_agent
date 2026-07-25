@@ -4,11 +4,17 @@ import { useConversations } from "./hooks/useConversations";
 import { AgentProvider } from "./context/AgentContext";
 import type { DiagramKind, UserRole } from "./hooks/agent-utils";
 import { loadGateHistory, clearGateHistory } from "./hooks/agent-utils";
+import { useBreakpoint } from "./lib/useBreakpoint";
+import { usePersistentState, oneOf, numberInRange } from "./lib/usePersistentState";
+import AppShell, { CHAT_DEFAULT, CHAT_MAX, CHAT_MIN } from "./app/AppShell";
+import Toolbar, { type Pane, type ThemePreference } from "./app/Toolbar";
+import StatusStrip from "./app/StatusStrip";
 import ChatSidebar from "./components/ChatSidebar";
 import DiagramCanvas from "./components/DiagramCanvas";
 import ConversationSidebar from "./components/ConversationSidebar";
 
 const USER_ROLES: UserRole[] = ["viewer", "pm", "lead", "admin"];
+const USER_ROLE_OPTIONS = USER_ROLES.map((r) => ({ value: r, label: r[0].toUpperCase() + r.slice(1) }));
 
 function getStoredRole(): UserRole {
   try {
@@ -41,10 +47,6 @@ function getStoredDiagramKind(): DiagramKind {
   }
 }
 
-const CHAT_MIN = 240;
-const CHAT_MAX = 600;
-const CHAT_DEFAULT = 380;
-
 function newThreadId() {
   return `thread-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -65,12 +67,37 @@ function setStoredThreadId(id: string) {
   }
 }
 
+const isThemePreference = oneOf<ThemePreference>("dark", "light", "system");
+const isPane = oneOf<Pane>("chat", "canvas");
+const isChatWidth = numberInRange(CHAT_MIN, CHAT_MAX);
+
 export default function App() {
   const [threadId, setThreadId] = useState<string>(getStoredThreadId);
   const [userRole, setUserRole] = useState<UserRole>(getStoredRole);
   const [diagramKind, setDiagramKind] = useState<DiagramKind>(getStoredDiagramKind);
   const diagramAgent = useDiagramAgent({ threadId, userRole, diagramKind });
   const convStore = useConversations();
+  const breakpoint = useBreakpoint();
+
+  const [chatWidth, setChatWidth] = usePersistentState("da.ui.chatWidth", CHAT_DEFAULT, isChatWidth);
+  const [theme, setTheme] = usePersistentState<ThemePreference>("da.ui.theme", "system", isThemePreference);
+  const [railOpen, setRailOpen] = useState(false);
+  const [activePane, setActivePane] = usePersistentState<Pane>("da.ui.pane", "chat", isPane);
+
+  // Explicit choice always wins over the OS preference (plan §C.5 layer 3);
+  // "system" removes the attribute so the prefers-color-scheme media query
+  // in tokens.css decides.
+  useEffect(() => {
+    if (theme === "system") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
+
+  // The narrow-mode rail is a drawer; closing it when the viewport widens out
+  // of narrow avoids a stale "open" overlay reappearing if the user later
+  // shrinks back down.
+  useEffect(() => {
+    if (breakpoint !== "narrow") setRailOpen(false);
+  }, [breakpoint]);
 
   useEffect(() => {
     try {
@@ -88,12 +115,6 @@ export default function App() {
     }
   }, [diagramKind]);
 
-  const diagramStep = diagramAgent.agentState.current_step;
-  const [chatWidth, setChatWidth] = useState(CHAT_DEFAULT);
-  const dragging = useRef(false);
-  const startX = useRef(0);
-  const startW = useRef(CHAT_DEFAULT);
-
   // Keep localStorage in sync whenever threadId changes
   useEffect(() => {
     setStoredThreadId(threadId);
@@ -102,7 +123,7 @@ export default function App() {
   // Extract stable function refs — these are created with useCallback([]) inside their
   // respective hooks, so they never change identity across renders.
   const { resetToNew, restore } = diagramAgent;
-  const { loadHistory, fetchAll, remove } = convStore;
+  const { loadHistory, fetchAll, remove, rename } = convStore;
 
   // Load conversations on mount. `fetchAll` is stable, so an empty dep array
   // would also be correct — depending on it explicitly keeps the lint rule honest.
@@ -151,233 +172,82 @@ export default function App() {
     prevRunning.current = diagramAgent.isRunning;
   }, [diagramAgent.isRunning, fetchAll]);
 
-  const onDragStart = useCallback(
-    (e: React.MouseEvent) => {
-      dragging.current = true;
-      startX.current = e.clientX;
-      startW.current = chatWidth;
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
+  const handleRenameTitle = useCallback((name: string) => rename(threadId, name), [rename, threadId]);
 
-      const onMove = (ev: MouseEvent) => {
-        if (!dragging.current) return;
-        const delta = ev.clientX - startX.current;
-        setChatWidth(Math.min(CHAT_MAX, Math.max(CHAT_MIN, startW.current + delta)));
-      };
-      const onUp = () => {
-        dragging.current = false;
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
-        window.removeEventListener("mousemove", onMove);
-        window.removeEventListener("mouseup", onUp);
-      };
-      window.addEventListener("mousemove", onMove);
-      window.addEventListener("mouseup", onUp);
-    },
-    [chatWidth],
+  const conversationTitle =
+    convStore.conversations.find((c) => c.thread_id === threadId)?.name || "Untitled";
+
+  const rail = (
+    <ConversationSidebar
+      conversations={convStore.conversations}
+      activeThreadId={threadId}
+      loading={convStore.loading}
+      onSelect={handleSelectConversation}
+      onNew={handleNewConversation}
+      onRename={convStore.rename}
+      onDelete={handleDeleteConversation}
+    />
   );
 
-  const activeStep = diagramStep;
-  const activeIsRunning = diagramAgent.isRunning;
+  const chat = <ChatSidebar />;
+
+  const canvas = (
+    <DiagramCanvas
+      agentState={diagramAgent.agentState}
+      pendingInterrupt={diagramAgent.pendingInterrupt}
+      isRunning={diagramAgent.isRunning}
+      activeSubagent={diagramAgent.activeSubagent}
+      activity={diagramAgent.activity}
+      threadId={threadId}
+      userRole={userRole}
+    />
+  );
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-surface-base">
-      {/* Header */}
-      <header className="flex items-center gap-3 border-b border-white/8 px-6 py-3.5">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600/20">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-blue-400">
-              <rect
-                x="3"
-                y="3"
-                width="7"
-                height="7"
-                rx="1"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              />
-              <rect
-                x="14"
-                y="3"
-                width="7"
-                height="7"
-                rx="1"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              />
-              <rect
-                x="3"
-                y="14"
-                width="7"
-                height="7"
-                rx="1"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              />
-              <path
-                d="M17.5 14v7M14 17.5h7"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-              <path
-                d="M10 6.5h4M6.5 10v4"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
-          <h1 className="text-sm font-bold tracking-tight text-white">Diagram Agent</h1>
-        </div>
+    <div className="flex h-screen w-screen flex-col bg-app">
+      <Toolbar
+        breakpoint={breakpoint}
+        title={conversationTitle}
+        onRenameTitle={handleRenameTitle}
+        currentStep={diagramAgent.agentState.current_step}
+        iteration={diagramAgent.agentState.iteration}
+        isRunning={diagramAgent.isRunning}
+        onStop={diagramAgent.abortRun}
+        error={diagramAgent.error}
+        diagramKind={diagramKind}
+        diagramKinds={DIAGRAM_KINDS}
+        onDiagramKindChange={(v) => setDiagramKind(v as DiagramKind)}
+        userRole={userRole}
+        userRoles={USER_ROLE_OPTIONS}
+        onUserRoleChange={(v) => setUserRole(v as UserRole)}
+        theme={theme}
+        onThemeChange={setTheme}
+        railOpen={railOpen}
+        onToggleRail={() => setRailOpen((v) => !v)}
+        activePane={activePane}
+        onPaneChange={setActivePane}
+      />
 
-        <div className="flex items-center gap-1.5">
-          <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-0.5 text-[11px] font-medium text-blue-400">
-            AG-UI
-          </span>
-          {activeStep && activeStep !== "done" && activeStep !== "cancelled" && (
-            <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[11px] text-slate-600 capitalize">
-              {activeStep.replace(/_/g, " ")}
-            </span>
-          )}
-          {(diagramAgent.agentState.iteration ?? 1) > 1 && (
-            <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[11px] text-slate-700">
-              v{diagramAgent.agentState.iteration}
-            </span>
-          )}
-        </div>
-
-        <div className="ml-auto flex items-center gap-3">
-          {/* Diagram-type selector — sent as diagramKind on every request; "Auto
-              detect" (empty value) defers to the backend's deterministic keyword
-              classifier + the model's own guess (improvement plan §10). */}
-          <label
-            className="flex items-center gap-1.5 text-[11px] text-slate-500"
-            title="Diagram type — Auto detect lets the agent classify the request"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="text-slate-500">
-              <path
-                d="M4 5h16M4 12h10M4 19h7"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-            <select
-              value={diagramKind}
-              onChange={(e) => setDiagramKind(e.target.value as DiagramKind)}
-              className="rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[11px] text-slate-300 outline-none hover:border-white/20 focus:border-blue-500/40"
-            >
-              {DIAGRAM_KINDS.map((d) => (
-                <option key={d.value || "auto"} value={d.value} className="bg-surface-base">
-                  {d.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          {/* Role selector — sent as userRole on every request; backend enforces gate
-              role policy (ROLE_GATE_PERMISSIONS, §8.6). */}
-          <label
-            className="flex items-center gap-1.5 text-[11px] text-slate-500"
-            title="Role used to approve gates"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="text-slate-500">
-              <path
-                d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-            <select
-              value={userRole}
-              onChange={(e) => setUserRole(e.target.value as UserRole)}
-              className="rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[11px] capitalize text-slate-300 outline-none hover:border-white/20 focus:border-blue-500/40"
-            >
-              {USER_ROLES.map((r) => (
-                <option key={r} value={r} className="bg-surface-base capitalize">
-                  {r}
-                </option>
-              ))}
-            </select>
-          </label>
-          {activeIsRunning && (
-            <div className="flex items-center gap-2 text-[11px] text-slate-600">
-              <span className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400" />
-                Processing
-              </span>
-              <button
-                onClick={diagramAgent.abortRun}
-                className="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-slate-300 hover:border-red-500/40 hover:text-red-400"
-                title="Cancel the in-flight run"
-              >
-                Stop
-              </button>
-            </div>
-          )}
-          {activeStep === "done" && !activeIsRunning && (
-            <div className="flex items-center gap-1.5 text-[11px] text-emerald-600">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              Ready
-            </div>
-          )}
-          {diagramStep === "reviewing" && !diagramAgent.isRunning && (
-            <div className="flex items-center gap-1.5 text-[11px] text-blue-500">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
-              Awaiting review
-            </div>
-          )}
-        </div>
-      </header>
-
-      {/* Main */}
       <AgentProvider value={diagramAgent}>
-        <main className="flex flex-1 overflow-hidden">
-          {/* Conversation sidebar */}
-          <ConversationSidebar
-            conversations={convStore.conversations}
-            activeThreadId={threadId}
-            loading={convStore.loading}
-            onSelect={handleSelectConversation}
-            onNew={handleNewConversation}
-            onRename={convStore.rename}
-            onDelete={handleDeleteConversation}
-          />
-
-          {/* Chat panel */}
-          <div
-            style={{ width: chatWidth, minWidth: chatWidth, maxWidth: chatWidth }}
-            className="flex flex-col overflow-hidden"
-          >
-            <ChatSidebar />
-          </div>
-
-          {/* Drag handle */}
-          <div
-            onMouseDown={onDragStart}
-            className="relative w-1 flex-shrink-0 cursor-col-resize bg-white/5 hover:bg-blue-500/40 transition-colors group"
-            title="Drag to resize"
-          >
-            <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              <span className="h-1 w-1 rounded-full bg-blue-400" />
-              <span className="h-1 w-1 rounded-full bg-blue-400" />
-              <span className="h-1 w-1 rounded-full bg-blue-400" />
-            </div>
-          </div>
-
-          {/* Right panel — diagram preview */}
-          <DiagramCanvas
-            agentState={diagramAgent.agentState}
-            pendingInterrupt={diagramAgent.pendingInterrupt}
-            isRunning={diagramAgent.isRunning}
-            activeSubagent={diagramAgent.activeSubagent}
-            activity={diagramAgent.activity}
-            threadId={threadId}
-            userRole={userRole}
-          />
-        </main>
+        <AppShell
+          breakpoint={breakpoint}
+          rail={rail}
+          chat={chat}
+          canvas={canvas}
+          chatWidth={chatWidth}
+          onChatWidthChange={setChatWidth}
+          railOpen={railOpen}
+          onCloseRail={() => setRailOpen(false)}
+          activePane={activePane}
+        />
       </AgentProvider>
+
+      <StatusStrip
+        isRunning={diagramAgent.isRunning}
+        activity={diagramAgent.activity}
+        error={diagramAgent.error}
+        modelCalls={diagramAgent.agentState.run_metrics?.model_calls}
+      />
     </div>
   );
 }
