@@ -591,6 +591,8 @@ def available_inputs(
     # never blocked on a business-narrative rate_card override.
     if (meta.get("wbs_sheet_images") or {}).get("wbs"):
         a.add("wbs.sheet_images.wbs")
+    if any(k != "architecture" for k in (meta.get("diagram_manifest") or {})):
+        a.add("diagram_manifest.additional")
     return a
 
 
