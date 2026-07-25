@@ -50,7 +50,7 @@ export default function CommentThread({ threadId, userRole }: CommentThreadProps
             }`}
           >
             <div className="mb-1 flex items-center gap-2">
-              <span className="text-[11px] font-semibold text-slate-300">{c.author || "user"}</span>
+              <span className="text-[11px] font-semibold text-fg">{c.author || "user"}</span>
               {c.role && (
                 <span className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] capitalize text-secondary">
                   {c.role}
@@ -63,7 +63,7 @@ export default function CommentThread({ threadId, userRole }: CommentThreadProps
               )}
               <span className="ml-auto font-mono text-[10px] text-muted">{c.id}</span>
             </div>
-            <p className="text-xs leading-relaxed text-slate-300">{c.body}</p>
+            <p className="text-xs leading-relaxed text-fg">{c.body}</p>
             {!c.resolved ? (
               <button
                 onClick={() => resolve(c.id, userRole || "user")}
@@ -85,7 +85,7 @@ export default function CommentThread({ threadId, userRole }: CommentThreadProps
           value={anchor}
           onChange={(e) => setAnchor(e.target.value)}
           placeholder="Anchor entity id (optional, e.g. REQ-3)"
-          className="mb-2 w-full rounded-lg border border-white/8 bg-white/4 px-2.5 py-1.5 text-[11px] text-slate-300 outline-none placeholder:text-slate-700 focus:border-blue-500/40"
+          className="mb-2 w-full rounded-lg border border-white/8 bg-white/4 px-2.5 py-1.5 text-[11px] text-fg outline-none placeholder:text-slate-700 focus:border-blue-500/40"
         />
         <div className="flex gap-2">
           <textarea
