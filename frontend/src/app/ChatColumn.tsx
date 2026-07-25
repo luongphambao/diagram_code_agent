@@ -19,13 +19,19 @@
  * depends on) exists. GateHost — the wildcard HITL handler — is mounted at
  * the CopilotKitProvider level (App.tsx), not here, since HITL registration
  * is global per agentId, not scoped to a chat view instance.
+ *
+ * Deliberately does NOT pass its own `threadId`/`agentId` props — App.tsx
+ * wraps this (and GateHost, and useDiagramWorkspace's useAgent() call) in
+ * ONE shared <CopilotChatConfigurationProvider>, so there is a single
+ * resolved threadId all three read from context rather than three
+ * independently-resolved values that could drift.
  */
 import { CopilotChat } from "@copilotkit/react-core/v2";
 
-export default function ChatColumn({ threadId }: { threadId: string }) {
+export default function ChatColumn() {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <CopilotChat threadId={threadId} className="h-full min-h-0 flex-1" />
+      <CopilotChat className="h-full min-h-0 flex-1" />
     </div>
   );
 }
