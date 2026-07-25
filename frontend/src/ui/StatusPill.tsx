@@ -53,7 +53,7 @@ export default function StatusPill({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-xs border border-line/60 bg-well/50 px-2 py-0.5 text-2xs font-medium uppercase tracking-wide ${LABEL_TEXT[variant]} ${className}`}
+      className={`label-caps inline-flex items-center gap-1.5 rounded-xs border border-line/60 bg-well/50 px-2 py-0.5 text-2xs font-medium ${LABEL_TEXT[variant]} ${className}`}
     >
       <Dot variant={variant} />
       {children}
