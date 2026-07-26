@@ -377,11 +377,23 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                 preserve_business_case_artifacts = _business_case_preserve(
                     desc, solution_exists=solution_exists, attached=bool(attached)
                 )
+                # General backstop: an already-built project (out.png/out.drawio/
+                # blueprint.json/tech_stack.json/diagram_brief.json on disk) is never
+                # discarded by a plain continuation message just because its wording
+                # missed the pdf/ppt/wbs/email/business-case keyword lists above — that
+                # keyword-matching approach kept needing a new category added every time
+                # a fresh phrasing slipped through (see the WBS/business-case comments
+                # above) and clear_stage_markers() wiped blueprint/tech_stack/brief/
+                # solution_model out from under an ongoing conversation. Only a genuinely
+                # new attachment (fresh intake, handled above) or a thread with nothing
+                # built yet (solution_exists=False, nothing to lose) still clears.
+                preserve_existing_project = solution_exists and not attached
                 preserve_artifacts = (
                     preserve_diagram_artifacts
                     or preserve_wbs_artifacts
                     or preserve_email_artifacts
                     or preserve_business_case_artifacts
+                    or preserve_existing_project
                 )
                 if not preserve_artifacts:
                     clear_stage_markers(preserve_wbs=(not attached and _wbs_plan_ready(ws)))
