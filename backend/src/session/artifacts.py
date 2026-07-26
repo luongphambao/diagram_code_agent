@@ -65,6 +65,9 @@ def _stage_artifacts(workspace) -> dict:
         out["blueprint"] = _normalize_blueprint(bp)
     elif bp_draft:
         out["blueprint_draft"] = _normalize_blueprint(bp_draft)
+    solution_model = _read_json(workspace / "solution_model.json")
+    if solution_model:
+        out["solution_model"] = solution_model
     if pending_gate:
         out["pending_gate"] = pending_gate
     if tool_summary:
