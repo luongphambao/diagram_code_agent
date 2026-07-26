@@ -55,6 +55,12 @@
       "skillPath": "skills/copilotkit-upgrade/SKILL.md",
       "computedHash": "b2723049bd281ac947b20a764dd893e87d62904725ca06d585dc00d7d9b71602"
     },
+    "drawio-aws": {
+      "source": "sparklabx/drawio-ai-kit",
+      "sourceType": "github",
+      "skillPath": "skills/drawio-aws/SKILL.md",
+      "computedHash": "97b156d3e6584c2e236c67abe2795b18969e06284775eb55992b2945e3b817aa"
+    },
     "react-core": {
       "source": "CopilotKit/CopilotKit",
       "sourceType": "github",

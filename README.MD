@@ -21,6 +21,16 @@ Diagram Code Agent turns plain-English system requirements into architecture dia
 - Streams chat, tool activity, approvals, and final state through AG-UI/SSE.
 - Persists conversations with Postgres when `DATABASE_URL` is configured.
 
+## User Interface
+
+The frontend is a chat + canvas workspace: describe requirements or upload a PDF/DOCX/MD/TXT document in the left-hand chat, approve each HITL gate inline as it comes up (tech stack -> architecture blueprint -> diagram review), and watch the artifact render live on the right-hand canvas.
+
+![Diagram Agent UI - full workspace](imgs/demo-fmcg-diagram-fullpage.png)
+*End-to-end run driven from chat - file upload, HITL approval cards (Tech Stack Recommendation, Architecture Blueprint, Diagram Review), and the rendered diagram on the canvas - for an FMCG Finance Automation (BnK IDP + RPA) requirements doc.*
+
+![Generated architecture diagram](imgs/demo-fmcg-diagram-artifact.png)
+*The rendered diagram artifact, exportable as PNG / `.drawio` / PDF / PPTX, or opened directly in draw.io.*
+
 ## Example Output
 
 Six recent end-to-end runs (diagram + editable `.drawio`, `example/*.drawio`). Names are genericized — no client/project names.

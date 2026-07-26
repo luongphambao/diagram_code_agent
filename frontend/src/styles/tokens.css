@@ -1,0 +1,146 @@
+/* GENERATED FILE — do not edit by hand.
+ * Source of truth: src/styles/tokens.ts. Regenerate with `npm run build-tokens`.
+ * See plan §C.5 (giao-dien-thiet-ke-jaunty-rain.md) for the three-layer cascade
+ * this implements and §C.1/C.2 for the palette rationale. */
+
+:root {
+  color-scheme: dark;
+  --ink-950: #0A0D13;
+  --ink-900: #0E131B;
+  --ink-850: #131922;
+  --ink-800: #1A212C;
+  --ink-700: #26313F;
+  --ink-500: #7E8795;
+  --ink-300: #9AA8BB;
+  --ink-100: #DDE4ED;
+
+  --accent-600: #2C7089;
+  --accent-500: #3B8FAC;
+  --accent-400: #59AECA;
+  --accent-300: #8FCFE2;
+  --accent-fg: #04141B;
+  --accent-text: #8FCFE2;
+
+  --ok: #2F8F63;
+  --ok-fg: #68D3A2;
+  --warn: #B8862F;
+  --warn-fg: #E5BC68;
+  --danger: #B8504C;
+  --danger-fg: #F09590;
+  --info: #4A6FA5;
+  --info-fg: #93AFD8;
+
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-full: 9999px;
+  --shadow-sm: none;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+  --ink-950: #F4F7FA;
+  --ink-900: #FAFCFD;
+  --ink-850: #FFFFFF;
+  --ink-800: #EDF2F7;
+  --ink-700: #DBE2EA;
+  --ink-500: #67707E;
+  --ink-300: #48566A;
+  --ink-100: #141C27;
+
+  --accent-600: #134E64;
+  --accent-500: #1B6580;
+  --accent-400: #2A7E9C;
+  --accent-300: #E1EFF4;
+  --accent-fg: #FFFFFF;
+  --accent-text: #1B6580;
+
+  --ok: #1F7A50;
+  --ok-fg: #166341;
+  --warn: #9A6E1C;
+  --warn-fg: #7A5614;
+  --danger: #A83F3B;
+  --danger-fg: #8A322F;
+  --info: #3A5C8C;
+  --info-fg: #2E4A73;
+
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px rgb(16 24 36 / .06), 0 0 0 1px rgb(16 24 36 / .04);
+  }
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --ink-950: #F4F7FA;
+  --ink-900: #FAFCFD;
+  --ink-850: #FFFFFF;
+  --ink-800: #EDF2F7;
+  --ink-700: #DBE2EA;
+  --ink-500: #67707E;
+  --ink-300: #48566A;
+  --ink-100: #141C27;
+
+  --accent-600: #134E64;
+  --accent-500: #1B6580;
+  --accent-400: #2A7E9C;
+  --accent-300: #E1EFF4;
+  --accent-fg: #FFFFFF;
+  --accent-text: #1B6580;
+
+  --ok: #1F7A50;
+  --ok-fg: #166341;
+  --warn: #9A6E1C;
+  --warn-fg: #7A5614;
+  --danger: #A83F3B;
+  --danger-fg: #8A322F;
+  --info: #3A5C8C;
+  --info-fg: #2E4A73;
+
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px rgb(16 24 36 / .06), 0 0 0 1px rgb(16 24 36 / .04);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --ink-950: #0A0D13;
+  --ink-900: #0E131B;
+  --ink-850: #131922;
+  --ink-800: #1A212C;
+  --ink-700: #26313F;
+  --ink-500: #7E8795;
+  --ink-300: #9AA8BB;
+  --ink-100: #DDE4ED;
+
+  --accent-600: #2C7089;
+  --accent-500: #3B8FAC;
+  --accent-400: #59AECA;
+  --accent-300: #8FCFE2;
+  --accent-fg: #04141B;
+  --accent-text: #8FCFE2;
+
+  --ok: #2F8F63;
+  --ok-fg: #68D3A2;
+  --warn: #B8862F;
+  --warn-fg: #E5BC68;
+  --danger: #B8504C;
+  --danger-fg: #F09590;
+  --info: #4A6FA5;
+  --info-fg: #93AFD8;
+
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-full: 9999px;
+  --shadow-sm: none;
+}
