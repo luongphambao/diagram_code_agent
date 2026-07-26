@@ -237,3 +237,21 @@ def test_create_client_meeting_writes_last_meeting_json(monkeypatch, tmp_path):
 
 def test_stage_artifacts_omits_last_meeting_when_absent(tmp_path):
     assert "last_meeting" not in _stage_artifacts(tmp_path)
+
+
+def test_stage_artifacts_includes_solution_model_for_db_restore(tmp_path):
+    """solution_model.json must land in the state persisted to Postgres so
+    _restore_workspace_from_db (chat.py) can recover it after a wipe — before
+    this it was read internally for the compliance card but never surfaced as
+    its own key, so DB-restore could never bring it back even after being
+    added to _RESTORABLE_FILES."""
+    model = {"components": [{"id": "c1", "name": "API"}]}
+    (tmp_path / "solution_model.json").write_text(json.dumps(model), encoding="utf-8")
+
+    artifacts = _stage_artifacts(tmp_path)
+
+    assert artifacts["solution_model"] == model
+
+
+def test_stage_artifacts_omits_solution_model_when_absent(tmp_path):
+    assert "solution_model" not in _stage_artifacts(tmp_path)
