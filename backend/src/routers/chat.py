@@ -130,6 +130,7 @@ _RESTORABLE_FILES = {
     "diagram_brief": "diagram_brief.json",
     "tech_stack": "tech_stack.json",
     "blueprint": "blueprint.json",
+    "solution_model": "solution_model.json",
 }
 
 
