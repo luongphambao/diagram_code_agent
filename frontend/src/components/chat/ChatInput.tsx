@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import type { UploadedFile } from "../../hooks/useDiagramAgent";
+import type { UploadedFile } from "../../hooks/agent-utils";
 import FileUpload from "../FileUpload";
 
 interface ChatInputProps {

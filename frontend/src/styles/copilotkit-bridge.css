@@ -1,0 +1,79 @@
+/**
+ * CopilotKit v2 themes through shadcn-style vars scoped to [data-copilotkit]
+ * (verified against CopilotKit/packages/react-core/src/v2/styles/globals.css
+ * — NOT the v1 --copilot-kit-* set). Its Tailwind output is compiled with
+ * `prefix(cpk)` and its preflight is rewritten scoped under [data-copilotkit]
+ * by scripts/scope-preflight.mjs, so there is zero collision with our own
+ * Tailwind v4 build — this file only needs to redefine the ~28 variables
+ * below, no !important, no layer surgery.
+ *
+ * One override block, unconditional: CopilotKit's own dark variant is
+ * `.dark [data-copilotkit]` (a literal `.dark` class ancestor), but our
+ * theme toggle sets `data-theme="dark"|"light"` on <html> instead. Since
+ * every value here is `var(--ink-*)`/`var(--accent-*)` — which ALREADY
+ * re-resolve per theme via tokens.css's three-layer cascade — a single
+ * unconditional block is correct and the toggle re-themes CopilotKit with
+ * no extra work, without ever touching CopilotKit's own `.dark` selector.
+ *
+ * Import this AFTER @copilotkit/react-core/v2/styles.css.
+ */
+[data-copilotkit] {
+  --background: var(--ink-900);
+  --foreground: var(--ink-100);
+  --card: var(--ink-850);
+  --card-foreground: var(--ink-100);
+  --popover: var(--ink-850);
+  --popover-foreground: var(--ink-100);
+  --primary: var(--accent-500);
+  --primary-foreground: var(--accent-fg);
+  --secondary: var(--ink-800);
+  --secondary-foreground: var(--ink-100);
+  --muted: var(--ink-800);
+  --muted-foreground: var(--ink-500);
+  --accent: var(--ink-800); /* CopilotKit's "accent" token = hover surface, not our accent hue */
+  --accent-foreground: var(--ink-100);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--danger-fg);
+  --border: var(--ink-700);
+  --input: var(--ink-700);
+  --ring: var(--accent-400);
+  --radius: var(--radius-md);
+  --sidebar: var(--ink-850);
+  --sidebar-foreground: var(--ink-100);
+  --sidebar-border: var(--ink-700);
+  --sidebar-accent: var(--ink-800);
+  --sidebar-accent-foreground: var(--ink-100);
+  --sidebar-primary: var(--accent-500);
+  --sidebar-primary-foreground: var(--accent-fg);
+  --sidebar-ring: var(--accent-400);
+  /* chart-1..5 unused by chat; map to semantics so any future CK chart inherits sensibly */
+  --chart-1: var(--accent-500);
+  --chart-2: var(--ok);
+  --chart-3: var(--warn);
+  --chart-4: var(--info);
+  --chart-5: var(--danger);
+  font-family: var(--font-sans);
+}
+
+/* CopilotChatAssistantMessage's markdown renderer uses @tailwindcss/typography
+ * with the cpk: prefix (`cpk:prose`) — retheme it onto our tokens so
+ * assistant prose matches the rest of the app instead of shadcn defaults. */
+[data-copilotkit] .cpk\:prose {
+  --tw-prose-body: var(--ink-100);
+  --tw-prose-headings: var(--ink-100);
+  --tw-prose-lead: var(--ink-300);
+  --tw-prose-links: var(--accent-text);
+  --tw-prose-bold: var(--ink-100);
+  --tw-prose-counters: var(--ink-500);
+  --tw-prose-bullets: var(--ink-700);
+  --tw-prose-hr: var(--ink-700);
+  --tw-prose-quotes: var(--ink-300);
+  --tw-prose-quote-borders: var(--ink-700);
+  --tw-prose-captions: var(--ink-500);
+  --tw-prose-code: var(--accent-text);
+  --tw-prose-pre-code: var(--ink-100);
+  --tw-prose-pre-bg: var(--ink-800);
+  --tw-prose-th-borders: var(--ink-700);
+  --tw-prose-td-borders: var(--ink-700);
+  font-size: var(--text-base);
+}

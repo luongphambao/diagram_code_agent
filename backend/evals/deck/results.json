@@ -8,9 +8,9 @@
       "dimensions": [],
       "score_ok": 1.0,
       "kw_recall": 1.0,
-      "structural_score": 80.0,
-      "structural_grade": "B",
-      "n_issues": 14,
+      "structural_score": 92.0,
+      "structural_grade": "A",
+      "n_issues": 5,
       "issue_recall": 1.0,
       "passed_ok": 1.0
     }
@@ -26,9 +26,9 @@
       ],
       "score_ok": 1.0,
       "kw_recall": 1.0,
-      "structural_score": 80.0,
-      "structural_grade": "B",
-      "n_issues": 14,
+      "structural_score": 92.0,
+      "structural_grade": "A",
+      "n_issues": 5,
       "issue_recall": 1.0,
       "passed_ok": 1.0
     }
@@ -44,9 +44,9 @@
       ],
       "score_ok": 1.0,
       "kw_recall": 1.0,
-      "structural_score": 70.0,
-      "structural_grade": "C",
-      "n_issues": 12,
+      "structural_score": 79.0,
+      "structural_grade": "B",
+      "n_issues": 5,
       "issue_recall": 1.0,
       "passed_ok": 1.0
     }
@@ -62,9 +62,9 @@
       ],
       "score_ok": 1.0,
       "kw_recall": 1.0,
-      "structural_score": 80.0,
-      "structural_grade": "B",
-      "n_issues": 14,
+      "structural_score": 92.0,
+      "structural_grade": "A",
+      "n_issues": 5,
       "issue_recall": 1.0,
       "passed_ok": 1.0
     }
@@ -80,9 +80,9 @@
       ],
       "score_ok": 1.0,
       "kw_recall": 1.0,
-      "structural_score": 80.0,
-      "structural_grade": "B",
-      "n_issues": 14,
+      "structural_score": 92.0,
+      "structural_grade": "A",
+      "n_issues": 5,
       "issue_recall": 1.0,
       "passed_ok": 1.0
     }
@@ -99,9 +99,9 @@
       ],
       "score_ok": 1.0,
       "kw_recall": 1.0,
-      "structural_score": 80.0,
-      "structural_grade": "B",
-      "n_issues": 14,
+      "structural_score": 92.0,
+      "structural_grade": "A",
+      "n_issues": 5,
       "issue_recall": 1.0,
       "passed_ok": 1.0
     }
@@ -117,9 +117,9 @@
       ],
       "score_ok": 1.0,
       "kw_recall": 1.0,
-      "structural_score": 78.0,
-      "structural_grade": "B",
-      "n_issues": 15,
+      "structural_score": 90.0,
+      "structural_grade": "A",
+      "n_issues": 6,
       "issue_recall": 1.0,
       "passed_ok": 1.0
     }
@@ -135,9 +135,9 @@
       ],
       "score_ok": 1.0,
       "kw_recall": 1.0,
-      "structural_score": 78.0,
-      "structural_grade": "B",
-      "n_issues": 15,
+      "structural_score": 90.0,
+      "structural_grade": "A",
+      "n_issues": 6,
       "issue_recall": 1.0,
       "passed_ok": 1.0
     }

@@ -1,0 +1,83 @@
+/* Tailwind v4 CSS-first config — maps our live custom properties (tokens.css)
+ * onto Tailwind utility names, so `bg-app`, `text-fg`, `border-line`, `.tnum`
+ * etc. resolve through the theme-toggle-reactive variables rather than being
+ * baked at build time. This is what makes the [data-theme] toggle re-skin the
+ * whole app instantly with no rebuild (plan §C.5). */
+
+@theme inline {
+  --color-app: var(--ink-950);
+  --color-surface: var(--ink-900);
+  --color-raised: var(--ink-850);
+  --color-well: var(--ink-800);
+  --color-line: var(--ink-700);
+  --color-muted: var(--ink-500);
+  --color-secondary: var(--ink-300);
+  --color-fg: var(--ink-100);
+
+  --color-accent: var(--accent-500);
+  --color-accent-hi: var(--accent-400);
+  --color-accent-lo: var(--accent-600);
+  --color-accent-text: var(--accent-text);
+  --color-on-accent: var(--accent-fg);
+
+  --color-ok: var(--ok);
+  --color-ok-text: var(--ok-fg);
+  --color-warn: var(--warn);
+  --color-warn-text: var(--warn-fg);
+  --color-danger: var(--danger);
+  --color-danger-text: var(--danger-fg);
+  --color-info: var(--info);
+  --color-info-text: var(--info-fg);
+
+  --font-sans:
+    "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    sans-serif;
+  --font-mono:
+    "IBM Plex Mono", ui-monospace, "SF Mono", "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+
+  --text-2xs: 11px;
+  --text-2xs--line-height: 15px;
+  --text-xs: 12px;
+  --text-xs--line-height: 17px;
+  --text-sm: 13px;
+  --text-sm--line-height: 20px;
+  --text-base: 15px;
+  --text-base--line-height: 24px;
+  --text-lg: 18px;
+  --text-lg--line-height: 26px;
+  --text-xl: 24px;
+  --text-xl--line-height: 30px;
+  --text-code: 12.5px;
+  --text-code--line-height: 20px;
+
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+}
+
+/* Structural numerals — metric tiles, WBS/quality cells, elapsed times, cost
+ * ranges, iteration badges: anywhere a digit sits above another digit. */
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Uppercase label treatment for 2xs text — chips, tab labels, table headers,
+ * StatusPill text (plan §C.3: "uppercase letter-spacing .06em"). */
+@utility label-caps {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Screen-reader-only region (aria-live status/error strips, §E.6). */
+@utility sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

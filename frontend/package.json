@@ -20,8 +20,12 @@
   "dependencies": {
     "@ag-ui/client": "0.0.57",
     "@ag-ui/core": "0.0.57",
+    "@copilotkit/react-core": "1.63.2",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
     "react": "^19.1.2",
-    "react-dom": "^19.1.2"
+    "react-dom": "^19.1.2",
+    "shiki": "^3.23.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
@@ -40,6 +44,7 @@
     "globals": "^15.14.0",
     "jsdom": "^26.0.0",
     "prettier": "^3.4.2",
+    "rollup-plugin-visualizer": "^7.0.1",
     "tailwindcss": "^4.1.0",
     "typescript": "^5.8.0",
     "typescript-eslint": "^8.20.0",

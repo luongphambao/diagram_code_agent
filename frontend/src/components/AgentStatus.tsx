@@ -82,7 +82,7 @@ export default function AgentStatus({ step, iteration }: AgentStatusProps) {
       )}
       <span>{label}</span>
       {iteration && iteration > 1 && (
-        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-slate-500">
+        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-secondary">
           Iteration {iteration}
         </span>
       )}

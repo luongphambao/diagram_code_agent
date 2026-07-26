@@ -1,4 +1,4 @@
-import type { ComplianceState, DriftReport, QualitySnapshot } from "../../hooks/useDiagramAgent";
+import type { ComplianceState, DriftReport, QualitySnapshot } from "../../hooks/agent-utils";
 
 interface QualityPanelProps {
   quality?: QualitySnapshot;
@@ -19,7 +19,7 @@ function Pct({ label, value }: { label: string; value: number }) {
   return (
     <div>
       <div className="mb-1 flex items-center justify-between text-[11px]">
-        <span className="text-slate-500">{label}</span>
+        <span className="text-secondary">{label}</span>
         <span className="font-semibold text-slate-300">{pct}%</span>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/8">
@@ -32,7 +32,7 @@ function Pct({ label, value }: { label: string; value: number }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-secondary">
         {title}
       </p>
       {children}
@@ -44,8 +44,8 @@ export default function QualityPanel({ quality, compliance, drift }: QualityPane
   if (!quality && !compliance && !drift) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-        <p className="text-sm text-slate-600">No quality snapshot yet</p>
-        <p className="text-xs text-slate-700">
+        <p className="text-sm text-muted">No quality snapshot yet</p>
+        <p className="text-xs text-muted">
           Run the quality summary, compliance pack, or reality-sync tools to populate governance
           read-outs.
         </p>
@@ -118,7 +118,7 @@ export default function QualityPanel({ quality, compliance, drift }: QualityPane
           )}
 
           {(quality.total_tokens ?? 0) > 0 && (
-            <p className="text-[11px] text-slate-600">
+            <p className="text-[11px] text-muted">
               Spend: {(quality.total_tokens ?? 0).toLocaleString()} tokens ·{" "}
               {quality.model_calls ?? 0} model calls
             </p>
@@ -134,7 +134,7 @@ export default function QualityPanel({ quality, compliance, drift }: QualityPane
               <tbody>
                 {compliance.controls.map((c) => (
                   <tr key={c.id} className="border-b border-white/5">
-                    <td className="py-1 pr-2 font-mono text-slate-600">{c.standard_ref || c.id}</td>
+                    <td className="py-1 pr-2 font-mono text-muted">{c.standard_ref || c.id}</td>
                     <td className="py-1 pr-2 text-slate-300">{c.name}</td>
                     <td className="py-1 pr-2 text-right">
                       <span
@@ -161,7 +161,7 @@ export default function QualityPanel({ quality, compliance, drift }: QualityPane
               </tbody>
             </table>
           ) : (
-            <p className="text-[11px] text-slate-600">Pack applied — no controls minted yet.</p>
+            <p className="text-[11px] text-muted">Pack applied — no controls minted yet.</p>
           )}
         </Section>
       )}
@@ -184,7 +184,7 @@ export default function QualityPanel({ quality, compliance, drift }: QualityPane
             <ul className="space-y-1">
               {drift.remediation.slice(0, 8).map((r, i) => (
                 <li key={i} className="flex gap-1.5 text-[11px] leading-relaxed text-slate-400">
-                  <span className="text-slate-600">•</span>
+                  <span className="text-muted">•</span>
                   <span>{r}</span>
                 </li>
               ))}

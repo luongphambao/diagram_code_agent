@@ -1,4 +1,4 @@
-import type { Blueprint } from "../hooks/useDiagramAgent";
+import type { Blueprint } from "../hooks/agent-utils";
 
 interface BlueprintViewerProps {
   blueprint: Blueprint;

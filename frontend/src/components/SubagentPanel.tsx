@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Delegation, LogEntry } from "../hooks/useDiagramAgent";
+import type { Delegation, LogEntry } from "../hooks/agent-utils";
 
 // ── Subagent metadata ─────────────────────────────────────────────────────────
 

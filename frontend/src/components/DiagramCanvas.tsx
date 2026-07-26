@@ -1,4 +1,4 @@
-import type { AgentState } from "../hooks/useDiagramAgent";
+import type { AgentState } from "../hooks/agent-utils";
 import AgentStatus from "./AgentStatus";
 import SubagentPanel from "./SubagentPanel";
 import ArtifactTabs from "./canvas/ArtifactTabs";

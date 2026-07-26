@@ -1,22 +1,47 @@
 @import "tailwindcss";
 
-/* Design tokens — the three dark-surface shades used throughout the app
-   (previously scattered as inline bg-[#hex] literals in every component). */
-@theme {
-  --color-surface-base: #0b0e14;
-  --color-surface-panel: #0c1015;
-  --color-surface-canvas: #0f1117;
-}
+/* "Technical-instrument dark/light" design system. tokens.css is generated
+ * from tokens.ts (`npm run build-tokens`) — see plan §C. Retired the old
+ * 3-token --color-surface-base/panel/canvas set (dark-only, no theme toggle,
+ * no accent/semantic/type/radius scale) in favor of this full system. */
+@import "./styles/tokens.css";
+@import "./styles/theme.css";
 
-:root {
-  color-scheme: dark;
-}
+/* CopilotKit v2's own compiled stylesheet (its Tailwind build uses
+ * prefix(cpk) and a preflight scoped under [data-copilotkit], so this does
+ * not collide with our own Tailwind utilities), then our bridge that
+ * retargets its shadcn-style tokens onto ours (plan §C.6). Order matters:
+ * the bridge must load after CopilotKit's base stylesheet to win the
+ * cascade on the same custom-property names. */
+@import "@copilotkit/react-core/v2/styles.css";
+@import "./styles/copilotkit-bridge.css";
+
+/* Subset-scoped imports only (latin + latin-ext + vietnamese — this app's
+ * conversations are routinely Vietnamese, see test/fixtures/) rather than the
+ * unscoped 400.css/500.css/600.css files, which also pull in
+ * cyrillic/cyrillic-ext/greek and roughly double the font payload for
+ * scripts this app never renders. */
+@import "@fontsource/ibm-plex-sans/latin-400.css";
+@import "@fontsource/ibm-plex-sans/latin-500.css";
+@import "@fontsource/ibm-plex-sans/latin-600.css";
+@import "@fontsource/ibm-plex-sans/latin-ext-400.css";
+@import "@fontsource/ibm-plex-sans/latin-ext-500.css";
+@import "@fontsource/ibm-plex-sans/latin-ext-600.css";
+@import "@fontsource/ibm-plex-sans/vietnamese-400.css";
+@import "@fontsource/ibm-plex-sans/vietnamese-500.css";
+@import "@fontsource/ibm-plex-sans/vietnamese-600.css";
+@import "@fontsource/ibm-plex-mono/latin-400.css";
+@import "@fontsource/ibm-plex-mono/latin-500.css";
+@import "@fontsource/ibm-plex-mono/latin-ext-400.css";
+@import "@fontsource/ibm-plex-mono/latin-ext-500.css";
+@import "@fontsource/ibm-plex-mono/vietnamese-400.css";
+@import "@fontsource/ibm-plex-mono/vietnamese-500.css";
 
 body {
   margin: 0;
-  background: var(--color-surface-canvas);
-  color: #e2e8f0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--ink-950);
+  color: var(--ink-100);
+  font-family: var(--font-sans);
 }
 
 ::-webkit-scrollbar {
@@ -27,9 +52,53 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--ink-700);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--ink-500);
+}
+
+/* Visible keyboard focus everywhere — an offset double ring that reads on
+ * both a card and a filled control (plan §C.4). */
+:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 1px var(--ink-950),
+    0 0 0 3px var(--accent-400);
+}
+
+/* shiki dual-theme output (CodeTab.tsx) sets `color: var(--shiki-light)`
+ * inline plus a `--shiki-dark` custom property per token; these rules pick
+ * the dark variant under the same three-layer theme cascade as tokens.css
+ * (system preference, then the explicit [data-theme] toggle overrides it in
+ * both directions) instead of re-highlighting on every theme change. */
+.shiki,
+.shiki span {
+  color: var(--shiki-light) !important;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .shiki,
+  :root:not([data-theme]) .shiki span {
+    color: var(--shiki-dark) !important;
+  }
+}
+[data-theme="dark"] .shiki,
+[data-theme="dark"] .shiki span {
+  color: var(--shiki-dark) !important;
+}
+[data-theme="light"] .shiki,
+[data-theme="light"] .shiki span {
+  color: var(--shiki-light) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

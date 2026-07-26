@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { AgentState, LogEntry } from "../../hooks/useDiagramAgent";
+import type { AgentState, LogEntry } from "../../hooks/agent-utils";
 import { fmtMd } from "../../hooks/agent-utils";
 import ActivityRow from "./ActivityRow";
 import SubagentPanel from "../SubagentPanel";

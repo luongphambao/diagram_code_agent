@@ -28,12 +28,20 @@ ENV PYTHONUNBUFFERED=1 \
 #  - fontconfig + fonts-liberation/dejavu → "Helvetica"-compatible fonts for labels
 #  - libcairo/pango/gdk-pixbuf → cairosvg runtime
 #  - libjpeg/zlib   → Pillow runtime
+#  - libreoffice-calc + poppler-utils → wbs_excel_render.py's wbs_filled.xlsx -> PDF ->
+#    PNG pipeline (proposal-deck WBS/Effort/Delivery-Plan sheet screenshots, docx WS3).
+#    Best-effort at the call site (see wbs_excel_render.soffice_available): if these are
+#    ever missing, the deck falls back to its native python-pptx tables — never blocking —
+#    but they ARE installed in this image so that fallback is not the common case.
+#    libreoffice-calc (not the full libreoffice-impress/-writer suite) keeps the image
+#    smaller since only spreadsheet conversion is needed.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         graphviz \
         ghostscript \
         fontconfig fonts-liberation fonts-dejavu-core \
         libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 \
         libjpeg62-turbo zlib1g \
+        libreoffice-calc poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

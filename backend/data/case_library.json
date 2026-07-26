@@ -854,6 +854,241 @@
     "image_ref": "DATA/SLIDE_IMAGES/AI Data Analytics MVP Proposal/slide_007.png"
   },
   {
+    "slug": "bnk-cmc-rpa-proposal-full",
+    "folder": "BnK - CMC RPA Proposal_Full",
+    "title": "BnK - CMC RPA Proposal Full",
+    "client": "CMC Telecom",
+    "type": "RPA Solution Proposal",
+    "domain": [
+      "retail",
+      "document-ai",
+      "ai-ml"
+    ],
+    "tech": [
+      "Power Platform (Power Apps",
+      "Dataverse",
+      "Admin Center)",
+      "On-premise Data Gateway",
+      "UiPath (đối chiếu so sánh)",
+      "OCR"
+    ],
+    "problem": "Bối cảnh khách hàng (slide 9) Các quy trình nhập liệu hợp đồng, hồ sơ khách hàng tại CMC Telecom hiện đang được xử lý thủ công bởi con người, gây mất nhiều thời gian và nguồn lực. CMC Telecom đã tự nghiên cứu công nghệ RPA và đánh giá phù hợp với nhu cầu, nhưng thiếu nhân sự nội bộ có nghiệp vụ triển khai/vận hành. BnK đã khảo sát và đánh giá 68 quy trình bị tác động tại CMC Telecom, từ đó đề xuất…",
+    "solution": "BnK đề xuất xây dựng robot tự động hóa cho cả 5 quy trình Quick Win nói trên, mô hình hóa lại từng quy trình theo cặp AS-IS (hiện tại) → TO-BE (tương lai) bằng sơ đồ activity diagram chi tiết (slides 10–17), thể hiện các bước sẽ được robot hóa và các bước vẫn cần con người xác nhận (ví dụ: nhân viên KD gửi yêu cầu, nhân viên nhập liệu xử lý ngoại lệ). So sánh nền tảng làm cơ sở chọn công nghệ (sli…",
+    "outcome": "Deck không có slide KPI/mục tiêu kỳ vọng riêng cho dự án CMC Telecom. Tuy nhiên, phần \"Dự án điển hình\" (slides 32–37) trình bày KPI thực tế từ các dự án RPA khác của BnK, được dùng làm minh chứng năng lực và ngầm định kỳ vọng benchmark: Dự án KPI đạt được Eximbank – Tự động hóa 12 quy trình (UiPath…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK - CMC RPA Proposal_Full/slide_007.png"
+  },
+  {
+    "slug": "bnk-shiseido-rpa-proposal-v-1-1",
+    "folder": "BnK - Shiseido RPA Proposal v 1_1",
+    "title": "BnK - Shiseido RPA Proposal v 1 1",
+    "client": "Shiseido Singapore (\"Shiseido Sing\", vận hành trên nền SAP S4 HANA)",
+    "type": "RPA/Intelligent Automation Solution Proposal",
+    "domain": [
+      "retail",
+      "document-ai",
+      "ai-ml"
+    ],
+    "tech": [
+      "UiPath",
+      "Microsoft Power Automate",
+      "FPT akaBot",
+      "BnK AI (OCR",
+      "NLP built-in)",
+      "SAP S4 HANA integration"
+    ],
+    "problem": "Bối cảnh khách hàng (slide 16) Shiseido Singapore hiện đang sử dụng các quy trình thủ công, tốn thời gian và nhiều nguồn lực. Mục tiêu: triển khai RPA dần dần (gradually) vào hệ thống. Hệ thống vận hành hiện tại dùng SAP S4 HANA. Sau khi đánh giá yêu cầu, BnK đề xuất kế hoạch triển khai theo giai đoạn (phased) cho một workflow gồm 20–30 bước để đánh giá hiệu quả công nghệ RPA. Pain points theo ngà…",
+    "solution": "BnK đề xuất triển khai một quy trình thí điểm (pilot) gồm 20–30 bước có kết nối SAP, đồng thời trình bày năng lực nền tảng AI tích hợp sẵn (BnK AI) có thể mở rộng sau này. Framework Hyperautomation (slide 3) BnK định vị giải pháp theo mô hình Hyperautomation = RPA + AI (Intelligent Automation): Nhánh RPA: rule-based decision making, process execution, data collection/preparation. Nhánh AI: speech/…",
+    "outcome": "Deck không có slide KPI riêng cho Shiseido, nhưng phần Use Cases (slides 29–38) cung cấp KPI thực tế từ các dự án tương tự ngành: Use case Ngành KPI CFO Office Finance Automation (Invoice, dùng BnK OCR + UiPath) Consumer, Finance & Accounting 90% khối lượng thủ công tự động hóa, 100% độ chính xác dữ…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK - Shiseido RPA Proposal v 1_1/slide_007.png"
+  },
+  {
+    "slug": "bnk-intelligent-automation-copy",
+    "folder": "BnK Intelligent Automation - Copy",
+    "title": "BnK Intelligent Automation - Copy",
+    "client": "Không có một khách hàng đích danh xuyên suốt deck — đây là bộ slide giới thiệu năng lực (capability deck) của chính BnK Solution, dùng chung cho nhiều khách hàng tiềm năng. Bên trong lồng ghép nhiều case study đã triển khai thực tế, có nêu tên: Häfele, Eximbank, BIDV, Sacombank, TPBank; và một số case ẩn danh (Multinational Bank – Vietnam Branch; một công ty bảo hiểm liên doanh Việt Nam/Bỉ/Thái Lan; một ngân hàng TMCP có vốn chủ sở hữu VND 13.317 tỷ)",
+    "type": "Company Capability Deck / Intelligent Automation & Automation Test Solution Overview (không phải đề xuất riêng cho một khách hàng cụ thể)",
+    "domain": [
+      "banking",
+      "retail",
+      "document-ai",
+      "ai-ml"
+    ],
+    "tech": [
+      "UiPath (RPA",
+      "Test Suite",
+      "Studio",
+      "Test Manager",
+      "Orchestrator)",
+      "akaBot",
+      "Power Automate",
+      "BnK AI (OCR",
+      "IDP nội bộ)",
+      "Katalon",
+      "Selenium",
+      "Appium",
+      "SmartBear"
+    ],
+    "problem": "Vì đây là capability deck chứ không phải proposal cho một khách hàng riêng lẻ, \"bài toán\" ở đây là tập hợp các pain-point chung mà BnK định vị mình có thể giải quyết, minh họa qua các case study nhúng trong deck: Xử lý hóa đơn thủ công khối lượng lớn (case Häfele, slide 6): 100.000+ hóa đơn/tháng, xử lý thủ công mất 5 phút/hóa đơn, dễ sai sót. Xử lý hợp đồng vay tại ngân hàng (case \"Multinational…",
+    "solution": "BnK định vị giải pháp theo mô hình Hyperautomation = giao của RPA và AI (slide 4): kết hợp RPA (rule-based decision making, process execution, data collection/preparation) với AI (NLP, nhận diện giọng nói/hình ảnh, nhận diện cảm xúc, deep learning, machine learning), đo lường bằng hai nhóm chỉ số — Operation Datapoints (Performance, Success Rate, Duration, Errors) và Business Datapoints (ROI, Mone…",
+    "outcome": "KPI framework cho Automation Test (slide 21 — bảng KPI chính thức duy nhất trong deck) # KPI Công thức Target 1 Automation framework delivery date On-time (hoàn thành sau 6 tuần từ kick-off) On-time 2 % áp dụng automation testing trong dự án Số dự án áp dụng / Tổng dự án hiện tại 100% 3 Automation d…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK Intelligent Automation - Copy/slide_007.png"
+  },
+  {
+    "slug": "bnk-intelligent-automation-rpa-idp-prudential",
+    "folder": "BnK Intelligent Automation- RPA_IDP Prudential",
+    "title": "BnK Intelligent Automation- RPA IDP Prudential",
+    "client": "Không có tên khách hàng cụ thể xuất hiện trong 32 slide — đây là bộ tài liệu năng lực chung của BnK (Capability + Case Study deck), khả năng được gửi làm hồ sơ tiếp cận cơ hội với **Prudential** (theo tên file) nhưng nội dung bên trong hoàn toàn không nhắc tên Prudential. Case study liên quan gần nhất về ngành bảo hiểm là **MB Ageas Life** (liên doanh MB Bank – Ageas Bỉ – Muang Thai Life Thái Lan)",
+    "type": "RPA/IDP Solution Capability Deck & Case Study",
+    "domain": [
+      "banking",
+      "insurance",
+      "retail",
+      "document-ai",
+      "ai-ml"
+    ],
+    "tech": [
+      "UiPath (Automation Suite",
+      "Test Suite",
+      "Gold Partner)",
+      "akaBot",
+      "Microsoft Power Automate",
+      "Katalon",
+      "Blue Prism",
+      "Automation Anywhere",
+      "SmartBear",
+      "BnK IDP",
+      "OCR",
+      "AI",
+      "NLP"
+    ],
+    "problem": "Vì đây là deck năng lực chung, không có \"Bài toán\" cụ thể của một khách hàng nào được đặt ra như cấu trúc thông thường của một Solution Proposal. Thay vào đó, deck trình bày các danh mục quy trình có tiềm năng tự động hóa theo từng ngành để khách hàng (Prudential) tự đối chiếu với nhu cầu của mình: Quy trình tiềm năng trong ngành Ngân hàng ưu tiên (slide 11 — Priority Banking Business Automation)…",
+    "solution": "Vì là deck năng lực, \"giải pháp\" ở đây là mô hình dịch vụ tổng quát BnK cung cấp, không phải giải pháp thiết kế riêng: Intelligent Automation Services Offering (slide 19) Dịch vụ Nội dung Assessment Service Xác định & ưu tiên quy trình, đánh giá & chọn công cụ, xây dựng chiến lược/lộ trình Implementation Service Xây dựng RPA Center of Excellence, đào tạo online/offline theo yêu cầu Maintenance & S…",
+    "outcome": "Không có KPI cam kết cho một dự án cụ thể, nhưng deck tập hợp KPI từ nhiều case study thực tế, đa dạng ngành hơn hẳn 3 deck khác trong batch: Case study Ngành KPI TPBank – Mast Automation Banking Tiết kiệm 45 FTE/6 tháng, 400+ tác vụ tự động, 60 phòng ban, 90 bot, ~410.000 giờ/năm tiết kiệm, giảm 98…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK Intelligent Automation- RPA_IDP Prudential/slide_007.png"
+  },
+  {
+    "slug": "bnk-rpa-case-study-en",
+    "folder": "BnK RPA - Case study_EN",
+    "title": "BnK RPA - Case study EN",
+    "client": "Không phải một khách hàng đơn lẻ mà là tổng hợp nhiều case study BnK đã triển khai thực tế — **Eximbank** (Banking, VN), **BIDV** (Banking, VN), **Sacombank** (Banking, VN), **HOYA** (Manufacturing — tên xác nhận qua logo trên slide 26, text extraction tự động không ghi nhận), **Häfele** (Consumer — tên xác nhận qua logo trên slide 27–28, 2 case riêng biệt: CFO Office & Supply Chain), **MB Ageas Life** (liên doanh bảo hiểm MB Bank – Ageas – Muang Thai Life), và **JnP Consulting** (công ty tư vấn chuyển đổi số tại Singapore)",
+    "type": "Case Study",
+    "domain": [
+      "banking",
+      "insurance",
+      "manufacturing",
+      "ai-ml"
+    ],
+    "tech": [
+      "UiPath (Platform",
+      "Orchestrator",
+      "Test Suite",
+      "Automation Suite)",
+      "akaBot (Studio",
+      "Agent",
+      "Vision",
+      "Center",
+      "Insights",
+      "Hub",
+      "DataService",
+      "AppConnect)",
+      "Katalon (Studio",
+      "TestOps",
+      "Recorder",
+      "Katalium)",
+      "Microsoft Power Platform (Power Automate",
+      "Power Pages",
+      "Dataverse)",
+      "BnK AI"
+    ],
+    "problem": "Vì đây là portfolio nhiều case study, \"bài toán\" thay đổi theo từng khách hàng, nhưng có một mẫu số chung: quy trình vận hành cốt lõi đã được số hóa một phần (core banking, ERP, HRMS...) nhưng vẫn còn nhiều bước xử lý thủ công, gây tốn thời gian, giảm SLA và tiềm ẩn rủi ro sai sót. Cụ thể theo từng case: Eximbank – IT & Operation (slide 13, 16, 17): dù core banking đã tự động xử lý nhiều giao dịch…",
+    "solution": "Case study Slide Nền tảng Giải pháp tóm tắt Eximbank – Legacy Modernization 13, 16, 17 UiPath Robot hóa 12 quy trình theo 2 pha: Pha 1 robot xử lý giao dịch khối lượng thấp, người xác nhận giao dịch khối lượng cao; Pha 2 nâng dần ngưỡng tự động hóa tới full automation Eximbank – LC Document Checking 14, 18 BnK AI Gán nhãn & huấn luyện 5.000 bộ chứng từ (50.000 tài liệu), đọc & phân loại 10 loại ch…",
+    "outcome": "Vì đây là case study về các dự án đã hoàn thành (không phải dự án đang chào), phần lớn số liệu dưới đây là kết quả thực tế đã đạt được, không phải kỳ vọng — ngoại trừ case BIDV được chính deck gắn nhãn là \"Hiệu quả DỰ KIẾN sau khi áp dụng RPA\" (slide 19–21), tức vẫn là số liệu ước tính/projected chứ…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK RPA - Case study_EN/slide_007.png"
+  },
+  {
+    "slug": "bnk-rpa-case-study-vn",
+    "folder": "BnK RPA - Case study_VN",
+    "title": "BnK RPA - Case study VN",
+    "client": "Nhiều khách hàng (portfolio case study) — Eximbank, BIDV, Sacombank, Häfele (Consumer, Supply Chain), MB Ageas Life (MBAL)",
+    "type": "Case Study",
+    "domain": [
+      "banking",
+      "insurance",
+      "document-ai",
+      "ai-ml"
+    ],
+    "tech": [
+      "UiPath (Test Suite)",
+      "aKabot",
+      "Katalon",
+      "Microsoft Power Automate",
+      "Blue Prism",
+      "Automation Anywhere",
+      "SmartBear",
+      "Selenium",
+      "Appium",
+      "AI",
+      "NLP",
+      "OCR (BnK AI",
+      "BnK AI-OCR)",
+      "SAP integration"
+    ],
+    "problem": "Cũng như bản EN, đây là case study compilation nên \"bài toán\" được tổng hợp theo từng khách hàng: Khách hàng Ngành Pain point chính Eximbank (chung) Banking Core banking đã tự động nhiều giao dịch nhưng còn nhiều quy trình xử lý thủ công, tốn thời gian, giảm SLA, tăng rủi ro lỗi (12 quy trình cần áp dụng RPA) Eximbank (Trade Finance) Banking Kiểm tra chứng từ thanh toán quốc tế (L/C) chủ yếu thủ c…",
+    "solution": "Case Study Nền tảng/Giải pháp Mô tả ngắn Eximbank (chung) UiPath (RPA) Áp dụng Tự động Hóa Quy Trình bằng Robot sử dụng nền tảng UiPath để loại bỏ quy trình thủ công Eximbank Trade Finance L/C checking BnK AI Gán nhãn & huấn luyện 5.000 bộ tài liệu (50.000 tài liệu), đọc/phân loại 10 loại tài liệu, đọc hiểu điều khoản L/C, hỗ trợ mô hình tự học cải thiện theo thời gian BIDV aKabot Robot tự động hó…",
+    "outcome": "Case Study Kết quả đạt được Eximbank RPA tổng quát 95% khối lượng công việc thủ công tự động hóa, 100% độ chính xác dữ liệu, giảm 80% thời gian thực hiện giao dịch, 12 quy trình áp dụng Eximbank Trade Finance AI 90% điều khoản L/C được kiểm tra, 95% độ chính xác dữ liệu, 100% tình huống không phù hợ…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK RPA - Case study_VN/slide_007.png"
+  },
+  {
+    "slug": "bnk-solution-dat-solar-app-proposal",
+    "folder": "BnK Solution - DAT Solar App Proposal",
+    "title": "BnK Solution - DAT Solar App Proposal",
+    "client": "DAT Group / DAT Solar (Dat Technical Company Limited, thành lập 2006)",
+    "type": "Solution Proposal",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "React Native (mobile front-end iOS",
+      "Android)",
+      "DAT API server (HTTP",
+      "MQTT",
+      "JSON:API)",
+      "Figma (thiết kế UI)",
+      "Agile",
+      "Scrum"
+    ],
+    "problem": "DAT cần một Mobile App giám sát năng lượng mặt trời (Solar Monitoring), nhưng chỉ muốn thuê ngoài phần front-end mobile (iOS + Android) — web-app và API (HTTP, MQTT) do đội ngũ DAT tự phát triển. Công nghệ đã được xác định trước: ReactNative; wireframe/mockup (UX) đã có sẵn từ DAT — bên ngoài chỉ cần thực hiện UI design dựa trên đó và lập trình ứng dụng. Yêu cầu chức năng (function overview, slide…",
+    "solution": "Hạng mục Nội dung Công nghệ React Native — hỗ trợ iOS 13+ (màn hình tối thiểu 375x812px) và Android 7+ (màn hình tối thiểu 360x640px) Chức năng chính Dashboard (tổng quan hệ thống, trạng thái, vị trí), Project management (danh sách dự án/thiết bị/cảnh báo), Device management (inverter/logger/meter/battery, cập nhật FW, cài đặt), User management (tài khoản, phân quyền), Contact/Support (hotline), đ…",
+    "outcome": "Không có slide KPI kinh doanh riêng cho dự án. Tiêu chí đầu ra dự án: Tiêu chí Mục tiêu Effort 120 man-days tổng (20 SRS/UI + 70 Development + 30 Warranty) Phân bổ vai trò FE 91 MD (76% effort), QC 13 MD, BA 10 MD, PM 7 MD, BE 0 MD Thời gian Golive trong khoảng Feb–Apr/May 2024, bảo hành kéo dài đến…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK Solution - DAT Solar App Proposal/slide_007.png"
+  },
+  {
+    "slug": "bnk-solution-dat-solar-app-proposal-vn",
+    "folder": "BnK Solution - DAT Solar App Proposal - VN",
+    "title": "BnK Solution - DAT Solar App Proposal - VN",
+    "client": "DAT Group / DAT Solar",
+    "type": "Solution Proposal",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "React Native (mobile front-end iOS",
+      "Android)",
+      "DAT API server (HTTP",
+      "MQTT",
+      "JSON:API)",
+      "Figma (thiết kế UI)",
+      "Agile",
+      "Scrum"
+    ],
+    "problem": "DAT cần một Mobile App giám sát năng lượng mặt trời (Solar Monitoring) cho khách hàng cuối, nhưng đội ngũ nội bộ DAT tập trung phát triển Web-app và các API (HTTP, MQTT) — thiếu năng lực/nguồn lực để tự làm phần mobile front-end (iOS + Android). DAT đã xác định trước công nghệ mong muốn: ReactNative, và đã có sẵn wireframe (UX) — chỉ cần đơn vị ngoài thực hiện UI design (dựa trên wireframe có sẵn)…",
+    "solution": "BnK đề xuất một dự án phát triển mobile app theo mô hình Agile/Scrum, với phạm vi được giới hạn rõ ràng: Hạng mục Nội dung Công nghệ React Native, hỗ trợ iOS 13+ (màn hình tối thiểu 375x812px) và Android 7+ (màn hình tối thiểu 360x640px) Tính năng chính Dashboard (tổng quan, lịch sử phát điện, trạng thái, vị trí dự án), Quản lý dự án, Quản lý thiết bị (inverter/logger/meter/battery/nâng cấp/cài đặ…",
+    "outcome": "Deck không có slide KPI riêng cho dự án Solar App (vì đây là một dự án gia công phần mềm ngắn hạn, không phải giải pháp chuyển đổi số có đo lường hiệu quả kinh doanh). Các \"KPI\" gần nhất là tiêu chí đầu ra dự án: Tiêu chí Mục tiêu Thời gian triển khai Golive trong khoảng Feb–Apr 2024 (~2-3 tháng phá…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK Solution - DAT Solar App Proposal - VN/slide_007.png"
+  },
+  {
     "slug": "bnk-solution-ggf-vat-stream-2-proposal-20230912-1",
     "folder": "BnK Solution - GGF VAT Stream 2 Proposal_20230912 1",
     "title": "BnK Solution - GGF VAT Stream 2 Proposal 20230912 1",
@@ -881,6 +1116,55 @@
     "image_ref": "DATA/SLIDE_IMAGES/BnK Solution - GGF VAT Stream 2 Proposal_20230912 1/slide_007.png"
   },
   {
+    "slug": "bnk-solution-msm-workflow-proposal-ver1-3",
+    "folder": "BnK Solution - MSM Workflow Proposal ver1_3",
+    "title": "BnK Solution - MSM Workflow Proposal ver1 3",
+    "client": "Không nêu tên cụ thể — hệ thống được gọi là \"MSM\" (nội bộ có phân hệ \"Trình Ký\" — quy trình phê duyệt/ký số dạng web app responsive)",
+    "type": "Proposal (Test Automation Proposal)",
+    "domain": [
+      "retail"
+    ],
+    "tech": [
+      "Katalon Studio (Enterprise + Community)",
+      "GitLab",
+      "Jenkins",
+      "GitHub",
+      "Redmine",
+      "Jira"
+    ],
+    "problem": "Yêu cầu dự án (slide 3–6) Cần kiểm thử tự động ứng dụng Web App quản lý và xử lý quy trình/thông tin cho phân hệ Trình Ký, trên nền tảng website responsive. Ba mảng cần tự động hóa kiểm thử: Kiểm thử tự động một số UI/UX hiển thị. Kiểm thử tự động Workflow (luồng nghiệp vụ trình ký). Kiểm thử tự động Data. Phạm vi nghiệp vụ Master Data cần kiểm thử: quản lý lĩnh vực, nội dung, thể loại, phân cấp,…",
+    "solution": "BnK đề xuất xây dựng bộ test automation dựa trên Katalon Studio, với kiến trúc song song hóa việc chạy test (slide 7): Katalon Studio Enterprise: nơi ghi (record) kịch bản test, sau đó push/pull code qua Git. GitLab / Jenkins / GitHub: lưu trữ và phân phối code test tới nhiều máy Katalon Studio Community chạy song song (quan sát thấy 5 máy Community trong sơ đồ). Redmine / Jira: nhận log bug tự độ…",
+    "outcome": "Không có slide KPI/success-metrics riêng biệt. Các chỉ tiêu định lượng duy nhất là số lượng testcase/process cần tự động hóa theo từng hạng mục trong WBS, ví dụ: Workflow Execution: ít nhất 10 processes. Chọn quy trình: ít nhất 10 processes. Soạn thảo: 20 testcases. Tham mưu / Phê duyệt: 15 testcase…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK Solution - MSM Workflow Proposal ver1_3/slide_007.png"
+  },
+  {
+    "slug": "bnk-solution-store-push-order-automation-ml",
+    "folder": "BnK Solution - Store Push Order Automation_ML",
+    "title": "BnK Solution - Store Push Order Automation ML",
+    "client": "GGF (Great Giant Foods) — cho thương hiệu/chuỗi cửa hàng \"Rejuve\"",
+    "type": "Proposal (Solution Proposal – Final Update)",
+    "domain": [
+      "ai-ml"
+    ],
+    "tech": [
+      "PHP-ML (Linear Regression)",
+      "Laravel",
+      "PHP",
+      "Apache",
+      "NGINX Proxy",
+      "Redis",
+      "Docker",
+      "JS",
+      "Tailwind CSS",
+      "Highcharts",
+      "jQuery"
+    ],
+    "problem": "Bối cảnh (slide 3) Background: Rejuve (chuỗi cửa hàng thuộc GGF) đang mở rộng nhanh (rapid store expansion), khiến việc quản lý đơn hàng trở nên phức tạp và dễ phát sinh lỗi con người. Quy trình tạo đơn bán hàng (sales ordering) tại cửa hàng hiện tốn nhiều thời gian và mang tính hành chính thủ công. Objective: Xây dựng hệ thống tạo đơn bán hàng tự động (automated sales order system) tại Rejuve Sto…",
+    "solution": "Business Process — SO Workflow (slide 5) Quy trình theo 5 bước, gắn với trạng thái Sales Order (SO): Step 0: Tạo Master Data, tạo User, gán vai trò (Role). Step 1: Hệ thống tự sinh SO lúc 4:00 sáng thứ Năm hàng tuần. Step 2: District Manager (DM) mở SO để review và submit cho Inventory Control (IC); có thể tạo Adhoc SO nếu cần. Step 3: IC mở SO để review, điều chỉnh (nếu cần) và Approve/Reject. St…",
+    "outcome": "Không có bảng KPI tổng hợp riêng, nhưng deck có tiêu chí nghiệm thu định lượng rõ ràng nhất trong các case đã phân tích: KPI Mục tiêu Độ chính xác mô hình dự báo (Machine Learning) R-squared ≥ 0.85 (điều kiện thanh toán Milestone 4) Fallback nếu không đạt Vận hành bằng Basic Moving Average Tự động h…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK Solution - Store Push Order Automation_ML/slide_007.png"
+  },
+  {
     "slug": "bnk-x-seoul-semi-ai-driven-sentiment-system",
     "folder": "BNK X Seoul semi - AI driven sentiment system",
     "title": "BNK X Seoul semi - AI driven sentiment system",
@@ -901,6 +1185,72 @@
     "solution": "Hệ thống tự động phân tích cảm xúc email theo 3 trụ cột chính: Trụ cột Công cụ Vai trò Power Automate (Low-code platform) Microsoft Power Automate Tự động hóa luồng xử lý, thu thập và tiền xử lý email từ Exchange Online mà không gián đoạn workflow hiện tại AI Engine Azure OpenAI GPT-4.1 Mini Kết hợp AI với business rules (rule-based) để phân loại cảm xúc chính xác, không bỏ sót rủi ro Power BI Mic…",
     "outcome": "KPI / Kết quả kỳ vọng Mô tả Fast Deployment Triển khai nhanh nhờ Low-code (Power Automate) + hệ sinh thái Microsoft sẵn có KPI Dashboard per Employee/Department Mỗi nhân viên và phòng ban có dashboard KPI riêng Customer Satisfaction Tăng sự hài lòng khách hàng nhờ phát hiện và xử lý email tiêu cực k…",
     "image_ref": "DATA/SLIDE_IMAGES/BNK X Seoul semi - AI driven sentiment system/slide_007.png"
+  },
+  {
+    "slug": "bnk-itl-proposal",
+    "folder": "BnK-ITL-Proposal",
+    "title": "BnK-ITL-Proposal",
+    "client": "ITL Logistics (Indo Trans Logistics — công ty logistics/giao nhận vận tải, logo \"ITL Logistics\" xuất hiện trên mọi slide nghiệp vụ)",
+    "type": "Proposal (Intelligent Automation / RPA + IDP Proposal)",
+    "domain": [
+      "banking",
+      "logistics",
+      "retail",
+      "document-ai",
+      "ai-ml"
+    ],
+    "tech": [
+      "UiPath (Studio",
+      "Orchestrator",
+      "Attended Robot)",
+      "Azure OCR",
+      "Google Vision API",
+      "PaddleOCR",
+      "Tesseract",
+      "PostgreSQL",
+      "Microsoft SQL Server",
+      "Viettel Cloud",
+      "IDC",
+      "eFMS",
+      "TradeTech",
+      "Flexport"
+    ],
+    "problem": "ITL Pain Point Overview (slide 4 — giống hệt bản without IDP) 1. Nhận cập nhật lịch tàu từ nhiều carrier với format khác nhau → CS phải điều chỉnh thủ công, dễ bỏ sót email. 2. CS phải copy dữ liệu từ SI (Shipping Instruction) sang nhiều platform. 3. Trùng lặp công việc (double work) khi làm billing và payment. 4. Thêm phí vào House's Job phải copy thủ công từ invoice, dễ gây mismatch. Thách thức…",
+    "solution": "Estimated Benefit — with IDP (slide 7) Process Bandwidth Freed (man-hours/năm) Error Reduction AHT Reduction Update Schedule of Vessels 971 75% 50% Input SI to carriers' systems ~1050 ~79% 53% Cargo information declaration 777 57% 60% Input & submit bill to eFMS 1.144 88% 80% Input & submit invoice to eFMS 1.144 88% 80% Payment process on eFMS 1.144 88% 80% Lưu ý đơn vị: Bản with-IDP đo bandwidth…",
+    "outcome": "KPI Giá trị Tỷ lệ tự động hóa (To Be) 80% robot / 20% con người Thời gian xử lý mỗi giao dịch Giảm từ 8 phút xuống 4 phút (-50%) Automation Potential trung bình 57–79% tùy quy trình Error Reduction 57–88% tùy quy trình AHT Reduction 50–80% tùy quy trình Tổng bandwidth giải phóng 971+~1050+777+1144+1…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK-ITL-Proposal/slide_007.png"
+  },
+  {
+    "slug": "bnk-itl-proposal-without-idp",
+    "folder": "BnK-ITL-Proposal without IDP",
+    "title": "BnK-ITL-Proposal without IDP",
+    "client": "ITL Logistics (Indo Trans Logistics — công ty logistics/giao nhận vận tải, thấy rõ qua logo \"ITL Logistics\" trên mọi slide)",
+    "type": "Proposal (Intelligent Automation / RPA Proposal)",
+    "domain": [
+      "logistics",
+      "retail",
+      "document-ai",
+      "ai-ml"
+    ],
+    "tech": [
+      "UiPath (Studio",
+      "Orchestrator",
+      "Attended Robot)",
+      "Regex Engine để trích xuất PDF",
+      "Microsoft SQL Server",
+      "Viettel Cloud",
+      "IDC",
+      "eFMS",
+      "TradeTech",
+      "Flexport",
+      "Office 365",
+      "SharePoint",
+      "Microsoft Graph API"
+    ],
+    "problem": "ITL Pain Point Overview (slide 4) Bốn pain point cốt lõi được xác định qua khảo sát/assessment của BnK: 1. Cập nhật lịch tàu (vessel schedule) không đồng nhất: Nhận update từ nhiều carrier với format khác nhau. Nhân viên CS (Customer Service) phải điều chỉnh mọi bước liên quan đến lịch tàu, có nguy cơ bỏ sót email do carrier gửi nhiều lần cập nhật. 2. Nhập liệu SI (Shipping Instruction) thủ công đ…",
+    "solution": "Estimated Benefit (slide 7) Process Bandwidth Freed (mandays/năm) Error Reduction AHT Reduction Update Schedule of Vessels 562 48% 29% Input SI to carriers' systems 620 (ước tính, số bị che một phần) 48% 32% Cargo information declaration 449 43% 29% Input & submit bill to eFMS 963 68% 45% Input & submit invoice to eFMS 963 68% 45% Executive Summary — Before/After (slide 9) Before (100% Manual): 8…",
+    "outcome": "KPI Giá trị Tỷ lệ tự động hóa (To Be) 60% robot / 40% con người Automation Potential trung bình 29–45% tùy quy trình Tổng bandwidth giải phóng 562 + ~620 + 449 + 963 + 963 ≈ ~3.557 mandays/năm trên cả 5 quy trình Error Reduction 43–68% tùy quy trình AHT (Average Handling Time) Reduction 29–45% tùy q…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK-ITL-Proposal without IDP/slide_007.png"
   },
   {
     "slug": "bnk-modena-ai-solution",
@@ -931,6 +1281,37 @@
     "solution": "1. AI Chatbot – Smart Assistant Platform Nền tảng chatbot đa năng cho phép doanh nghiệp xây dựng chatbot với prompt tùy chỉnh, không cần lập trình phức tạp. Hỗ trợ các use case: Travel Consultant, Banking Chatbot, Internal Banking Q&A, Sales Chatbot, AI Front-end Interviewer, v.v. 2. AI Document Understanding (DU) Kết hợp OCR + Layout Analysis + Language Model + Attention Mechanism thành pipeline…",
     "outcome": "Metric Giá trị Module OCR Accuracy > 95% Document Understanding Data Accuracy after OCR > 95% PAI – Payroll AI Salary Expense List Coverage 100% PAI Error & Exception Elimination 100% PAI Document Templates Supported > 700 PAI Fraud Detection Real-time blocking CDP Speech Recognition Speed 60x faste…",
     "image_ref": "DATA/SLIDE_IMAGES/BnK-Modena _ AI Solution/slide_007.png"
+  },
+  {
+    "slug": "bnk-sme-automate-test-and-eod-automation-proposal",
+    "folder": "BnK-SME-Automate-Test-And-EOD-Automation-Proposal",
+    "title": "BnK-SME-Automate-Test-And-EOD-Automation-Proposal",
+    "client": "CIMB Bank (chi nhánh Philippines — \"CIMB PH\"/\"CIMB PHY\", xuất hiện tại slides 22, 23, 26, 31)",
+    "type": "Proposal",
+    "domain": [
+      "banking",
+      "agriculture",
+      "manufacturing",
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "UiPath Test Suite (Studio",
+      "Test Manager",
+      "Orchestrator",
+      "Robots — Unattended)",
+      "Tricentis qTest",
+      "Kobiton",
+      "Sauce Labs",
+      "BrowserStack (mobile device farm)",
+      "UiPath RPA (EOD process)",
+      "Jira",
+      "ALM Tools"
+    ],
+    "problem": "Bối cảnh khách hàng 340 thay đổi (changes) trong Production trong 6 tháng gần nhất, trung bình 56 changes/tháng. Đội ngũ QC hiện tại chỉ có khoảng 15 QC, không đủ effort để chạy Regression Test đầy đủ cho tần suất thay đổi này. Áp lực giao sản phẩm (delivery) trong thời gian ngắn và thường xuyên. Cần chuẩn hóa hoạt động testing và áp dụng automation để cải thiện chất lượng & năng suất. Executive S…",
+    "solution": "BnK đề xuất 2 giải pháp song song, cùng dùng nền tảng UiPath: 1. Test Automation Solution Xây dựng automation testing framework dựa trên UiPath Test Suite (Studio, Test Manager, Orchestrator, Robots). Tích hợp với Tricentis qTest (ALM/test case management) và Kobiton (mobile device testing). Phát triển 400 test cases, deliverable gồm 300 test scripts + mobile test automation script. 2. EOD (End-of…",
+    "outcome": "Xem bảng Target Metrics ở phần Giải pháp — toàn bộ 5 KPI (delivery date, % automation coverage, defect rate, % test case automated, FTE saved) đều để ở mức target tạm 50% (TBD), ngoại trừ mốc delivery date framework là \"on-time trong 6 tuần từ kick-off\".",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK-SME-Automate-Test-And-EOD-Automation-Proposal/slide_007.png"
   },
   {
     "slug": "bnk-cma-solution-proposal-en-v0-1",
@@ -977,6 +1358,129 @@
     "image_ref": "DATA/SLIDE_IMAGES/BnK_Dispatch Management System and Matching Platform/slide_007.png"
   },
   {
+    "slug": "bnk-du-proposal-v2",
+    "folder": "BnK_DU proposal_v2",
+    "title": "BnK DU proposal v2",
+    "client": "Không nêu tên khách hàng cụ thể trong nội dung deck (đây là tài liệu giới thiệu sản phẩm/giải pháp AI-OCR mang tính tổng quát, có thể dùng cho nhiều khách hàng khác nhau; hậu tố \"DU\" trong tên file có thể là mã nội bộ của một prospect cụ thể nhưng không xuất hiện trong nội dung slide)",
+    "type": "Solution Proposal",
+    "domain": [
+      "retail",
+      "document-ai",
+      "ai-ml"
+    ],
+    "tech": [
+      "Azure Cognitive Services (Azure OCR)",
+      "Azure OpenAI",
+      "RPA (Power Automate",
+      "akaBot)",
+      "NLP",
+      "Machine Learning"
+    ],
+    "problem": "Đây không phải một proposal giải quyết pain-point cụ thể của một khách hàng, mà là tài liệu định vị sản phẩm AI-OCR nhắm đến nhóm khách hàng doanh nghiệp nói chung có nhu cầu: Số hóa và xử lý khối lượng lớn tài liệu giấy/scan (hóa đơn, hợp đồng, chứng từ, hồ sơ...). Khắc phục hạn chế của OCR truyền thống: độ chính xác thấp, khả năng xử lý hạn chế, không tự động hóa được, không hiểu ngôn ngữ/ngữ cả…",
+    "solution": "BnK giới thiệu AI-OCR như một nền tảng có 3 năng lực cốt lõi: 1. Phân loại tài liệu (Document Classification) — dùng thuật toán học máy phân tích nội dung để xác định loại tài liệu, áp dụng cho 6 nhóm: tài chính/kế toán (hóa đơn, hợp đồng, báo cáo tài chính), định danh cá nhân (CMND/CCCD, hộ chiếu, bằng lái, sổ hộ khẩu), y tế (hồ sơ bệnh án, kết quả xét nghiệm), pháp lý (văn bản pháp luật, biên bả…",
+    "outcome": "Không có bảng KPI tổng quát cho sản phẩm AI-OCR, nhưng case study Eximbank (slide 32–33) cung cấp số liệu kết quả thực tế đã đạt được: Case study 1 — Eximbank: Ứng dụng AI-OCR cho chi lương (slide 32) KPI Kết quả Danh sách chi lương được áp dụng 100% Độ chính xác dữ liệu sau OCR >95% Loại bỏ các trư…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK_DU proposal_v2/slide_007.png"
+  },
+  {
+    "slug": "bnk-eib-automation-test-painpoint",
+    "folder": "BnK_EIB_Automation_Test_Painpoint",
+    "title": "BnK EIB Automation Test Painpoint",
+    "client": "EIB — Ngân hàng TMCP Xuất Nhập Khẩu Việt Nam (Eximbank, mã chứng khoán EIB)",
+    "type": "Case Study / Solution Retrospective",
+    "domain": [
+      "banking",
+      "ai-ml"
+    ],
+    "tech": [
+      "UiPath Test Suite (Studio",
+      "Orchestrator",
+      "Test Manager)",
+      "Katalon Platform + OpenAI",
+      "Appium (mobile test)"
+    ],
+    "problem": "Bối cảnh dự án (Timeline — slide 3) Năm Sự kiện 2021 PoC Katalon, PoC UiPath (đánh giá công cụ) 2022 Dự án chuyển giao công nghệ UiPath Test-Suite: đào tạo + xây dựng Framework + bàn giao gói 100 test-case 2023 EIB ngưng sử dụng auto test; BnK gửi phản hồi lần 1 2024 BnK phản hồi lại các thông tin liên quan Các vướng mắc chi tiết (slide 4–7, dạng bảng 3 cột: Vướng mắc / Phản hồi đối tác / Phản hồi…",
+    "solution": "2025 — Bước tiếp cận mới theo xu hướng Intelligence Automation Test (slide 9) BnK đề xuất khung tiếp cận mới gồm 4 trụ cột: Trụ cột Nội dung Apply AI Design (Generative AI), Automate (Generative AI), Execute (Specialized AI), Analyze (Generative AI) OKR/KPI A/B Testing, Single Application Testing, UI/UX Testing, Integration Testing Strategy Testing Management (thiết kế/quản lý tự động hóa test), T…",
+    "outcome": "Không có bảng KPI định lượng cụ thể cho giai đoạn 2025. Tuy nhiên deck có nêu rõ mục tiêu định tính: tăng tỷ lệ tương thích testcase lên gần 90% (đề cập ở phản hồi nội bộ slide 5: \"nâng cao tính tương thích tiệm cận 90%\"), và mục tiêu chiến lược để business user tham gia trực tiếp vào automation tes…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK_EIB_Automation_Test_Painpoint/slide_007.png"
+  },
+  {
+    "slug": "bnk-eib-automation-test-proposal-2025",
+    "folder": "BnK_EIB_Automation_Test_Proposal_2025",
+    "title": "BnK EIB Automation Test Proposal 2025",
+    "client": "EIB — Ngân hàng TMCP Xuất Nhập Khẩu Việt Nam (Eximbank, mã chứng khoán EIB)",
+    "type": "Proposal",
+    "domain": [
+      "banking",
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "UiPath Test Suite (Studio",
+      "Orchestrator",
+      "Test Manager",
+      "AutoPilot)",
+      "Katalon Platform + OpenAI",
+      "Appium",
+      "Selenium",
+      "CI",
+      "CD",
+      "PowerBI",
+      "ELK Stack (báo cáo)"
+    ],
+    "problem": "Phần \"HẠN CHẾ VÀ ĐỀ XUẤT\" (slide 3–9) — 6 nhóm hạn chế kỹ thuật cụ thể 01. Tính ổn định và độ tin cậy (slide 4) Hạn chế Đề xuất cải thiện Kịch bản test bị ảnh hưởng khi giao diện ứng dụng thay đổi thường xuyên Xây dựng framework automation theo hướng modular, data-driven để giảm phụ thuộc UI; áp dụng Hybrid Test Automation — ưu tiên automate các chức năng ổn định, ít thay đổi Robot thực thi test c…",
+    "solution": "Về tổng thể, bản Proposal 2025 đề xuất một framework khắc phục toàn diện dựa trên 6 nhóm cải tiến kỹ thuật (nêu trên) cộng với hướng tiếp cận GenAI hóa testing (Apply AI / OKR-KPI / Strategy / Tools — xem phân tích deck Painpoint). Điểm nhấn giải pháp riêng của bản Proposal: Hybrid Test Automation: chỉ automate các chức năng ổn định, ít thay đổi — thay vì cố gắng automate 100% (nguyên nhân gốc gây…",
+    "outcome": "Không có bảng KPI định lượng riêng cho chương trình cải tiến 2025. Các kỳ vọng định tính có thể suy luận từ nội dung đề xuất: giảm thời gian bảo trì kịch bản, tăng độ ổn định/tin cậy của automation, giảm phụ thuộc chuyên gia kỹ thuật bên ngoài, mở rộng khả năng báo cáo/tích hợp đa nền tảng.",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK_EIB_Automation_Test_Proposal_2025/slide_007.png"
+  },
+  {
+    "slug": "bnk-esg-disclosure-proposal",
+    "folder": "BnK_ESG_Disclosure_Proposal",
+    "title": "BnK ESG Disclosure Proposal",
+    "client": "Không nêu tên cụ thể — có dấu hiệu là proposal mang tính \"template/generic\" hướng tới doanh nghiệp Việt Nam có nhu cầu số hóa báo cáo ESG (không phải case study cho một khách hàng named cụ thể)",
+    "type": "Solution Proposal",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "Laravel",
+      "Node.js",
+      "Vue.js",
+      "MySQL",
+      "Nginx",
+      "Amazon EC2",
+      "SaaS multi-tenant"
+    ],
+    "problem": "Bối cảnh thị trường (slide 3–4, PwC data) 82% doanh nghiệp Việt Nam áp dụng ESG để cải thiện hình ảnh thương hiệu; 68% để duy trì tính cạnh tranh; 44% để thu hút/giữ chân nhân viên; 40% áp lực từ nhà đầu tư; 37% áp lực từ chính phủ (Nguồn: PwC Global Consumer Insight, Workforce Survey). 35% doanh nghiệp Việt Nam chưa có chương trình ESG nào; 71% thiếu hiểu biết về dữ liệu cần cho báo cáo; 70% có b…",
+    "solution": "BnK đề xuất xây dựng \"ESG Reporting Tool\" — nền tảng SaaS 2 cổng (Admin Portal + User Portal), với luồng nghiệp vụ chính (slide 5): Company User: Đăng ký tài khoản (theo gói dịch vụ) → Login → Điền/Import ESG questionnaire → Validation check → Submit đánh giá → nhận ESG report. Internal User (BnK): Tạo & tùy biến bộ câu hỏi ESG (E/S/G) bằng kéo-thả → Đánh giá dữ liệu ESG khách hàng nộp → Upload ES…",
+    "outcome": "Deck không có slide KPI riêng biệt (khác với case study Dispatch). Các mục tiêu suy luận được: Khía cạnh Mục tiêu ngụ ý Thời gian triển khai ~20 tuần (12 sprint) từ kickoff đến Golive Effort 290 man-days phát triển Tuân thủ ESG Giúp doanh nghiệp thoát khỏi nhóm 35% \"không có chương trình ESG\" và 70%…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK_ESG_Disclosure_Proposal/slide_007.png"
+  },
+  {
+    "slug": "bnk-esg-disclosure-proposal-logoremoved",
+    "folder": "BnK_ESG_Disclosure_Proposal_Logoremoved",
+    "title": "BnK ESG Disclosure Proposal Logoremoved",
+    "client": "Không nêu tên cụ thể — có dấu hiệu là proposal mang tính \"template/generic\" hướng tới doanh nghiệp Việt Nam có nhu cầu số hóa báo cáo ESG (không phải case study cho một khách hàng named cụ thể)",
+    "type": "Solution Proposal",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "Laravel",
+      "Node.js",
+      "Vue.js",
+      "MySQL",
+      "Nginx",
+      "Amazon EC2",
+      "SaaS multi-tenant"
+    ],
+    "problem": "Bối cảnh thị trường (slide 3–4, PwC data) 82% doanh nghiệp Việt Nam áp dụng ESG để cải thiện hình ảnh thương hiệu; 68% để duy trì tính cạnh tranh; 44% để thu hút/giữ chân nhân viên; 40% áp lực từ nhà đầu tư; 37% áp lực từ chính phủ (Nguồn: PwC Global Consumer Insight, Workforce Survey). 35% doanh nghiệp Việt Nam chưa có chương trình ESG nào; 71% thiếu hiểu biết về dữ liệu cần cho báo cáo; 70% có b…",
+    "solution": "BnK đề xuất xây dựng \"ESG Reporting Tool\" — nền tảng SaaS 2 cổng (Admin Portal + User Portal), với luồng nghiệp vụ chính (slide 5): Company User: Đăng ký tài khoản (theo gói dịch vụ) → Login → Điền/Import ESG questionnaire → Validation check → Submit đánh giá → nhận ESG report. Internal User (BnK): Tạo & tùy biến bộ câu hỏi ESG (E/S/G) bằng kéo-thả → Đánh giá dữ liệu ESG khách hàng nộp → Upload ES…",
+    "outcome": "Deck không có slide KPI riêng biệt (khác với case study Dispatch). Các mục tiêu suy luận được: Khía cạnh Mục tiêu ngụ ý Thời gian triển khai ~20 tuần (12 sprint) từ kickoff đến Golive Effort 290 man-days phát triển Tuân thủ ESG Giúp doanh nghiệp thoát khỏi nhóm 35% \"không có chương trình ESG\" và 70%…",
+    "image_ref": "DATA/SLIDE_IMAGES/BnK_ESG_Disclosure_Proposal_Logoremoved/slide_007.png"
+  },
+  {
     "slug": "bnk-pa-case-study-vn",
     "folder": "BnK_PA_Case_study_VN",
     "title": "BnK PA Case study VN",
@@ -1016,6 +1520,39 @@
     "solution": "BnK de xuat giai phap 4 thanh phan chinh, trien khai theo lo trinh tang dan (Step 0 -> 1A -> 1B/2/3): Thanh phan Mo ta RPA Automation Tu dong hoa cac buoc lap lai tren Logizard WMS, e-Hiden, Excel, import/export file, xac nhan ket qua AI-OCR / IDP Doc packing list, trich xuat san pham va so luong, nhan dien dong co danh dau lien quan den kho, tao data san sang cho nhan vien review Report Automatio…",
     "outcome": "*(Du lieu thuc te tu Case Study AIG Logistics -- du an tuong tu BnK da trien khai, dung lam bang chung nang luc)* Chi so Ket qua thuc te Thoi gian xu ly trung binh 1 phut 47 giay / ho so (end-to-end) Do chinh xac AI (confidence) Trung binh 97% Do chinh xac voi ground truth 94,2% Ti le false positive…",
     "image_ref": "DATA/SLIDE_IMAGES/BnK_Warehouse Operation Automation Solution Proposal_EN_v1_2/slide_007.png"
+  },
+  {
+    "slug": "cimb-bnk-automation-test",
+    "folder": "CIMB - BnK Automation Test",
+    "title": "CIMB - BnK Automation Test",
+    "client": "CIMB (ngân hàng khu vực, xuất hiện rõ trong slide 15: \"CIMB Project Manager/PO\")",
+    "type": "Solution Proposal",
+    "domain": [
+      "ai-ml"
+    ],
+    "tech": [
+      "UiPath Studio",
+      "UiPath Orchestrator",
+      "UiPath Test Manager",
+      "UiPath Robots",
+      "Selenium",
+      "Appium",
+      "GitLab",
+      "Jenkins",
+      "Azure Pipelines",
+      "Jira",
+      "Redmine",
+      "ServiceNow",
+      "Azure DevOps",
+      "MS SQL Server",
+      "Sauce Labs",
+      "Kobiton",
+      "BrowserStack"
+    ],
+    "problem": "Bối cảnh CIMB hiện đang duy trì test automation bằng Selenium scripts, cần đánh giá lại framework để nâng cấp năng lực kiểm thử tự động. Bài toán đặt ra: chọn đúng framework (\"Right Framework\") đáp ứng các tiêu chí về tích hợp công cụ, khả năng mở rộng, hỗ trợ đa nền tảng, cộng đồng hỗ trợ, và báo cáo/phân tích. So sánh 5 framework (slide 4 — Comparison Challenges) BnK dựng bảng so sánh chi tiết g…",
+    "solution": "BnK đề xuất CIMB áp dụng UiPath Test Suite — nền tảng automation testing tích hợp trong hệ sinh thái Enterprise Automation Platform của UiPath (slide 7): Discover (Process & Task Mining) → Manage → AI Enabled Automation (Robotic Process Automation) → Orchestrate → Run (Test and RPA Robots), hỗ trợ end-to-end UI và API automation trên cả Automation Cloud, Hybrid, và On-premises. Các cấu phần chính…",
+    "outcome": "Bảng KPI chính thức (slide 5 — duy nhất trong 3 deck có slide KPI riêng với công thức đo lường rõ ràng) # KPI Công thức Target 1 Automation framework delivery date On-time 6 tuần từ kickoff 2 % áp dụng automation testing trong dự án Số dự án đã áp dụng / tổng dự án hiện tại 100% 3 Tỷ lệ lỗi phát hiệ…",
+    "image_ref": "DATA/SLIDE_IMAGES/CIMB - BnK Automation Test/slide_007.png"
   },
   {
     "slug": "cimb-proposal-april-2026-1",
@@ -1125,6 +1662,33 @@
     "image_ref": "DATA/SLIDE_IMAGES/GGF-B_K - Yield Prediction_V2/slide_007.png"
   },
   {
+    "slug": "gti-hk-quotation",
+    "folder": "GTI HK_Quotation",
+    "title": "GTI HK Quotation",
+    "client": "GTI (đối tác/khách hàng có trụ sở tại Hong Kong — suy luận từ tên thư mục \"GTI HK\", không có tên khách hàng tường minh trong nội dung slide)",
+    "type": "Proposal (Commercial Quotation / Staff Augmentation T&M)",
+    "domain": [
+      "retail",
+      "ai-ml"
+    ],
+    "tech": [
+      "Microsoft Azure (Cloud Infrastructure",
+      "DevOps",
+      "SRE",
+      "Landing Zone IaC)",
+      "UiPath",
+      "Odoo",
+      "Creatio",
+      "Katalon",
+      "Infobip",
+      "Axway"
+    ],
+    "problem": "Deck không trình bày pain point cụ thể của khách hàng theo kiểu solution proposal thông thường — vì bản chất đây là báo giá cho một nhu cầu đã được xác định sẵn: khách hàng (GTI, Hong Kong) cần bổ sung nhân sự kỹ thuật Microsoft Azure (2 Senior DevOps/Azure Engineer) trong thời gian 12 tháng, có thể theo hình thức offshore từ Việt Nam hoặc on-site tại Hong Kong. Không có slide \"As-Is/To-Be\" hay \"P…",
+    "solution": "BnK đề xuất mô hình Outsourced Development Center (ODC) cung cấp nhân sự theo 2 phương án song song để khách hàng lựa chọn: Phương án Địa điểm Số lượng Thời hạn Tổng chi phí Offshore Việt Nam 2 Senior Azure Engineer (DevOps) 12 tháng 81.600 USD On-site Hong Kong 2 Senior Azure Engineer 12 tháng 157.300 USD (gồm lương + chi phí triển khai) Cả hai phương án đều dùng cùng rate card nội bộ (Developmen…",
+    "outcome": "Bản quotation này không có slide KPI/expected outcome riêng biệt — vì đây là báo giá nhân sự T&M chứ không phải proposal giải pháp có mục tiêu đo lường kết quả kinh doanh. Các cam kết gần với \"KPI dịch vụ\" nằm ở điều khoản hợp đồng: Cam kết Nội dung Onboarding Sẵn sàng onboard đầu tháng 8/2026 SLA t…",
+    "image_ref": "DATA/SLIDE_IMAGES/GTI HK_Quotation/slide_007.png"
+  },
+  {
     "slug": "makalot-x-bnk-ai-proposal",
     "folder": "Makalot x BnK - AI Proposal",
     "title": "Makalot x BnK - AI Proposal",
@@ -1182,6 +1746,62 @@
     "solution": "Core: Adapter Application Dong vai tro cau noi trung gian (intermediary bridge), co 3 chuc nang chinh: 1. Request Forwarding: Nhan tu Monday, xu ly, chuyen den he thong tuong ung 2. Response Reception & Forwarding: Nhan ket qua tu he thong thu ba, tra lai Monday 3. Connection Management: Quan ly ket noi on dinh va bao mat Adapter duoc trien khai tai moi truong khach hang (on client environment), K…",
     "outcome": "De xuat khong co KPI cu the. Gia tri ky vong suy ra: Giam thoi gian nhap lieu thu cong giua cac he thong Tu dong hoa quy trinh luu tai lieu Monday -> Vitals ESP Tu dong hoa quy trinh don hang Monday <-> Epicor ERP Tu dong hoa quy trinh ban ve ky thuat Monday <-> SOLIDWORKS PDM Giam sai sot do nhap l…",
     "image_ref": "DATA/SLIDE_IMAGES/Monday Integration Proposal_FN/slide_007.png"
+  },
+  {
+    "slug": "odoo-casestudy-template",
+    "folder": "Odoo_CaseStudy_Template",
+    "title": "Odoo CaseStudy Template",
+    "client": "Không phải một khách hàng đơn lẻ — đây là tài liệu năng lực tổng hợp của **BnK Solution**, dẫn chứng bằng nhiều case tham chiếu thực tế: Sun Group (bất động sản, Việt Nam), một công ty Odoo hàng đầu tại Đức, Impirix/Northern Standard (hóa chất & cannabis, Mỹ, qua LeafLink & Metrc), nhà bán lẻ nội thất gia đình, nhà máy thép, nhà máy sản xuất hook-and-loop, tập đoàn y tế (thương mại & sản xuất), nhà máy thiết bị điện",
+    "type": "Case Study / Solution Capability Deck (bộ sưu tập nhiều mini case study + tài liệu năng lực dùng làm template bán hàng)",
+    "domain": [
+      "retail",
+      "document-ai",
+      "data-platform",
+      "ai-ml"
+    ],
+    "tech": [
+      "Odoo (Community",
+      "Enterprise)",
+      "Python",
+      "Django",
+      "Flask (microservices)",
+      "OutSystems (Low-code)",
+      "UiPath",
+      "RPA & BPM",
+      "AI (Document Understanding",
+      "NLP",
+      "OCR)",
+      "Customer Data Platform (CDP)",
+      "AWS IoT",
+      "Azure IoT"
+    ],
+    "problem": "Vì đây là tài liệu năng lực tổng hợp, không có một \"bài toán\" duy nhất. Thay vào đó, mỗi case study Odoo (slide 27–34) đại diện cho một bài toán riêng biệt của khách hàng khác nhau: Case Ngành Bài toán Sun Group Bất động sản (VN) Cần hệ thống nội bộ quản lý phân công công việc theo workflow + đánh giá KPI/OKR cho 85 subsidiaries, 2000+ phòng ban, 10K users Công ty Odoo hàng đầu Đức Công nghệ/Odoo…",
+    "solution": "BnK định vị mình là đối tác Odoo Silver Partner tại Việt Nam, cung cấp 4 dòng dịch vụ chính quanh Odoo/Python (slide 21–25): Dịch vụ Nội dung Odoo Outsourcing Service Triển khai đa hệ thống, thiết kế kiến trúc, migrate giữa các phiên bản, chuyển đổi Enterprise ↔ Community, tùy biến module theo yêu cầu, fix core, maintain hệ thống Django Outsourcing Service Chuyên gia Django 5–8 năm kinh nghiệm, xâ…",
+    "outcome": "Deck không có KPI dự án theo nghĩa mục tiêu kinh doanh, nhưng có nhiều số liệu năng lực/proof point dùng làm bằng chứng thuyết phục: Mảng Số liệu Công ty 350 nhân viên, 100+ khách hàng, 12 đối tác, 5 văn phòng RPA/Automation 40+ chuyên gia, 35+ dự án OutSystems 32 chứng chỉ, 20+ dự án, 60K active us…",
+    "image_ref": "DATA/SLIDE_IMAGES/Odoo_CaseStudy_Template/slide_007.png"
+  },
+  {
+    "slug": "proposal-charm-website",
+    "folder": "Proposal - Charm Website",
+    "title": "Proposal - Charm Website",
+    "client": "Avows (tên pháp nhân khách hàng xuất hiện ở điều khoản thanh toán, slide 13) — vận hành chuỗi cửa hàng nail & spa thương hiệu **\"Charm\"** (website charm.ie) tại **Dublin, Ireland** (slide text ghi \"Iceland\" nhưng đây gần như chắc chắn là lỗi chính tả/OCR vì Dublin là thủ đô Ireland, không phải Iceland, và tên miền .ie là mã quốc gia Ireland)",
+    "type": "Proposal (Website Redesign — Fixed-scope nhỏ)",
+    "domain": [
+      "retail",
+      "document-ai",
+      "ai-ml"
+    ],
+    "tech": [
+      "WordPress (PHP CMS)",
+      "Amazon Web Services (AWS",
+      "tùy chọn hosting)",
+      "UI",
+      "UX tham chiếu townhouse.co.uk"
+    ],
+    "problem": "Khách hàng Avows/Charm hiện có nhiều cửa hàng nail & spa tại Dublin, Ireland. Mong muốn làm lại (redo) website hiện tại charm.ie — ngụ ý website cũ đã lỗi thời hoặc không đáp ứng được nhu cầu trình bày thương hiệu/dịch vụ. Khách hàng có website tham chiếu cụ thể để định hướng thiết kế: townhouse.co.uk — cho thấy khách hàng đã có gu thẩm mỹ/UX rõ ràng, muốn một trải nghiệm tương tự. Yêu cầu rõ ràng…",
+    "solution": "BnK đề xuất xây dựng lại website trên nền tảng WordPress (PHP), với 2 nhóm hạng mục chính (slide 4 — Requirements, mã hóa theo work-item ID): Nhóm Hạng mục Mã I. CMS Cấu hình codebase trên nền WordPress CW-1 I. CMS Cấu hình thông tin cơ bản website (menu, header, banner, footer) CW-2 I. CMS Cấu hình danh mục và bài viết CW-3 I. CMS Cấu hình thư viện hình ảnh CW-4 I. CMS Quản lý dịch vụ: danh sách…",
+    "outcome": "Deck không có slide KPI riêng biệt (đặc điểm chung của các proposal nhỏ, tập trung vào scope/cost hơn là đo lường kết quả kinh doanh). Các mốc/tiêu chí thành công ngầm định: Tiêu chí Mục tiêu Thời gian ra mắt Go-live trong vòng 1.5 tháng kể từ khi bắt đầu Chất lượng bàn giao Đầy đủ tài liệu SRS, tes…",
+    "image_ref": "DATA/SLIDE_IMAGES/Proposal - Charm Website/slide_007.png"
   },
   {
     "slug": "protenlindo-proposal-update-2-2",

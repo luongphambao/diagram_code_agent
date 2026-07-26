@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { LogEntry } from "../../hooks/useDiagramAgent";
+import type { LogEntry } from "../../hooks/agent-utils";
 
 export default function ActivityRow({ entry }: { entry: LogEntry }) {
   const [expanded, setExpanded] = useState(false);
@@ -9,7 +9,7 @@ export default function ActivityRow({ entry }: { entry: LogEntry }) {
       <div className="flex items-center gap-2 rounded-md border border-white/5 bg-white/3 px-3 py-1.5">
         <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-violet-400" />
         <span className="font-mono text-[11px] text-violet-300/80">LLM turn #{entry.turn}</span>
-        <span className="ml-auto text-[10px] text-slate-700">{entry.t}s</span>
+        <span className="ml-auto text-[10px] text-muted">{entry.t}s</span>
       </div>
     );
   }
@@ -39,21 +39,21 @@ export default function ActivityRow({ entry }: { entry: LogEntry }) {
           {title}
         </span>
         {entry.subagent && (
-          <span className="flex-shrink-0 rounded border border-white/8 bg-white/4 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-slate-600">
+          <span className="flex-shrink-0 rounded border border-white/8 bg-white/4 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-muted">
             {entry.subagent}
           </span>
         )}
-        <span className="flex-1 truncate font-mono text-[11px] text-slate-600">{detail}</span>
+        <span className="flex-1 truncate font-mono text-[11px] text-muted">{detail}</span>
         {entry.elapsed_s !== undefined && (
-          <span className="flex-shrink-0 text-[10px] text-slate-700">{entry.elapsed_s}s</span>
+          <span className="flex-shrink-0 text-[10px] text-muted">{entry.elapsed_s}s</span>
         )}
         {hasDetail && (
-          <span className="flex-shrink-0 text-[10px] text-slate-700">{expanded ? "▲" : "▼"}</span>
+          <span className="flex-shrink-0 text-[10px] text-muted">{expanded ? "▲" : "▼"}</span>
         )}
       </button>
       {expanded && hasDetail && (
         <pre
-          className={`whitespace-pre-wrap border-t border-white/5 px-3 py-2 font-mono text-[10px] leading-relaxed ${isError ? "text-red-400/80" : "text-slate-500"}`}
+          className={`whitespace-pre-wrap border-t border-white/5 px-3 py-2 font-mono text-[10px] leading-relaxed ${isError ? "text-red-400/80" : "text-secondary"}`}
         >
           {detail}
         </pre>
