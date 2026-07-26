@@ -485,7 +485,7 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                             "`web_research` first if you don't already have one from this "
                             "conversation)."
                         )
-                    else:
+                    elif preserve_diagram_artifacts:
                         artifact_instruction = (
                             "The user is asking for a PPT/proposal/PowerPoint deck. Do NOT "
                             "redesign or re-render the diagram. Call `generate_ppt_proposal({})` "
@@ -503,6 +503,14 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                             "(`out.png`, `out.drawio`, `diagram.py`) with approved planning "
                             f"artifacts. {artifact_instruction}"
                         )
+                    # else: only preserve_existing_project matched (a plain continuation
+                    # message that didn't hit any of the specific followup categories
+                    # above). Leave `desc` untouched — injecting one of the category-
+                    # specific "call this tool now" instructions here would put words in
+                    # the user's mouth for requests that were never pdf/ppt/wbs/email/
+                    # business-case asks. The point of this branch is only to have
+                    # skipped clear_stage_markers() above so the existing solution
+                    # context survives for whatever the message actually asked for.
                 req_file = ws / "requirements.md"
                 if attached:
                     ws.mkdir(parents=True, exist_ok=True)
