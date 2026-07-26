@@ -42,7 +42,7 @@ Backend là một Deep Agent (LangGraph + deepagents) điều phối 5 subagent 
 - **Không** nới `--cov-fail-under=60`, không đổi `uv sync --frozen` thành có fallback, không mở blocking ruff set thành `ALL` (xem `docs/decisions/0005-*`).
 - **Không** thêm dependency mới khi chưa hỏi. `@ag-ui/client` + `@ag-ui/core` phải pin đúng `0.0.57` ở **cả** `frontend/` và `runtime/`.
 - **Không** chạy `backend/evals/e2e/` trong CI hay khi test vặt — nó gửi **email thật** và đặt **lịch Google thật**.
-- Cẩn thận: hook `PostToolUse` trong `.claude/settings.json` **tự động commit** mọi file code bạn sửa (`.py/.ts/.tsx/.json/...`) với message `auto: update <file>`.
+- Cẩn thận: hook `Stop` trong `.claude/settings.json` **tự động commit** mọi thay đổi trong `backend/`, `frontend/`, `runtime/`, `.github/`, `docs/`, `docker-compose.yml`, `AGENTS.md`, `CLAUDE.md`, `.dockerignore`, `.gitignore` vào **một commit gộp mỗi lượt** (`git add -A` theo danh sách đường dẫn trên rồi commit một lần khi kết thúc lượt), message `auto: session <timestamp>`. Đã đổi từ commit-mỗi-file (PostToolUse, dựa theo đuôi file) sang batch theo lượt vì allowlist đuôi file từng bỏ sót file không đuôi (như `Dockerfile`) khiến chúng không bao giờ được track.
 
 ## Trước khi commit
 1. `cd backend && uv run pytest tests/ -q` — phải xanh.
@@ -57,6 +57,7 @@ Backend là một Deep Agent (LangGraph + deepagents) điều phối 5 subagent 
 | Thêm/sửa tool, subagent, gate, middleware, budget | `docs/agent-design.md` |
 | Gặp thuật ngữ nghiệp vụ lạ (WBS, CSM, blueprint, preset, zone…) | `docs/domain-glossary.md` |
 | Đụng schema JSON của artifact (wbs.json, blueprint.json, deck_plan.json…) | `docs/data-contracts.md` |
+| Đụng renderer PPTX, preset màu, hoặc thêm block slide | `docs/deck-design-system.md` |
 | Đụng Postgres / checkpointer / store | `docs/database.md` |
 | Thêm/sửa endpoint, sự kiện SSE, giao thức gate resume | `docs/api-contracts.md` |
 | Viết test hoặc eval | `docs/testing.md` |

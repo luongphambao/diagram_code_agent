@@ -835,22 +835,26 @@ try:
                 "uml actor", "dynamodb", "kafka".
             limit: Max number of matching shapes to return (default 5).
         """
-        try:
-            from domain.diagram.shapesearch import search_shapes
+        from domain.diagram.shapesearch import ShapeIndexMissing, search_shapes
 
+        try:
             results = search_shapes(query, limit)
-            if not results:
-                return json.dumps(
-                    {
-                        "status": "NOT_FOUND",
-                        "query": query,
-                        "hint": "Try broader keywords or check spelling.",
-                    },
-                    indent=2,
-                )
-            return json.dumps({"status": "OK", "query": query, "results": results}, indent=2)
-        except Exception as exc:  # noqa: BLE001
-            return f"search_drawio_shapes error: {exc}"
+        except ShapeIndexMissing as exc:
+            # A real, narrow failure (the packaged shape index is missing) —
+            # surfaced as structured status rather than swallowed by a bare
+            # `except Exception`, which used to make this tool silently and
+            # permanently return an error string on every call (docs/gotchas.md).
+            return json.dumps({"status": "ERROR", "query": query, "reason": str(exc)}, indent=2)
+        if not results:
+            return json.dumps(
+                {
+                    "status": "NOT_FOUND",
+                    "query": query,
+                    "hint": "Try broader keywords or check spelling.",
+                },
+                indent=2,
+            )
+        return json.dumps({"status": "OK", "query": query, "results": results}, indent=2)
 
 except ImportError:
     # Allow importing this module even without langchain (e.g., for testing constants)

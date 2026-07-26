@@ -48,14 +48,30 @@ DATA/
 example/
 example_doc/
 requirement/
+# slide/ is a scratch run's generated output (deck plan, rendered pptx, slide
+# preview PNGs, WBS json/excel) — not code, never needed inside the image.
+slide/
 
-# --- Misc large / irrelevant top-level dirs not part of the image build ---
+# --- Vendored reference repos (AGENTS.md: never build/read these) ------------
 Paper2Any/
-deer-flow/
-next-ai-draw-io/
-open-swe/
 drawio-skill/
-mcp/
+CopilotKit/
+open-design/
+openwiki/
+officecli/
+
+# --- Root-level scratch (matches .gitignore's pattern-based root cleanup) ----
+# Leading / anchors to repo root — unanchored patterns would also match
+# tracked package assets like backend/src/data/logo.png.
+/*.zip
+/*.drawio
+/*.png
+/*.pdf
+/scratch_*.txt
+/WBS_image/
+/imgs/
+
+# --- Misc large / irrelevant top-level dirs not part of the image build ------
 scripts/
 plans/
 new/

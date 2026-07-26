@@ -48,10 +48,15 @@ def test_failed_render_counts_toward_hard_cap(monkeypatch, tmp_path):
     _use_workspace(monkeypatch, tmp_path)
     (tmp_path / "blueprint.json").write_text("{}", encoding="utf-8")
 
-    def fail_run(*_args, **_kwargs):
-        return SimpleNamespace(returncode=1, stderr="boom", stdout="")
+    # render_diagram no longer shells out via subprocess.run directly — it goes
+    # through get_sandbox_runner().render() (runtime/sandbox/render_exec.py),
+    # which with the default SANDBOX_PROVIDER hits real Modal. Patch that seam
+    # instead so this test stays hermetic (docs/gotchas.md).
+    class _FailingRunner:
+        def render(self, *_args, **_kwargs):
+            return SimpleNamespace(returncode=1, stderr="boom", stdout="")
 
-    monkeypatch.setattr(rendering_tools.subprocess, "run", fail_run)
+    monkeypatch.setattr(rendering_tools, "get_sandbox_runner", lambda: _FailingRunner())
 
     msg = tools.render_diagram.func("print('bad')", tool_call_id="tc-1")
     assert "Render #1/6 FAILED" in msg.content

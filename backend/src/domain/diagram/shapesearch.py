@@ -29,9 +29,25 @@ _shapes_cache: list | None = None
 _tag_map_cache: dict | None = None
 
 
+class ShapeIndexMissing(RuntimeError):
+    """Raised when ``shape-index.json.gz`` isn't installed at the expected path.
+
+    Kept a distinct type (rather than letting ``FileNotFoundError`` propagate)
+    so callers — notably ``tools.icon_tools.search_drawio_shapes`` — can catch
+    this one failure mode narrowly instead of swallowing every exception and
+    silently degrading the tool into an always-erroring no-op.
+    """
+
+    def __init__(self, path: str) -> None:
+        super().__init__(f"shape index not found at {path}")
+        self.path = path
+
+
 def _load_index() -> tuple[list, dict]:
     global _shapes_cache, _tag_map_cache
     if _shapes_cache is None:
+        if not os.path.exists(INDEX):
+            raise ShapeIndexMissing(INDEX)
         with gzip.open(INDEX, "rt", encoding="utf-8") as f:
             _shapes_cache = json.load(f)
         _tag_map_cache = build_tag_map(_shapes_cache)
@@ -154,10 +170,10 @@ def main() -> None:
     ap.add_argument("--json", action="store_true", help="emit JSON instead of a table")
     args = ap.parse_args()
 
-    if not os.path.exists(INDEX):
-        sys.exit(f"error: shape index not found at {INDEX}")
-
-    results = search_shapes(args.query, args.limit)
+    try:
+        results = search_shapes(args.query, args.limit)
+    except ShapeIndexMissing as exc:
+        sys.exit(f"error: {exc}")
     if not results:
         sys.exit(f"no shapes matched {args.query!r}")
     if args.json:

@@ -66,6 +66,14 @@ temp/
 # not part of this repo (contains its own nested .git).
 drawio-skill/
 
+# ── Vendored reference repos (AGENTS.md: never build/read these) ─────────────
+# Leading / anchors to repo root.
+/CopilotKit/
+/Paper2Any/
+/open-design/
+/openwiki/
+/officecli/
+
 # ── Reference / training data (too large or not code) ────────────────────────
 # Leading / anchors to repo root — avoids matching backend/src/.../data/ on Windows.
 /DATA/
@@ -81,18 +89,26 @@ run-*.json
 *.pdf
 test_poster_demo.*
 Gemini_Generated_Image_*.png
+# slide/ is a scratch run's output (deck plan + rendered pptx + slide preview
+# PNGs + WBS json/excel), not a vendored repo or shipped code.
+/slide/
 
-# ── Diagram image outputs at repo root ────────────────────────────────────────
-diagram\ (*.png
+# ── Root-level scratch (pattern-based, not by-name — see docs/decisions/) ────
+# Leading / anchors to repo root so backend/src/.../data/ never matches.
+/scratch_*.txt
+/*.zip
+/*.drawio
+/*.png
+/*.html
+/*.xlsx
+/new/
+/WBS_LOG.txt
 
-# ── Claude Code session / plan artifacts (auto-generated, not code) ───────────
-adaptive-exploring-lampson.md
-cheeky-hopping-clock.md
-lexical-cooking-marble.md
-hi-n-t-i-ang-mu-n-wild-sparkle.md
-context_engineering.md
-deep_agent_context_management.md
-diagram.md
+# ── Root-level scratch markdown (allowlist: everything except the real docs) ─
+/*.md
+!/README.MD
+!/AGENTS.md
+!/CLAUDE.md
 
 # ── Local scratch / prototype scripts (not part of the shipped agent) ─────────
 mino.py
@@ -100,11 +116,9 @@ read_wbs.py
 read_wbs2.py
 build_wbs_json.py
 test_mimo_vision.py
+generate_image.py
 backend/_tmp_*.py
 backend/test_email_send.py
-
-# ── Large binary data files in the package data directory ─────────────────────
-backend/src/diagram_mcp/data/shape-index.json.gz
 
 # ── Local tool/external config not relevant to the repo ───────────────────────
 composio.json

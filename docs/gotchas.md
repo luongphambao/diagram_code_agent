@@ -36,8 +36,8 @@ Mắc lỗi mới vì một đặc thù không hiển nhiên? Thêm một mục.
 - **Đúng:** khi cần RAG thì bật lại service + `QDRANT_URL`, và kiểm tra `status` chứ đừng chỉ nhìn có kết quả hay không.
 
 ### Git log toàn commit bạn không tạo
-- **Nguyên nhân:** hook `PostToolUse` trong `.claude/settings.json` tự `git add` + `git commit -m "auto: update <file>"` sau **mọi** lần sửa `.py/.ts/.tsx/.js/.jsx/.json/.yaml/.yml/.toml/.sh`.
-- **Đúng:** biết trước điều này khi làm việc theo nhánh; file `.md` không bị hook.
+- **Nguyên nhân:** hook `Stop` trong `.claude/settings.json` tự `git add -A` (theo danh sách đường dẫn code chính) rồi `git commit -m "auto: session <timestamp>"` một lần khi kết thúc mỗi lượt làm việc. (Trước đây là hook `PostToolUse` commit-mỗi-file theo đuôi file — đã đổi vì allowlist đuôi bỏ sót file không đuôi như `Dockerfile`, khiến chúng không bao giờ được track; xem `docs/decisions/`.)
+- **Đúng:** biết trước điều này khi làm việc theo nhánh — mỗi lượt là một commit gộp, không phải một commit/file nữa. Hook chỉ động tới các đường dẫn "Code chính" ở `AGENTS.md`, không bao giờ động tới 75 file rác ở root.
 
 ---
 

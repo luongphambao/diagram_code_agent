@@ -30,6 +30,11 @@ dependencies = [
     "langchain-qdrant>=0.2",
     "modal>=1.5.2",
     "sqlglot>=25.0",
+    # Already used transitively (via langchain/fastapi) at 38+ import sites —
+    # not new dependencies, just previously-undeclared ones (docs/gotchas.md).
+    "pyyaml>=6.0",
+    "httpx>=0.28",
+    "pydantic>=2.13",
 ]
 
 [project.optional-dependencies]
@@ -50,7 +55,7 @@ sources = ["src"]
 path = "src"
 
 [tool.hatch.build.targets.wheel]
-include = ["src/**/*.py", "src/**/*.json", "src/**/*.xlsx", "src/**/*.png", "src/**/*.md"]
+include = ["src/**/*.py", "src/**/*.json", "src/**/*.xlsx", "src/**/*.png", "src/**/*.md", "src/**/*.gz"]
 sources = {"src" = ""}
 
 # --- Dev tooling (improvement plan §1.3) -------------------------------------

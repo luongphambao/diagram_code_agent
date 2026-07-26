@@ -92,4 +92,4 @@ Thêm subpackage `domain/` mới → thêm đường dẫn vào **cả hai**: `[
 
 - Conventional commits: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`.
 - Thay đổi prompt hoặc model **phải** đi kèm eval artifact trong cùng commit (xem `testing.md`).
-- Lưu ý hook auto-commit trong `.claude/settings.json` sẽ tự tạo commit `auto: update <file>` cho mỗi file code được sửa — squash lại trước khi mở PR nếu muốn lịch sử sạch.
+- Lưu ý hook auto-commit (`Stop`) trong `.claude/settings.json` sẽ tự tạo một commit gộp `auto: session <timestamp>` mỗi khi kết thúc lượt làm việc có thay đổi — squash lại trước khi mở PR nếu muốn lịch sử sạch.
