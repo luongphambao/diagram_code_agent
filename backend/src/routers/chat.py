@@ -167,10 +167,15 @@ def _wbs_solution_context_exists(workspace) -> bool:
 async def _restore_workspace_from_db(pool, thread_id: str, workspace) -> None:
     """Write stage JSON files back to disk if they are missing but present in DB state.
 
-    This guards against the shared-workspace race: any fresh run calls
-    clear_stage_markers() which deletes JSON files for all threads.  When a
-    PPT/PDF followup comes in for a thread whose files were wiped by another
-    thread, we recover them from the snapshot saved in conversations.state_json.
+    This guards against the shared-workspace race (a fresh run on the shared
+    default-thread workspace calls clear_stage_markers(), which deletes JSON
+    files any other thread on that same workspace was relying on) and against
+    a stale container/volume restart wiping the per-thread workspace outright.
+    Called on every non-attached "fresh run" turn (see the call site in
+    stream_chat), not just recognized pdf/ppt/wbs/email/business-case
+    follow-ups, so any continuation message gets a chance to recover files a
+    previous turn wiped before this thread's own preserve_existing_project
+    guard existed. A no-op when nothing needed is actually missing.
     """
     from pathlib import Path
 
