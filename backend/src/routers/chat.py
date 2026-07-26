@@ -322,18 +322,17 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                 is_wbs_followup = _is_wbs_followup(desc)
                 is_email_followup = _is_email_followup(desc)
                 is_business_case_followup = _is_business_case_followup(desc)
-                if (
-                    is_pdf_followup
-                    or is_ppt_followup
-                    or is_wbs_followup
-                    or is_email_followup
-                    or is_business_case_followup
-                ) and not attached:
-                    # Restore before deciding whether a downstream follow-up can
-                    # preserve artifacts. A previous run may have wiped the
-                    # per-thread JSON files while the conversation snapshot still
-                    # has them; checking disk first would falsely classify the
-                    # request as fresh and clear the files WBS/PPT/PDF/email need.
+                if not attached:
+                    # Restore before deciding whether this run can preserve artifacts.
+                    # Unconditional on the followup-phrase match (not gated to
+                    # is_pdf/is_ppt/is_wbs/is_email/is_business_case_followup): ANY
+                    # continuation message in an existing thread deserves a chance to
+                    # recover JSON markers a previous run may have wiped (the shared-
+                    # workspace race, or this same fix's own preserve_existing_project
+                    # guard below not having applied on an earlier turn). Restoring is
+                    # a cheap no-op when nothing is actually missing, and only ever
+                    # pulls from THIS thread's own DB snapshot, so it can't leak
+                    # another conversation's context into a genuinely fresh one.
                     await _restore_workspace_from_db(request.app.state.pool, thread_id, ws)
                 # A newly attached document is fresh intake for a (possibly new) project,
                 # not a request to re-export the existing diagram/WBS — never preserve
