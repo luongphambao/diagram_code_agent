@@ -8,13 +8,13 @@
 #   main:   claude-sonnet-4-6   → uses ANTHROPIC_API_KEY
 
 models:
-  main:           gpt-5.6-luna
-  icon_resolver:  gpt-5.6-luna
-  drawer:         gpt-5.6-luna
-  critic:         gpt-5.6-luna
-  wbs_planner:    gpt-5.6-luna
-  ppt_outline:    gpt-5.6-luna
-  ppt_generator:  gpt-5.6-luna
+  main:           mimo-v2.5
+  icon_resolver:  mimo-v2.5
+  drawer:         mimo-v2.5
+  critic:         mimo-v2.5
+  wbs_planner:    mimo-v2.5
+  ppt_outline:    mimo-v2.5
+  ppt_generator:  mimo-v2.5
 
 
 # ─── Provider Configurations ──────────────────────────────────────────────────
