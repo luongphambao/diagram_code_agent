@@ -1526,6 +1526,7 @@ def validate_xml(xml: str, profile: str = "auto", stats: dict | None = None) -> 
             "polish": [],
             "collisions": [],
             "layout_metrics": {},
+            "metrics_ok": False,
             "error_count": 1,
             "warning_count": 0,
             "advice_count": 0,
@@ -1552,6 +1553,13 @@ def validate_xml(xml: str, profile: str = "auto", stats: dict | None = None) -> 
     polish: list[str] = []
     collisions: list[str] = []
     metrics: dict = {}
+    # metrics_ok distinguishes "measured and clean" from "couldn't measure" —
+    # production_scorecard's convention is that an ABSENT metric scores neutral
+    # (never a false fail), which previously meant a bug in the design-audit
+    # pipeline itself (this try block) silently turned into a full-marks PASS.
+    # A gate that can be defeated by an exception in its own measurement code
+    # is worse than no gate.
+    metrics_ok = True
     try:
         pxml = _primary_model(xml)  # string audits see page 1 only
         if "</mxGraphModel>" in xml:  # skip compressed/empty pages
@@ -1564,7 +1572,7 @@ def validate_xml(xml: str, profile: str = "auto", stats: dict | None = None) -> 
             warns += collisions  # cross-container card overlaps -> layout warnings
             metrics = audit_layout_metrics(pxml, stats)
     except Exception:  # noqa: BLE001 — design audits are best-effort
-        pass
+        metrics_ok = False
     return {
         "errors": errors,
         "warnings": warns,
@@ -1572,6 +1580,7 @@ def validate_xml(xml: str, profile: str = "auto", stats: dict | None = None) -> 
         "polish": polish,
         "collisions": collisions,
         "layout_metrics": metrics,
+        "metrics_ok": metrics_ok,
         "error_count": len(errors),
         "warning_count": len(warns),
         "advice_count": len(advice),
@@ -1593,6 +1602,7 @@ def validate_file(path: str, profile: str = "auto", stats: dict | None = None) -
             "polish": [],
             "collisions": [],
             "layout_metrics": {},
+            "metrics_ok": False,
             "error_count": 1,
             "warning_count": 0,
             "advice_count": 0,
@@ -1665,6 +1675,33 @@ def check_semantic_preservation(expected_node_ids, expected_edges, xml: str):
     return errors, stats
 
 
+def _effective_icon_coverage(metrics: dict, stats: dict) -> float | None:
+    """The honest icon-coverage signal: the weaker of two measurements.
+
+    ``metrics["icon_coverage"]`` (audit_layout_metrics) counts a leaf as
+    "covered" the moment its style has ANY resIcon/image/shape reference —
+    which is also true of the never-bare-card fallback glyph
+    (_category_glyph in tools/rendering_tools.py::_bake_icon_plan), a generic
+    gray placeholder used when every real lookup (icon_plan, catalog, bundled
+    search) missed. A diagram built entirely of placeholders therefore scored
+    ~1.0 coverage — full iconography marks for zero real icons.
+
+    ``stats["fallback_icons"]`` is the exact count of nodes that fell through
+    to that placeholder (set by _bake_icon_plan). Combined with the node
+    count, it gives a second, stricter coverage estimate; taking the min of
+    the two means a diagram can only score as well as its WORST icon signal,
+    never better. Falls back to the metrics-only value when fallback_icons
+    isn't available (e.g. the Graphviz/mingrammer path, which doesn't set it).
+    """
+    coverage = metrics.get("icon_coverage")
+    fallback_icons = stats.get("fallback_icons")
+    total_nodes = stats.get("nodes")
+    if fallback_icons is None or not total_nodes:
+        return coverage
+    real_coverage = max(0.0, (int(total_nodes) - int(fallback_icons)) / int(total_nodes))
+    return real_coverage if coverage is None else min(coverage, real_coverage)
+
+
 def production_scorecard(report: dict, stats: dict | None = None) -> dict:
     """V2 §16 production QA scorecard (0-100) over a validate_file()/validate_xml()
     report + the native engine stats (semantic preservation + routing residuals).
@@ -1675,7 +1712,11 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
     crossings come from ``report["layout_metrics"]`` (audit_layout_metrics) —
     absent metrics score neutral (same blindness as before, never a false fail).
     PASS iff total >= 85 AND semantic = 100% AND relationship = 100% AND zero
-    XML errors AND zero card collisions AND arrow_clarity_score >= 75.
+    XML errors AND zero card collisions AND arrow_clarity_score >= 75 AND the
+    design-audit pipeline that produced ``layout_metrics`` actually ran
+    (``report["metrics_ok"]``) — an exception in the measurement code used to
+    score neutral-to-full-marks on every affected dimension, which meant a bug
+    in the auditor could pass a diagram the auditor never actually looked at.
     """
     stats = stats or {}
     sem = stats.get("semantic") or {}
@@ -1685,6 +1726,7 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
     advice = report.get("advice", []) or []
     polish = report.get("polish", []) or []
     metrics = report.get("layout_metrics") or {}
+    metrics_ok = bool(report.get("metrics_ok", True))
     err_count = report.get("error_count", len(errs))
     ok = report.get("ok", not errs)
     collisions = int(report.get("collision_count", 0))
@@ -1742,7 +1784,7 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
         # topped up with structure points: backbone 1.5 + numbering 1.5
         # (sequential 1, count in band 0.5) + legend-covers-edge-classes 1.
         zlo, zhi = REFINED_TARGET["zones"]
-        coverage = metrics.get("icon_coverage")
+        coverage = _effective_icon_coverage(metrics, stats)
         cov_pts = 6.0 if coverage is None else 6.0 * min(1.0, coverage / 0.95)
         iconography = (
             cov_pts
@@ -1752,7 +1794,7 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
             + (1.0 if metrics.get("legend_covers_edge_classes") else 0.0)
         )
     else:
-        coverage = metrics.get("icon_coverage")
+        coverage = _effective_icon_coverage(metrics, stats)
         iconography = (
             10.0 if coverage is None else 10.0 * min(1.0, coverage / PRODUCTION_TARGET["icon_coverage"])
         )
@@ -1807,11 +1849,13 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
         and err_count == 0
         and collisions == 0
         and arrow_score >= 75.0
+        and metrics_ok
     )
     return {
         "total": total,
         "breakdown": bd,
         "pass": passed,
+        "metrics_ok": metrics_ok,
         "collisions": collisions,
         "node_recall": round(node_recall, 4),
         "edge_recall": round(edge_recall, 4),
@@ -1819,6 +1863,38 @@ def production_scorecard(report: dict, stats: dict | None = None) -> dict:
         "target": target,
         "style_preset": "bpmn" if bpmn else ("refined" if refined else "icon"),
     }
+
+
+# Tier-1 (LLM+vision) inspection trigger — deliberately NOT the same number as
+# PASS (85). Before this, prompts/drawer_agent.py said "inspect ONLY if below
+# 85", which IS the PASS bar, so a diagram scoring exactly 85 with 3 crossings,
+# a ratio at the edge of the target band, and 40% placeholder icons got zero
+# LLM scrutiny — it already "passed". Trigger is a strictly higher bar (90) OR
+# any of the three dimensions the automated tiers are weakest at reading
+# (connector clarity, spacing/collisions, composition) falling meaningfully
+# short of its own weight, independent of whether the total cleared 85.
+_INSPECTION_TOTAL_THRESHOLD = 90.0
+_INSPECTION_DIMENSION_RATIO = 0.70
+_INSPECTION_LAYOUT_DIMENSIONS: dict[str, float] = {
+    "connector_readability": 15.0,
+    "spacing_alignment": 10.0,
+    "composition": 10.0,
+}
+
+
+def inspection_recommended(scorecard: dict) -> tuple[bool, str]:
+    """Whether calling inspect_render_quality is worth it for this scorecard.
+    Returns (recommended, reason) — the reason is meant to be printed verbatim
+    so the drawer doesn't have to re-derive the threshold logic itself."""
+    bd = scorecard.get("breakdown") or {}
+    total = scorecard.get("total") or 0.0
+    if total < _INSPECTION_TOTAL_THRESHOLD:
+        return True, f"total {total} < {_INSPECTION_TOTAL_THRESHOLD}"
+    for dim, weight in _INSPECTION_LAYOUT_DIMENSIONS.items():
+        val = bd.get(dim)
+        if val is not None and val < weight * _INSPECTION_DIMENSION_RATIO:
+            return True, f"{dim} {val}/{weight} below {int(_INSPECTION_DIMENSION_RATIO * 100)}% of its weight"
+    return False, f"total {total} >= {_INSPECTION_TOTAL_THRESHOLD} and all layout dimensions healthy"
 
 
 def main() -> None:

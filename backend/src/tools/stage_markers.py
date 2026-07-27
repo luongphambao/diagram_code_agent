@@ -20,6 +20,7 @@ from .constants import (
     _NODE_SEARCH_BUDGET_FILE,
     _OUT_NAMES,
     _PRETTYGRAPH_PKG_DIR,
+    _QUALITY_HISTORY_FILE,
     _RENDER_COUNT_FILE,
     _RENDER_SPEC_FILE,
     _REVISION_COUNT_FILE,
@@ -86,6 +87,132 @@ def _reset_revision_count() -> None:
         _REVISION_COUNT_FILE.unlink()
 
 
+# --------------------------------------------------------------------------- #
+# Native-drawio engineer-loop counters (edit_drawio / inspect_render_quality /
+# export_drawio_native / upgrade_drawio). Moved here from rendering_tools.py so
+# every file-backed budget counter lives in one place (see AGENTS.md: "Bộ đếm
+# nằm ở file JSON trong workspace ... qua tools/stage_markers.py"), and so
+# DrawerReviseGateMiddleware (agent/middleware/drawer_gate.py) can reset them
+# without importing the (heavy) rendering_tools module.
+#
+# Reset points, by design:
+#   - a fresh export (_render_native_from_spec) resets ONLY the edit/inspect
+#     counters (see _reset_drawio_edit_rounds) -- geometry changed, so old edit
+#     history no longer applies.
+#   - the export-count itself (.native_export_rounds) is reset ONLY when
+#     DrawerReviseGateMiddleware lets a genuine post-finalize_diagram revision
+#     dispatch through, and by clear_stage_markers() on a brand-new run. This
+#     is what makes "never re-export hoping for a different geometry"
+#     (prompts/drawer_agent.py) a code-enforced budget instead of prose: a
+#     drawer that hits EDIT/ENGINEER BUDGET EXHAUSTED cannot just call
+#     export_drawio_native() again to get a fresh one within the same round.
+# --------------------------------------------------------------------------- #
+
+_EDIT_ROUNDS_FILE = ".drawio_edit_rounds"
+_ENGINEER_ROUNDS_FILE = ".engineer_rounds"
+_NATIVE_EXPORT_ROUNDS_FILE = ".native_export_rounds"
+
+
+def _reset_drawio_edit_rounds() -> None:
+    """Called after a fresh export — old edit/inspect history no longer applies
+    to the new geometry. Does NOT touch .native_export_rounds (see module note)."""
+    for name in (_EDIT_ROUNDS_FILE, _ENGINEER_ROUNDS_FILE):
+        p = current_workspace() / name
+        if p.exists():
+            try:
+                p.unlink()
+            except OSError:
+                pass
+
+
+def _reset_native_export_rounds() -> None:
+    """Called only when a genuine post-rejection revision round is granted
+    (DrawerReviseGateMiddleware) or on a brand-new run (clear_stage_markers)."""
+    p = current_workspace() / _NATIVE_EXPORT_ROUNDS_FILE
+    if p.exists():
+        try:
+            p.unlink()
+        except OSError:
+            pass
+
+
+def _bump_counter_file(name: str) -> int:
+    p = current_workspace() / name
+    n = 0
+    if p.exists():
+        try:
+            n = int(p.read_text(encoding="utf-8").strip() or 0)
+        except (OSError, ValueError):
+            n = 0
+    n += 1
+    p.write_text(str(n), encoding="utf-8")
+    return n
+
+
+def _read_counter_file(name: str) -> int:
+    p = current_workspace() / name
+    try:
+        return int(p.read_text(encoding="utf-8").strip() or 0) if p.exists() else 0
+    except (OSError, ValueError):
+        return 0
+
+
+def _bump_drawio_edit_rounds() -> int:
+    return _bump_counter_file(_EDIT_ROUNDS_FILE)
+
+
+def _drawio_edit_rounds() -> int:
+    return _read_counter_file(_EDIT_ROUNDS_FILE)
+
+
+def _bump_engineer_rounds() -> int:
+    return _bump_counter_file(_ENGINEER_ROUNDS_FILE)
+
+
+def _bump_native_export_rounds() -> int:
+    return _bump_counter_file(_NATIVE_EXPORT_ROUNDS_FILE)
+
+
+def _native_export_rounds() -> int:
+    return _read_counter_file(_NATIVE_EXPORT_ROUNDS_FILE)
+
+
+def append_quality_history(step: str, scorecard: dict, *, reverted: bool = False) -> list[dict]:
+    """Append one {step_no, step, total, pass, breakdown, reverted} entry and
+    return the full history so far. `scorecard` is whatever production_scorecard()
+    returned. Pass reverted=True for a batch edit_drawio rejected (see
+    tools/rendering_tools.py::edit_drawio) — it still lands in the trail so the
+    next inspect_render_quality call can say "that direction already failed"
+    instead of the drawer silently retrying the same fix.
+
+    This is the only thing that lets the drawer/critic see "did the last edit
+    help or hurt" — KeepLatestImagesEdit (agent/middleware/context_edits.py)
+    strips every rendered image except the most recent, so a visual before/after
+    comparison is structurally impossible; a numeric delta is the substitute.
+    Does not use datetime.now() (would break Workflow-style resume determinism
+    elsewhere in this codebase) — a monotonic step_no is enough to order entries.
+    """
+    history = _read_json_file(_QUALITY_HISTORY_FILE, [])
+    if not isinstance(history, list):
+        history = []
+    entry = {
+        "step_no": len(history) + 1,
+        "step": step,
+        "total": scorecard.get("total"),
+        "pass": scorecard.get("pass"),
+        "breakdown": scorecard.get("breakdown"),
+        "reverted": reverted,
+    }
+    history.append(entry)
+    _write_json_file(_QUALITY_HISTORY_FILE, history)
+    return history
+
+
+def quality_history() -> list[dict]:
+    history = _read_json_file(_QUALITY_HISTORY_FILE, [])
+    return history if isinstance(history, list) else []
+
+
 def clear_stage_markers(*, preserve_wbs: bool = False) -> None:
     """Reset the staged-flow markers at the start of a fresh run.
 
@@ -121,6 +248,7 @@ def clear_stage_markers(*, preserve_wbs: bool = False) -> None:
         ws / "delivery_export_preview.json",
         ws / "current_state_model.json",
         ws / "drift_report.json",
+        ws / "quality_history.json",
     ]
     if not preserve_wbs:
         files.extend(
@@ -134,6 +262,8 @@ def clear_stage_markers(*, preserve_wbs: bool = False) -> None:
         if f.exists():
             f.unlink()
     _reset_round_budgets()
+    _reset_drawio_edit_rounds()
+    _reset_native_export_rounds()
 
 
 def _stage_helpers() -> None:
@@ -214,11 +344,17 @@ def _layout_audit() -> str:
     return verdict
 
 
-def _archive_session() -> Path | None:
+def _archive_session(*, extra_meta: dict | None = None) -> Path | None:
     """Copy final diagram artifacts into a timestamped session folder under OUTPUTS_DIR.
 
-    Called automatically by export_drawio() on success so every completed diagram
-    is preserved for reuse without overwriting the active workspace.
+    Called from finalize_diagram() on every user-approved diagram (§4.3 — the
+    ONLY diagrams worth learning from) and, for the deprecated Graphviz path,
+    from export_drawio() on success — so every completed diagram is preserved
+    for reuse without overwriting the active workspace.
+
+    extra_meta is merged into meta.json (e.g. scorecard/provider/style_preset
+    from finalize_diagram, so the archive is self-describing without having
+    to re-open out.native_stats.json).
 
     Returns the archive folder path, or None if nothing was saved.
     """
@@ -259,6 +395,7 @@ def _archive_session() -> Path | None:
         "saved_at": dt.datetime.now().isoformat(timespec="seconds"),
         "title": title or folder_name,
         "files": copied,
+        **(extra_meta or {}),
     }
     (dest / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
     return dest

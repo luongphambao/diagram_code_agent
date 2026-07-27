@@ -129,12 +129,18 @@ def _solution_gate_note(stage: str = "export", *, block: bool = False) -> str:
     return note
 
 
-def _diagram_gate_note(*, block: bool = False) -> str:
+def _diagram_gate_note(*, block: bool = False, include_scorecard: bool = True) -> str:
     """Lint out.drawio → SolutionFindings → persist lifecycle → 3-outcome summary.
 
     Mirrors _solution_gate_note() but scoped to the rendered diagram artifact.
     Findings go into findings_log.json so waive_finding/resolve_finding apply
     to diagram defects just like blueprint/WBS defects (docx §4.7).
+
+    include_scorecard=False skips the trailing "PRODUCTION SCORECARD:" line —
+    the native export_drawio_native/upgrade_drawio tools already print their
+    own (more detailed, per-dimension) scorecard, so calling this with the
+    default would just duplicate it. The Graphviz export_drawio path has no
+    scorecard of its own, so it keeps the default True.
     """
     from domain.validation.validate_drawio import validate_file, findings_from_validation
     from memory.stores.finding_store import active_findings, upsert_findings
@@ -166,28 +172,29 @@ def _diagram_gate_note(*, block: bool = False) -> str:
     # V2 §16 production scorecard — reuses the persisted native stats (semantic
     # preservation + routing residuals) from the last export.
     scorecard_note = ""
-    try:
-        from domain.validation.validate_drawio import production_scorecard
+    if include_scorecard:
+        try:
+            from domain.validation.validate_drawio import production_scorecard
 
-        sc = production_scorecard(result, stats)
-        verdict = "PASS" if sc["pass"] else "BELOW GATE (need >=85, semantic & relationship = 100%)"
-        bd = sc.get("breakdown", {})
-        scorecard_note = (
-            f"\n\nPRODUCTION SCORECARD: {sc['total']}/100 — {verdict} "
-            f"(semantic {int(sc['node_recall'] * 100)}%, "
-            f"relationship {int(sc['edge_recall'] * 100)}%, "
-            f"composition {bd.get('composition', '?')}/10, "
-            f"iconography {bd.get('iconography', '?')}/10)."
-        )
-    except Exception:
-        pass
+            sc = production_scorecard(result, stats)
+            verdict = "PASS" if sc["pass"] else "BELOW GATE (need >=85, semantic & relationship = 100%)"
+            bd = sc.get("breakdown", {})
+            scorecard_note = (
+                f"\n\nPRODUCTION SCORECARD: {sc['total']}/100 — {verdict} "
+                f"(semantic {int(sc['node_recall'] * 100)}%, "
+                f"relationship {int(sc['edge_recall'] * 100)}%, "
+                f"composition {bd.get('composition', '?')}/10, "
+                f"iconography {bd.get('iconography', '?')}/10)."
+            )
+        except Exception:
+            pass
     try:
-        revision = "0"
+        revision = 0
         try:
             from memory.stores.csm_adapter import build_solution_model
 
             m = build_solution_model(current_workspace())
-            revision = str(m.revision)
+            revision = int(m.revision)
         except Exception:
             pass
         upsert_findings(findings, revision=revision)

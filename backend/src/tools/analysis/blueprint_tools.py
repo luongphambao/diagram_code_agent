@@ -31,7 +31,6 @@ from ..stage_markers import (
     _inspection_image_b64,
     _layout_audit,
     _read_json_file,
-    _reset_revision_count,
     reset_render_count,
 )
 from ..schemas.brief import DiagramBrief
@@ -729,7 +728,13 @@ def propose_blueprint(blueprint: Blueprint) -> str:
         data=blueprint_data,
     )
     reset_render_count()
-    _reset_revision_count()
+    # NOTE: deliberately does NOT call _reset_revision_count() here. Re-proposing
+    # a blueprint used to wipe CRITIC_REVISION_HARD_CAP as a side effect, which
+    # meant a drawer stuck at the revision cap could get a fresh one just by
+    # having the main agent re-propose the same blueprint — the same "reset the
+    # budget from the wrong place" bug as the native-export counters (see
+    # agent/middleware/drawer_gate.py). The revision cap now resets ONLY where
+    # DrawerReviseGateMiddleware grants a genuine post-rejection round.
 
     result_parts = [
         f"Blueprint APPROVED (density={d}, {n} nodes). "

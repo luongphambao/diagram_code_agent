@@ -168,14 +168,17 @@ from the read_drawio findings before calling. Then finalize (step 9).
 **Engineer loop (quality gate).** The export already ran a deterministic layout
 analysis + auto-repair (see the layout plan / engineer report the Lint line
 mentions) — the layout you got is the best of several candidates, so never
-re-export hoping for a different geometry. ONLY if the reported Production
-scorecard is below 85: call `inspect_render_quality()` ONCE — it returns the
-scorecard breakdown, objective layout metrics (ratio, crossings, icon coverage,
-label collisions) and the rendered image — then fix the named findings with ONE
-batched `edit_drawio` call. Re-inspect only if the post-edit scorecard is still
-below the gate (hard budget: 2 inspections per export, code-enforced). When the
-scorecard reports PASS, or the budget is exhausted, STOP polishing and finalize,
-mentioning any residual findings in your summary.
+re-export hoping for a different geometry. Read the `Inspection recommended:`
+line the export/upgrade tool prints — it is NOT the same threshold as PASS (a
+diagram can pass the >=85 gate and still have a weak connector/spacing/
+composition dimension worth a look). Only when it says "yes": call
+`inspect_render_quality()` ONCE — it returns the scorecard breakdown, objective
+layout metrics (ratio, crossings, icon coverage, label collisions) and the
+rendered image — then fix the named findings with ONE batched `edit_drawio`
+call. Re-inspect only if the post-edit scorecard still recommends it (hard
+budget: 2 inspections per export, code-enforced). When it says "no", or the
+budget is exhausted, STOP polishing and finalize, mentioning any residual
+findings in your summary.
 If the below-gate category is connector/arrow readability (arrow_clarity_score
 <75, crossings_per_edge >0.30, or multiple long edges), prefer reducing and
 bundling side-channel arrows over hand-pinning many individual connectors. The

@@ -66,5 +66,6 @@ Backend là một Deep Agent (LangGraph + deepagents) điều phối 5 subagent 
 | Gặp lỗi khó hiểu hoặc token blowout | `docs/gotchas.md` |
 | Thấy code "kỳ lạ" và muốn refactor | `docs/decisions/` |
 | Viết thêm tài liệu cho agent | `docs/instruction.md` (house style) |
+| Sửa engineer loop hoặc cơ chế memory của diagram agent | `docs/plans/2026-07-26-memory-va-engineer-loop.md` |
 
 > `README.MD` ở root là tài liệu cũ, auto-generated, **đã lệch thực tế** (mô tả `diagram_mcp/`, `agent.py`, `RECURSION_LIMIT=160`). Đừng coi là contract; ưu tiên `docs/`.

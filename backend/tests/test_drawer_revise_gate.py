@@ -21,7 +21,14 @@ import agent as agent_module
 import backends
 from agent import DrawerReviseGateMiddleware
 from backends import resolve_workspace, set_current_workspace
-from tools.constants import CRITIC_REVISION_HARD_CAP, _REVISION_COUNT_FILE
+from tools.constants import CRITIC_REVISION_HARD_CAP, _NATIVE_EXPORT_CAP, _REVISION_COUNT_FILE
+from tools.stage_markers import (
+    _bump_drawio_edit_rounds,
+    _bump_engineer_rounds,
+    _bump_native_export_rounds,
+    _drawio_edit_rounds,
+    _native_export_rounds,
+)
 
 
 def _ai_task_call(subagent_type: str, call_id: str = "c1") -> AIMessage:
@@ -123,6 +130,34 @@ def test_gate_re_arms_after_each_critic_round(workspace):
     assert blocked is not None
 
 
+def test_revise_grant_resets_engineer_loop_budgets(workspace):
+    """A genuine post-rejection revision round must refill the native-drawio
+    engineer loop's counters (edit/inspect/export) — otherwise a drawer that
+    obeys the "never re-export" prompt rule hits EDIT/ENGINEER BUDGET EXHAUSTED
+    on the very first edit_drawio call of its new round, because those counters
+    are otherwise only reset by export_drawio_native/upgrade_drawio itself."""
+    mw = DrawerReviseGateMiddleware()
+    messages = [
+        _ai_task_call("drawer", "c1"),
+        _ai_task_call("critic", "c2"),
+        _finalize_tool_message(),
+    ]
+    # Exhaust all three counters as if a prior round had used its full budget.
+    for _ in range(3):
+        _bump_drawio_edit_rounds()
+        _bump_engineer_rounds()
+    for _ in range(_NATIVE_EXPORT_CAP + 1):
+        _bump_native_export_rounds()
+    assert _drawio_edit_rounds() > 0
+    assert _native_export_rounds() > _NATIVE_EXPORT_CAP
+
+    req = _FakeRequest(_drawer_tool_call(), messages=messages)
+    assert mw._decide(req) is None  # revision round granted
+
+    assert _drawio_edit_rounds() == 0
+    assert _native_export_rounds() == 0
+
+
 def test_non_drawer_task_calls_pass_through_untouched(workspace):
     mw = DrawerReviseGateMiddleware()
     messages = [_ai_task_call("drawer", "c1"), _ai_task_call("critic", "c2")]
@@ -145,11 +180,15 @@ def test_submit_critique_reads_but_no_longer_increments_counter(workspace):
     blueprint = {"nodes": [], "clusters": [], "edges": []}
     (workspace / "blueprint.json").write_text(json.dumps(blueprint), encoding="utf-8")
     finding = {
-        "severity": "high", "confidence": "high", "category": "layout",
-        "title": "test finding", "detail": "test",
+        "severity": "high",
+        "confidence": "high",
+        "category": "layout",
+        "title": "test finding",
+        "detail": "test",
     }
     verdict_text = submit_critique.invoke({"findings": [finding]})
     assert "VERDICT: REVISE" in verdict_text
-    assert not _REVISION_COUNT_FILE.resolve().exists() or json.loads(
-        _REVISION_COUNT_FILE.resolve().read_text(encoding="utf-8")
-    )["count"] == 0
+    assert (
+        not _REVISION_COUNT_FILE.resolve().exists()
+        or json.loads(_REVISION_COUNT_FILE.resolve().read_text(encoding="utf-8"))["count"] == 0
+    )

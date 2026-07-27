@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from backends import WORKSPACE, WorkspaceFile
@@ -36,9 +37,28 @@ _REVISION_COUNT_FILE = WorkspaceFile("revision_count.json")
 _TOOL_SUMMARY_FILE = WorkspaceFile("tool_budget_summary.json")
 _ICON_PLAN_FILE = WorkspaceFile("icon_plan.json")
 _TECH_ICONS_FILE = WorkspaceFile("tech_icons.json")
+# Append-only history of scorecard totals across a diagram's export/edit/inspect
+# steps (§ engineer loop) — lets edit_drawio/inspect_render_quality show a delta
+# instead of just the current score, since KeepLatestImagesEdit means the model
+# can never visually compare before/after.
+_QUALITY_HISTORY_FILE = WorkspaceFile("quality_history.json")
 
 # Files copied into each session archive folder under OUTPUTS_DIR.
-_SESSION_ARTIFACTS = ("out.png", "out.body.png", "out.drawio", "diagram.py", "out.nodes.json", "out.dot")
+_SESSION_ARTIFACTS = (
+    "out.png",
+    "out.body.png",
+    "out.drawio",
+    "diagram.py",
+    "out.nodes.json",
+    "out.dot",
+    # Native-engine artifacts (§ engineer loop) — carried into the archive so
+    # a saved session is self-describing for the native path too, not just
+    # the legacy Graphviz one these six were originally written for.
+    "render_spec.json",
+    "layout_plan.json",
+    "engineer_report.json",
+    "out.native_stats.json",
+)
 
 # Per-round render budget: soft nudge at 3 (finalize with what you have), hard
 # refusal at 6 (the #1 cause of "run limit 80/80" was an endless fix->render
@@ -59,6 +79,29 @@ ICON_SEARCH_DEFAULT_TOTAL_CAP = 20
 NODE_SINGLE_SEARCH_WARN = 1
 NODE_SINGLE_SEARCH_HARD_CAP = 2
 CRITIC_REVISION_HARD_CAP = 2
+
+# Native-drawio engineer loop (edit_drawio / inspect_render_quality /
+# export_drawio_native / upgrade_drawio) — see tools/stage_markers.py for the
+# counter files and reset points, and agent/middleware/drawer_gate.py for the
+# one place that grants a fresh round of all three.
+_DRAWIO_EDIT_CAP = 2  # edit_drawio batches per exported diagram
+# A batch is reverted (not counted against the edit budget) if the production
+# score drops by MORE than this many points, or if the semantic-loss guard
+# fires (any node/edge count drop is always reverted, regardless of score —
+# that's corruption, not noise). The tolerance absorbs the sub-point score
+# jitter a legitimate small nudge (e.g. moving one card 10px) can cause via the
+# aspect-ratio/composition metric, so normal edits aren't falsely reverted.
+_EDIT_REGRESSION_TOLERANCE = 1.0
+# Engineer loop tiers 1-2 (LLM rounds): hard cap on inspect_render_quality calls
+# per export — each call ships a (downscaled) image to the model, so the budget
+# is code-enforced like the edit cap, not prompt-enforced.
+_ENGINEER_INSPECT_CAP = 2
+# Code-enforces "never re-export hoping for a different geometry"
+# (prompts/drawer_agent.py) — without this, export_drawio_native/upgrade_drawio
+# silently refilled the two caps above on every call (they reset the edit/
+# inspect counters as a side effect of a fresh export), so a drawer hitting
+# EDIT/ENGINEER BUDGET EXHAUSTED could just re-export to get a new budget.
+_NATIVE_EXPORT_CAP = int(os.getenv("NATIVE_EXPORT_CAP", "2"))
 
 # Tavily web search is metered per session. The total cap is split into per-stage
 # sub-budgets (the `topic`/category argument to web_research) so a single stage

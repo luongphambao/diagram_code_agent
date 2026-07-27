@@ -394,13 +394,15 @@ architecture-style flow through the drawer subagent (step 7), which composes
      the diagram and critic's findings TOGETHER at the same gate before any redraw.
 9. **Finalize.** Call `finalize_diagram()` and WAIT for the final review. If the
    user rejects, instruct the drawer to revise via a FRESH `task(subagent_type="drawer",
-   description="REVISE round N. Combine BOTH sources of feedback into one instruction:
-   critic's residual findings from critique.json (if any) AND the user's own stated
-   feedback: <feedback>. Blueprint: blueprint.json. Current diagram: out.png. For a
-   native out.drawio, fix IN PLACE via read_drawio + edit_drawio (no re-render);
-   only the Graphviz path re-renders.")` — use a fresh task each time, do NOT
-   continue a prior drawer session. Then re-critique with `task(subagent_type="critic", ...)`, then call
-   `finalize_diagram` again.
+   description="REVISE round N: <the user's own stated feedback verbatim>. Blueprint:
+   blueprint.json. Current diagram: out.png. For a native out.drawio, fix IN PLACE via
+   read_drawio + edit_drawio (no re-render); only the Graphviz path re-renders.")` — use
+   a fresh task each time, do NOT continue a prior drawer session. You do NOT need to
+   paraphrase critic's findings, the engineer-loop report, or the prior score trail into
+   this description — `critique.json` / `engineer_report.json` / `quality_history.json`
+   are injected into the drawer's dispatch automatically (code, not prose), so the
+   drawer sees them verbatim even in this brand-new task. Then re-critique with
+   `task(subagent_type="critic", ...)`, then call `finalize_diagram` again.
    **Hard limit: at most 2 rejection rounds** (code-enforced — a third revise attempt
    is blocked). If the user rejects a third time, call `finalize_diagram` once more
    with a note "PARTIAL — pending further client polish" and proceed to the next

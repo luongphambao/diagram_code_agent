@@ -1,18 +1,30 @@
-"""Offline learning-loop analyzer: mine gate outcomes → update AGENTS.md.
+"""Offline learning-loop consolidator: mine gate outcomes -> update global memory.
 
-Synthesizes reject outcomes (with notes) from the conversations table into
-structured style guidance written into ``agent_space/memories/AGENTS.md``.
+Synthesizes reject outcomes (with notes) from the `conversations` table into
+structured style guidance written into `agent_space/memories/AGENTS.md` (the
+file every agent gets in its system prompt every turn — see
+docs/agent-design.md §6 and ADR 0001). The data going IN is already written by
+code on every gate decision (`conversations.record_gate_outcome`, called from
+`routers/chat.py`), so this script is the missing CONSUMER, not a new
+producer — it was previously `backend/scripts/refine_memory.py`, which could
+not run in the container (`.dockerignore` excludes `scripts/`) and had never
+been executed against this repo's AGENTS.md (no `<!-- last_analyzed -->`
+watermark on disk).
 
-Usage:
-    cd backend
-    uv run python scripts/refine_memory.py              # continual: new outcomes only
-    uv run python scripts/refine_memory.py --bootstrap  # process full history
-    uv run python scripts/refine_memory.py --dry-run    # preview, do not write
+Usage (from `backend/`):
+    uv run python -m memory.refine                # continual: new outcomes only
+    uv run python -m memory.refine --bootstrap     # process full history
+    uv run python -m memory.refine --dry-run       # preview, do not write
 
 Requires:
-    DATABASE_URL   — Postgres connection string (same as server).
-    OPENAI_API_KEY — for the synthesis LLM call.
+    DATABASE_URL           — Postgres connection string (same as server).
+    <provider API key>     — for the synthesis LLM call, via config.make_llm.
     DIAGRAM_AGENT_MODEL (optional) — defaults to gpt-4.1-mini.
+
+Deliberately NOT wired to a cron/scheduler in this change — it calls an LLM
+and rewrites a file that lands in every agent's prompt every turn, so a human
+should see the diff (--dry-run) before it's applied, same as every other gate
+in this product.
 """
 
 from __future__ import annotations
@@ -23,25 +35,34 @@ import os
 import re
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
 
-# ---------------------------------------------------------------------------
-# Paths
-# ---------------------------------------------------------------------------
-_BACKEND = Path(__file__).resolve().parent.parent
-_AGENTS_MD = _BACKEND / "agent_space" / "memories" / "AGENTS.md"
+from backends import MEMORIES_DIR
 
-# Section headers (must match AGENTS.md exactly)
-_SECTIONS = ["## Do Not Do", "## Style Preferences", "## Learned Icon & Tech Notes"]
+_AGENTS_MD = MEMORIES_DIR / "AGENTS.md"
+
+# Section headers this script knows how to synthesize INTO (see _route below).
+# NOTE: "## Learned WBS Norms" is a fourth, hand-maintained section in the live
+# file that this script never writes to — it's listed here only so it's
+# visible as a real section name; _replace_section (below) no longer depends
+# on this list to find section BOUNDARIES (that was the bug — see its
+# docstring), so an unlisted section is safe either way.
+_SECTIONS = [
+    "## Do Not Do",
+    "## Style Preferences",
+    "## Learned Icon & Tech Notes",
+    "## Learned WBS Norms",
+]
 
 # Hidden machine marker inside an HTML comment (deepagents strips comments before
 # inject, so this never leaks into the model context but survives on disk).
 _TIMESTAMP_PATTERN = re.compile(r"<!-- last_analyzed: ([^>]+) -->")
+_H2_HEADER_RE = re.compile(r"^## .+$", re.MULTILINE)
 
 
 # ---------------------------------------------------------------------------
 # AGENTS.md read / write helpers
 # ---------------------------------------------------------------------------
+
 
 def _read_agents_md() -> str:
     if _AGENTS_MD.exists():
@@ -60,20 +81,25 @@ def _last_analyzed(text: str) -> datetime | None:
 
 
 def _replace_section(text: str, header: str, new_body: str) -> str:
-    """Replace the content between ``header`` and the next ``##`` section."""
+    """Replace the content between ``header`` and the next ``## `` header.
+
+    BUG FIX vs. the old scripts/refine_memory.py: the previous version found
+    the "next section" boundary by searching only the headers enumerated in
+    _SECTIONS. AGENTS.md has a FOURTH section ("## Learned WBS Norms", added
+    by hand) that was never added to that list — so synthesizing into
+    "## Learned Icon & Tech Notes" (the last-listed section) found no
+    "next" boundary before end-of-file and silently deleted everything after
+    it, including "## Learned WBS Norms". Scanning for ANY real "## " header
+    in the text (this version) is correct regardless of what's enumerated in
+    _SECTIONS, including sections nobody remembered to list.
+    """
     start = text.find(header)
     if start == -1:
         # Section missing — append it.
         return text.rstrip() + f"\n\n{header}\n{new_body}\n"
     after = start + len(header)
-    # Find next section header (or end of file).
-    next_sec = len(text)
-    for h in _SECTIONS:
-        if h == header:
-            continue
-        idx = text.find(h, after)
-        if idx != -1 and idx < next_sec:
-            next_sec = idx
+    m = _H2_HEADER_RE.search(text, after)
+    next_sec = m.start() if m else len(text)
     return text[:after] + "\n" + new_body + "\n" + text[next_sec:]
 
 
@@ -82,11 +108,10 @@ def _set_timestamp(text: str) -> str:
     marker = f"<!-- last_analyzed: {ts} -->"
     if _TIMESTAMP_PATTERN.search(text):
         return _TIMESTAMP_PATTERN.sub(marker, text)
-    # Insert after the first HTML comment block (the managed-by comment).
-    first_comment_end = text.find("-->")
-    if first_comment_end != -1:
-        ins = first_comment_end + len("-->")
-        return text[:ins] + f"\n{marker}" + text[ins:]
+    # Insert after the title line (or at the very top if the file is empty).
+    first_line_end = text.find("\n")
+    if first_line_end != -1:
+        return text[: first_line_end + 1] + f"\n{marker}\n" + text[first_line_end + 1 :]
     return marker + "\n" + text
 
 
@@ -94,12 +119,13 @@ def _set_timestamp(text: str) -> str:
 # Postgres helpers
 # ---------------------------------------------------------------------------
 
+
 def _fetch_outcomes(since: datetime | None) -> list[dict]:
     """Return all gate outcomes, optionally filtered to those after ``since``."""
     try:
         import psycopg
     except ImportError:
-        print("psycopg not installed. Run: pip install 'psycopg[binary]'", file=sys.stderr)
+        print("psycopg not installed. Run: uv add psycopg[binary] (or use the backend env).", file=sys.stderr)
         sys.exit(1)
 
     db_url = os.getenv("DATABASE_URL", "").strip()
@@ -116,7 +142,7 @@ def _fetch_outcomes(since: datetime | None) -> list[dict]:
     for thread_id, outcomes_json in rows:
         try:
             outcomes = json.loads(outcomes_json or "[]")
-        except Exception:
+        except Exception:  # noqa: BLE001 — a malformed row shouldn't abort the whole run
             continue
         for o in outcomes:
             if not isinstance(o, dict):
@@ -134,12 +160,14 @@ def _fetch_outcomes(since: datetime | None) -> list[dict]:
                         continue
                 except ValueError:
                     pass
-            results.append({
-                "thread_id": thread_id,
-                "gate": o.get("gate", "unknown"),
-                "note": note,
-                "timestamp": ts_str,
-            })
+            results.append(
+                {
+                    "thread_id": thread_id,
+                    "gate": o.get("gate", "unknown"),
+                    "note": note,
+                    "timestamp": ts_str,
+                }
+            )
     return results
 
 
@@ -174,40 +202,37 @@ Rejection notes:
 
 
 def _synthesize(section: str, outcomes: list[dict], model: str) -> str:
-    try:
-        from openai import OpenAI
-    except ImportError:
-        print("openai not installed. Run: pip install openai", file=sys.stderr)
-        sys.exit(1)
+    from config import make_llm
+    from langchain_core.messages import HumanMessage
 
-    notes_text = "\n".join(
-        f"[{o['gate']}] {o['note']}" for o in outcomes
-    )
+    notes_text = "\n".join(f"[{o['gate']}] {o['note']}" for o in outcomes)
     prompt = _SYNTHESIS_PROMPT.format(section=section.lstrip("# "), notes=notes_text)
-    client = OpenAI()
-    resp = client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0,
-        max_tokens=800,
-    )
-    return resp.choices[0].message.content.strip()
+    llm = make_llm(model).bind(temperature=0, max_tokens=800)
+    resp = llm.invoke([HumanMessage(content=prompt)])
+    return (resp.content or "").strip()
 
 
 # ---------------------------------------------------------------------------
 # Section routing: which outcomes belong to which section
 # ---------------------------------------------------------------------------
 
+# Only sections this script actually SYNTHESIZES into — "## Learned WBS Norms"
+# is intentionally excluded (hand-maintained, no routing rule for it yet).
+_SYNTHESIS_TARGETS = ["## Do Not Do", "## Style Preferences", "## Learned Icon & Tech Notes"]
+
+
 def _route(outcomes: list[dict]) -> dict[str, list[dict]]:
     """Split outcomes into per-section buckets."""
-    buckets: dict[str, list[dict]] = {s: [] for s in _SECTIONS}
+    buckets: dict[str, list[dict]] = {s: [] for s in _SYNTHESIS_TARGETS}
     for o in outcomes:
         gate = o.get("gate", "")
         note = o.get("note", "").lower()
         if gate in ("propose_tech_stack", "propose_blueprint", "finalize_diagram"):
             buckets["## Do Not Do"].append(o)
         # Style notes often mention layout, color, style words.
-        if any(w in note for w in ("style", "color", "layout", "direction", "align", "font", "cluster")):
+        if any(
+            w in note for w in ("style", "color", "layout", "direction", "align", "font", "cluster", "zone")
+        ):
             buckets["## Style Preferences"].append(o)
         # Icon / import notes.
         if any(w in note for w in ("icon", "import", "path", "logo", "class")):
@@ -219,29 +244,32 @@ def _route(outcomes: list[dict]) -> dict[str, list[dict]]:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Refine AGENTS.md from gate outcomes.")
-    parser.add_argument("--bootstrap", action="store_true",
-                        help="Process full history (ignore last_analyzed timestamp).")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Print the updated AGENTS.md to stdout, do not write.")
+    parser = argparse.ArgumentParser(description="Refine agent_space/memories/AGENTS.md from gate outcomes.")
+    parser.add_argument(
+        "--bootstrap", action="store_true", help="Process full history (ignore last_analyzed timestamp)."
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print the updated AGENTS.md to stdout, do not write."
+    )
     args = parser.parse_args()
 
     model = os.getenv("DIAGRAM_AGENT_MODEL", "gpt-4.1-mini")
-    print(f"[refine_memory] model={model}  bootstrap={args.bootstrap}  dry_run={args.dry_run}")
+    print(f"[memory.refine] model={model}  bootstrap={args.bootstrap}  dry_run={args.dry_run}")
 
     current_text = _read_agents_md()
     since = None if args.bootstrap else _last_analyzed(current_text)
     if since:
-        print(f"[refine_memory] processing outcomes after {since.isoformat()}")
+        print(f"[memory.refine] processing outcomes after {since.isoformat()}")
     else:
-        print("[refine_memory] processing full history")
+        print("[memory.refine] processing full history")
 
     outcomes = _fetch_outcomes(since)
-    print(f"[refine_memory] found {len(outcomes)} reject outcomes with notes")
+    print(f"[memory.refine] found {len(outcomes)} reject outcomes with notes")
 
     if not outcomes:
-        print("[refine_memory] nothing to learn — AGENTS.md unchanged")
+        print("[memory.refine] nothing to learn — AGENTS.md unchanged")
         return
 
     buckets = _route(outcomes)
@@ -249,7 +277,7 @@ def main() -> None:
     for section, section_outcomes in buckets.items():
         if not section_outcomes:
             continue
-        print(f"[refine_memory] synthesizing {len(section_outcomes)} items → {section!r}")
+        print(f"[memory.refine] synthesizing {len(section_outcomes)} items -> {section!r}")
         new_body = _synthesize(section, section_outcomes, model)
         updated = _replace_section(updated, section, new_body)
 
@@ -262,7 +290,7 @@ def main() -> None:
     else:
         _AGENTS_MD.parent.mkdir(parents=True, exist_ok=True)
         _AGENTS_MD.write_text(updated, encoding="utf-8")
-        print(f"[refine_memory] wrote {_AGENTS_MD}")
+        print(f"[memory.refine] wrote {_AGENTS_MD}")
 
 
 if __name__ == "__main__":

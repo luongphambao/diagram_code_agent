@@ -31,6 +31,11 @@ from runtime.sandbox.provider import get_sandbox_runner
 from .constants import (
     _BLUEPRINT_FILE,
     _BRIEF_FILE,
+    _CRITIQUE_FILE,
+    _DRAWIO_EDIT_CAP,
+    _EDIT_REGRESSION_TOLERANCE,
+    _ENGINEER_INSPECT_CAP,
+    _NATIVE_EXPORT_CAP,
     _OUT_NAMES,
     RENDER_HARD_CAP,
     RENDER_SOFT_CAP,
@@ -38,14 +43,21 @@ from .constants import (
 )
 from .stage_markers import (
     _archive_session,
+    _bump_drawio_edit_rounds,
+    _bump_engineer_rounds,
+    _bump_native_export_rounds,
     _bump_render_count,
     _bump_tool_summary,
+    _drawio_edit_rounds,
     _inspection_image_b64,
     _layout_audit,
+    _native_export_rounds,
     _render_count,
+    _reset_drawio_edit_rounds,
     _stage_helpers,
+    append_quality_history,
+    quality_history,
     reset_render_count,
-    _reset_revision_count,
 )
 
 logger = logging.getLogger("diagram-agent")
@@ -1053,6 +1065,14 @@ def export_drawio_native(style_preset: str = "") -> str:
     out = current_workspace() / "out.drawio"
     if not _RENDER_SPEC_FILE.exists():
         return "No render_spec.json — call propose_blueprint first (native export needs a blueprint)."
+    if _native_export_rounds() >= _NATIVE_EXPORT_CAP:
+        return (
+            f"NATIVE EXPORT BUDGET EXHAUSTED ({_NATIVE_EXPORT_CAP} exports used this "
+            "round). Do NOT re-export hoping for a different geometry — the layout "
+            "is deterministic, so a re-export of the same spec produces the same "
+            "result. Fix findings in place: read_drawio() -> ONE batched "
+            "edit_drawio(ops) call."
+        )
     try:
         spec = json.loads(_RENDER_SPEC_FILE.read_text(encoding="utf-8"))
         if str(style_preset or "").lower() == "refined":
@@ -1062,6 +1082,7 @@ def export_drawio_native(style_preset: str = "") -> str:
         return f"export_drawio_native failed: {exc}"
     if not out.exists():
         return "export_drawio_native produced no file."
+    _bump_native_export_rounds()
     png = current_workspace() / "out.png"
     png_ok = png.exists()
     png_note = (
@@ -1096,13 +1117,31 @@ def export_drawio_native(style_preset: str = "") -> str:
             lint += "\nPOLISH GATE (must fix via edit_drawio): " + "; ".join(report["polish"][:5])
         if report.get("advice"):
             lint += f"\nDesign advice: {'; '.join(report['advice'][:5])}"
-        from domain.validation.validate_drawio import production_scorecard
+        from domain.validation.validate_drawio import inspection_recommended, production_scorecard
 
         sc = production_scorecard(report, stats)
         verdict = "PASS" if sc["pass"] else "BELOW GATE (need >=85, semantic & relationship = 100%)"
         lint += f"\nProduction scorecard: {sc['total']}/100 ({verdict}) — " + ", ".join(
             f"{k}={v}" for k, v in sc["breakdown"].items()
         )
+        recommend, reason = inspection_recommended(sc)
+        lint += (
+            f"\nInspection recommended: {'yes' if recommend else 'no'} ({reason})."
+            if recommend
+            else f"\nInspection recommended: no ({reason}) — finalize, don't call inspect_render_quality."
+        )
+        append_quality_history("export_drawio_native", sc)
+    except Exception:  # noqa: BLE001
+        pass
+    # Persist lint findings as durable SolutionFindings — the native path is
+    # the DEFAULT render path, but until now only the deprecated Graphviz
+    # export_drawio() called this, so a native diagram's defects never became
+    # waivable/resolvable and never showed up in quality_summary.
+    gate_note = ""
+    try:
+        from .analysis.gates import _diagram_gate_note
+
+        gate_note = _diagram_gate_note(block=False, include_scorecard=False)
     except Exception:  # noqa: BLE001
         pass
     vendor_icons = stats["native_icons"] + stats.get("image_icons", 0)
@@ -1128,7 +1167,7 @@ def export_drawio_native(style_preset: str = "") -> str:
         f"({stats['native_icons']} AWS stencils + {stats.get('image_icons', 0)} "
         f"image tiles), {stats['native_groups']} native group frames. "
         f"Routing: {stats['edge_cross']} edge-through-node, "
-        f"{stats['edge_overlaps']} parallel overlaps.{sem_note}{lint}\n"
+        f"{stats['edge_overlaps']} parallel overlaps.{sem_note}{lint}{gate_note}\n"
         "If Lint reports gate findings, fix them IN PLACE: read_drawio -> one "
         "batched edit_drawio call (do NOT re-export)."
     )
@@ -1167,6 +1206,12 @@ def upgrade_drawio(source_path: str, style_preset: str = "refined") -> str:
         src = ws / source_path
     if not src.exists():
         return f"Source .drawio not found: {source_path}"
+    if _native_export_rounds() >= _NATIVE_EXPORT_CAP:
+        return (
+            f"NATIVE EXPORT BUDGET EXHAUSTED ({_NATIVE_EXPORT_CAP} exports used this "
+            "round). Do NOT re-run upgrade_drawio hoping for a different geometry — "
+            "fix findings in place: read_drawio() -> ONE batched edit_drawio(ops) call."
+        )
     try:
         inv = extract_inventory(str(src))
     except Exception as exc:  # noqa: BLE001 — surface to the agent
@@ -1183,19 +1228,34 @@ def upgrade_drawio(source_path: str, style_preset: str = "refined") -> str:
         stats = _render_native_from_spec(spec, ws)
     except Exception as exc:  # noqa: BLE001
         return f"upgrade_drawio: rebuild failed: {exc}"
+    _bump_native_export_rounds()
     out = ws / "out.drawio"
     sem = stats.get("semantic") or {}
     lint = ""
     try:
-        from domain.validation.validate_drawio import validate_file, production_scorecard
+        from domain.validation.validate_drawio import (
+            inspection_recommended,
+            production_scorecard,
+            validate_file,
+        )
 
         report = validate_file(str(out), stats=stats)
         sc = production_scorecard(report, stats)
         verdict = "PASS" if sc["pass"] else "BELOW GATE (need >=85, semantic & relationship = 100%)"
+        recommend, reason = inspection_recommended(sc)
         lint = (
             f" Scorecard {sc['total']}/100 ({verdict}). Lint: "
-            f"{report['error_count']} error(s), {report.get('polish_count', 0)} polish."
+            f"{report['error_count']} error(s), {report.get('polish_count', 0)} polish. "
+            f"Inspection recommended: {'yes' if recommend else 'no'} ({reason})."
         )
+        append_quality_history("upgrade_drawio", sc)
+    except Exception:  # noqa: BLE001
+        pass
+    gate_note = ""
+    try:
+        from .analysis.gates import _diagram_gate_note
+
+        gate_note = _diagram_gate_note(block=False, include_scorecard=False)
     except Exception:  # noqa: BLE001
         pass
     icons = sum(1 for n in inv["nodes"] if n.get("icon"))
@@ -1222,6 +1282,7 @@ def upgrade_drawio(source_path: str, style_preset: str = "refined") -> str:
         + (f" — MISSING nodes {miss[:5]}" if miss else "")
         + "."
         + lint
+        + gate_note
         + "\nReview out.png; refine in place via read_drawio -> edit_drawio if needed."
     )
 
@@ -1235,59 +1296,7 @@ def upgrade_drawio(source_path: str, style_preset: str = "refined") -> str:
 # mirroring the drawio-ai-kit "author XML → validate → render → loop" workflow.
 # --------------------------------------------------------------------------- #
 
-_DRAWIO_EDIT_CAP = 2  # edit_drawio batches per exported diagram
-_EDIT_ROUNDS_FILE = ".drawio_edit_rounds"
-# Engineer loop tiers 1-2 (LLM rounds): hard cap on inspect_render_quality calls
-# per export — each call ships a (downscaled) image to the model, so the budget
-# is code-enforced like the edit cap, not prompt-enforced.
-_ENGINEER_INSPECT_CAP = 2
-_ENGINEER_ROUNDS_FILE = ".engineer_rounds"
-
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
-
-
-def _reset_drawio_edit_rounds() -> None:
-    for name in (_EDIT_ROUNDS_FILE, _ENGINEER_ROUNDS_FILE):
-        p = current_workspace() / name
-        if p.exists():
-            try:
-                p.unlink()
-            except OSError:
-                pass
-
-
-def _bump_drawio_edit_rounds() -> int:
-    p = current_workspace() / _EDIT_ROUNDS_FILE
-    n = 0
-    if p.exists():
-        try:
-            n = int(p.read_text(encoding="utf-8").strip() or 0)
-        except (OSError, ValueError):
-            n = 0
-    n += 1
-    p.write_text(str(n), encoding="utf-8")
-    return n
-
-
-def _drawio_edit_rounds() -> int:
-    p = current_workspace() / _EDIT_ROUNDS_FILE
-    try:
-        return int(p.read_text(encoding="utf-8").strip() or 0) if p.exists() else 0
-    except (OSError, ValueError):
-        return 0
-
-
-def _bump_engineer_rounds() -> int:
-    p = current_workspace() / _ENGINEER_ROUNDS_FILE
-    n = 0
-    if p.exists():
-        try:
-            n = int(p.read_text(encoding="utf-8").strip() or 0)
-        except (OSError, ValueError):
-            n = 0
-    n += 1
-    p.write_text(str(n), encoding="utf-8")
-    return n
 
 
 @tool
@@ -1365,6 +1374,17 @@ def inspect_render_quality(tool_call_id: Annotated[str, InjectedToolCallId]) -> 
             )
     except Exception:  # noqa: BLE001
         pass
+    hist = quality_history()
+    if hist:
+        trail = " → ".join(
+            f"{h['step']}={h['total']}" + ("(reverted)" if h.get("reverted") else "") for h in hist[-5:]
+        )
+        text += f"\nScore trail: {trail}"
+        if hist[-1].get("reverted"):
+            text += (
+                " — the last edit_drawio batch was auto-reverted (it made the "
+                "score worse); do not repeat that same fix, try a different one."
+            )
     text += (
         "\nApply every fix in ONE batched edit_drawio call "
         f"(edit budget {_drawio_edit_rounds()}/{_DRAWIO_EDIT_CAP} used)."
@@ -1473,10 +1493,21 @@ def read_drawio() -> str:
         _, cell_root = _load_drawio_model(out)
     except Exception as exc:  # noqa: BLE001 — surface to the agent
         return f"read_drawio failed: {exc}"
+    # Decorative sub-cells (shadow/accent/icon-badge/pill — same suffixes
+    # edit_drawio's own count-preservation guard uses) are never a valid,
+    # standalone edit target, so they're excluded from the listing rather than
+    # eating into the 250-cell cap below. A dense refined page easily has 3-4
+    # of these per card; without this, "one batched fix" was being planned from
+    # an inventory that was mostly decoration once truncated.
+    _decor_suffixes = ("__sh", "__ac", "__ic", "__pill")
     lines: list[str] = []
+    decor_skipped = 0
     for cell in cell_root.iter("mxCell"):
         cid = cell.get("id") or ""
         if cid in ("0", "1"):
+            continue
+        if cid.endswith(_decor_suffixes):
+            decor_skipped += 1
             continue
         style = cell.get("style") or ""
         geo = cell.find("mxGeometry")
@@ -1519,8 +1550,18 @@ def read_drawio() -> str:
                 if v:
                     bits.append(f"{k[0:4]}={v}")
             lines.append(" | ".join(b for b in bits if b))
+    truncation_note = ""
     if len(lines) > 250:
-        lines = lines[:250] + [f"... ({len(lines) - 250} more cells truncated)"]
+        remaining = len(lines) - 250
+        lines = lines[:250]
+        truncation_note = (
+            f"\n\n... {remaining} more editable cell(s) truncated (250-cell cap; "
+            f"{decor_skipped} decorative sub-cell(s) already excluded above and don't "
+            "count against it). If the cell you need to edit isn't listed, narrow your "
+            "fix to what IS shown, or ask for a specific id range."
+        )
+    elif decor_skipped:
+        truncation_note = f"\n\n({decor_skipped} decorative sub-cell(s) omitted — not valid edit targets.)"
     lint = ""
     try:
         from domain.validation.validate_drawio import validate_file
@@ -1540,9 +1581,29 @@ def read_drawio() -> str:
     rounds_left = max(0, _DRAWIO_EDIT_CAP - _drawio_edit_rounds())
     return (
         "\n".join(lines)
+        + truncation_note
         + lint
         + f"\n\nedit_drawio batches left: {rounds_left}. Batch ALL fixes into one call."
     )
+
+
+def _semantic_loss_diff(
+    before_v: set,
+    before_e: set,
+    after_v: set,
+    after_e: set,
+    deleted_ids: set,
+) -> tuple[set, set]:
+    """Pure count-preservation diff used by edit_drawio's revert guard: which
+    vertices/edges present before an edit batch are gone after it, MINUS
+    whatever was explicitly removed via a `delete` op (deleted_ids). A
+    non-empty result means the tree was corrupted by the batch, not that the
+    model asked for a removal — extracted as its own function so the detection
+    logic is unit-testable without needing to construct a real corrupting op
+    sequence through the DrawioOp API."""
+    lost_v = (before_v - after_v) - deleted_ids
+    lost_e = {(s, t) for (s, t) in (before_e - after_e) if s not in deleted_ids and t not in deleted_ids}
+    return lost_v, lost_e
 
 
 class DrawioOp(BaseModel):
@@ -1587,6 +1648,11 @@ def edit_drawio(
     add_edge {id,source,target,label,color,dashed}. Use read_drawio first to see
     cell ids, geometry and current validator findings.
 
+    A batch that lowers the production score by more than a small tolerance, or
+    that drops a node/edge without an explicit delete, is AUTOMATICALLY REVERTED
+    and does NOT count against your edit budget — the reply says REVERTED and
+    quotes the before/after score so you can try a different fix.
+
     Args:
         ops: The list of edit operations to apply, in order.
     """
@@ -1606,6 +1672,21 @@ def edit_drawio(
             tool_call_id=tool_call_id,
             status="error",
         )
+    # Snapshot the pre-edit XML + score so a batch that makes things worse can be
+    # reverted instead of silently kept (the native tier-0 repair guarantees
+    # "never worse than baseline" — this is the same guarantee for the LLM edit
+    # tier, which previously had none: a batch that lowered the score, or lost a
+    # node/edge, was accepted as-is and consumed a scarce edit round for nothing).
+    before_xml = out.read_text(encoding="utf-8")
+    before_score: dict | None = None
+    try:
+        from domain.validation.validate_drawio import validate_file, production_scorecard
+
+        _stats_path = current_workspace() / "out.native_stats.json"
+        _stats0 = json.loads(_stats_path.read_text(encoding="utf-8")) if _stats_path.exists() else {}
+        before_score = production_scorecard(validate_file(str(out), stats=_stats0), _stats0)
+    except Exception:  # noqa: BLE001 — advisory; missing before-score just disables the revert-on-regression check
+        pass
     import xml.etree.ElementTree as ET
 
     try:
@@ -1758,7 +1839,6 @@ def edit_drawio(
 
     xml_text = ET.tostring(tree.getroot(), encoding="unicode")
     out.write_text(xml_text, encoding="utf-8")
-    rounds = _bump_drawio_edit_rounds()
 
     # Count-preservation guard: nodes/edges that disappeared without a delete op.
     after_v = {
@@ -1771,17 +1851,11 @@ def edit_drawio(
         for c in cell_root.iter("mxCell")
         if c.get("edge") == "1" and c.get("source") and c.get("target")
     }
-    lost_v = (before_v - after_v) - deleted_ids
-    lost_e = {(s, t) for (s, t) in (before_e - after_e) if s not in deleted_ids and t not in deleted_ids}
-    preservation_note = ""
-    if lost_v or lost_e:
-        preservation_note = (
-            f"\nWARNING — SEMANTIC LOSS: {len(lost_v)} node(s) and {len(lost_e)} edge(s) "
-            f"disappeared without a delete op (nodes: {', '.join(sorted(map(str, lost_v))[:5])}). "
-            "This usually means an edit corrupted the tree — undo or re-export."
-        )
+    lost_v, lost_e = _semantic_loss_diff(before_v, before_e, after_v, after_e, deleted_ids)
+    semantic_loss = bool(lost_v or lost_e)
 
     lint = ""
+    sc: dict | None = None
     try:
         from domain.validation.validate_drawio import validate_file, production_scorecard
 
@@ -1802,12 +1876,60 @@ def edit_drawio(
             lint += f"\nDesign advice: {'; '.join(report['advice'][:5])}"
         # Recomputed scorecard so the drawer sees progress without re-inspecting.
         sc = production_scorecard(report, stats)
-        lint += (
-            f"\nProduction scorecard after edit: {sc['total']}/100 "
-            f"({'PASS' if sc['pass'] else 'below gate'})."
-        )
+        if before_score is not None:
+            delta = sc["total"] - before_score["total"]
+            lint += (
+                f"\nProduction scorecard: {before_score['total']} → {sc['total']}/100 "
+                f"(Δ{delta:+.1f}) ({'PASS' if sc['pass'] else 'below gate'})."
+            )
+        else:
+            lint += (
+                f"\nProduction scorecard after edit: {sc['total']}/100 "
+                f"({'PASS' if sc['pass'] else 'below gate'})."
+            )
     except Exception:  # noqa: BLE001
         pass
+
+    regressed_score = (
+        before_score is not None
+        and sc is not None
+        and sc["total"] < before_score["total"] - _EDIT_REGRESSION_TOLERANCE
+    )
+    if semantic_loss or regressed_score:
+        # Never worse than before: revert in place and DON'T consume an edit
+        # round — the drawer still has its full budget to try something else.
+        # This mirrors the "never worse than baseline" guarantee the native
+        # tier-0 repair already has (prettygraph/native/repair.py); the LLM
+        # edit tier had no equivalent until now.
+        out.write_text(before_xml, encoding="utf-8")
+        png = current_workspace() / "out.png"
+        _render_drawio_png(out, png)
+        if sc is not None:
+            append_quality_history("edit_drawio", sc, reverted=True)
+        reasons = []
+        if semantic_loss:
+            reasons.append(f"{len(lost_v)} node(s) and {len(lost_e)} edge(s) disappeared without a delete op")
+        if regressed_score:
+            reasons.append(f"production score would drop {before_score['total']} → {sc['total']}")
+        record_report_step(
+            current_workspace(),
+            "edit_drawio",
+            summary=f"REVERTED {len(applied)} drawio edit(s): {'; '.join(reasons)}.",
+            data={"applied": applied, "failed": failed, "reverted": True},
+        )
+        text = (
+            f"REVERTED: {'; '.join(reasons)}. out.drawio restored to the pre-edit "
+            "version — this batch was NOT counted against your edit budget "
+            f"({_drawio_edit_rounds()}/{_DRAWIO_EDIT_CAP} used). Try a different "
+            f"fix for the same finding instead of repeating this batch.\n"
+            f"Ops attempted: {'; '.join(applied)}."
+            + ("\nAlso failed: " + "; ".join(failed) if failed else "")
+        )
+        return ToolMessage(content=text, name="edit_drawio", tool_call_id=tool_call_id, status="error")
+
+    rounds = _bump_drawio_edit_rounds()
+    if sc is not None:
+        append_quality_history("edit_drawio", sc)
     png = current_workspace() / "out.png"
     png_ok = _render_drawio_png(out, png)
     record_report_step(
@@ -1820,7 +1942,6 @@ def edit_drawio(
         f"Applied {len(applied)} op(s) (batch {rounds}/{_DRAWIO_EDIT_CAP})."
         + ("\nFailed: " + "; ".join(failed) if failed else "")
         + lint
-        + preservation_note
         + (
             ""
             if png_ok
@@ -2352,13 +2473,99 @@ def finalize_diagram(kind: str = "architecture") -> str:
         _snapshot_diagram(current_workspace(), kind)
     except Exception:  # noqa: BLE001 — advisory; never block finalization
         pass
+    # Surface how good the diagram actually is at the ONE gate a human sees it
+    # at. finalize_diagram never blocked on quality (it's a HITL gate — the
+    # approver decides, not the tool) and previously only checked out.png
+    # exists, so a 40/100 diagram finalized identically to a 95/100 one: the
+    # approver had no number to look at. Advisory only — never fails the call.
+    quality_note: dict = {}
+    drawio = current_workspace() / "out.drawio"
+    if drawio.exists():
+        try:
+            from domain.validation.validate_drawio import production_scorecard, validate_file
+
+            stats_path = current_workspace() / "out.native_stats.json"
+            stats = json.loads(stats_path.read_text(encoding="utf-8")) if stats_path.exists() else {}
+            sc = production_scorecard(validate_file(str(drawio), stats=stats), stats)
+            quality_note = {
+                "scorecard_total": sc["total"],
+                "scorecard_pass": sc["pass"],
+                "breakdown": sc["breakdown"],
+            }
+        except Exception:  # noqa: BLE001
+            pass
+    if _CRITIQUE_FILE.exists():
+        try:
+            findings = json.loads(_CRITIQUE_FILE.read_text(encoding="utf-8"))
+            if findings:
+                quality_note["residual_findings"] = findings
+        except Exception:  # noqa: BLE001
+            pass
+    # Archive every user-approved diagram (§4.3 memory) — previously
+    # _archive_session() was only ever called from the deprecated Graphviz
+    # export_drawio() path, so agent_space/outputs/ stayed empty for the
+    # native (default) path and list_saved_diagrams() had nothing to return.
+    # finalize_diagram is a HITL gate (deepagents interrupts BEFORE the tool
+    # runs), so this code only executes AFTER a human has approved — exactly
+    # the diagrams worth preserving, and (if the scorecard passed) worth
+    # harvesting into a learned template for future find_diagram_template hits.
+    try:
+        ws = current_workspace()
+        native_stats: dict = {}
+        stats_path = ws / "out.native_stats.json"
+        if stats_path.exists():
+            native_stats = json.loads(stats_path.read_text(encoding="utf-8"))
+        spec_for_archive = {}
+        spec_path = ws / "render_spec.json"
+        if spec_path.exists():
+            spec_for_archive = json.loads(spec_path.read_text(encoding="utf-8"))
+        plan_for_archive = None
+        plan_path = ws / "layout_plan.json"
+        if plan_path.exists():
+            plan_for_archive = json.loads(plan_path.read_text(encoding="utf-8"))
+        archive_dest = _archive_session(
+            extra_meta={
+                "kind": kind,
+                "scorecard_total": quality_note.get("scorecard_total"),
+                "scorecard_pass": quality_note.get("scorecard_pass"),
+                "breakdown": quality_note.get("breakdown"),
+                "provider": spec_for_archive.get("provider", ""),
+                "style_preset": native_stats.get("style_preset", ""),
+                "node_count": native_stats.get("nodes"),
+                "band_count": len((plan_for_archive or {}).get("band_order") or []),
+            }
+        )
+        if archive_dest and quality_note.get("scorecard_pass"):
+            from domain.diagram.template_library import harvest_learned_template
+
+            learned = harvest_learned_template(
+                spec_for_archive, plan_for_archive, quality_note.get("scorecard_total") or 0.0
+            )
+            if learned is not None:
+                (archive_dest / "template.json").write_text(
+                    json.dumps(learned, indent=2, ensure_ascii=False), encoding="utf-8"
+                )
+    except Exception:  # noqa: BLE001 — advisory; never block finalization
+        pass
     record_report_step(
         current_workspace(),
         "finalize_diagram",
         summary=f"Diagram ({kind}) finalized and approved by the user.",
-        data={"kind": kind, "artifacts": record_artifact_inventory(current_workspace())},
+        data={
+            "kind": kind,
+            "artifacts": record_artifact_inventory(current_workspace()),
+            **({"quality": quality_note} if quality_note else {}),
+        },
     )
-    return f"Diagram ({kind}) finalized and approved by the user."
+    quality_text = ""
+    if quality_note.get("scorecard_total") is not None:
+        quality_text = (
+            f" Production scorecard: {quality_note['scorecard_total']}/100 "
+            f"({'PASS' if quality_note.get('scorecard_pass') else 'below gate'})."
+        )
+        if quality_note.get("residual_findings"):
+            quality_text += f" {len(quality_note['residual_findings'])} residual critic finding(s)."
+    return f"Diagram ({kind}) finalized and approved by the user.{quality_text}"
 
 
 class GridSection(BaseModel):

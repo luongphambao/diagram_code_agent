@@ -15,6 +15,7 @@ engineer tried and why the winner won.
 from __future__ import annotations
 
 import copy
+import json
 
 try:
     from .topology import build_drawio_from_spec
@@ -23,7 +24,99 @@ except (ImportError, ValueError):  # pragma: no cover - import fallback
     from prettygraph.native.topology import build_drawio_from_spec  # type: ignore
     from prettygraph.native.layout_plan import TARGET_RATIO  # type: ignore
 
+# NOTE: kept at 6, NOT raised, despite an earlier plan to try 8-10. Measured:
+# build_drawio_from_spec on a realistic ~40-node spec (the system's practical
+# per-diagram ceiling — see agent/middleware/drawer_context_inject.py's "~48
+# nodes" comment) takes ~3.4s (icon preset) to ~7s (refined preset) PER BUILD —
+# not the sub-150ms this budget assumed. Each round of auto_repair is meant to
+# be the free 0-token tier; multiplying that cost by a higher cap would turn a
+# "free" repair pass into a multi-minute one for exactly the large diagrams
+# most likely to need repair. The multi-round restructuring below (§3.1) does
+# NOT raise the total candidates tried — it only changes which candidates fill
+# this same budget (variants of the current best each round, not just the
+# original baseline's symptoms), so the worst-case latency ceiling is
+# unchanged from before this change.
 _MAX_CANDIDATES = 6
+_MAX_ROUNDS = 2
+
+# --------------------------------------------------------------------------- #
+# Cross-thread "which knob tends to win" memory (§3.4). Read-only influence on
+# TRY ORDER within a round — it can only affect which subset of variants gets
+# scored before _MAX_CANDIDATES is hit, never which one wins among those tried
+# (that's always _rank_key, untouched) and never whether the baselines
+# ("planned"/"unplanned", always scored first) are skipped. A stale or empty
+# file degrades to today's behavior (original generation order), so this can
+# only help, never hurt, output quality.
+# --------------------------------------------------------------------------- #
+
+_LAYOUT_WINS_FILE = "layout_wins.json"
+_LAYOUT_WINS_MAX_SIGNATURES = 200
+
+
+def _bucket(n: int, edges: tuple[int, ...]) -> str:
+    for e in edges:
+        if n <= e:
+            return f"<={e}"
+    return f">{edges[-1]}"
+
+
+def _spec_signature(spec: dict, plan: dict | None) -> str:
+    """Cheap, stable key grouping similarly-shaped specs for the layout-wins
+    memory — style_preset + bucketed node/edge counts + band count + whether
+    there's a sidebar (cross-cutting cluster). Reuses band_order/sidebar_roots
+    already computed on ``plan`` rather than re-deriving cluster topology."""
+    preset = str(spec.get("style_preset") or "icon").lower()
+    n_nodes = _bucket(len(spec.get("nodes") or []), (10, 20, 30, 48))
+    n_edges = _bucket(len(spec.get("edges") or []), (10, 20, 40, 80))
+    n_bands = len((plan or {}).get("band_order") or [])
+    has_sidebar = bool((plan or {}).get("sidebar_roots"))
+    return f"{preset}|nodes{n_nodes}|edges{n_edges}|bands{n_bands}|sidebar{int(has_sidebar)}"
+
+
+def _load_layout_wins() -> dict:
+    try:
+        from backends import MEMORIES_DIR
+
+        return json.loads((MEMORIES_DIR / _LAYOUT_WINS_FILE).read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001 — missing/corrupt file just means no ranking hint
+        return {}
+
+
+def _record_layout_win(signature: str, label: str, score: float) -> None:
+    """Best-effort: never raises, never blocks the repair result on I/O."""
+    try:
+        from backends import MEMORIES_DIR
+
+        path = MEMORIES_DIR / _LAYOUT_WINS_FILE
+        data = _load_layout_wins()
+        bucket = data.setdefault(signature, {})
+        entry = bucket.setdefault(label, {"wins": 0, "avg_score": score})
+        n = int(entry.get("wins", 0))
+        entry["avg_score"] = (float(entry.get("avg_score", score)) * n + score) / (n + 1)
+        entry["wins"] = n + 1
+        if len(data) > _LAYOUT_WINS_MAX_SIGNATURES:
+            # Drop the signature with the fewest total wins recorded — the
+            # least-established bucket, not necessarily the oldest, since this
+            # file carries no timestamps (repo convention: avoid argless
+            # datetime.now() so results stay reproducible across the codebase).
+            stalest = min(data, key=lambda k: sum(v.get("wins", 0) for v in data[k].values()))
+            if stalest != signature:
+                data.pop(stalest, None)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _order_by_past_wins(
+    signature: str, variants: list[tuple[str, dict | None]]
+) -> list[tuple[str, dict | None]]:
+    """Stable-sort variants so labels that have won before (for this spec
+    shape) are tried first — ties (no history) keep the original order."""
+    wins = _load_layout_wins().get(signature, {})
+    if not wins:
+        return variants
+    return sorted(variants, key=lambda lc: -int(wins.get(lc[0], {}).get("wins", 0)))
 
 
 def semantic_stats(spec: dict, xml: str, plan: dict | None = None) -> dict:
@@ -103,38 +196,83 @@ def _variants_for(plan: dict | None, spec: dict, baseline_metrics: dict) -> list
     if not plan:
         return []
     out: list[tuple[str, dict | None]] = []
+    is_refined = str(spec.get("style_preset") or "").lower() == "refined"
+
+    aggressive_plan: dict | None = None
     if _arrow_poor(baseline_metrics) and not plan.get("aggressive_bundles"):
         try:
             from .layout_plan import analyze_layout
         except (ImportError, ValueError):  # pragma: no cover - import fallback
             from prettygraph.native.layout_plan import analyze_layout  # type: ignore
-        aggressive = analyze_layout(spec, aggressive_bundles=True)
-        out.append(("aggressive-bundles", aggressive))
-        if str(spec.get("style_preset") or "").lower() == "refined":
-            v = copy.deepcopy(aggressive)
-            v["refined_zones_per_row"] = 4
-            out.append(("aggressive-bundles-zpr4", v))
-    if str(spec.get("style_preset") or "").lower() == "refined":
+        aggressive_plan = analyze_layout(spec, aggressive_bundles=True)
+        out.append(("aggressive-bundles", aggressive_plan))
+
+    if is_refined:
         # The refined page template ignores band_cols — its knobs are zones
         # per main row and whether the ops shelves pack across the full
-        # content width. Symptom-gate like the band variants below.
+        # content width. Collect each symptom-triggered knob's candidate
+        # value(s) first (single-knob variants below, unchanged labels/
+        # behavior), THEN generate combos of up to 2 knobs whose OWN symptom
+        # fired together — replacing what used to be a single hardcoded pair
+        # (aggressive-bundles + zpr4) tried regardless of whether the ratio
+        # symptom zpr4 addresses had actually fired.
         ratio = baseline_metrics.get("ratio")
         cur_zpr = int(plan.get("refined_zones_per_row") or 6)
+        # knob -> (base plan to patch onto, [(label, value), ...]). aggressive_bundles
+        # patches onto aggressive_plan (already re-analyzed with aggressive_bundles=
+        # True, so its own bundling/suppression is recomputed) rather than a bare
+        # flag flip on `plan`, mirroring what the old hardcoded combo did.
+        knobs: dict[str, tuple[dict, list[tuple[str, object]]]] = {}
+        if aggressive_plan is not None:
+            knobs["aggressive_bundles"] = (aggressive_plan, [("aggressive-bundles", True)])
         if ratio is not None and ratio > 2.1:
-            for zpr in (4, 5):
-                if zpr < cur_zpr:
-                    v = copy.deepcopy(plan)
-                    v["refined_zones_per_row"] = zpr
-                    out.append((f"zpr{zpr}", v))
+            zpr_opts = [(f"zpr{zpr}", zpr) for zpr in (4, 5) if zpr < cur_zpr]
+            if zpr_opts:
+                knobs["refined_zones_per_row"] = (plan, zpr_opts)
         elif ratio is not None and ratio < 1.5 and cur_zpr < 6:
-            v = copy.deepcopy(plan)
-            v["refined_zones_per_row"] = 6
-            out.append(("zpr6", v))
+            knobs["refined_zones_per_row"] = (plan, [("zpr6", 6)])
         if (baseline_metrics.get("page_fill") or 1.0) < 0.5:
-            v = copy.deepcopy(plan)
-            v["refined_ops_pack"] = not plan.get("refined_ops_pack", True)
-            out.append(("ops-pack-toggle", v))
+            knobs["refined_ops_pack"] = (
+                plan,
+                [("ops-pack-toggle", not plan.get("refined_ops_pack", True))],
+            )
+
+        for knob, (base, options) in knobs.items():
+            if knob == "aggressive_bundles":
+                continue  # already appended as the plain "aggressive-bundles" candidate above
+            for label, value in options:
+                v = copy.deepcopy(base)
+                v[knob] = value
+                out.append((label, v))
+
+        knob_names = list(knobs.keys())
+        for i in range(len(knob_names)):
+            for j in range(i + 1, len(knob_names)):
+                k1, k2 = knob_names[i], knob_names[j]
+                base = aggressive_plan if "aggressive_bundles" in (k1, k2) else plan
+                for label1, val1 in knobs[k1][1]:
+                    for label2, val2 in knobs[k2][1]:
+                        v = copy.deepcopy(base)
+                        v[k1] = val1
+                        v[k2] = val2
+                        out.append((f"{label1}+{label2}", v))
         return out[: _MAX_CANDIDATES - 2]
+    if _arrow_poor(baseline_metrics):
+        # band_order is the single biggest lever on crossing count, but was
+        # never varied here before — only bundling/column knobs. Refined
+        # skips this (early-returned above): it uses zone rows, not band
+        # order, for its layout. analyze_layout recomputes bundling/band_cols
+        # consistently for the alternate order (see its band_order_rank note
+        # for why patching plan["band_order"] alone would be unsafe).
+        try:
+            from .layout_plan import analyze_layout as _analyze_layout_rank
+        except (ImportError, ValueError):  # pragma: no cover - import fallback
+            from prettygraph.native.layout_plan import analyze_layout as _analyze_layout_rank  # type: ignore
+        alt = _analyze_layout_rank(
+            spec, aggressive_bundles=bool(plan.get("aggressive_bundles")), band_order_rank=1
+        )
+        if alt.get("band_order") != plan.get("band_order"):
+            out.append(("band-order-2", alt))
     lo, hi = 1.3, 1.9
     ratio = baseline_metrics.get("ratio")
     wrappable = _wrappable_bands(plan, spec)
@@ -171,8 +309,24 @@ def _rank_key(res: dict) -> tuple:
     )
 
 
+def _plan_key(cand: dict | None) -> str:
+    """Stable identity for a candidate plan, used to avoid re-scoring (and
+    re-paying the multi-second build cost of) a plan already tried this call."""
+    return json.dumps(cand, sort_keys=True) if cand is not None else "\x00unplanned"
+
+
 def auto_repair(spec: dict, name: str, plan: dict | None) -> tuple[dict | None, dict]:
-    """Try plan variants, keep the best-scoring one.
+    """Try plan variants across up to ``_MAX_ROUNDS`` rounds, keep the best-scoring one.
+
+    Round 1 tries the baselines ("planned" + "unplanned") plus symptom-gated
+    variants of the ORIGINAL plan. If the best candidate so far still doesn't
+    pass, round 2+ generates a FRESH set of variants from THAT winner's own
+    remaining symptoms — e.g. a round-1 fix for arrow clarity that leaves the
+    ratio off-target gets a round-2 ratio fix on top of it, instead of the
+    search stopping after one hill-climbing pass. This never raises the total
+    number of candidates tried (still capped at ``_MAX_CANDIDATES`` overall —
+    see the module-level comment on why that cap stays at 6), it only changes
+    which candidates fill that same budget.
 
     Returns ``(winning_plan, engineer_report)``. Never raises on a candidate
     failure — a candidate that errors is simply dropped (the baselines are
@@ -180,8 +334,13 @@ def auto_repair(spec: dict, name: str, plan: dict | None) -> tuple[dict | None, 
     """
     iterations = []
     results: list[tuple[str, dict | None, dict]] = []
+    tried: set[str] = set()
 
     def _try(label: str, cand: dict | None) -> dict | None:
+        key = _plan_key(cand)
+        if key in tried:
+            return None
+        tried.add(key)
         try:
             res = _score_candidate(spec, name, cand)
         except Exception as exc:  # noqa: BLE001 — drop broken candidates
@@ -204,17 +363,35 @@ def auto_repair(spec: dict, name: str, plan: dict | None) -> tuple[dict | None, 
         )
         return res
 
+    signature = _spec_signature(spec, plan)
     baseline = _try("planned", plan)
     # A passing baseline needs no repair — skip the extra builds entirely.
     if baseline and not baseline["scorecard"]["pass"]:
         if plan is not None:
             _try("unplanned", None)
-        for label, cand in _variants_for(
-            plan, spec, baseline["metrics"] | {"collisions": baseline["scorecard"]["collisions"]}
-        ):
-            if len(results) >= _MAX_CANDIDATES:
+        cur_plan, cur_res = plan, baseline
+        for _round in range(_MAX_ROUNDS):
+            if len(results) >= _MAX_CANDIDATES or cur_res["scorecard"]["pass"]:
                 break
-            _try(label, cand)
+            variants = _variants_for(
+                cur_plan, spec, cur_res["metrics"] | {"collisions": cur_res["scorecard"]["collisions"]}
+            )
+            fresh = [(label, cand) for label, cand in variants if _plan_key(cand) not in tried]
+            if not fresh:
+                break  # this winner has nothing new left to try — converged
+            # Try previously-winning knobs (for this spec shape) first, so a
+            # historically-good fix is more likely to make it in before the
+            # candidate budget runs out. Pure ordering hint — see the module
+            # note above on why this can only help, never hurt.
+            fresh = _order_by_past_wins(signature, fresh)
+            for label, cand in fresh:
+                if len(results) >= _MAX_CANDIDATES:
+                    break
+                _try(label, cand)
+            # Re-derive the current best from ALL results so far (not just this
+            # round) so the next round's variants are generated from whichever
+            # candidate is actually winning, not just this round's newest try.
+            _, cur_plan, cur_res = min(results, key=lambda r: _rank_key(r[2]))
     if not results:
         return plan, {"iterations": iterations, "chosen": "planned", "final_score": None}
     label, best_plan, best = min(results, key=lambda r: _rank_key(r[2]))
@@ -227,4 +404,5 @@ def auto_repair(spec: dict, name: str, plan: dict | None) -> tuple[dict | None, 
         "final_pass": best["scorecard"]["pass"],
         "target": PRODUCTION_TARGET,
     }
+    _record_layout_win(signature, label, best["scorecard"]["total"])
     return best_plan, report

@@ -91,7 +91,13 @@ class DrawerReviseGateMiddleware(AgentMiddleware):
         # finalize_diagram was reached after the last critic call: this drawer
         # dispatch is a genuine post-rejection revision round.
         from tools.constants import CRITIC_REVISION_HARD_CAP, _REVISION_COUNT_FILE
-        from tools.stage_markers import _read_json_file, _write_json_file, reset_render_count
+        from tools.stage_markers import (
+            _read_json_file,
+            _reset_drawio_edit_rounds,
+            _reset_native_export_rounds,
+            _write_json_file,
+            reset_render_count,
+        )
 
         count = int(_read_json_file(_REVISION_COUNT_FILE, {"count": 0}).get("count", 0))
         if count >= CRITIC_REVISION_HARD_CAP:
@@ -107,6 +113,17 @@ class DrawerReviseGateMiddleware(AgentMiddleware):
             )
         _write_json_file(_REVISION_COUNT_FILE, {"count": count + 1})
         reset_render_count()
+        # This is the ONE place in the system that knows for certain "a human
+        # just rejected and the drawer is being given a genuine new round" —
+        # so it's the one place allowed to refill the native-drawio engineer
+        # loop's edit/inspect/export budgets. Without this, a drawer that
+        # obeys the "never re-export" prompt rule (prompts/drawer_agent.py)
+        # would hit EDIT/ENGINEER BUDGET EXHAUSTED on its very first edit_drawio
+        # call of the revision round, because those counters are otherwise only
+        # reset by export_drawio_native/upgrade_drawio itself (see
+        # tools/stage_markers.py module note).
+        _reset_drawio_edit_rounds()
+        _reset_native_export_rounds()
         return None
 
     def wrap_tool_call(self, request, handler):

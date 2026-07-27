@@ -14,7 +14,23 @@ from backends import current_workspace
 # still has read_file as a fallback.
 _MAX_EMBED_CHARS = 20_000
 
-_FILES = ("render_spec.json", "icon_plan.json", "style_plan.json", "label_fits.json")
+_FILES = (
+    "render_spec.json",
+    "icon_plan.json",
+    "style_plan.json",
+    "label_fits.json",
+    # Prior-round feedback (§ engineer loop). Injecting these turns "critic
+    # finding reaches the drawer via the main model correctly transcribing it
+    # into free-text prose" into "reaches the drawer by code" — round 2 of a
+    # fresh drawer task (each task() call is a brand-new agent, see
+    # prompts/_blocks.py) previously had NO way to know what round 1 already
+    # tried short of the main agent's paraphrase. Harmless when absent (a
+    # first-ever draw has none of these yet) — _read_workspace_file returns
+    # None and the block is simply skipped for that file.
+    "critique.json",
+    "engineer_report.json",
+    "quality_history.json",
+)
 
 
 def _read_workspace_file(name: str) -> str | None:

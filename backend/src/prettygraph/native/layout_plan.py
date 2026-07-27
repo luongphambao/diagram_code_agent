@@ -97,22 +97,39 @@ def _order_cost(order: list[str], w: dict) -> float:
     return cost
 
 
-def order_bands(main_roots: list[str], w: dict) -> list[str]:
-    """Order layer bands along the dominant flow (minimize weighted edge span).
+def order_bands_ranked(main_roots: list[str], w: dict, top_n: int = 2) -> list[list[str]]:
+    """Like ``order_bands``, but returns up to ``top_n`` distinct orderings
+    ranked best-first — feeds the auto-repair candidate search (repair.py) a
+    second band order to try when crossings/arrow-clarity are still poor after
+    other fixes, since band order is the single biggest lever on crossing
+    count but was previously never varied by the repair search at all.
 
-    Deterministic: exhaustive for <=6 bands (first-minimal in an ordering that
-    enumerates near-original permutations first, so ties keep spec order),
-    adjacent-pair-swap hill climb otherwise.
+    Only the <=6-band case (exhaustive permutation search) has a genuine
+    "second best" to offer — the >6-band hill climb has no natural runner-up,
+    so it returns just the one order it converged to. Always returns at least
+    one ordering (the original, byte-identical to ``order_bands`` in the
+    no-edges/single-band case).
     """
     if len(main_roots) <= 1 or not w:
-        return list(main_roots)
+        return [list(main_roots)]
     if len(main_roots) <= 6:
-        best, best_cost = list(main_roots), _order_cost(main_roots, w)
-        for perm in permutations(main_roots):
-            c = _order_cost(list(perm), w)
-            if c < best_cost - 1e-9:
-                best, best_cost = list(perm), c
-        return best
+        # Evaluate permutations() in its own order (starts with the original,
+        # so ties keep spec order) THEN sort by cost — Python's sort is
+        # stable, so among equal-cost candidates the earliest-seen one stays
+        # first, preserving the original single-best algorithm's tie-break.
+        scored = [(_order_cost(list(perm), w), list(perm)) for perm in permutations(main_roots)]
+        scored.sort(key=lambda t: t[0])
+        ranked: list[list[str]] = []
+        seen: set[tuple[str, ...]] = set()
+        for _cost, order in scored:
+            key = tuple(order)
+            if key in seen:
+                continue
+            seen.add(key)
+            ranked.append(order)
+            if len(ranked) >= top_n:
+                break
+        return ranked
     order = list(main_roots)
     cost = _order_cost(order, w)
     for _ in range(20):
@@ -124,7 +141,20 @@ def order_bands(main_roots: list[str], w: dict) -> list[str]:
                 order, cost, improved = cand, c, True
         if not improved:
             break
-    return order
+    return [order]
+
+
+def order_bands(main_roots: list[str], w: dict) -> list[str]:
+    """Order layer bands along the dominant flow (minimize weighted edge span).
+
+    Deterministic: exhaustive for <=6 bands (first-minimal in an ordering that
+    enumerates near-original permutations first, so ties keep spec order),
+    adjacent-pair-swap hill climb otherwise. Thin wrapper over
+    ``order_bands_ranked`` (kept as its own function since most call sites
+    only want the single best order).
+    """
+    ranked = order_bands_ranked(main_roots, w, top_n=1)
+    return ranked[0] if ranked else list(main_roots)
 
 
 def _bundle_edges(
@@ -589,11 +619,21 @@ def _pick_band_cols(main_roots: list[str], nodes_in_root: dict, sidebar_nodes: i
     return {cid: best_cols for cid in big}
 
 
-def analyze_layout(spec: dict, *, aggressive_bundles: bool = False) -> dict:
+def analyze_layout(spec: dict, *, aggressive_bundles: bool = False, band_order_rank: int = 0) -> dict:
     """Produce a layout_plan for a render_spec (deterministic, no LLM).
 
     Keys: band_order, sidebar_roots, band_cols, edge_bundles, suppressed_edges,
     target_ratio, notes. Safe on any spec — degrades to empty/no-op fields.
+
+    band_order_rank selects among order_bands_ranked's candidate orderings
+    (0 = best/default). Everything downstream of band order — bundling
+    (keyed by band POSITION, not id) and band_cols — is recomputed for
+    whichever order is picked, so this is the only safe way to try an
+    alternate band order: patching plan["band_order"] after the fact would
+    leave edge_bundles/band_cols computed for the WRONG order. Used by
+    repair.py's auto-repair search when crossings/arrow-clarity are still
+    poor after other fixes — band order is the single biggest lever on
+    crossing count, but was previously never varied by that search at all.
     """
     clusters, children_of, roots, node_root, nodes_in_root = _cluster_maps(spec)
     notes: list[str] = []
@@ -625,9 +665,12 @@ def analyze_layout(spec: dict, *, aggressive_bundles: bool = False) -> dict:
         if ra in main_roots and rb in main_roots:
             w[(ra, rb)] = w.get((ra, rb), 0) + 1
 
-    band_order = order_bands(main_roots, w)
+    ranked_orders = order_bands_ranked(main_roots, w, top_n=band_order_rank + 1)
+    band_order = ranked_orders[min(band_order_rank, len(ranked_orders) - 1)]
     if band_order != main_roots:
         notes.append("bands reordered along dominant edge flow")
+    if band_order_rank and band_order == ranked_orders[0]:
+        notes.append(f"requested band order rank {band_order_rank} unavailable — fell back to rank 0")
     band_pos = {cid: i for i, cid in enumerate(band_order)}
 
     bundle_min = _AGGRESSIVE_BUNDLE_MIN if aggressive_bundles else _BUNDLE_MIN
