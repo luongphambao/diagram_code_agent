@@ -196,4 +196,33 @@ def audit_spec_semantics(spec: dict, plan: dict | None = None) -> list[Finding]:
             )
         )
 
+    # I6 — bundle integrity: refined.py's Interface Register lists exactly
+    # plan["edge_bundles"][*]["members"] (see _render_interface_register).
+    # That's true by construction today, but nothing enforced it — this
+    # gate is the regression guard, catching the day bundling and register
+    # rendering silently drift apart and a folded relationship stops being
+    # traceable anywhere.
+    if plan:
+        registered = {
+            (m[0], m[1], m[2] if len(m) > 2 else "")
+            for b in (plan.get("edge_bundles") or [])
+            for m in (b.get("members") or [])
+        }
+        suppressed = {(s[0], s[1], s[2] if len(s) > 2 else "") for s in (plan.get("suppressed_edges") or [])}
+        missing = sorted(f"{f}->{t}" for f, t, _l in suppressed - registered)
+        if missing:
+            findings.append(
+                Finding(
+                    code="I6",
+                    severity="hard",
+                    ids=missing,
+                    message=(
+                        f"I6 bundle integrity: {len(missing)} folded relationship(s) do not "
+                        f"appear in any bundle's member list ({', '.join(missing[:6])}"
+                        f"{', ...' if len(missing) > 6 else ''}). Bundling must fold a "
+                        "relationship into the Interface Register, never drop it silently."
+                    ),
+                )
+            )
+
     return findings
