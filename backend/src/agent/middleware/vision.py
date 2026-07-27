@@ -15,13 +15,16 @@ class VisionErrorFallbackMiddleware(AgentMiddleware):
 
     mimo intermittently 400s with "Multimodal data is corrupted" on the vision
     relay; without this the model just re-issues the same request and burns its
-    call budget. On a vision 400, strip every image/image_url block from the
-    request messages, add a text note, and retry ONCE — drawer/critic then
-    proceed text-only (layout audit) instead of retry-storming.
+    call budget. Some mimo model variants (e.g. mimo-v2.5-pro) instead 404 with
+    "No endpoints found that support image input" — the underlying router has
+    no vision-capable backend for that model at all, not just in tool messages.
+    On any of these, strip every image/image_url block from the request
+    messages, add a text note, and retry ONCE — drawer/critic then proceed
+    text-only (layout audit) instead of crashing or retry-storming.
     """
 
     name = "VisionErrorFallbackMiddleware"
-    _MARKERS = ("multimodal", "corrupted")
+    _MARKERS = ("multimodal", "corrupted", "no endpoints found", "support image input")
 
     _NOTE = (
         "[image removed — the provider rejected the image payload. Review "
