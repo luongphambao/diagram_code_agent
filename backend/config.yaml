@@ -8,13 +8,13 @@
 #   main:   claude-sonnet-4-6   → uses ANTHROPIC_API_KEY
 
 models:
-  main:           gpt-5.6-luna
-  icon_resolver:  gpt-5.6-luna
-  drawer:         gpt-5.6-luna
-  critic:         gpt-5.6-luna
-  wbs_planner:    gpt-5.6-luna
-  ppt_outline:    gpt-5.6-luna
-  ppt_generator:  gpt-5.6-luna
+  main:           cx/gpt-5.6-so
+  icon_resolver:  cx/gpt-5.6-so
+  drawer:         cx/gpt-5.6-so
+  critic:         cx/gpt-5.6-so
+  wbs_planner:    cx/gpt-5.6-so
+  ppt_outline:    cx/gpt-5.6-so
+  ppt_generator:  cx/gpt-5.6-so
 
 
 # ─── Provider Configurations ──────────────────────────────────────────────────
@@ -42,6 +42,10 @@ providers:
     api_key_env: AIAND_API_KEY
     base_url: https://api.aiand.com/v1   # OpenAI-compatible endpoint
 
+  bnk:
+    api_key_env: BNK_API_KEY
+    base_url: https://router.bnksolution.com/v1   # OpenAI-compatible endpoint (BnK internal router)
+
   anthropic:
     api_key_env: ANTHROPIC_API_KEY
     max_tokens: 16000
@@ -59,3 +63,4 @@ model_prefixes:
   "claude-": anthropic
   "mimo-":   mimo
   "deepseek-ai/": aiand
+  "cx/":     bnk
