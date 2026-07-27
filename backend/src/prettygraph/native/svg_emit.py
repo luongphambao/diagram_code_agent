@@ -217,7 +217,9 @@ def _render_vertex(c: dict) -> str:
 
 
 def _anchor(g: dict, fx: float | None, fy: float | None) -> tuple[float, float]:
-    return g["x"] + (fx if fx is not None else 0.5) * g["w"], g["y"] + (fy if fy is not None else 0.5) * g["h"]
+    return g["x"] + (fx if fx is not None else 0.5) * g["w"], g["y"] + (fy if fy is not None else 0.5) * g[
+        "h"
+    ]
 
 
 def _label_chip(text: str, cx: float, cy: float, fs: float, color: str, bg: str | None) -> str:
@@ -227,7 +229,9 @@ def _label_chip(text: str, cx: float, cy: float, fs: float, color: str, bg: str 
     h = fs * LINE_HEIGHT
     out = []
     if bg and bg.upper() != "NONE":
-        out.append(f'<rect x="{cx - w / 2:.1f}" y="{cy - h / 2:.1f}" width="{w:.1f}" height="{h:.1f}" fill="{bg}"/>')
+        out.append(
+            f'<rect x="{cx - w / 2:.1f}" y="{cy - h / 2:.1f}" width="{w:.1f}" height="{h:.1f}" fill="{bg}"/>'
+        )
     out.append(
         f'<text x="{cx:.1f}" y="{cy + fs * 0.32:.1f}" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" '
         f'font-size="{fs:.1f}" fill="{_esc(color)}">{_esc(text)}</text>'
@@ -259,7 +263,11 @@ def _render_edge(c: dict, by_id: dict, markers: dict[str, str]) -> str:
     stroke = style.get("strokeColor", "#64748B")
     stroke_w = style.get("strokeWidth", "1")
     dash = ' stroke-dasharray="6,4"' if style.get("dashed") == "1" else ""
-    marker = f' marker-end="url(#{markers[stroke]})"' if style.get("endArrow", "block") != "none" and stroke in markers else ""
+    marker = (
+        f' marker-end="url(#{markers[stroke]})"'
+        if style.get("endArrow", "block") != "none" and stroke in markers
+        else ""
+    )
 
     out = [f'<path d="{path_d}" fill="none" stroke="{stroke}" stroke-width="{stroke_w}"{dash}{marker}/>']
 
