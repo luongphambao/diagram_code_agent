@@ -23,9 +23,14 @@ def _cell_xml(d: Diagram, id: str) -> str:
 
 def test_rich_card_style_and_body():
     d = _d()
-    r = d.rich_card("redis", [100, 100], [145, 155], "ElastiCache for Redis",
-                    ["cache.r6g.large", "Detection state & events"],
-                    stroke="#C7B8EA")
+    r = d.rich_card(
+        "redis",
+        [100, 100],
+        [145, 155],
+        "ElastiCache for Redis",
+        ["cache.r6g.large", "Detection state & events"],
+        stroke="#C7B8EA",
+    )
     xml = _cell_xml(d, "redis")
     assert "arcSize=8" in xml
     assert "shadow=0" in xml
@@ -43,8 +48,7 @@ def test_rich_card_style_and_body():
 
 def test_tab_zone_emits_tab_pill_at_overlap():
     d = _d()
-    d.tab_zone("zone_state", [980, 225], [185, 385], "SHARED STATE", "purple",
-               number=4)
+    d.tab_zone("zone_state", [980, 225], [185, 385], "SHARED STATE", "purple", number=4)
     zone = d.R["zone_state"]
     tab = d.R["tab_zone_state"]
     assert tab["y"] == zone["y"] - RT.GEO["tab_overlap"]
@@ -60,8 +64,7 @@ def test_tab_zone_emits_tab_pill_at_overlap():
 
 def test_boundary_rect_dashed_kinds():
     d = _d()
-    d.boundary_rect("aws_cloud", [320, 145], [1210, 710], "cloud",
-                    "AWS CLOUD · us-east-1")
+    d.boundary_rect("aws_cloud", [320, 145], [1210, 710], "cloud", "AWS CLOUD · us-east-1")
     d.boundary_rect("vpc", [345, 195], [845, 455], "vpc", "VPC · MULTI-AZ")
     cloud = _cell_xml(d, "aws_cloud")
     vpc = _cell_xml(d, "vpc")
@@ -74,8 +77,13 @@ def test_boundary_rect_dashed_kinds():
 
 def test_note_card_centred_glue():
     d = _d()
-    d.note_card("note_sec", [390, 555], [155, 40], "Security boundary",
-                ["Only approved camera traffic reaches private compute."])
+    d.note_card(
+        "note_sec",
+        [390, 555],
+        [155, 40],
+        "Security boundary",
+        ["Only approved camera traffic reaches private compute."],
+    )
     xml = _cell_xml(d, "note_sec")
     assert "align=center" in xml and "verticalAlign=middle" in xml
     assert "fontSize=9.5" in xml
@@ -84,11 +92,15 @@ def test_note_card_centred_glue():
 
 def test_legend_band_swatches_and_obstacle():
     d = _d()
-    entries = [("Request / data flow", "#2563EB", False),
-               ("Monitoring / telemetry", "#C96A1B", True)]
-    band = d.legend_band("footer", [40, 880], 1840, entries,
-                         scope_note="Current target architecture.",
-                         metadata="<b>Format:</b> Editable XML")
+    entries = [("Request / data flow", "#2563EB", False), ("Monitoring / telemetry", "#C96A1B", True)]
+    band = d.legend_band(
+        "footer",
+        [40, 880],
+        1840,
+        entries,
+        scope_note="Current target architecture.",
+        metadata="<b>Format:</b> Editable XML",
+    )
     assert band["ob"] is True  # router must treat the footer as an obstacle
     ln0 = _cell_xml(d, "footer__ln0")
     ln1 = _cell_xml(d, "footer__ln1")
@@ -102,8 +114,15 @@ def test_flat_mode_all_parent_one():
     d = _d()
     d.tab_zone("zone_a", [40, 170], [250, 410], "VIDEO SOURCES", "blue", number=1)
     d.rich_card("cam", [65, 225], [200, 150], "19+ IP Cameras", ["RTSP / RTMP"])
-    d.pill("tag_external", [205, 184], [65, 22], "EXTERNAL",
-           fill="#FFFFFF", stroke="#B8CDF7", font_color="#2563EB")
+    d.pill(
+        "tag_external",
+        [205, 184],
+        [65, 22],
+        "EXTERNAL",
+        fill="#FFFFFF",
+        stroke="#B8CDF7",
+        font_color="#2563EB",
+    )
     for cid in ("zone_a", "tab_zone_a", "cam", "tag_external"):
         assert 'parent="1"' in _cell_xml(d, cid)
 
@@ -111,16 +130,16 @@ def test_flat_mode_all_parent_one():
 def test_mxfile_multi_page_roundtrip():
     d = _d()
     d.rich_card("a", [100, 100], [200, 100], "A", ["line"])
-    original = ('<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>'
-                '<mxCell id="x" value="old" vertex="1" parent="1">'
-                '<mxGeometry x="1" y="1" width="10" height="10" as="geometry"/>'
-                '</mxCell></root></mxGraphModel>')
-    xml = d.mxfile("01 — Refined Architecture",
-                   extra_pages=[("02 — Original Source", original)])
+    original = (
+        '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>'
+        '<mxCell id="x" value="old" vertex="1" parent="1">'
+        '<mxGeometry x="1" y="1" width="10" height="10" as="geometry"/>'
+        "</mxCell></root></mxGraphModel>"
+    )
+    xml = d.mxfile("01 — Refined Architecture", extra_pages=[("02 — Original Source", original)])
     root = ET.fromstring(xml)
     pages = root.findall("diagram")
-    assert [p.get("name") for p in pages] == ["01 — Refined Architecture",
-                                             "02 — Original Source"]
+    assert [p.get("name") for p in pages] == ["01 — Refined Architecture", "02 — Original Source"]
     assert root.get("compressed") == "false"
     # page 2 model preserved verbatim
     assert original in xml
@@ -140,8 +159,14 @@ def test_edge_semantic_id_via_router():
     d = _d()
     d.rich_card("src", [100, 100], [150, 80], "S")
     d.rich_card("tgt", [400, 100], [150, 80], "T")
-    d.link("src", "tgt", "flow", id="e_src_tgt",
-           stroke="#2563EB", style="strokeWidth=1.7;endArrow=block;endFill=1;")
+    d.link(
+        "src",
+        "tgt",
+        "flow",
+        id="e_src_tgt",
+        stroke="#2563EB",
+        style="strokeWidth=1.7;endArrow=block;endFill=1;",
+    )
     xml = d.to_xml()
     assert 'id="e_src_tgt"' in xml
     assert "strokeWidth=1.7" in xml and "endArrow=block" in xml
@@ -152,67 +177,107 @@ def _refined_spec() -> dict:
         "style_preset": "refined",
         "diagram_title": "DeepStream Detection Pipeline",
         "subtitle": "19+ IP cameras · Multi-AZ runtime",
-        "backbone": ["Video Streams", "Secure Ingress", "GPU Inference",
-                     "State & Storage", "Outcomes"],
+        "backbone": ["Video Streams", "Secure Ingress", "GPU Inference", "State & Storage", "Outcomes"],
         "metadata": {"format": "Editable XML"},
         "clusters": [
-            {"id": "sources", "label": "Video Sources", "number": 1,
-             "scope": "external"},
-            {"id": "access", "label": "Access & Security", "number": 2,
-             "parent": "aws"},
-            {"id": "processing", "label": "GPU Processing", "number": 3,
-             "parent": "aws"},
+            {"id": "sources", "label": "Video Sources", "number": 1, "scope": "external"},
+            {"id": "access", "label": "Access & Security", "number": 2, "parent": "aws"},
+            {"id": "processing", "label": "GPU Processing", "number": 3, "parent": "aws"},
             {"id": "state", "label": "Shared State", "number": 4, "parent": "aws"},
-            {"id": "operations", "label": "Operations & Governance", "number": 5,
-             "role": "ops", "parent": "aws"},
-            {"id": "outcomes", "label": "Consumption & Outcomes", "number": 6,
-             "role": "outcome"},
+            {
+                "id": "operations",
+                "label": "Operations & Governance",
+                "number": 5,
+                "role": "ops",
+                "parent": "aws",
+            },
+            {"id": "outcomes", "label": "Consumption & Outcomes", "number": 6, "role": "outcome"},
             {"id": "aws", "label": "AWS Cloud · us-east-1", "zone": "cloud"},
         ],
         "nodes": [
-            {"id": "cameras", "label": "19+ IP Cameras", "cluster": "sources",
-             "body": ["RTSP / RTMP streams", "H.264 / H.265 video"]},
-            {"id": "ingress", "label": "Stream Ingress", "cluster": "access",
-             "body": ["RTSP allow-list", "NAT Gateway"]},
+            {
+                "id": "cameras",
+                "label": "19+ IP Cameras",
+                "cluster": "sources",
+                "body": ["RTSP / RTMP streams", "H.264 / H.265 video"],
+            },
+            {
+                "id": "ingress",
+                "label": "Stream Ingress",
+                "cluster": "access",
+                "body": ["RTSP allow-list", "NAT Gateway"],
+            },
             {"id": "sg", "label": "Security Groups", "cluster": "access"},
-            {"id": "worker1", "label": "DeepStream Worker 1",
-             "cluster": "processing", "body": ["EC2 g4dn.2xlarge", "NVIDIA T4"]},
-            {"id": "worker2", "label": "DeepStream Worker 2",
-             "cluster": "processing", "body": ["EC2 g4dn.2xlarge", "NVIDIA T4"]},
-            {"id": "redis", "label": "ElastiCache Redis", "cluster": "state",
-             "body": ["cache.r6g.large", "Multi-AZ"]},
-            {"id": "note_state", "label": "Runtime responsibility",
-             "cluster": "state", "kind": "note",
-             "body": ["Fast shared state; downstream handoff."]},
-            {"id": "iam", "label": "IAM Role", "cluster": "operations",
-             "body": ["Least privilege"]},
-            {"id": "cloudwatch", "label": "CloudWatch", "cluster": "operations",
-             "body": ["Logs · metrics · alarms"]},
-            {"id": "dashboard", "label": "Detection Dashboard",
-             "cluster": "outcomes", "body": ["Operator view"]},
+            {
+                "id": "worker1",
+                "label": "DeepStream Worker 1",
+                "cluster": "processing",
+                "body": ["EC2 g4dn.2xlarge", "NVIDIA T4"],
+            },
+            {
+                "id": "worker2",
+                "label": "DeepStream Worker 2",
+                "cluster": "processing",
+                "body": ["EC2 g4dn.2xlarge", "NVIDIA T4"],
+            },
+            {
+                "id": "redis",
+                "label": "ElastiCache Redis",
+                "cluster": "state",
+                "body": ["cache.r6g.large", "Multi-AZ"],
+            },
+            {
+                "id": "note_state",
+                "label": "Runtime responsibility",
+                "cluster": "state",
+                "kind": "note",
+                "body": ["Shared state for this stage."],
+            },
+            {"id": "iam", "label": "IAM Role", "cluster": "operations", "body": ["Least privilege"]},
+            {
+                "id": "cloudwatch",
+                "label": "CloudWatch",
+                "cluster": "operations",
+                "body": ["Logs · metrics · alarms"],
+            },
+            {
+                "id": "dashboard",
+                "label": "Detection Dashboard",
+                "cluster": "outcomes",
+                "body": ["Operator view"],
+            },
         ],
         "edges": [
             {"from": "cameras", "to": "ingress", "label": "RTSP", "flow": "data"},
-            {"from": "ingress", "to": "worker1", "flow": "serving"},
-            {"from": "ingress", "to": "worker2", "flow": "serving"},
-            {"from": "worker1", "to": "redis", "flow": "data"},
+            {"from": "cameras", "to": "worker1", "label": "direct high-priority feed", "flow": "data"},
+            {"from": "ingress", "to": "worker1", "label": "RTSP / RTMP stream", "flow": "serving"},
+            {"from": "ingress", "to": "worker2", "label": "RTSP / RTMP stream", "flow": "serving"},
+            {"from": "sg", "to": "worker1", "label": "allows 8554/tcp from ingress", "flow": "security"},
+            {"from": "worker1", "to": "redis", "label": "writes detection events", "flow": "data"},
             {"from": "worker2", "to": "cloudwatch", "flow": "monitoring"},
             {"from": "iam", "to": "worker1", "flow": "security"},
-            {"from": "redis", "to": "dashboard", "flow": "data"},
+            {"from": "redis", "to": "dashboard", "label": "reads detection events", "flow": "data"},
         ],
     }
 
 
 def test_refined_composition_structure():
     from prettygraph.native.topology import build_drawio_from_spec
+
     xml, stats = build_drawio_from_spec(_refined_spec(), "Refined")
     assert stats["style_preset"] == "refined"
     root = ET.fromstring(xml)
     model = root.find(".//mxGraphModel")
     cells = {c.get("id"): c for c in model.iter("mxCell")}
     # zones + folder tabs for every content cluster
-    for z in ("zone_sources", "zone_access", "zone_processing", "zone_state",
-              "zone_operations", "zone_outcomes"):
+    for z in (
+        "zone_sources",
+        "zone_access",
+        "zone_processing",
+        "zone_state",
+        "zone_operations",
+        "zone_outcomes",
+    ):
         assert z in cells, f"missing {z}"
         assert f"tab_{z}" in cells, f"missing tab for {z}"
     # numbered tabs
@@ -252,6 +317,7 @@ def test_refined_composition_structure():
 
 def test_refined_grid_and_page():
     from prettygraph.native.topology import build_drawio_from_spec
+
     xml, _ = build_drawio_from_spec(_refined_spec(), "Refined")
     model = ET.fromstring(xml).find(".//mxGraphModel")
     assert model.get("grid") == "1"
@@ -268,17 +334,19 @@ _DIRTY_PAGE = (
     '<mxGeometry x="20" y="20" width="120" height="60" as="geometry"/></mxCell>'
     '<mxCell id="bad" edge="1" parent="1" source="o1" target="ghost">'
     '<mxGeometry relative="1" as="geometry"/></mxCell>'
-    '</root></mxGraphModel>')
+    "</root></mxGraphModel>"
+)
 
 
 def test_validator_scopes_to_first_page():
     import domain.validation.validate_drawio as vd
     from prettygraph.native.topology import build_drawio_from_spec
+
     d_xml, _ = build_drawio_from_spec(_refined_spec(), "Refined")
     # splice the dirty page in as page 2 (what the refined upgrade emits)
     two_page = d_xml.replace(
-        "</mxfile>",
-        f'<diagram name="02 — Original Source" id="d1">{_DIRTY_PAGE}</diagram></mxfile>')
+        "</mxfile>", f'<diagram name="02 — Original Source" id="d1">{_DIRTY_PAGE}</diagram></mxfile>'
+    )
     clean = vd.validate_xml(d_xml)
     multi = vd.validate_xml(two_page)
     # page-2 dangling edge / overlaps must not add errors or collisions
@@ -289,12 +357,15 @@ def test_validator_scopes_to_first_page():
 
 def test_semantic_preservation_page1_only():
     import domain.validation.validate_drawio as vd
-    one = ('<mxfile><diagram name="p1"><mxGraphModel><root>'
-           '<mxCell id="0"/><mxCell id="1" parent="0"/>'
-           '<mxCell id="a" value="A" vertex="1" parent="1">'
-           '<mxGeometry x="0" y="0" width="10" height="10" as="geometry"/></mxCell>'
-           '</root></mxGraphModel></diagram>'
-           f'<diagram name="p2" id="d1">{_DIRTY_PAGE}</diagram></mxfile>')
+
+    one = (
+        '<mxfile><diagram name="p1"><mxGraphModel><root>'
+        '<mxCell id="0"/><mxCell id="1" parent="0"/>'
+        '<mxCell id="a" value="A" vertex="1" parent="1">'
+        '<mxGeometry x="0" y="0" width="10" height="10" as="geometry"/></mxCell>'
+        "</root></mxGraphModel></diagram>"
+        f'<diagram name="p2" id="d1">{_DIRTY_PAGE}</diagram></mxfile>'
+    )
     # "o1" exists only on page 2 -> must count as missing
     errors, sem = vd.check_semantic_preservation(["a", "o1"], [], one)
     assert sem["node_recall"] == 0.5
@@ -304,10 +375,11 @@ def test_semantic_preservation_page1_only():
 def test_edit_preserves_second_page(tmp_path):
     from tools.rendering_tools import _load_drawio_model
     from prettygraph.native.topology import build_drawio_from_spec
+
     d_xml, _ = build_drawio_from_spec(_refined_spec(), "Refined")
     two_page = d_xml.replace(
-        "</mxfile>",
-        f'<diagram name="02 — Original Source" id="d1">{_DIRTY_PAGE}</diagram></mxfile>')
+        "</mxfile>", f'<diagram name="02 — Original Source" id="d1">{_DIRTY_PAGE}</diagram></mxfile>'
+    )
     f = tmp_path / "out.drawio"
     f.write_text(two_page, encoding="utf-8")
     tree, cell_root = _load_drawio_model(f)
@@ -329,9 +401,11 @@ def test_edit_preserves_second_page(tmp_path):
 def test_refined_scorecard_pass_and_structure():
     import domain.validation.validate_drawio as vd
     from prettygraph.native.topology import build_drawio_from_spec
+
     spec = _refined_spec()
     xml, stats = build_drawio_from_spec(spec, "Refined")
     from prettygraph.native.repair import semantic_stats
+
     stats["semantic"] = semantic_stats(spec, xml, None)
     report = vd.validate_xml(xml, stats=stats)
     # zones must never register as colliding cards (flat layout)
@@ -355,6 +429,7 @@ def test_refined_scorecard_pass_and_structure():
 def test_refined_scorecard_fails_without_backbone():
     import domain.validation.validate_drawio as vd
     from prettygraph.native.topology import build_drawio_from_spec
+
     spec = _refined_spec()
     xml, stats = build_drawio_from_spec(spec, "Refined")
     xml_nb = xml.replace('id="backbone"', 'id="stripped"')
@@ -367,10 +442,18 @@ def test_refined_scorecard_fails_without_backbone():
 
 def test_icon_mode_scorecard_unchanged():
     import domain.validation.validate_drawio as vd
+
     # no style_preset -> icon branch, PRODUCTION_TARGET, same shape as before
-    report = {"errors": [], "warnings": [], "advice": [], "polish": [],
-              "layout_metrics": {"ratio": 1.6, "icon_coverage": 0.95},
-              "error_count": 0, "ok": True, "collision_count": 0}
+    report = {
+        "errors": [],
+        "warnings": [],
+        "advice": [],
+        "polish": [],
+        "layout_metrics": {"ratio": 1.6, "icon_coverage": 0.95},
+        "error_count": 0,
+        "ok": True,
+        "collision_count": 0,
+    }
     sc = vd.production_scorecard(report, {"edges": 4})
     assert sc["style_preset"] == "icon"
     assert sc["target"] is vd.PRODUCTION_TARGET
@@ -391,14 +474,14 @@ _SRC_DRAWIO = (
     '<mxGeometry x="30" y="180" width="160" height="60" as="geometry"/></mxCell>'
     '<mxCell id="e1" value="HTTPS" edge="1" parent="1" source="api" target="svc">'
     '<mxGeometry relative="1" as="geometry"/></mxCell>'
-    '</root></mxGraphModel></diagram>'
-    f'<diagram name="extra" id="s2">{_DIRTY_PAGE}</diagram></mxfile>')
+    "</root></mxGraphModel></diagram>"
+    f'<diagram name="extra" id="s2">{_DIRTY_PAGE}</diagram></mxfile>'
+)
 
 
 def test_ingest_refined_spec(tmp_path):
-    from domain.diagram.drawio_ingest import (extract_inventory,
-                                              inventory_to_render_spec,
-                                              first_page_model_xml)
+    from domain.diagram.drawio_ingest import extract_inventory, inventory_to_render_spec, first_page_model_xml
+
     f = tmp_path / "src.drawio"
     f.write_text(_SRC_DRAWIO, encoding="utf-8")
     inv = extract_inventory(str(f))
@@ -424,6 +507,7 @@ def test_ingest_refined_spec(tmp_path):
     assert 'id="api"' in model and 'id="o1"' not in model
     # and the refined build renders it end-to-end
     from prettygraph.native.topology import build_drawio_from_spec
+
     xml, stats = build_drawio_from_spec(spec, "Upgraded")
     assert stats["style_preset"] == "refined"
     assert 'id="api"' in xml and "tab_zone_tier_app" in xml
@@ -434,17 +518,16 @@ def test_e2e_refined_upgrade_deepstream():
     produce a 2-page PASS-grade document (skips if the fixture is absent)."""
     import pytest
     from pathlib import Path
-    src = (Path(__file__).resolve().parents[2]
-           / "deepstream_aws_architecture_improved(1).drawio")
+
+    src = Path(__file__).resolve().parents[2] / "deepstream_aws_architecture_improved(1).drawio"
     if not src.exists():
         pytest.skip("deepstream before-file not present")
     import domain.validation.validate_drawio as vd
-    from domain.diagram.drawio_ingest import (extract_inventory,
-                                              inventory_to_render_spec,
-                                              first_page_model_xml)
+    from domain.diagram.drawio_ingest import extract_inventory, inventory_to_render_spec, first_page_model_xml
     from prettygraph.native.topology import build_drawio_from_spec
     from prettygraph.native.layout_plan import analyze_layout
     from prettygraph.native.repair import auto_repair, semantic_stats
+
     inv = extract_inventory(str(src))
     spec = inventory_to_render_spec(inv, style_preset="refined")
     # Mirror the production path: plan + deterministic auto-repair (the strict
@@ -452,9 +535,12 @@ def test_e2e_refined_upgrade_deepstream():
     plan, _rep = auto_repair(spec, "01 — Refined Architecture", analyze_layout(spec))
     xml, stats = build_drawio_from_spec(spec, "01 — Refined Architecture", plan=plan)
     stats["semantic"] = semantic_stats(spec, xml, plan)
-    xml = xml.replace("</mxfile>",
-                      '<diagram name="02 — Original Source" id="dsrc">'
-                      + first_page_model_xml(str(src)) + "</diagram></mxfile>")
+    xml = xml.replace(
+        "</mxfile>",
+        '<diagram name="02 — Original Source" id="dsrc">'
+        + first_page_model_xml(str(src))
+        + "</diagram></mxfile>",
+    )
     pages = ET.fromstring(xml).findall("diagram")
     assert len(pages) == 2
     report = vd.validate_xml(xml, stats=stats)
@@ -471,6 +557,7 @@ def test_refined_subzone_span_and_subtint():
     distributor cards, and per-card hue sub-tint (playbook §8.5 / §10.3)."""
     from prettygraph.native.topology import build_drawio_from_spec
     from prettygraph.native import refined_theme as RT
+
     spec = {
         "style_preset": "refined",
         "diagram_title": "T",
@@ -479,22 +566,43 @@ def test_refined_subzone_span_and_subtint():
             {"id": "q", "label": "State", "number": 2, "hue": "purple"},
         ],
         "nodes": [
-            {"id": "router", "cluster": "p", "span": "header",
-             "label": "Stream assignment", "body": ["Distribute feeds"]},
-            {"id": "w1", "cluster": "p", "label": "Worker 1", "body": ["g4dn"],
-             "subzone": {"id": "az1", "label": "us-east-1a · PRIVATE", "kind": "az"}},
-            {"id": "ebs1", "cluster": "p", "label": "EBS gp3", "hue": "orange",
-             "body": ["encrypted"],
-             "subzone": {"id": "az1", "label": "us-east-1a · PRIVATE", "kind": "az"}},
-            {"id": "w2", "cluster": "p", "label": "Worker 2", "body": ["g4dn"],
-             "subzone": {"id": "az2", "label": "us-east-1b · PRIVATE", "kind": "az"}},
-            {"id": "out", "cluster": "p", "span": "footer", "hue": "teal",
-             "label": "Detection events"},
+            {
+                "id": "router",
+                "cluster": "p",
+                "span": "header",
+                "label": "Stream assignment",
+                "body": ["Distribute feeds"],
+            },
+            {
+                "id": "w1",
+                "cluster": "p",
+                "label": "Worker 1",
+                "body": ["g4dn"],
+                "subzone": {"id": "az1", "label": "us-east-1a · PRIVATE", "kind": "az"},
+            },
+            {
+                "id": "ebs1",
+                "cluster": "p",
+                "label": "EBS gp3",
+                "hue": "orange",
+                "body": ["encrypted"],
+                "subzone": {"id": "az1", "label": "us-east-1a · PRIVATE", "kind": "az"},
+            },
+            {
+                "id": "w2",
+                "cluster": "p",
+                "label": "Worker 2",
+                "body": ["g4dn"],
+                "subzone": {"id": "az2", "label": "us-east-1b · PRIVATE", "kind": "az"},
+            },
+            {"id": "out", "cluster": "p", "span": "footer", "hue": "teal", "label": "Detection events"},
             {"id": "redis", "cluster": "q", "label": "Redis", "body": ["cache"]},
         ],
-        "edges": [{"from": "router", "to": "w1", "flow": "execution"},
-                  {"from": "w1", "to": "out", "flow": "execution"},
-                  {"from": "out", "to": "redis", "flow": "data"}],
+        "edges": [
+            {"from": "router", "to": "w1", "flow": "execution"},
+            {"from": "w1", "to": "out", "flow": "execution"},
+            {"from": "out", "to": "redis", "flow": "data"},
+        ],
     }
     xml, _ = build_drawio_from_spec(spec, "T")
     root = ET.fromstring(xml)
@@ -521,13 +629,15 @@ def test_refined_card_logo_badge():
     validator treats as decor (no false collision)."""
     from prettygraph.native.topology import build_drawio_from_spec
     import domain.validation.validate_drawio as vd
+
     uri = "data:image/png;base64,iVBORw0KGgoAAAANS=="
     spec = {
-        "style_preset": "refined", "provider": "gcp", "diagram_title": "T",
+        "style_preset": "refined",
+        "provider": "gcp",
+        "diagram_title": "T",
         "clusters": [{"id": "z", "label": "Web", "number": 1, "hue": "blue"}],
         "nodes": [
-            {"id": "dns", "cluster": "z", "label": "Cloud DNS", "body": ["Managed"],
-             "icon_data_uri": uri},
+            {"id": "dns", "cluster": "z", "label": "Cloud DNS", "body": ["Managed"], "icon_data_uri": uri},
             {"id": "lb", "cluster": "z", "label": "Load Balancer", "body": ["ALB"]},
         ],
         "edges": [{"from": "dns", "to": "lb", "flow": "data"}],
@@ -545,6 +655,7 @@ def test_refined_external_tier_is_sidebar():
     """An 'External …' tier is a sidebar dependency, not the ops band, even when
     its name also contains ops words like 'identity'."""
     from prettygraph.native.refined import _role_of
+
     assert _role_of({"label": "Bank Channels & External Parties"}) == "main"
     assert _role_of({"label": "External Identity & Services"}) == "sidebar"
     assert _role_of({"label": "Third-Party APIs"}) == "sidebar"
@@ -556,6 +667,7 @@ def test_refined_reflows_entry_channels_and_support_data():
     move to the support shelf when the main row would otherwise be too crowded."""
     from prettygraph.native.layout_plan import analyze_layout
     from prettygraph.native.topology import build_drawio_from_spec
+
     spec = {
         "style_preset": "refined",
         "diagram_title": "Trade Finance",
@@ -594,15 +706,16 @@ def test_refined_access_zone_stays_main_inside_vpc():
     """A security/access zone nested in a VPC is main-plane (edge), NOT the ops
     band — the fix that keeps 'Access & Security' in the top row."""
     from prettygraph.native.refined import _role_of
+
     clusters = {
         "vpc": {"id": "vpc", "zone": "vpc"},
         "access": {"id": "access", "label": "Access & Security", "parent": "vpc"},
         "identity": {"id": "identity", "label": "Identity & Access"},
         "cw": {"id": "cw", "label": "Monitoring & Logging", "parent": "vpc"},
     }
-    assert _role_of(clusters["access"], clusters) == "main"   # in-VPC edge zone
+    assert _role_of(clusters["access"], clusters) == "main"  # in-VPC edge zone
     assert _role_of(clusters["identity"], clusters) == "ops"  # top-level governance
-    assert _role_of(clusters["cw"], clusters) == "ops"        # telemetry even in-VPC
+    assert _role_of(clusters["cw"], clusters) == "ops"  # telemetry even in-VPC
 
 
 def test_refined_theme_tokens_json():

@@ -14,7 +14,14 @@ from __future__ import annotations
 
 import math
 
+from ..text_metrics import text_width as _tm_text_width
 from .theme import THEME
+
+# Edge labels in the icon preset render at this size (matches the plain
+# fontSize=11 text cells builder.py emits alongside them) — kept as one named
+# constant here so _solve_label_offset and any future edge-label geometry in
+# this module can't drift onto a second guessed size.
+_EDGE_LABEL_FS = 11.0
 
 
 def _r(v: float) -> int:
@@ -803,7 +810,7 @@ def _solve_label_offset(d, label: str, pts: list[dict], want: tuple | None) -> t
     obstacle card AND every label already placed this build (label-on-label
     overprint reads as garbage text in the export)."""
     mid = _path_mid(pts)
-    lw = max(30.0, len(label) * 6.6)
+    lw = max(30.0, _tm_text_width(label, _EDGE_LABEL_FS))
     lh = 14.0  # matches validate_drawio's edge-label-overlap estimate
     boxes = getattr(d, "_label_boxes", None)
     if boxes is None:

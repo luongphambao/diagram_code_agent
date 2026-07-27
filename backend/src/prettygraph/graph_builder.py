@@ -11,6 +11,7 @@ from xml.sax.saxutils import escape as xml_escape
 
 from subprocess_utils import run_graphviz
 
+from .text_metrics import text_width as _text_width
 from .constants import (
     CLUSTER_KINDS,
     EDGE_COLOR,
@@ -81,8 +82,10 @@ def _aws_group_for_label(label: str | None) -> str | None:
 
 
 def _est_text_w(s: str, size: int, *, bold: bool = False) -> float:
-    """Approx Helvetica text width in pts (~0.62em/char bold, ~0.54em regular)."""
-    return len(s or "") * size * (0.62 if bold else 0.54)
+    """Real Helvetica/Arial (Liberation Sans metric-compatible) text width in
+    px — replaces the old flat ~0.62em/0.54em-per-char approximation, which
+    scored `"Illinois"` and `"WWWWWWWW"` (same 8 chars) as identical widths."""
+    return _text_width(s or "", size, bold=bold)
 
 
 def _esc(s: str) -> str:

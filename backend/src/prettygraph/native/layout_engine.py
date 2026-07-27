@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import math
 
+from ..text_metrics import text_width, wrap
 from .builder import Z_CONTAINER, Z_FORE
 from .theme import THEME, stage_stroke, zone_style
 
@@ -37,9 +38,9 @@ def icon(id, name, label="", **opts):
 def _auto_box(label):
     """A box auto-sizes to its label (longest wrapped line -> w, line count -> h)."""
     lines = str(label if label is not None else "").split("\n")
-    max_len = max([1] + [len(l) for l in lines])
+    max_w = max([0.0] + [text_width(l, THEME.font_label) for l in lines])
     return {
-        "w": min(260, max(120, round(max_len * 6.6 + 28))),
+        "w": min(260, max(120, round(max_w + 28))),
         "h": max(44, len(lines) * 18 + 26),
     }
 
@@ -237,7 +238,7 @@ def zone_frame(id, label, zone, provider, children=None, opts=None):
 # measure: assign w,h (bottom-up)
 # --------------------------------------------------------------------------- #
 def _m_icon(n):
-    n["w"] = max(96, min(200, (len(n.get("label") or "")) * 7 + 24))
+    n["w"] = max(96, min(200, round(text_width(n.get("label") or "", THEME.font_small) + 24)))
     n["h"] = ICON + 34  # icon + label below
 
 
@@ -245,24 +246,28 @@ def _m_box(n):
     pass  # w,h provided by box()
 
 
+_CARD_TITLE_FS = 12  # matches builder.Diagram.card's fontSize=12 (title, bold)
+_CARD_SUB_FS = 10  # matches builder.Diagram.card's inline font-size:10px (sub)
+
+
 def _m_card(n):
     ic = 30 if (n.get("icon") or n.get("image_data_uri")) else 0
     title, sub = n.get("title") or "", n.get("sub") or ""
-    text_w = max(len(title) * 7.2, len(sub) * 5.8)
+    text_w = max(text_width(title, _CARD_TITLE_FS, bold=True), text_width(sub, _CARD_SUB_FS))
     # Density-aware sizing (V2 §5.3): size_class supplies the width band via
     # min_w/max_w; dense rows stay compact, sparse rows with long text go wide.
     min_w = n.get("min_w") or 150
     max_w = n.get("max_w") or 260
     w = n.get("w") or round(min(max_w, max(min_w, text_w + ic + 44)))
     n["w"] = w
-    # Height must scale with the WRAPPED line count, not assume a single line: a
-    # narrow "compact" card (>4 siblings) combined with a long sub-label wraps to
-    # 2-3 lines and overflows a fixed box, visually colliding with whatever sits
-    # below it (an edge label, the next card). Char-width heuristic mirrors
-    # _auto_box's approach for plain boxes.
+    # Height must scale with the REAL wrapped line count (real font metrics,
+    # not a chars-per-line guess), not assume a single line: a narrow
+    # "compact" card (>4 siblings) combined with a long sub-label wraps to 2-3
+    # lines and overflows a fixed box, visually colliding with whatever sits
+    # below it (an edge label, the next card).
     avail = max(40, w - ic - 20)
-    title_lines = max(1, math.ceil(len(title) * 7.2 / avail)) if title else 0
-    sub_lines = max(1, math.ceil(len(sub) * 5.8 / avail)) if sub else 0
+    title_lines = len(wrap(title, avail, _CARD_TITLE_FS, bold=True)) if title else 0
+    sub_lines = len(wrap(sub, avail, _CARD_SUB_FS)) if sub else 0
     n["h"] = n.get("h") or max(54, 20 + title_lines * 16 + sub_lines * 14)
 
 
@@ -286,7 +291,7 @@ def _m_pool(n):
         n["w"] = n["pad"] * 2 + content_w + n["phaseLabel"]
         n["h"] = n["header"] + n["pad"] * 2 + n["laneLabel"] + content_h
     if n["label"]:
-        n["w"] = max(n["w"], (len(n["label"]) * 6.6) // 1 + n["pad"] * 2)
+        n["w"] = max(n["w"], round(text_width(n["label"], 11, bold=True)) + n["pad"] * 2)
 
 
 def _measure_container(n):
@@ -303,8 +308,6 @@ def _measure_container(n):
         return max([0] + [f(c) for c in ch])
 
     if n["kind"] == "grid":
-        import math
-
         rows = math.ceil(len(ch) / n["cols"]) if ch else 0
         n["cellW"] = _max(lambda c: c["w"])
         n["cellH"] = _max(lambda c: c["h"])
@@ -331,9 +334,7 @@ def _measure_container(n):
 
     # floor by title width: a frame is never narrower than its label.
     if n["label"]:
-        import math
-
-        n["w"] = max(n["w"], math.ceil(len(n["label"]) * 6.6) + p * 2)
+        n["w"] = max(n["w"], math.ceil(text_width(n["label"], 12, bold=True)) + p * 2)
 
 
 # --------------------------------------------------------------------------- #
@@ -462,7 +463,7 @@ def _e_group(d, n, parent):
         r["ob"] = False
         pill = n.get("pill")
         if pill:
-            pw = max(40, len(str(pill)) * 7 + 22)
+            pw = max(40, round(text_width(str(pill), 11, bold=True)) + 22)
             pr = d._put(
                 f"{n['id']}__pill",
                 n["id"],

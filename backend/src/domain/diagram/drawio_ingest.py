@@ -418,22 +418,24 @@ def extract_inventory(path: str) -> dict:
     return {"title": title_guess, "provider": "generic", "clusters": clusters, "nodes": nodes, "edges": edges}
 
 
-def _wrap_body(text: str, width: int = 32, max_lines: int = 3) -> list[str]:
-    """Split a long subtitle into short refined card body lines (playbook §12.4)."""
-    words = str(text or "").split()
-    lines: list[str] = []
-    cur = ""
-    for w in words:
-        if cur and len(cur) + 1 + len(w) > width:
-            lines.append(cur)
-            cur = w
-            if len(lines) == max_lines:
-                break
-        else:
-            cur = f"{cur} {w}".strip()
-    if cur and len(lines) < max_lines:
-        lines.append(cur)
-    return lines
+def _wrap_body(text: str, max_lines: int = 3) -> list[str]:
+    """Split a long subtitle into short refined card body lines (playbook §12.4).
+
+    Wraps against the REAL rendered pixel width of a refined card
+    (prettygraph.native.refined_theme.card_text_avail_w), not a flat
+    chars-per-line guess — this runs BEFORE refined.py ever sees the node (the
+    result is baked into render_spec["nodes"][i]["body"], which refined.py's
+    own `_body_lines` takes as-is), so if this wraps to the wrong width the
+    card will silently re-wrap/overflow in draw.io with no later chance to
+    catch it. Every ingested node gets a vendor icon (see rendering_tools.
+    _bake_icon_plan's "never bare card" guarantee), so this assumes an icon
+    badge is present — the same assumption refined.py's own card path makes.
+    """
+    from prettygraph.native import refined_theme as RT
+    from prettygraph.text_metrics import wrap as tm_wrap
+
+    avail = RT.card_text_avail_w(RT.GEO["card_w"], has_icon=True)
+    return tm_wrap(str(text or ""), avail, RT.TYPE_SCALE["card"], max_lines=max_lines)
 
 
 def inventory_to_render_spec(

@@ -9,6 +9,7 @@ until it lands, edges emit as plain orthogonal source→target connectors.
 
 from __future__ import annotations
 
+from ..text_metrics import text_width
 from .theme import THEME
 from . import refined_theme as RT
 
@@ -262,7 +263,7 @@ class Diagram:
         if not entries:
             return None
         row_h, pad, sw = 24, 12, 36
-        w = max(170, max(len(str(l)) for l, _, _ in entries) * 7 + sw + pad * 3)
+        w = max(170, max(text_width(str(l), 11) for l, _, _ in entries) + sw + pad * 3)
         h = pad * 2 + 24 + row_h * len(entries)
         x, y = xy
         self.box(
@@ -442,7 +443,7 @@ class Diagram:
         r = self._put(id, "1", xy[0], xy[1], wh[0], wh[1], style, "", z=Z_CONTAINER)
         r["ob"] = False  # container: edges route across it
         label = f"{number} · {title}" if number is not None else str(title)
-        tab_w = max(100, round(len(label) * 7.2) + 34)
+        tab_w = max(100, round(text_width(label, RT.TYPE_SCALE["tab"], bold=True)) + 34)
         self.pill(
             f"tab_{id}",
             [xy[0] + 18, xy[1] - RT.GEO["tab_overlap"]],
@@ -468,7 +469,7 @@ class Diagram:
         r = self._put(id, "1", xy[0], xy[1], wh[0], wh[1], style, "", z=Z_CONTAINER)
         r["ob"] = False
         if label:
-            tab_w = max(90, round(len(label) * 7.2) + 30)
+            tab_w = max(90, round(text_width(label, RT.TYPE_SCALE["tab"], bold=True)) + 30)
             self.pill(
                 f"tab_{id}",
                 [xy[0] + 20, xy[1] - RT.GEO["tab_overlap"]],
@@ -533,7 +534,7 @@ class Diagram:
                 z=Z_CHROME,
             )
             ln["ob"] = False
-            lw = max(90, round(len(str(label)) * 6.5) + 10)
+            lw = max(90, round(text_width(str(label), RT.TYPE_SCALE["legend"])) + 10)
             lb = self._put(
                 f"{id}__lb{i}",
                 "1",

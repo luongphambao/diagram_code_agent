@@ -69,13 +69,23 @@ EDGE_COLOR = "#5A6573"
 EDGE_FONTCOLOR = "#3f4a57"
 FONT = "Helvetica"
 
+# Kept color-identical to prettygraph.native.refined_theme.EDGE_CLASSES (via
+# that module's FLOW_ALIAS: serving->execution, registry->data,
+# security->control) — this is the "icon" preset's + Pretty.edge(flow=...)'s
+# vocabulary, refined_theme.EDGE_CLASSES is the "refined" (now default)
+# preset's. Same `flow` key used to render a visibly DIFFERENT color
+# depending on which preset happened to draw it (e.g. flow="data" was
+# #2563EB here vs #1D4ED8 in refined_theme) — a spec author has no way to
+# know which preset will render their blueprint, so the same semantic edge
+# must look the same either way. If you touch refined_theme.EDGE_CLASSES,
+# update these to match.
 FLOW_COLORS: dict[str, tuple[str, str]] = {
-    "data": ("#2563EB", "solid"),
-    "control": ("#64748B", "dashed"),
-    "serving": ("#0D9488", "solid"),
-    "registry": ("#7C3AED", "solid"),
-    "monitoring": ("#D97706", "dashed"),
-    "security": ("#E11D48", "dashed"),
+    "data": ("#1D4ED8", "solid"),
+    "control": ("#536174", "dashed"),
+    "serving": ("#536174", "solid"),
+    "registry": ("#1D4ED8", "solid"),
+    "monitoring": ("#98A2B3", "dashed"),
+    "security": ("#536174", "dashed"),
 }
 
 # ---- draw.io theme tokens (ported from drawio-ai-kit/src/theme.mjs) ---------- #

@@ -27,6 +27,9 @@ import re
 import sys
 import xml.etree.ElementTree as ET
 
+from prettygraph.native.refined_theme import TYPE_SCALE as _TYPE_SCALE, card_text_avail_w
+from prettygraph.text_metrics import text_width
+
 RESERVED = {"0", "1"}
 
 
@@ -62,16 +65,17 @@ _DECOR_SUFFIXES = ("__sh", "__ac", "__pill", "__ic")
 
 def _is_refined_chrome(cid: str | None) -> bool:
     """Refined-preset chrome that OVERLAPS by design (folder tabs crossing the
-    zone top edge, scope tags, legend internals, the background rect) — must be
-    invisible to every geometry/overlap/bbox audit."""
-    return bool(cid) and (cid.startswith(("tab_", "tag_", "footer__")) or cid == "__bg")
+    zone top edge, scope tags, legend internals, the Interface Register's own
+    header/row cells, the background rect) — must be invisible to every
+    geometry/overlap/bbox audit."""
+    return bool(cid) and (cid.startswith(("tab_", "tag_", "footer__", "__ireg__")) or cid == "__bg")
 
 
 def _is_refined_container(cid: str | None) -> bool:
     """Refined-preset zones/boundaries/bands are flat (parent="1") — no children
     to infer container-ness from, so recognize them by id convention. They
     legitimately sit under their member cards and must not count as cards."""
-    return bool(cid) and (cid.startswith(("zone_", "bnd_")) or cid in ("footer", "backbone"))
+    return bool(cid) and (cid.startswith(("zone_", "bnd_")) or cid in ("footer", "backbone", "__ireg"))
 
 
 _RE_POOL_CHROME = re.compile(r"__(band|lane|phase)\d+$")
@@ -1195,7 +1199,6 @@ REFINED_TARGET = {
     "backbone": True,
     "zones": (3, 9),  # numbered zones (playbook §7.1 wants 5-9;
     # small diagrams legitimately have 3-4)
-    "body_line_max": 38,  # chars per card body line (§12.4 + slack)
 }
 
 # The BPMN swimlane preset's bar: a pool has no aspect-ratio dial, no icon
@@ -1230,16 +1233,31 @@ def audit_refined_structure(xml: str) -> dict:
     # outcome/future edges are deliberately unlegended (self-evident sinks)
     unlegended_ok = {"#2E7D4F", "#98A2B3"}
     legend_covers = edge_colors <= (swatch_colors | unlegended_ok) if edge_colors else True
+    # Real-metric replacement for the old `len(plain) > 38 chars` guess: a
+    # line "overlongs" its box when its RENDERED pixel width exceeds what a
+    # standard card actually has available (card_text_avail_w) — no per-cell
+    # geometry is parsed here (this audit works off the raw XML string for
+    # speed), so header/footer/subzone cards that get a different width than
+    # a standard card are measured against this same bound, same
+    # approximation refined.py's own zone-geometry pre-measure makes.
+    # Semantic glue notes (glueNote=1 — builder.note_card) never carry an
+    # icon badge and render smaller (TYPE_SCALE["note"]), so they get their
+    # own, wider bound instead of a regular icon card's.
+    _card_avail_w = card_text_avail_w(has_icon=True)
+    _note_avail_w = card_text_avail_w(has_icon=False)
     overlong = 0
     for m in re.finditer(
         r'<mxCell id="(?!zone_|bnd_|tab_|tag_|footer|backbone|__)[^"]*" '
-        r'value="([^"]*)"[^>]*vertex="1"',
+        r'value="([^"]*)"[^>]*style="([^"]*)"[^>]*vertex="1"',
         xml,
     ):
+        is_note = "glueNote=1" in m.group(2)
+        fs = _TYPE_SCALE["note"] if is_note else _TYPE_SCALE["card"]
+        avail_w = _note_avail_w if is_note else _card_avail_w
         for line in m.group(1).split("&lt;br&gt;"):
             plain = re.sub(r"&lt;[^&]*&gt;", "", line)
             plain = plain.replace("&amp;amp;", "&").replace("&amp;", "&").strip()
-            if len(plain) > REFINED_TARGET["body_line_max"]:
+            if text_width(plain, fs) > avail_w:
                 overlong += 1
     return {
         "refined": True,
@@ -1420,7 +1438,11 @@ def audit_layout_metrics(xml: str, stats: dict | None = None) -> dict:
         off = e.get("label_offset")  # refined preset: real drawio label-offset point
         if off:
             mid = {"x": mid["x"] + off["x"], "y": mid["y"] + off["y"]}
-        lw, lh = len(e["label"]) * 6.6, 14.0
+        # Shares text_metrics.text_width + the "edge" type-scale entry with
+        # refined.py's own label-placement solver (_label_box_free) — same
+        # font/size, so this audit never disagrees with what the renderer
+        # already checked before placing the label.
+        lw, lh = max(30.0, text_width(e["label"], _TYPE_SCALE["edge"])), 14.0
         lb = {"x": mid["x"] - lw / 2, "y": mid["y"] - lh / 2, "w": lw, "h": lh}
         for r in card_rects:
             ix = min(lb["x"] + lb["w"], r["x"] + r["w"]) - max(lb["x"], r["x"])
@@ -1549,6 +1571,16 @@ def validate_xml(xml: str, profile: str = "auto", stats: dict | None = None) -> 
             e, w = check_page(page)
             errors += e
             warns += w
+    # Spec-level semantic gates (I1-I4 — orphan components, relationship
+    # density, weak primary labels, icon-family mixing). Computed by
+    # prettygraph.native.repair.semantic_stats on the SPEC before layout_plan
+    # bundles/suppresses edges (see semantic_gates.py's module docstring for
+    # why gating the rendered XML directly produces false positives) and
+    # threaded through here via `stats["semantic"]["gate_findings"]`. `hard`
+    # findings are real errors — they force REVISE via patch_blueprint, the
+    # same as a dangling edge or a duplicate id.
+    for gf in (stats or {}).get("semantic", {}).get("gate_findings") or []:
+        (errors if gf.get("severity") == "hard" else warns).append(gf.get("message") or "")
     advice: list[str] = []
     polish: list[str] = []
     collisions: list[str] = []

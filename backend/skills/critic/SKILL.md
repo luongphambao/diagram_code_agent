@@ -16,6 +16,14 @@ documents the quality bar, the defect taxonomy, and what NOT to file.
 - **Every node inside a cluster**: Client · Edge/Hosting · Application · Data ·
   AI · Monitoring · CI/CD. Only a single entry actor (User/Browser) may float
   outside. A bare box outside any cluster is a defect.
+- **Every component node has at least one relationship.** A component with no
+  edge at all — in or out — is not architecture: delete it, merge it into
+  another component, or connect it. This is a functional finding, severity
+  `high`, and forces REVISE (annotation nodes — legend/note/KPI tiles — are
+  exempt; they were never meant to have an edge). The automated `I1 orphan`
+  gate already checks this on the blueprint before render, so a rendered
+  orphan means the blueprint itself needs a relationship added, not a layout
+  tweak.
 - **No spaghetti**: edges go in one direction; no whole-canvas crossing arrows.
   Label-bearing edges that span >50% of the canvas will strand — they are a
   defect when the layout audit flags them.
@@ -77,7 +85,7 @@ documents the quality bar, the defect taxonomy, and what NOT to file.
 | Severity  | Examples |
 |-----------|---------|
 | `critical` | Render is broken; topology is wrong (edges connect wrong nodes; whole tier missing) |
-| `high`    | Blueprint node/edge missing; blank icon box; visible empty shape; Data nested in Application; orchestration flow not numbered |
+| `high`    | Blueprint node/edge missing; blank icon box; visible empty shape; Data nested in Application; orchestration flow not numbered; orphan component (no edge in or out — see `I1 orphan` above) |
 | `medium`  | Crossing or whole-canvas edges; aspect ratio > 2.6:1 (layout audit TOO WIDE); clipped/truncated text; overlapping labels; floating un-clustered nodes; floating labeled edges; missing expected VPC/subnet boundary; absent security boundary when security_level=high/critical; per-service observability lines instead of one aggregated channel; per-file config fan-out; primary-flow backtracking; client-facing code-level clutter (legend issues go under the aesthetic `legend` category — advisory, not here) |
 | `low`     | Minor misalignment; small inconsistency; negligible impact; pillar_gap (Well-Architected pillar undocumented — file as `pillar_gap` category, `in_blueprint=false`, severity `low`) |
 

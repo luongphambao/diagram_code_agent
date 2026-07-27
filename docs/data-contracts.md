@@ -54,6 +54,7 @@ process(Optional[ProcessBlueprint])
 
 - **`DiagramSpec`** (`tools/schemas/diagram_spec.py`) — union phân biệt theo `kind`: `ArchitectureSpec | ProcessSpec | SequenceSpec | ERDSpec | StateMachineSpec`. Envelope `DiagramPlan`: `kind, title, objective, audience, source_type, presentation_style, spec`.
 - **`render_spec.json`** — dict **phẳng** mà native renderer tiêu thụ (mọi kind dùng chung), dựng bởi `_build_render_spec` trong `tools/schemas/coercion.py`. Key: `style_preset, nodes, edges, clusters, hub, process, layout_intent`.
+- **`waivers`** (optional, top-level) — list `{code, ids, reason, approved_by}` cho phép bỏ qua một finding cụ thể của `domain.validation.semantic_gates.audit_spec_semantics` (I1-I4) theo đúng `code` + `ids` (node id hoặc `"<from>-><to>"` cho edge). Waiver có người ký (`approved_by`) thì audit được — hạ threshold thì không.
 - **Renderer registry** (`prettygraph/native/registry.py`): `RendererEntry{kind, backend:"native"|"codegen", tree_builder, style_preset_label, semantic_ids_fn}`. Contract của tree builder: `(spec, *, flat, plan) -> (Diagram, root)`.
 - **`icon_plan.json`** — output của subagent `icon_resolver`: map node id → icon path / node class. `icon_resolver` bị **deny write** file này ở permission layer; nó ghi qua tool chuyên trách.
 - **`engineer_report.json`** — `chosen plan`, per-candidate `{score, pass, collisions, …}`, `final_score`, `final_pass`. Scorecard phơi ra: `arrow_clarity_score, visible_edge_count, bundled_edge_count, crossings_per_edge, long_edge_ratio, icon_coverage, ratio, page_fill`.

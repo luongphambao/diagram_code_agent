@@ -130,10 +130,27 @@ GEO = {
     "zone_pad": 14,  # inner padding between zone border and cards
     "zone_gap": 44,  # gap between adjacent zones (room for cross-zone edge labels)
     "card_gap": 14,  # vertical gap between stacked cards
-    "body_line_max": 35,  # chars per body line (playbook §12.4)
     "body_lines_max": 4,
     "footer_lane": 40,  # routing lane reserved above the footer band
+    "card_w": 200,  # standard refined card width (refined._CARD_W mirrors this)
+    "card_text_pad_x": 24,  # generic left+right text padding inside a card
+    "card_icon_pad_x": 52,  # extra left indent cleared by the 38px logo badge (builder.rich_card)
 }
+
+
+def card_text_avail_w(card_w: float | None = None, *, has_icon: bool = True) -> float:
+    """Pixel width left for wrapping a card's title/body text once the icon
+    badge (if any) and generic padding are subtracted.
+
+    This is the SINGLE bound both `refined.py` (which sizes+renders cards) and
+    `drawio_ingest.py` (which pre-wraps subtitles for an ingested .drawio
+    BEFORE refined.py ever sees them) measure text against — keeping them in
+    lockstep is what makes "wrapped at layout time" match "wrapped by draw.io
+    at render time" instead of silently drifting apart (playbook §12.4).
+    """
+    w = card_w if card_w is not None else GEO["card_w"]
+    pad = GEO["card_text_pad_x"] + (GEO["card_icon_pad_x"] if has_icon else 0)
+    return max(24.0, w - pad)
 
 
 def as_json() -> dict:

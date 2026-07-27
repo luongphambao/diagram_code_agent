@@ -2,6 +2,42 @@
 
 from __future__ import annotations
 
+
+def design_token_block() -> str:
+    """Render the refined preset's design tokens as prompt text, generated
+    straight from `refined_theme.as_json()` (the same dict written to
+    `design_tokens.json` next to every refined render — see
+    rendering_tools.py) so this can never drift from what the engine
+    actually draws. Every number the drawer would otherwise have to guess
+    when hand-fixing a finding via `edit_drawio` (a color, a font size, a
+    stroke width) is right here instead."""
+    from prettygraph.native import refined_theme as RT
+
+    tok = RT.as_json()
+    lines = [
+        "## Design tokens (the engine's actual values — do NOT invent a different number)",
+        "Type scale (px): " + " · ".join(f"{k}={v}" for k, v in tok["type_scale"].items()),
+        "Zone accents (tab/stroke/tint): "
+        + " · ".join(f"{k}={v['tab']}/{v['stroke']}/{v['tint']}" for k, v in tok["zone_hues"].items()),
+        "Edge classes (color/width/dashed): "
+        + " · ".join(f"{k}={v['color']}/{v['width']}/{v['dashed']}" for k, v in tok["edge_classes"].items()),
+        "Boundary kinds (fill/stroke/dash/tab): "
+        + " · ".join(
+            f"{k}={v['fill']}/{v['stroke']}/{v['dash']}/{v['tab']}" for k, v in tok["boundary"].items()
+        ),
+        f"Radius: card=9 zone={tok['geometry']['arc_zone']} pill={tok['geometry']['arc_pill']} · "
+        f"Stroke: card={tok['geometry']['card_stroke_w']} zone={tok['geometry']['zone_stroke_w']} "
+        f"boundary={tok['geometry']['boundary_stroke_w']}",
+        f"Card width={tok['geometry']['card_w']} · gaps: card={tok['geometry']['card_gap']} "
+        f"zone={tok['geometry']['zone_gap']} pad={tok['geometry']['zone_pad']}",
+        "You do NOT choose coordinates — the engine computes geometry. When "
+        "hand-editing a rendered diagram (`set_style`/`set_label`), reuse these "
+        "exact values so the fix matches the rest of the page instead of "
+        "introducing a one-off color or size.",
+    ]
+    return "\n".join(lines)
+
+
 _MAIN_TOOLS_BLOCK = """\
 ## Tools (you have NO shell — use these)
 [[PHASE intake]]

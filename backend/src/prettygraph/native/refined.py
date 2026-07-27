@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import re
 
+from ..text_metrics import text_width as _tm_text_width, wrap as _tm_wrap
 from .builder import Diagram, Z_CHROME
 from . import refined_theme as RT
 
@@ -57,7 +58,7 @@ _BOUNDARY_KINDS = {
     "onprem": "onprem",
 }
 
-_CARD_W = 200  # standard refined card width
+_CARD_W = RT.GEO["card_w"]  # standard refined card width
 _CARD_PAD_H = 40  # card height base (title row + padding)
 _LINE_H = 15  # per body line
 _MAX_ROWS = 4  # cards per zone column before wrapping to a new column
@@ -67,33 +68,43 @@ _OPS_GAP = 70  # gap between main row and the operations band
 _SIDEBAR_GAP = 55  # gap between main row and the outcomes sidebar
 
 
-def _wrap(text: str, width: int = 32, max_lines: int = 3) -> list[str]:
-    """Split free text into short body lines (playbook §12.4)."""
-    words = str(text or "").split()
-    lines: list[str] = []
-    cur = ""
-    for w in words:
-        if cur and len(cur) + 1 + len(w) > width:
-            lines.append(cur)
-            cur = w
-            if len(lines) == max_lines:
-                break
-        else:
-            cur = f"{cur} {w}".strip()
-    if cur and len(lines) < max_lines:
-        lines.append(cur)
-    return lines
+def _wrap(text: str, card_w: int = _CARD_W, size: float | None = None, *, has_icon: bool = True) -> list[str]:
+    """Split free text into short body lines, wrapped to the REAL rendered
+    pixel width of a `card_w`-wide card (playbook §12.4) — matches what
+    draw.io will actually lay out, not a flat chars-per-line guess. A card
+    with a left icon badge has less available width than a bare one."""
+    avail = RT.card_text_avail_w(card_w, has_icon=has_icon)
+    fs = size if size is not None else RT.TYPE_SCALE["card"]
+    return _tm_wrap(str(text or ""), avail, fs, max_lines=RT.GEO["body_lines_max"] - 1)
 
 
-def _body_lines(n: dict) -> list[str]:
+def _body_lines(
+    n: dict, card_w: int = _CARD_W, *, note: bool = False, has_icon: bool | None = None
+) -> list[str]:
     body = [str(l).strip() for l in (n.get("body") or []) if str(l).strip()]
     if body:
         return body[: RT.GEO["body_lines_max"]]
     tech = str(n.get("tech") or "").strip()
     label = str(n.get("label") or "").strip()
     if tech and tech.lower() != label.lower():
-        return _wrap(tech)
+        icon = (not note) and (
+            bool(n.get("icon") or n.get("icon_data_uri")) if has_icon is None else has_icon
+        )
+        size = RT.TYPE_SCALE["note"] if note else RT.TYPE_SCALE["card"]
+        return _wrap(tech, card_w, size, has_icon=icon)
     return []
+
+
+def _card_geometry(n: dict, card_w: int, *, span: bool = False) -> list[str]:
+    """Body lines for `n`, wrapped against EXACTLY the font size / icon-pad /
+    width `_render` will use for this same node. Measure and render calling
+    this same function (instead of each guessing independently) is what keeps
+    the box drawn at render time the same size as the box `_card_h` sized for
+    — a mismatch here is exactly what makes draw.io silently re-wrap or
+    overflow a card whose height was already committed."""
+    note = str(n.get("kind") or "") == "note"
+    has_icon = (not span) and (not note) and bool(n.get("icon") or n.get("icon_data_uri"))
+    return _body_lines(n, card_w, note=note, has_icon=has_icon)
 
 
 # "Hard" ops — telemetry/governance that belongs in the cross-cutting band even
@@ -150,26 +161,6 @@ def _role_of(c: dict, clusters: dict | None = None) -> str:
     return "main"
 
 
-_SECURITY_RX = re.compile(r"security|access|iam\b|auth|identity|ingress", re.I)
-_STATE_RX = re.compile(r"redis|cache|database|\bdb\b|state|queue|broker|message", re.I)
-
-
-def _auto_glue(zone_id: str, cluster: dict, role: str) -> tuple[str, list[str]] | None:
-    """Playbook §14 semantic glue: a short rationale note for zones whose
-    purpose isn't self-evident from component names alone. Only synthesized
-    when the zone has no note already (spec-authored notes always win) — pure
-    heuristic on the zone's own label, safe to be generic/conservative."""
-    label = str(cluster.get("label") or zone_id)
-    text = f"{label} {cluster.get('tier') or ''}"
-    if role == "ops" and _SECURITY_RX.search(text):
-        return ("Security boundary", ["Gates what reaches downstream."])
-    if role == "main" and _STATE_RX.search(text):
-        return ("Runtime responsibility", ["Shared state for this pipeline stage."])
-    if role == "sidebar":
-        return ("Target outcome", ["Consumers act on these results."])
-    return None
-
-
 def _card_h(lines: list[str]) -> int:
     # Floor of 56px: every card now carries a 38px left icon badge, which needs
     # 8px top + ~10px bottom clearance even on title-only cards.
@@ -188,10 +179,142 @@ _CTRL_RX = re.compile(
 )
 
 
+def _register_codes(plan: dict) -> dict[tuple, str]:
+    """Stable ``I-NN`` code per bundle representative, assigned in the plan's
+    own bundle order — the same order the Interface Register panel lists
+    them in, so a reader can jump from an edge label's "· I-07" straight to
+    its row."""
+    return {
+        tuple(b["rep"]): f"I-{i + 1:02d}"
+        for i, b in enumerate(plan.get("edge_bundles") or [])
+        if b.get("rep")
+    }
+
+
+def _truncate(text: str, max_w: float, size: float) -> str:
+    if _tm_text_width(text, size) <= max_w:
+        return text
+    lines = _tm_wrap(text, max_w, size, max_lines=1)
+    line = lines[0] if lines else text
+    while line and _tm_text_width(line + "…", size) > max_w:
+        line = line[:-1]
+    return (line + "…") if line else text[:1]
+
+
+def _render_interface_register(
+    d: Diagram, plan: dict, node_by_id: dict, xy: tuple[int, int], width: int
+) -> int:
+    """Playbook: bundling must FOLD suppressed edges, never DROP them — every
+    edge collapsed into a bundle representative (layout_plan._bundle_edges /
+    _bundle_refined_support_edges) is still listed here with its real
+    from/to/label, one row per bundle. This is what makes a short
+    representative label ("systems sync · I-07") legible without needing a
+    30-word tooltip: the detail is one panel away, not gone.
+
+    Returns the rendered height (0 if there's nothing to register)."""
+    bundles = [b for b in (plan.get("edge_bundles") or []) if b.get("rep")]
+    if not bundles:
+        return 0
+    fs = RT.TYPE_SCALE["legend"]
+
+    def _name(nid: str) -> str:
+        return str((node_by_id.get(nid) or {}).get("label") or nid)
+
+    row_h, header_h, pad = 20, 32, 12
+    x, y = xy
+    col_x = [x + 18, x + 84, x + 340, x + 560]
+    col_w = [58, 248, 212, max(160, width - (560 - x) - 24)]
+    rows: list[tuple[str, str, str, str]] = []
+    for i, b in enumerate(bundles):
+        rep = b["rep"]
+        rep_txt = f"{_name(rep[0])} → {_name(rep[1])}"
+        label = str(b.get("label") or rep[2] or "—")
+        members = b.get("members") or []
+        member_txt = (
+            "; ".join(f"{_name(m[0])}→{_name(m[1])}: {m[2] or '—'}" for m in members)
+            if members
+            else "(no additional member — representative only)"
+        )
+        rows.append(
+            (
+                f"I-{i + 1:02d}",
+                _truncate(rep_txt, col_w[1] - 10, fs),
+                _truncate(label, col_w[2] - 10, fs),
+                _truncate(f"{len(members)} folded: {member_txt}", col_w[3] - 10, fs),
+            )
+        )
+    h = header_h + row_h * len(rows) + pad
+    band = d._put(
+        "__ireg",
+        "1",
+        x,
+        y,
+        width,
+        h,
+        f"rounded=1;arcSize={RT.GEO['arc_zone']};html=1;whiteSpace=wrap;"
+        f"fillColor={RT.CHROME['strip_fill']};strokeColor={RT.CHROME['strip_stroke']};"
+        "strokeWidth=1.3;shadow=0;",
+        "",
+        z=Z_CHROME,
+    )
+    band["ob"] = True
+    title = d._put(
+        "__ireg__title",
+        "1",
+        x + 18,
+        y + 8,
+        width - 36,
+        18,
+        f"text;html=1;align=left;verticalAlign=middle;fontFamily={RT.FONT};"
+        f"fontColor={RT.INK['slate']};fontSize=11;fontStyle=1;",
+        "INTERFACE REGISTER — bundled edges, unfolded",
+        z=Z_CHROME,
+    )
+    title["ob"] = False
+    ry = y + header_h
+    headers = ("ID", "From → to", "Label shown", "Folded members")
+    for cx, cw, text in zip(col_x, col_w, headers):
+        hc = d._put(
+            f"__ireg__hdr_{cx}",
+            "1",
+            cx,
+            ry,
+            cw,
+            16,
+            f"text;html=1;align=left;verticalAlign=middle;fontFamily={RT.FONT};"
+            f"fontColor={RT.INK['muted']};fontSize=8.5;fontStyle=1;",
+            text.upper(),
+            z=Z_CHROME,
+        )
+        hc["ob"] = False
+    ry += 18
+    for code, rep_txt, label, member_txt in rows:
+        for cx, cw, text, bold in zip(
+            col_x, col_w, (code, rep_txt, label, member_txt), (True, False, False, False)
+        ):
+            cell = d._put(
+                f"__ireg__{code}_{cx}",
+                "1",
+                cx,
+                ry,
+                cw,
+                row_h,
+                f"text;html=1;align=left;verticalAlign=middle;fontFamily={RT.FONT};"
+                f"fontColor={RT.INK['body']};fontSize={fs};" + ("fontStyle=1;" if bold else ""),
+                text,
+                z=Z_CHROME,
+            )
+            cell["ob"] = False
+        ry += row_h
+    return h
+
+
 def _label_box_free(cx: float, cy: float, label: str, card_rects: list[dict]) -> bool:
     """True when a label box centred at (cx, cy) clears every card. Box size
-    mirrors validate_drawio's edge-label estimate (6.6px/char × 14px)."""
-    w = max(30.0, len(label) * 6.6)
+    shares `text_metrics.text_width` with validate_drawio's edge-label
+    collision check — same font, same size, so the two never disagree about
+    whether a given label position is actually free."""
+    w = max(30.0, _tm_text_width(label, RT.TYPE_SCALE["edge"]))
     x0, x1 = cx - w / 2, cx + w / 2
     y0, y1 = cy - 8, cy + 8
     for r in card_rects:
@@ -317,22 +440,31 @@ def _col_card_w(col: dict) -> int:
 
 
 def _measure_content(content: dict) -> tuple[int, int]:
-    """Zone (w, h) from its content model — kept in lockstep with _emit_content."""
+    """Zone (w, h) from its content model — kept in lockstep with _emit_content.
+
+    Width is computed from the COLUMNS first (headers/footers never widen a
+    zone, only its columns/`_CARD_W` floor do — see `_emit_content`'s
+    `inner_w = rect["w"] - 2*pad`), so header/footer body lines can then be
+    wrapped against the SAME `inner_w` they will actually render at, instead
+    of guessing a width before the zone's real width is known.
+    """
     gap = RT.GEO["card_gap"]
     pad = RT.GEO["zone_pad"]
     col_ws, col_hs = [], []
     for col in content["columns"]:
-        col_ws.append(_col_card_w(col) + (2 * _SUBZONE_PAD if col["sub"] else 0))
+        cw = _col_card_w(col)
+        col_ws.append(cw + (2 * _SUBZONE_PAD if col["sub"] else 0))
         ch = _SUBZONE_TOP if col["sub"] else 0
-        ch += sum(_card_h(_body_lines(n)) + gap for n in col["cards"]) - gap
+        ch += sum(_card_h(_card_geometry(n, cw)) + gap for n in col["cards"]) - gap
         if col["sub"]:
             ch += _SUBZONE_PAD
         col_hs.append(max(0, ch))
     cols_w = (sum(col_ws) + gap * (len(col_ws) - 1)) if col_ws else 0
     cols_h = max(col_hs) if col_hs else 0
-    hh = sum(_card_h(_body_lines(n)) + gap for n in content["headers"])
-    fh = sum(_card_h(_body_lines(n)) + gap for n in content["footers"])
     w = max(cols_w, _CARD_W) + 2 * pad
+    inner_w = w - 2 * pad
+    hh = sum(_card_h(_card_geometry(n, inner_w, span=True)) + gap for n in content["headers"])
+    fh = sum(_card_h(_card_geometry(n, inner_w, span=True)) + gap for n in content["footers"])
     h = 46 + hh + cols_h + fh + 8
     return max(w, 170), max(h, 120)
 
@@ -474,37 +606,20 @@ def build_refined(spec: dict, plan: dict | None = None):
         role_by_zone = {z: "main" for z in order}
     mains.sort(key=_num_key)
 
-    # ---- auto-glue (playbook §14): one note per category, first match wins,
-    # never overriding a spec-authored note ---- #
-    used_glue: set[str] = set()
-    for z in mains + ops + sides:
-        role = _layout_role(z)
-        cat = "sidebar" if role == "sidebar" else "security" if role == "ops" else "state"
-        if cat in used_glue:
-            continue
-        if any(str(n.get("kind") or "") == "note" for n in nodes_by_cluster.get(z, [])):
-            used_glue.add(cat)  # spec already covers this category here
-            continue
-        glue = _auto_glue(z, clusters[z], role)
-        if glue:
-            title, lines = glue
-            nodes_by_cluster.setdefault(z, []).append(
-                {
-                    "id": f"note_auto_{z}",
-                    "cluster": z,
-                    "kind": "note",
-                    "span": "footer",
-                    "label": title,
-                    "body": lines,
-                }
-            )
-            used_glue.add(cat)
+    # Playbook §14 used to auto-synthesize one filler "semantic glue" note per
+    # zone category (e.g. "Target outcome" / "Consumers act on these
+    # results.") whenever the spec didn't author one — removed (see
+    # docs/improve/REVIEW-CODEBASE-FIT.md Patch 2b item 3): those fixed
+    # strings carried no information specific to the actual diagram and, at
+    # the default card width, some of them didn't even fit their own note
+    # card. A spec-authored `kind: "note"` node still renders exactly as
+    # before — only the no-content fallback is gone.
 
     # ---- measure zones ---- #
     def _zone_geom(zid: str, horizontal: bool = False) -> dict:
         members = nodes_by_cluster.get(zid, [])
         if horizontal:
-            cards = [(n, _body_lines(n)) for n in members]
+            cards = [(n, _card_geometry(n, _CARD_W)) for n in members]
             w = 30 + sum(min(300, max(150, _CARD_W)) + 14 for _ in cards)
             h = 40 + max((_card_h(l) for _, l in cards), default=60) + 20
             return {"cards": cards, "w": max(w, 170), "h": max(h, 120)}
@@ -697,7 +812,7 @@ def build_refined(spec: dict, plan: dict | None = None):
         )
         scope = str(c.get("scope") or ("future" if role == "future" else "")).upper()
         if scope:
-            pw = max(60, len(scope) * 6 + 24)
+            pw = max(60, round(_tm_text_width(scope, 9, bold=True)) + 24)
             d.pill(
                 f"tag_{z}",
                 [rect["x"] + rect["w"] - pw - 8, rect["y"] - 11],
@@ -711,13 +826,14 @@ def build_refined(spec: dict, plan: dict | None = None):
 
         def _render(n, xy, wh, span=False, zone_hue=hue):
             fill, cstroke = _card_fill_stroke(n, zone_hue)
+            lines = _card_geometry(n, wh[0], span=span)
             if str(n.get("kind") or "") == "note":
                 d.note_card(
                     n["id"],
                     xy,
                     wh,
                     n.get("label") or n["id"],
-                    _body_lines(n),
+                    lines,
                     fill=fill,
                     stroke=cstroke or "#D0D5DD",
                 )
@@ -728,7 +844,7 @@ def build_refined(spec: dict, plan: dict | None = None):
                     xy,
                     wh,
                     n.get("label") or n["id"],
-                    _body_lines(n),
+                    lines,
                     fill=fill,
                     stroke=cstroke,
                     align="center" if span else "left",
@@ -743,7 +859,7 @@ def build_refined(spec: dict, plan: dict | None = None):
             n_cards = max(1, len(cards))
             cw = min(320, max(170, (rect["w"] - 40 - 14 * n_cards) // n_cards))
             for n, lines in cards:
-                _render(n, [cx, rect["y"] + 40], [cw, _card_h(lines)])
+                _render(n, [cx, rect["y"] + 40], [cw, _card_h(_card_geometry(n, cw))])
                 cx += cw + 14
         else:  # vertical: header spans / subzone columns / footer spans
             content = (geo_main.get(z) or geo_side.get(z) or {}).get("content") or _zone_content(
@@ -755,7 +871,7 @@ def build_refined(spec: dict, plan: dict | None = None):
             inner_w = rect["w"] - 2 * pad
             cy = rect["y"] + 46
             for n in content["headers"]:
-                h = _card_h(_body_lines(n))
+                h = _card_h(_card_geometry(n, inner_w, span=True))
                 _render(n, [inner_x, cy], [inner_w, h], span=True)
                 cy += h + gap
             col_top = cy
@@ -767,7 +883,7 @@ def build_refined(spec: dict, plan: dict | None = None):
                 ccx = cx + (_SUBZONE_PAD if col["sub"] else 0)
                 ccy = col_top + (_SUBZONE_TOP if col["sub"] else 0)
                 for n in col["cards"]:
-                    h = _card_h(_body_lines(n))
+                    h = _card_h(_card_geometry(n, cw))
                     _render(n, [ccx, ccy], [cw, h])
                     ccy += h + gap
                 bottom = ccy - gap
@@ -785,7 +901,7 @@ def build_refined(spec: dict, plan: dict | None = None):
                 cx += frame_w + gap
             cy = max(col_bottoms)
             for n in content["footers"]:
-                h = _card_h(_body_lines(n))
+                h = _card_h(_card_geometry(n, inner_w, span=True))
                 _render(n, [inner_x, cy], [inner_w, h], span=True)
                 cy += h + gap
 
@@ -829,7 +945,9 @@ def build_refined(spec: dict, plan: dict | None = None):
         phases = [str(clusters[z].get("label") or z).upper() for z in mains]
     if phases:
         label = "  →  ".join(phases)
-        bw = min(page_w - 2 * margin, max(600, len(label) * 8))
+        bw = min(
+            page_w - 2 * margin, max(600, round(_tm_text_width(label, RT.TYPE_SCALE["backbone"], bold=True)))
+        )
         bb = d.pill(
             "backbone",
             [round((page_w - bw) / 2), _HEADER_Y[2]],
@@ -857,6 +975,10 @@ def build_refined(spec: dict, plan: dict | None = None):
         for b in plan.get("edge_bundles", [])
         if b.get("kind") == "pair"
     }
+    # Every bundle gets an Interface Register code, regardless of how its
+    # representative label was chosen — suppression must stay traceable back
+    # to the full member list (see _render_interface_register).
+    register_codes = _register_codes(plan)
     node_by_id = {n["id"]: n for n in nodes}
     side_set = set(sides)
     # Left-to-right position of each main zone — an edge between two ADJACENT
@@ -924,6 +1046,8 @@ def build_refined(spec: dict, plan: dict | None = None):
             label = (label + " (all layers)").strip()
         if cls == "future" and "future" not in label.lower():
             label = (label + " (future)").strip()
+        if key in register_codes and register_codes[key] not in label:
+            label = f"{label} · {register_codes[key]}".strip(" ·")
         label_offset = None
         if label:
             src_zone = zone_rects.get(node_by_id.get(s, {}).get("cluster"))
@@ -1031,7 +1155,14 @@ def build_refined(spec: dict, plan: dict | None = None):
     # Width = what the swatches + optional meta/scope cards actually need
     # (mirrors legend_band's internal layout) — a full-width legend band for
     # three entries reads as filler on a client deliverable.
-    legend_w = 30 + sum(55 + max(90, round(len(str(lbl)) * 6.5) + 10) + 30 for lbl, _c, _d in entries) + 20
+    legend_w = (
+        30
+        + sum(
+            55 + max(90, round(_tm_text_width(str(lbl), RT.TYPE_SCALE["legend"])) + 10) + 30
+            for lbl, _c, _d in entries
+        )
+        + 20
+    )
     legend_w = max(legend_w, 25 + 280 + 20)  # never narrower than the title row
     if meta_html:
         legend_w += 240
@@ -1045,8 +1176,12 @@ def build_refined(spec: dict, plan: dict | None = None):
         "footer", [margin, fy], legend_w, entries, scope_note=scope_note, metadata=meta_html, h=legend_h
     )
 
+    # ---- interface register (unfolds every bundle-suppressed edge) ---- #
+    register_y = fy + legend_h + 20
+    register_h = _render_interface_register(d, plan, node_by_id, (margin, register_y), page_w - 2 * margin)
+
     # ---- background + page ---- #
-    page_h = max(900, fy + legend_h + 35)
+    page_h = max(900, register_y + register_h + 35 if register_h else fy + legend_h + 35)
     d.page = [page_w, page_h]
     bg = d._put(
         "__bg", "1", 0, 0, page_w, page_h, f"html=1;fillColor={RT.CHROME['bg']};strokeColor=none;", "", z=-1

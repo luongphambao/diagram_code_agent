@@ -125,7 +125,15 @@ def semantic_stats(spec: dict, xml: str, plan: dict | None = None) -> dict:
     A bundle-suppressed edge is intentionally absent (its representative
     carries the meaning) — only (s,t) pairs whose EVERY parallel edge was
     suppressed leave the expectation set.
+
+    Also runs the spec-level semantic gates (I1-I4: orphan components,
+    relationship density, weak primary-path labels, icon-family mixing —
+    see domain.validation.semantic_gates) and stashes their findings here so
+    validate_xml can fold `hard` ones into its `errors` list. These MUST run
+    on the spec, not the rendered XML — see semantic_gates.py's module
+    docstring for why gating post-bundling produces false orphans.
     """
+    from domain.validation.semantic_gates import audit_spec_semantics
     from domain.validation.validate_drawio import check_semantic_preservation
 
     sup = {tuple(x) for x in (plan or {}).get("suppressed_edges", [])}
@@ -140,6 +148,13 @@ def semantic_stats(spec: dict, xml: str, plan: dict | None = None) -> dict:
     _, sem = check_semantic_preservation(src_nodes, src_edges, xml)
     if sup:
         sem["bundled_edges"] = len(sup)
+    try:
+        gate_findings = audit_spec_semantics(spec, plan)
+    except Exception:  # noqa: BLE001 — a gate bug must never block a render
+        gate_findings = []
+    sem["gate_findings"] = [
+        {"code": f.code, "message": f.message, "severity": f.severity, "ids": f.ids} for f in gate_findings
+    ]
     return sem
 
 

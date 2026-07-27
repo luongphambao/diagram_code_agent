@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from ._blocks import _DRAWER_CONTEXT_RULES, _DRAWER_TOOLS_BLOCK, _PLAIN_DIAGRAM_DETAIL, _PRETTY_DIAGRAM_DETAIL
+from ._blocks import (
+    _DRAWER_CONTEXT_RULES,
+    _DRAWER_TOOLS_BLOCK,
+    _PLAIN_DIAGRAM_DETAIL,
+    _PRETTY_DIAGRAM_DETAIL,
+    design_token_block,
+)
 
 
 def build_drawer_prompt(
@@ -164,6 +170,8 @@ cell ids + geometry + findings, then ONE `edit_drawio(ops)` batch with every fix
 stray cell, add a missing edge). It auto re-validates and re-renders `out.png` so
 you can verify. You get at most 2 edit batches per export — plan the whole batch
 from the read_drawio findings before calling. Then finalize (step 9).
+
+{design_token_block()}
 
 **Engineer loop (quality gate).** The export already ran a deterministic layout
 analysis + auto-repair (see the layout plan / engineer report the Lint line

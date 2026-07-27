@@ -460,6 +460,22 @@ def _bundle_refined_executive_edges(
         return bool(_REFINED_SUPPORT_RX.search(text))
 
     def _label_for(hub: str, members: list[dict], rep: dict) -> str:
+        # Small bundle (<=3 total members incl. rep): join the REAL labels
+        # instead of reaching for a generic category word — a reader can
+        # still see what actually crosses the wire without 2-3 separate
+        # arrows cluttering the canvas. Larger bundles keep the generic
+        # keyword match below (refined.py appends an Interface Register code
+        # to it at render time, so the detail isn't lost, just deferred).
+        if len(members) + 1 <= 3:
+            seen_lower: set[str] = set()
+            real_labels: list[str] = []
+            for e in [rep] + members:
+                lbl = str(e.get("label") or "").strip()
+                if lbl and lbl.lower() not in seen_lower:
+                    seen_lower.add(lbl.lower())
+                    real_labels.append(lbl)
+            if real_labels:
+                return " · ".join(real_labels)
         classes = {_class(e) for e in members if _class(e)}
         text = " ".join([_node_text(hub)] + [str(e.get("label") or "").lower() for e in members])
         if re.search(r"rpa|erp|dms|tms|invoice|bank|system|reconcile", text):

@@ -1,5 +1,11 @@
 # Nâng cấp `diagram_code_agent` lên chất lượng review-grade
 
+> ⚠ **Đọc `REVIEW-CODEBASE-FIT.md` (cùng thư mục) TRƯỚC.** Bản phân tích dưới đây
+> viết ngoài, chưa đối chiếu codebase thật — có 6 điểm sai/lỗi thời, trong đó
+> một điểm (con số orphan/density đo trên `.drawio` thay vì spec) nếu implement
+> y nguyên sẽ tạo vòng REVISE vô tận. Việc thi công thật theo bản đã hiệu chỉnh
+> trong `plans/replicated-riding-thimble.md`, không phải 9 patch dưới đây nguyên văn.
+
 **Repo:** `luongphambao/diagram_code_agent` · 52.389 LOC Python · 9 skill · validator 1.633 dòng · router libavoid-style
 **Ngày phân tích:** 26/07/2026
 
