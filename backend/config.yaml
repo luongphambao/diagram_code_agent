@@ -8,13 +8,13 @@
 #   main:   claude-sonnet-4-6   → uses ANTHROPIC_API_KEY
 
 models:
-  main:           gemini
-  icon_resolver:  gemini
-  drawer:         gemini
-  critic:         gemini
-  wbs_planner:    gemini
-  ppt_outline:    gemini
-  ppt_generator:  gemini
+  main:           gpt-5.4-mini
+  icon_resolver:  gpt-5.4-mini
+  drawer:         gpt-5.4-mini
+  critic:         gpt-5.4-mini
+  wbs_planner:    gpt-5.4-mini
+  ppt_outline:    gpt-5.4-mini
+  ppt_generator:  gpt-5.4-mini
 
 
 # ─── Provider Configurations ──────────────────────────────────────────────────
@@ -49,6 +49,7 @@ providers:
   bnk:
     api_key_env: BNK_API_KEY
     base_url: https://llm-gateway.idpuat.bnksolution.com/   # OpenAI-compatible endpoint
+    supports_structured_output: false  # gateway doesn't honor the Literal enum in with_structured_output's JSON schema → LLMToolSelectorMiddleware picks tool names outside the allowed set ("Model selected invalid tools")
 
 
 # ─── Model-name prefix → provider mapping ─────────────────────────────────────
