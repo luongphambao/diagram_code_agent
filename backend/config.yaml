@@ -8,13 +8,13 @@
 #   main:   claude-sonnet-4-6   → uses ANTHROPIC_API_KEY
 
 models:
-  main:           mimo-v2.5
-  icon_resolver:  mimo-v2.5
-  drawer:         mimo-v2.5
-  critic:         mimo-v2.5
-  wbs_planner:    mimo-v2.5
-  ppt_outline:    mimo-v2.5
-  ppt_generator:  mimo-v2.5
+  main:           gemini
+  icon_resolver:  gemini
+  drawer:         gemini
+  critic:         gemini
+  wbs_planner:    gemini
+  ppt_outline:    gemini
+  ppt_generator:  gemini
 
 
 # ─── Provider Configurations ──────────────────────────────────────────────────
@@ -46,6 +46,10 @@ providers:
     api_key_env: ANTHROPIC_API_KEY
     max_tokens: 16000
 
+  bnk:
+    api_key_env: BNK_API_KEY
+    base_url: https://llm-gateway.idpuat.bnksolution.com/   # OpenAI-compatible endpoint
+
 
 # ─── Model-name prefix → provider mapping ─────────────────────────────────────
 # Rules are matched in order; first match wins.
@@ -59,3 +63,4 @@ model_prefixes:
   "claude-": anthropic
   "mimo-":   mimo
   "deepseek-ai/": aiand
+  "gemini":  bnk
