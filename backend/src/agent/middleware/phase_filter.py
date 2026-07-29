@@ -75,7 +75,8 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
         # Solution-memory retrieval — ground the upcoming tech-stack proposal in real
         # past BnK delivery history; see rag_tools.py docstrings ("call BEFORE
         # propose_tech_stack" / "sanity-check a total estimate").
-        "find_similar_solutions",
+        # find_similar_solutions temporarily disabled: OpenAI embeddings key is broken,
+        # so it only errors out. Re-add once the key is fixed.
         "benchmark_solution",
     },
     "blueprint": _UTILITY_TOOLS
@@ -92,7 +93,7 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
         "visualize_code_structure",
         "finalize_diagram",
         "propose_business_case",
-        "find_similar_solutions",
+        # find_similar_solutions temporarily disabled: OpenAI embeddings key is broken.
         "benchmark_solution",
     },
     "draw": _UTILITY_TOOLS
@@ -120,7 +121,7 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
         # compute_wbs_rollup (wbs_tools._benchmark_effort_totals) already runs
         # deterministically on every rollup; this lets the agent additionally query
         # a different/narrower domain on demand.
-        "find_similar_solutions",
+        # find_similar_solutions temporarily disabled: OpenAI embeddings key is broken.
         "benchmark_solution",
     },
     "ppt": _UTILITY_TOOLS

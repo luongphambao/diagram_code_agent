@@ -19,7 +19,7 @@ Usage (from `backend/`):
 Requires:
     DATABASE_URL           — Postgres connection string (same as server).
     <provider API key>     — for the synthesis LLM call, via config.make_llm.
-    DIAGRAM_AGENT_MODEL (optional) — defaults to gpt-4.1-mini.
+    DIAGRAM_AGENT_MODEL (optional) — defaults to mimo-v2.5-pro.
 
 Deliberately NOT wired to a cron/scheduler in this change — it calls an LLM
 and rewrites a file that lands in every agent's prompt every turn, so a human
@@ -255,7 +255,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    model = os.getenv("DIAGRAM_AGENT_MODEL", "gpt-4.1-mini")
+    model = os.getenv("DIAGRAM_AGENT_MODEL", "mimo-v2.5-pro")
     print(f"[memory.refine] model={model}  bootstrap={args.bootstrap}  dry_run={args.dry_run}")
 
     current_text = _read_agents_md()
