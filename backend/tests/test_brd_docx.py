@@ -625,3 +625,79 @@ def test_snapshot_keeps_only_last_n_revisions(tmp_path):
     remaining = sorted(p.name for p in revisions_dir.glob("REV-*.docx"))
     assert len(remaining) == 2
     assert remaining == ["REV-1.docx", "REV-2.docx"]
+
+
+# --------------------------------------------------------------------------- #
+# rename_heading / cascade-delete id churn — check_semantic_preservation must
+# treat the WHOLE renamed/deleted subtree's id churn as expected, not just the
+# direct children (found while building the Sprint-4 eval suite: a rename of a
+# non-code-prefixed section with children, or a cascade delete two levels
+# deep, was being falsely reverted as "Mất mục ngoài dự kiến").
+# --------------------------------------------------------------------------- #
+def test_rename_heading_cascades_ids_through_the_whole_subtree_without_reverting(tmp_path):
+    doc = _make_doc()
+    path = tmp_path / "doc.docx"
+    doc.save(path)
+    _, sections = bd.index_document(path)
+    fr_root = bd.resolve_section_ref(sections, "functional-requirements")
+
+    result = bd.apply_brd_ops(
+        path,
+        [
+            {
+                "op": "rename_heading",
+                "section": fr_root.section_id,
+                "expect": fr_root.own_checksum,
+                "title": "FUNCTIONAL SPECIFICATIONS",
+            }
+        ],
+    )
+    assert result.ok, result.failed
+    assert not result.reverted, result.revert_reasons
+
+    _, after = bd.index_document(path)
+    after_ids = {s.section_id for s in after}
+    assert "functional-requirements" not in after_ids
+    assert "functional-specifications" in after_ids
+    # every FR-coded descendant two levels down keeps its stable code-derived
+    # id, just re-parented under the renamed section.
+    assert "functional-specifications/fr01" in after_ids
+    assert "functional-specifications/fr01/description" in after_ids
+    assert "functional-specifications/fr02/interface-requirements" in after_ids
+
+
+def test_cascade_delete_removes_grandchildren_too_without_reverting(tmp_path):
+    doc = Document()
+    _register_numbering(doc)
+    _heading(doc, "PARENT", 1)
+    _heading(doc, "CHILD", 2)
+    _heading(doc, "GRANDCHILD", 3)
+    doc.add_paragraph("leaf text")
+    _heading(doc, "SIBLING", 1)
+    doc.add_paragraph("sibling text")
+    path = tmp_path / "doc.docx"
+    doc.save(path)
+
+    _, sections = bd.index_document(path)
+    parent = bd.resolve_section_ref(sections, "parent")
+
+    result = bd.apply_brd_ops(
+        path,
+        [
+            {
+                "op": "delete_section",
+                "section": parent.section_id,
+                "expect": parent.own_checksum,
+                "cascade": True,
+            }
+        ],
+    )
+    assert result.ok, result.failed
+    assert not result.reverted, result.revert_reasons
+
+    _, after = bd.index_document(path)
+    after_ids = {s.section_id for s in after}
+    assert "parent" not in after_ids
+    assert "parent/child" not in after_ids
+    assert "parent/child/grandchild" not in after_ids
+    assert "sibling" in after_ids

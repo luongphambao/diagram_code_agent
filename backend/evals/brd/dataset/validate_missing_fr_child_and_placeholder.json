@@ -1,0 +1,10 @@
+{
+  "id": "validate_flags_missing_fr_child_and_placeholder_text",
+  "kind": "validate",
+  "headings": [
+    { "title": "FUNCTIONAL REQUIREMENTS", "level": 1 },
+    { "title": "FR01 - Login", "level": 2 },
+    { "title": "Description", "level": 3, "paragraphs": ["TODO: dien noi dung sau."] }
+  ],
+  "expect_error_codes": ["fr_missing_slot", "placeholder_residue"]
+}

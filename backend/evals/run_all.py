@@ -20,6 +20,21 @@ from pathlib import Path
 _BACKEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_BACKEND / "src"))
 sys.path.insert(0, str(_BACKEND))
+# Each suite's judge/run_eval imports its domain module by FLAT name (e.g.
+# `from wbs_effort import ...`, `from brd_docx import ...`) — pytest gets this
+# for free from pyproject.toml's `[tool.pytest.ini_options].pythonpath`, but a
+# plain `python -m evals.run_all` (this file, and CI's evals.yml) does not, so
+# every suite import below would otherwise fail with ModuleNotFoundError. Keep
+# this list in sync with that pytest pythonpath list.
+for _sub in (
+    "src/domain/diagram",
+    "src/domain/deck",
+    "src/domain/reporting",
+    "src/domain/wbs",
+    "src/domain/validation",
+    "src/domain/brd",
+):
+    sys.path.insert(0, str(_BACKEND / _sub))
 
 from evals._core import (  # noqa: E402
     compare_to_baseline,
@@ -43,6 +58,8 @@ from evals.compliance.judge import METRIC_KEYS as COMPLIANCE_KEYS  # noqa: E402
 from evals.compliance.run_eval import _run_one as compliance_run  # noqa: E402
 from evals.reality_sync.judge import METRIC_KEYS as REALITY_KEYS  # noqa: E402
 from evals.reality_sync.run_eval import _run_one as reality_run  # noqa: E402
+from evals.brd.judge import METRIC_KEYS as BRD_KEYS  # noqa: E402
+from evals.brd.run_eval import _run_one as brd_run  # noqa: E402
 
 _SUITES = [
     ("intake", _BACKEND / "evals" / "intake", intake_run, INTAKE_KEYS),
@@ -52,6 +69,7 @@ _SUITES = [
     ("diagram_quality", _BACKEND / "evals" / "diagram_quality", dq_run, DQ_KEYS),
     ("compliance", _BACKEND / "evals" / "compliance", compliance_run, COMPLIANCE_KEYS),
     ("reality_sync", _BACKEND / "evals" / "reality_sync", reality_run, REALITY_KEYS),
+    ("brd", _BACKEND / "evals" / "brd", brd_run, BRD_KEYS),
 ]
 
 
@@ -78,6 +96,7 @@ def main() -> None:
         passed, regressions = compare_to_baseline(results, baseline, keys)
         # First metric key is the suite's headline number.
         from evals._core import aggregate
+
         headline = aggregate(results, [keys[0]]).get(keys[0], float("nan"))
         status = "OK" if passed else "REGRESSED"
         if not passed:

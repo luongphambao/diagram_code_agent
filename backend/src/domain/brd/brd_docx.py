@@ -892,6 +892,25 @@ def _headings_missing_numbering(doc: _Doc) -> list[str]:
     return bad
 
 
+def _collect_subtree_ids(by_id: dict[str, Section], root_id: str) -> set[str]:
+    """Every descendant id of `root_id` (NOT including root_id itself), walking
+    `children` recursively — a cascade delete_section (or a rename_heading,
+    which re-derives the whole renamed subtree's ids on next index) affects
+    the FULL subtree, not just direct children."""
+    out: set[str] = set()
+    root = by_id.get(root_id)
+    stack = list(root.children) if root is not None else []
+    while stack:
+        cid = stack.pop()
+        if cid in out:
+            continue
+        out.add(cid)
+        child = by_id.get(cid)
+        if child is not None:
+            stack.extend(child.children)
+    return out
+
+
 def check_semantic_preservation(
     before_bytes: bytes,
     before_sections: list[Section],
@@ -915,23 +934,41 @@ def check_semantic_preservation(
     before_by_id = _sections_by_id(before_sections)
 
     expected_deleted: set[str] = set()
+    # rename_heading legitimately changes the renamed section's id (and every
+    # descendant's, since parent_id cascades) — see op_rename_heading's own
+    # note. heading_idx is stable across a pure text rename (no blocks move),
+    # so match old ids to their new id by POSITION instead of treating the
+    # churn as an unexpected loss.
+    renamed_old_ids: set[str] = set()
+    renamed_heading_idxs: set[int] = set()
     n_insert = 0
     for op in ops:
         if op.get("op") == "delete_section":
             sid = op.get("section", "")
             expected_deleted.add(sid)
             if op.get("cascade"):
-                sec = before_by_id.get(sid)
-                if sec is not None:
-                    expected_deleted.update(sec.children)
+                expected_deleted.update(_collect_subtree_ids(before_by_id, sid))
         elif op.get("op") == "insert_section":
             n_insert += 1
+        elif op.get("op") == "rename_heading":
+            sid = op.get("section", "")
+            sec = before_by_id.get(sid)
+            if sec is not None:
+                renamed_old_ids.add(sid)
+                renamed_old_ids.update(_collect_subtree_ids(before_by_id, sid))
+                renamed_heading_idxs.add(sec.heading_idx)
+                for cid in _collect_subtree_ids(before_by_id, sid):
+                    csec = before_by_id.get(cid)
+                    if csec is not None:
+                        renamed_heading_idxs.add(csec.heading_idx)
 
-    unexpected_missing = (before_ids - after_ids) - expected_deleted
+    unexpected_missing = (before_ids - after_ids) - expected_deleted - renamed_old_ids
     if unexpected_missing:
         findings.append(f"Mất mục ngoài dự kiến: {sorted(unexpected_missing)}")
 
-    unexpected_new = after_ids - before_ids
+    after_by_heading_idx = {s.heading_idx: s.section_id for s in after_sections}
+    renamed_new_ids = {after_by_heading_idx[h] for h in renamed_heading_idxs if h in after_by_heading_idx}
+    unexpected_new = (after_ids - before_ids) - renamed_new_ids
     if len(unexpected_new) != n_insert:
         findings.append(f"Số mục mới ({len(unexpected_new)}) không khớp số op insert_section ({n_insert})")
 
