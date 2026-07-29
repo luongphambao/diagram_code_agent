@@ -43,4 +43,5 @@ export const MIME_TYPES = {
   xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   drawio: "application/xml",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 } as const;

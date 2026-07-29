@@ -33,6 +33,29 @@ def _matches_whole_phrase(text: str, phrases: tuple[str, ...]) -> bool:
     return any(re.search(rf"\b{re.escape(phrase)}\b", normalized) for phrase in phrases)
 
 
+def _is_brd_followup(text: str) -> bool:
+    """Detect a request to author or revise a BRD (.docx) — MUST be checked
+    BEFORE _is_pdf_followup: "document"/"doc"/"report" are also pdf-followup
+    trigger words, and a BRD ask like "sửa lại tài liệu BRD, thêm mục security"
+    or "update the BRD document" would otherwise be misrouted to the PDF/report
+    pipeline (chat.py would inject a "call generate_pdf_report() now"
+    instruction instead of pointing the agent at edit_brd_section)."""
+    return _matches_whole_phrase(
+        text,
+        (
+            "brd",
+            "business requirements document",
+            "requirements document",
+            "tài liệu brd",
+            "tai lieu brd",
+            "tài liệu yêu cầu",
+            "tai lieu yeu cau",
+            "biên bản yêu cầu",
+            "bien ban yeu cau",
+        ),
+    )
+
+
 def _is_pdf_followup(text: str) -> bool:
     """Detect a follow-up asking to package the current diagram as a PDF report."""
     return _matches_whole_phrase(
@@ -260,6 +283,16 @@ def _is_business_case_followup(text: str) -> bool:
             "bien minh tai chinh",
         ),
     )
+
+
+def _brd_preserve(text: str, *, solution_exists: bool, attached: bool) -> bool:
+    """Whether a BRD request should preserve on-disk artifacts instead of a
+    fresh clear_stage_markers() wipe — same reasoning as
+    _business_case_preserve: a BRD ask is a downstream step from an
+    already-designed solution (brd_assembler reads diagram_brief.json/
+    tech_stack.json/blueprint.json/wbs.json), never fresh intake, UNLESS a new
+    document was attached (fresh project intake takes priority)."""
+    return _is_brd_followup(text) and solution_exists and not attached
 
 
 def _business_case_preserve(text: str, *, solution_exists: bool, attached: bool) -> bool:

@@ -1,0 +1,11 @@
+current_state,event,guard,actor,next_state
+intake,tech_stack.json ∨ architecture_analysis.json tồn tại,,,blueprint
+blueprint,out.png ∨ blueprint.json tồn tại,,,draw
+draw,wbs.json tồn tại,,,wbs
+wbs,deck_plan.json tồn tại,,,ppt
+ppt,out.pdf tồn tại,,,report
+report,reset (clear_stage_markers),,,intake
+blueprint,tech_stack.json bị thiếu,,,backfill nếu thiếu file
+backfill nếu thiếu file,giữ propose_tech_stack trong allowed set (backfill),,,blueprint
+draw,pending_gate.json tồn tại,,,gate đang chờ duyệt
+gate đang chờ duyệt,giữ tool đang chờ duyệt trong allowed set,,,draw

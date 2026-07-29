@@ -151,6 +151,19 @@ from .analysis.blueprint_tools import (
     submit_critique,
 )
 from .analysis.business_case_tools import propose_business_case
+from .analysis.brd_tools import (
+    BRD_WRITER_TOOLS,
+    draft_brd_outline,
+    draft_section_content,
+    edit_brd_section,
+    generate_brd_docx,
+    import_brd_docx,
+    inspect_brd_template,
+    load_brd_context,
+    propose_brd_outline,
+    read_brd_outline,
+    validate_brd,
+)
 
 # Side-effect-only import: registers lint_sequence into diagram_lint.LINTERS
 # (no tool exposed here — the LLM authors sequences code-first via
@@ -298,6 +311,12 @@ MAIN_TOOLS = [
     export_wbs_excel,  # WBS .xlsx deliverable gate
     query_change_impact,  # report blast radius of a requirement change (CSM diff)
     propose_business_case,  # improvement plan §C, S3: deterministic ROI/TCO/payback gate
+    import_brd_docx,  # BRD Agent: adopt an existing/client .docx as out.brd.docx
+    read_brd_outline,  # BRD Agent: section+block inventory of out.brd.docx
+    validate_brd,  # BRD Agent: structural lint of out.brd.docx
+    propose_brd_outline,  # BRD Agent gate: approve the drafted outline
+    generate_brd_docx,  # BRD Agent gate: render out.brd.docx from template + drafted content
+    edit_brd_section,  # BRD Agent gate: targeted section/block edit with diff review
 ]
 
 # Icon resolver subagent tools: node search + icon resolution (runs before drawer).
@@ -336,6 +355,11 @@ CRITIC_TOOLS = [inspect_diagram, submit_critique]
 # "PROPOSED SOLUTION | Technical Stack" slide — call before create_pptx.
 PPT_GENERATOR_TOOLS = [plan_deck, resolve_tech_stack_icons, create_pptx]
 
+# BRD writer subagent tools: draft the outline + per-section content only.
+# read_brd_outline/validate_brd are re-exported (see MAIN_TOOLS above) since a
+# revise-existing-BRD flow may ask brd_writer to read the current outline
+# before drafting replacement content — see BRD_WRITER_TOOLS in brd_tools.py.
+
 # Tools that require human approval before they run (interrupt_on in agent.py).
 GATE_TOOL_NAMES = [
     "propose_tech_stack",
@@ -351,6 +375,9 @@ GATE_TOOL_NAMES = [
     "export_wbs_excel",
     "export_to_delivery",
     "propose_business_case",
+    "propose_brd_outline",
+    "generate_brd_docx",
+    "edit_brd_section",
 ]
 
 # HITL v2 decision menu (docx §5.3): the trade-off ACTIONS each gate offers the user,
@@ -396,6 +423,9 @@ GATE_DECISIONS: dict[str, list[str]] = {
         "request_evidence",
         "reject",
     ],
+    "propose_brd_outline": ["approve", "request_alternative", "reject"],
+    "generate_brd_docx": ["approve", "reject"],
+    "edit_brd_section": ["approve", "request_alternative", "reject"],
 }
 
 
@@ -419,6 +449,9 @@ ROLE_GATE_PERMISSIONS: dict[str, set[str]] = {
     "create_client_meeting": {"pm", "lead", "admin"},
     "export_to_delivery": {"pm", "lead", "admin"},
     "propose_business_case": {"pm", "lead", "architect", "admin"},
+    "propose_brd_outline": {"ba", "lead", "admin"},
+    "generate_brd_docx": {"ba", "lead", "admin"},
+    "edit_brd_section": {"ba", "lead", "admin"},
 }
 
 

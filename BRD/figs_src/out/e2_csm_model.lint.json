@@ -1,0 +1,48 @@
+{
+  "errors": [],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "many_to_many_without_junction",
+      "message": "relationship[0]: many_to_many between 'comp' and 'req' has no apparent junction table.",
+      "ref": "relationship[0]"
+    },
+    {
+      "severity": "warning",
+      "code": "many_to_many_without_junction",
+      "message": "relationship[1]: many_to_many between 'con' and 'dec' has no apparent junction table.",
+      "ref": "relationship[1]"
+    },
+    {
+      "severity": "warning",
+      "code": "many_to_many_without_junction",
+      "message": "relationship[2]: many_to_many between 'asm' and 'dec' has no apparent junction table.",
+      "ref": "relationship[2]"
+    },
+    {
+      "severity": "warning",
+      "code": "many_to_many_without_junction",
+      "message": "relationship[3]: many_to_many between 'dec' and 'comp' has no apparent junction table.",
+      "ref": "relationship[3]"
+    },
+    {
+      "severity": "warning",
+      "code": "many_to_many_without_junction",
+      "message": "relationship[4]: many_to_many between 'ctrl' and 'risk' has no apparent junction table.",
+      "ref": "relationship[4]"
+    },
+    {
+      "severity": "warning",
+      "code": "many_to_many_without_junction",
+      "message": "relationship[5]: many_to_many between 'wi' and 'comp' has no apparent junction table.",
+      "ref": "relationship[5]"
+    },
+    {
+      "severity": "warning",
+      "code": "many_to_many_without_junction",
+      "message": "relationship[6]: many_to_many between 'evd' and 'dec' has no apparent junction table.",
+      "ref": "relationship[6]"
+    }
+  ],
+  "info": []
+}

@@ -1,0 +1,30 @@
+[
+  {
+    "case_id": "stale_checksum_rejected_correct_checksum_accepted",
+    "scores": {
+      "recall": 1.0,
+      "ok": 1.0
+    }
+  },
+  {
+    "case_id": "insert_heading_shifts_positional_ids",
+    "scores": {
+      "recall": 1.0,
+      "ok": 1.0
+    }
+  },
+  {
+    "case_id": "rename_non_code_section_with_children_does_not_revert",
+    "scores": {
+      "recall": 1.0,
+      "ok": 1.0
+    }
+  },
+  {
+    "case_id": "validate_flags_missing_fr_child_and_placeholder_text",
+    "scores": {
+      "recall": 1.0,
+      "ok": 1.0
+    }
+  }
+]

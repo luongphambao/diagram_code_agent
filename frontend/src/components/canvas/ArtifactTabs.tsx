@@ -16,7 +16,7 @@ import { resolveSrc } from "../../lib/artifacts";
 import { MIME_TYPES } from "../../lib/downloadBase64";
 
 type Tab =
-  "preview" | "pdf" | "ppt" | "wbs" | "quality" | "code" | "activity" | "agents" | "comments";
+  "preview" | "pdf" | "ppt" | "wbs" | "brd" | "quality" | "code" | "activity" | "agents" | "comments";
 
 interface ArtifactTabsProps {
   agentState: AgentState;
@@ -43,6 +43,8 @@ export default function ArtifactTabs({
     pptx_base64,
     wbs_xlsx_base64,
     wbs_summary,
+    brd_docx_base64,
+    brd_outline,
     drawio,
     summary,
     iteration,
@@ -56,6 +58,7 @@ export default function ArtifactTabs({
   const hasDelegations = !!delegations && delegations.length > 0;
   const hasLiveAgentWork = isRunning || !!activeSubagent || hasDelegations || !!activity;
   const hasWbs = !!wbs_summary || !!wbs_xlsx_base64;
+  const hasBrd = !!brd_outline || !!brd_docx_base64;
   const hasQuality = !!quality || !!compliance || !!drift;
 
   const { download, isAvailable, openDrawio } = useExport(agentState);
@@ -65,6 +68,7 @@ export default function ArtifactTabs({
     ...(pdf_base64 ? (["pdf"] as Tab[]) : []),
     ...(pptx_base64 ? (["ppt"] as Tab[]) : []),
     ...(hasWbs ? (["wbs"] as Tab[]) : []),
+    ...(hasBrd ? (["brd"] as Tab[]) : []),
     ...(hasQuality ? (["quality"] as Tab[]) : []),
     "code",
     "activity",
@@ -122,7 +126,7 @@ export default function ArtifactTabs({
         countVariant: isRunning && hasLiveAgentWork ? "accent" : "neutral",
       };
     }
-    const LABELS: Partial<Record<Tab, string>> = { pdf: "PDF", ppt: "PPT", wbs: "WBS" };
+    const LABELS: Partial<Record<Tab, string>> = { pdf: "PDF", ppt: "PPT", wbs: "WBS", brd: "BRD" };
     return { id: t, label: LABELS[t] ?? t.charAt(0).toUpperCase() + t.slice(1) };
   });
 
@@ -143,8 +147,9 @@ export default function ArtifactTabs({
 
           {/* Download group */}
           <div className="flex items-center gap-2">
-            {(["png", "drawio", "pdf", "ppt", "wbs"] as const).map((id) => {
+            {(["png", "drawio", "pdf", "ppt", "wbs", "brd"] as const).map((id) => {
               if (id === "wbs" && !hasWbs) return null;
+              if (id === "brd" && !hasBrd) return null;
               return (
                 <Button key={id} variant="secondary" size="sm" disabled={!isAvailable(id)} onClick={() => download(id)}>
                   <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -308,6 +313,51 @@ export default function ArtifactTabs({
                 </div>
               ) : (
                 <EmptyState title="No WBS summary available" />
+              )}
+            </div>
+          )}
+
+          {tab === "brd" && (
+            <div className="flex flex-1 flex-col overflow-hidden bg-app">
+              <div className="flex items-center justify-between border-b border-line px-4 py-2">
+                <span className="text-xs font-medium text-secondary">Business Requirements Document</span>
+                <Button variant="secondary" size="sm" disabled={!brd_docx_base64} onClick={() => download("brd")}>
+                  Download .docx
+                </Button>
+              </div>
+              {brd_outline && brd_outline.length > 0 ? (
+                <div className="flex-1 overflow-y-auto p-4">
+                  <div className="divide-y divide-line overflow-hidden rounded-sm border border-line">
+                    {brd_outline.map((item, i) => (
+                      <div key={item.section_id ?? i} className="flex items-baseline gap-2 px-3 py-1.5">
+                        <span
+                          className={`shrink-0 rounded-xs border px-1.5 py-0.5 text-2xs font-medium ${
+                            item.status === "fill"
+                              ? "border-accent/30 bg-accent/10 text-accent-text"
+                              : item.status === "skip"
+                                ? "border-warn/30 bg-warn/10 text-warn-text"
+                                : "border-line bg-well text-secondary"
+                          }`}
+                        >
+                          {item.status ?? "fill"}
+                        </span>
+                        <span className="truncate font-mono text-2xs text-muted">{item.section_id}</span>
+                        <span className="truncate text-xs text-fg">{item.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : brd_docx_base64 ? (
+                <div className="flex flex-1 items-center justify-center p-8">
+                  <div className="rounded-md border border-line bg-well px-6 py-5 text-center">
+                    <p className="text-sm font-semibold text-fg">BRD ready</p>
+                    <p className="mt-1 text-xs text-secondary">
+                      Word preview is not available in-browser. Download the document to inspect and edit it.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <EmptyState title="No BRD available" />
               )}
             </div>
           )}

@@ -233,3 +233,50 @@ def test_bundling_does_not_create_false_orphans_or_density_findings():
     findings = audit_spec_semantics(spec, plan)
     assert "I1" not in _codes(findings)
     assert "I2" not in _codes(findings)
+
+
+def test_bundle_integrity_passes_when_every_suppressed_edge_is_registered():
+    """I6: layout_plan's own bundles/suppressed lists are built from the same
+    data (see _bundle_edges), so a real plan must always be gate-clean —
+    this is the positive counterpart to the corruption test below."""
+    from prettygraph.native.layout_plan import analyze_layout
+
+    nodes = [{"id": "siem", "label": "SIEM", "cluster": "mon"}] + [
+        {"id": f"x{i}", "label": f"Svc {i}", "cluster": "t1" if i < 3 else "t2"} for i in range(6)
+    ]
+    flow = [{"from": f"x{i}", "to": f"x{i + 1}", "label": f"hop {i} via HTTPS"} for i in range(5)]
+    telemetry = [
+        {"from": f"x{i}", "to": "siem", "label": "Telemetry export", "style": "dashed"} for i in range(6)
+    ]
+    spec = {
+        "clusters": [
+            {"id": "mon", "label": "Monitoring & Observability"},
+            {"id": "t1", "label": "Tier 1"},
+            {"id": "t2", "label": "Tier 2"},
+        ],
+        "nodes": nodes,
+        "edges": flow + telemetry,
+    }
+    plan = analyze_layout(spec)
+    assert plan.get("suppressed_edges")
+    findings = audit_spec_semantics(spec, plan)
+    assert "I6" not in _codes(findings)
+
+
+def test_bundle_integrity_is_hard_fail_when_a_suppressed_edge_is_unregistered():
+    """I6 has teeth: if a bundle's member list ever drifted out of sync with
+    suppressed_edges (a future refactor bug), the gate must catch it instead
+    of silently trusting the register."""
+    spec = {
+        "nodes": [{"id": "a"}, {"id": "b"}, {"id": "c"}],
+        "edges": [
+            {"from": "a", "to": "b", "label": "calls via HTTPS"},
+            {"from": "a", "to": "c", "label": "calls via HTTPS"},
+        ],
+    }
+    plan = {
+        "edge_bundles": [{"kind": "hub", "rep": ["a", "b", "calls via HTTPS"], "members": []}],
+        "suppressed_edges": [["a", "c", "calls via HTTPS"]],  # never listed in any bundle's members
+    }
+    findings = audit_spec_semantics(spec, plan)
+    assert "I6" in _codes(findings)

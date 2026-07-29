@@ -1,0 +1,21 @@
+{
+  "id": "insert_heading_shifts_positional_ids",
+  "kind": "id_stability",
+  "headings": [
+    { "title": "FUNCTIONAL REQUIREMENTS", "level": 1 },
+    { "title": "FR01 - Login", "level": 2 },
+    { "title": "Description", "level": 3, "paragraphs": ["Nguoi dung dang nhap bang email/mat khau."] },
+    { "title": "FR02 - Logout", "level": 2 },
+    { "title": "Description", "level": 3, "paragraphs": ["Nguoi dung dang xuat khoi he thong."] }
+  ],
+  "insert_after_title": "FR01 - Login",
+  "insert_title": "Interface requirements",
+  "insert_level": 3,
+  "insert_paragraphs": ["Man hinh dang nhap."],
+  "expect_stable_ids": [
+    "functional-requirements/fr01/description",
+    "functional-requirements/fr02",
+    "functional-requirements/fr02/description"
+  ],
+  "expect_new_ids": ["functional-requirements/fr01/interface-requirements"]
+}

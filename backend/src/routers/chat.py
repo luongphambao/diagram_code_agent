@@ -29,10 +29,12 @@ from tools import GATE_TOOL_NAMES, allowed_decisions_for, clear_stage_markers
 import session_state as ss
 from session_state import (
     _artifacts,
+    _brd_preserve,
     _card_for,
     _business_case_preserve,
     _decision_from_payload,
     _display_subagent,
+    _is_brd_followup,
     _is_business_case_followup,
     _is_email_followup,
     _is_pdf_followup,
@@ -323,6 +325,7 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                 attached = _attached_text(file_ids)
                 image_blocks = _attached_images(file_ids)
                 tabular_files = _attached_tabular_files(file_ids)
+                is_brd_followup = _is_brd_followup(desc)
                 is_pdf_followup = _is_pdf_followup(desc)
                 is_ppt_followup = _is_ppt_followup(desc)
                 is_wbs_followup = _is_wbs_followup(desc)
@@ -383,6 +386,17 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                 preserve_business_case_artifacts = _business_case_preserve(
                     desc, solution_exists=solution_exists, attached=bool(attached)
                 )
+                # A BRD ask is ALWAYS a downstream step from an already-designed solution
+                # (or an already-imported out.brd.docx) — brd_assembler reads diagram_brief/
+                # tech_stack/blueprint/wbs.json for content, so wiping those out from under
+                # it defeats the whole point. Checked and preferred over preserve_diagram_
+                # artifacts below: "document"/"doc"/"report" are ALSO pdf-followup trigger
+                # words (see session/followups.py's _is_brd_followup docstring), so a BRD
+                # ask phrased with those words must win the branch below, not fall through
+                # to "call generate_pdf_report() now".
+                preserve_brd_artifacts = _brd_preserve(
+                    desc, solution_exists=solution_exists, attached=bool(attached)
+                )
                 # General backstop: an already-built project (out.png/out.drawio/
                 # blueprint.json/tech_stack.json/diagram_brief.json on disk) is never
                 # discarded by a plain continuation message just because its wording
@@ -399,10 +413,19 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                     or preserve_wbs_artifacts
                     or preserve_email_artifacts
                     or preserve_business_case_artifacts
+                    or preserve_brd_artifacts
                     or preserve_existing_project
                 )
                 if not preserve_artifacts:
-                    clear_stage_markers(preserve_wbs=(not attached and _wbs_plan_ready(ws)))
+                    clear_stage_markers(
+                        preserve_wbs=(not attached and _wbs_plan_ready(ws)),
+                        # Same independent safety net as preserve_wbs above: an existing
+                        # out.brd.docx survives a fresh-seeming continuation even when no
+                        # preserve_* flag matched, so it's never wiped out from under an
+                        # ongoing BRD revision session just because the message's wording
+                        # missed every followup keyword list.
+                        preserve_brd=(not attached and (ws / "out.brd.docx").exists()),
+                    )
                 else:
                     if preserve_email_artifacts:
                         desc = (
@@ -490,6 +513,24 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                             "`benefit_basis` (a grounded estimate — use `record_evidence`/"
                             "`web_research` first if you don't already have one from this "
                             "conversation)."
+                        )
+                    elif preserve_brd_artifacts:
+                        # Checked BEFORE preserve_diagram_artifacts: a BRD ask phrased with
+                        # "document"/"doc"/"report" would otherwise match is_pdf_followup too
+                        # and get the wrong "call generate_pdf_report() now" instruction.
+                        desc = (
+                            (desc + "\n\n" if desc else "")
+                            + "IMPORTANT: The user wants to author or revise the BRD (.docx). "
+                            "The approved solution artifacts already exist in the workspace — "
+                            "do NOT redesign or re-run intake. If `out.brd.docx` does NOT exist "
+                            "yet: delegate to `brd_writer` (load_brd_context → "
+                            "inspect_brd_template → draft_brd_outline → draft_section_content "
+                            "for every 'fill' section), then call `propose_brd_outline(...)` "
+                            "and `generate_brd_docx()`. If `out.brd.docx` ALREADY exists: use "
+                            "`read_brd_outline(section)` to get the exact section id and block "
+                            "address, then call `edit_brd_section(ops=[...])` for ONLY the "
+                            "section(s) the user asked about — NEVER regenerate the whole "
+                            "document for a one-section change."
                         )
                     elif preserve_diagram_artifacts:
                         artifact_instruction = (

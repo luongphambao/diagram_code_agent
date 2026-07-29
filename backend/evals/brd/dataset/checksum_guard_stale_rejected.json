@@ -1,0 +1,8 @@
+{
+  "id": "stale_checksum_rejected_correct_checksum_accepted",
+  "kind": "checksum_guard",
+  "headings": [{ "title": "INTRODUCTION", "level": 1, "paragraphs": ["Noi dung goc cua tai lieu."] }],
+  "section": "introduction",
+  "op": "replace_body",
+  "content": [{ "type": "p", "text": "Noi dung moi cho phan gioi thieu." }]
+}

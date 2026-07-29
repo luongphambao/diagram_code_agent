@@ -36,6 +36,9 @@ WBS_PLANNER_SKILL_PATHS = [
 PPT_GENERATOR_SKILL_PATHS = [
     (SKILLS_DIR / "ppt-generator").as_posix(),
 ]
+BRD_WRITER_SKILL_PATHS = [
+    (SKILLS_DIR / "brd-writing").as_posix(),
+]
 
 # Context-management: the conversation is re-sent every turn, so stale tool
 # outputs (read_file of skill docs, repeated search_icons, old render images)
@@ -84,6 +87,9 @@ _DRAWER_CALL_LIMIT = int(os.getenv("DRAWER_CALL_LIMIT", "40"))  # ~2.5x the ≤1
 # call (Pass 2 ≈ N add_wbs_items + 1).
 _WBS_CALL_LIMIT = int(os.getenv("WBS_CALL_LIMIT", "60"))
 _PPT_CALL_LIMIT = int(os.getenv("PPT_CALL_LIMIT", "60"))
+# brd_writer drafts an outline plus per-section content in small batches (≤5
+# sections/call) — a 40-60 section BRD is comparable call volume to wbs_planner.
+_BRD_CALL_LIMIT = int(os.getenv("BRD_CALL_LIMIT", "60"))
 
 # Early-warning thresholds: log at WARNING level so runaway traces surface in
 # logs before they show up in LangSmith. Both are env-tunable.
@@ -122,4 +128,7 @@ _MAIN_TOOL_SELECTOR_ALWAYS_INCLUDE = [
     "export_wbs_excel",
     "export_to_delivery",
     "propose_business_case",
+    "propose_brd_outline",
+    "generate_brd_docx",
+    "edit_brd_section",
 ]

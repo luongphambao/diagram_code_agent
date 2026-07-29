@@ -8,6 +8,7 @@ imports from below.
 
 from __future__ import annotations
 
+import difflib
 import json
 
 from domain.reporting.business_case import (
@@ -21,6 +22,7 @@ from domain.reporting.reporting import DEFAULT_REPORT_SECTIONS
 
 from tool_coercion import _maybe_json
 
+from .artifacts import _read_json
 from .normalize import (
     _coerce_assumptions,
     _coerce_list,
@@ -96,6 +98,28 @@ def _coerce_card_dict(val) -> dict:
         if isinstance(parsed, dict):
             return parsed
     return val if isinstance(val, dict) else {}
+
+
+def _line_diff(before: str, after: str) -> list[dict]:
+    """Line-level diff for the edit_brd_section approval card — computed HERE
+    (backend), not trusted from the model's own description of the edit. See
+    docs/plans/2026-07-29-brd-agent.md §B7: the frontend has no diff library on
+    purpose, so this returns the fully-resolved {type, text} op list."""
+    before_lines = before.splitlines()
+    after_lines = after.splitlines()
+    out: list[dict] = []
+    sm = difflib.SequenceMatcher(a=before_lines, b=after_lines)
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        if tag == "equal":
+            out.extend({"type": "equal", "text": line} for line in before_lines[i1:i2])
+        elif tag == "delete":
+            out.extend({"type": "delete", "text": line} for line in before_lines[i1:i2])
+        elif tag == "insert":
+            out.extend({"type": "insert", "text": line} for line in after_lines[j1:j2])
+        elif tag == "replace":
+            out.extend({"type": "delete", "text": line} for line in before_lines[i1:i2])
+            out.extend({"type": "insert", "text": line} for line in after_lines[j1:j2])
+    return out
 
 
 def _pending_action_name(val) -> str | None:
@@ -372,6 +396,85 @@ def _card_for(val, summary: str):
                 "dry_run": dry_run,
             },
             "awaiting_delivery_export",
+            {},
+        )
+    if name == "propose_brd_outline":
+        items = _coerce_card_list(args.get("items"))
+        n_fill = sum(1 for i in items if isinstance(i, dict) and i.get("status") == "fill")
+        n_skip = sum(1 for i in items if isinstance(i, dict) and i.get("status") == "skip")
+        return (
+            {
+                "type": "brd_outline_approval",
+                "question": args.get(
+                    "question",
+                    "Review the BRD outline (fill/keep/skip per section) and approve or request changes.",
+                ),
+                "items": items,
+                "fill_count": n_fill,
+                "skip_count": n_skip,
+            },
+            "awaiting_brd_outline",
+            {"brd_outline_draft": items},
+        )
+    if name == "generate_brd_docx":
+        try:
+            from backends import current_workspace
+
+            ws = current_workspace()
+        except Exception:  # noqa: BLE001
+            ws = None
+        outline = (_read_json(ws / "brd_outline.json") if ws is not None else None) or (
+            _read_json(ws / "brd_outline_draft.json") if ws is not None else None
+        )
+        outline = outline or []
+        n_fill = sum(1 for i in outline if isinstance(i, dict) and i.get("status") == "fill")
+        return (
+            {
+                "type": "brd_generate_approval",
+                "question": args.get(
+                    "question", "Generate out.brd.docx from the approved outline and drafted content?"
+                ),
+                "section_count": len(outline),
+                "fill_count": n_fill,
+            },
+            "awaiting_brd_generate",
+            {},
+        )
+    if name == "edit_brd_section":
+        # Same architecture as propose_business_case: interrupt_on fires BEFORE
+        # edit_brd_section's body runs, so the diff card must simulate the ops
+        # itself (domain.brd.brd_docx.preview_ops, in-memory, never touching
+        # disk) rather than show the model's own prose description of the edit.
+        ops_list = _coerce_card_list(args.get("ops"))
+        sections: list[dict] = []
+        failed: list[str] = []
+        try:
+            from backends import current_workspace
+            from domain.brd.brd_docx import preview_ops
+
+            ws = current_workspace()
+            brd_path = ws / "out.brd.docx"
+            if brd_path.exists():
+                preview = preview_ops(brd_path, ops_list)
+                failed = preview.get("failed", [])
+                sections = [
+                    {
+                        "section_id": s["section_id"],
+                        "diff": _line_diff(s["before"], s["after"]),
+                    }
+                    for s in preview.get("sections", [])
+                ]
+        except Exception:  # noqa: BLE001 — the card is advisory; approval still shows op_count
+            pass
+        return (
+            {
+                "type": "brd_edit_approval",
+                "question": "Review the change(s) to the BRD section(s) below and approve or reject.",
+                "op_count": len(ops_list),
+                "sections": sections,
+                "failed": failed,
+            },
+            "awaiting_brd_edit",
             {},
         )
     return None, None, {}

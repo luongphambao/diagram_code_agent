@@ -182,6 +182,18 @@ export interface WbsSummary {
   effort_by_module: Array<{ code: string; name: string; total_md: number }>;
 }
 
+// BRD Agent (docs/plans/2026-07-29-brd-agent.md §E). `brd_outline` mirrors
+// brd_outline.json (or the pre-approval brd_outline_draft.json fallback) —
+// one entry per template section with its fill/keep/skip decision.
+export interface BrdOutlineItem {
+  section_id: string;
+  title?: string;
+  level?: number;
+  source?: string;
+  status?: "fill" | "keep" | "skip";
+  notes?: string;
+}
+
 /**
  * Format a man-day value that MIGHT arrive as a string. Backend defaults these to 0,
  * but a stringified number from the model would make a bare `.toFixed(1)` throw
@@ -281,7 +293,9 @@ export interface AgentState {
   pdf_base64?: Base64OrArtifact;
   pptx_base64?: Base64OrArtifact;
   wbs_xlsx_base64?: Base64OrArtifact;
+  brd_docx_base64?: Base64OrArtifact;
   wbs_summary?: WbsSummary;
+  brd_outline?: BrdOutlineItem[];
   drawio?: string;
   code?: string;
   summary?: string;
@@ -312,7 +326,10 @@ export type InterruptType =
   | "wbs_approval"
   | "wbs_excel_approval"
   | "business_case_approval"
-  | "delivery_export_approval";
+  | "delivery_export_approval"
+  | "brd_outline_approval"
+  | "brd_generate_approval"
+  | "brd_edit_approval";
   // "brief_approval" dropped (plan §F): BriefApproval.tsx was never mounted —
   // no gate_decisions.py::_card_for branch ever produces it.
   // Typed-diagram foundation (improvement plan MVP-3): Sequence/ERD/State
@@ -377,6 +394,14 @@ export interface PendingInterrupt {
     // Delivery export gate (export_to_delivery).
     system?: string;
     dry_run?: boolean;
+    // BRD Agent gates (docs/plans/2026-07-29-brd-agent.md §E3).
+    items?: BrdOutlineItem[];
+    fill_count?: number;
+    skip_count?: number;
+    section_count?: number;
+    op_count?: number;
+    sections?: Array<{ section_id?: string; diff?: Array<{ type?: "equal" | "insert" | "delete"; text?: string }> }>;
+    failed?: string[];
     // HITL v2: the trade-off actions this gate offers (drives DecisionActions).
     allowed_decisions?: DecisionAction[];
   };

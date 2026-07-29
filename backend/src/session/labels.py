@@ -23,6 +23,16 @@ _TOOL_LABELS = {
     "generate_ppt_proposal": "Presenting the PPT proposal for approval",
     "create_pptx": "Generating the PowerPoint deck",
     "send_email": "Sending the deliverables email",
+    "load_brd_context": "Loading BRD context",
+    "inspect_brd_template": "Indexing the BRD template",
+    "draft_brd_outline": "Drafting the BRD outline",
+    "draft_section_content": "Drafting BRD section content",
+    "read_brd_outline": "Reading the BRD outline",
+    "validate_brd": "Validating the BRD",
+    "import_brd_docx": "Importing the BRD document",
+    "propose_brd_outline": "Proposing the BRD outline for approval",
+    "generate_brd_docx": "Generating the BRD document",
+    "edit_brd_section": "Editing a BRD section",
     "write_todos": "Planning the steps",
     "task": "Delegating to subagent",
     "ls": "Listing files",
@@ -45,6 +55,10 @@ _TOOL_TO_SUBAGENT: dict[str, str] = {
     "inspect_diagram": "critic",
     "submit_critique": "critic",
     "create_pptx": "ppt_generator",
+    "load_brd_context": "brd_writer",
+    "inspect_brd_template": "brd_writer",
+    "draft_brd_outline": "brd_writer",
+    "draft_section_content": "brd_writer",
 }
 
 

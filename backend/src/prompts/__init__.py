@@ -4,6 +4,7 @@ Backward-compatible re-exports — callers use `from prompts import build_*`
 unchanged after this split from the monolithic prompts.py.
 """
 
+from .brd_writer_agent import build_brd_writer_prompt
 from .critic_agent import build_critic_prompt
 from .drawer_agent import build_drawer_prompt
 from .icon_resolver_agent import build_icon_resolver_prompt
@@ -20,4 +21,5 @@ __all__ = [
     "build_critic_prompt",
     "build_ppt_generator_prompt",
     "build_wbs_planner_prompt",
+    "build_brd_writer_prompt",
 ]

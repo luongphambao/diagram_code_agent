@@ -603,10 +603,46 @@ def _render_drawio_png_playwright(
     return png_path.exists()
 
 
+def _render_drawio_png_svg(drawio_path: Path, png_path: Path, scale: int = 2) -> bool:
+    """Offline PNG fallback: reproject the exported .drawio to SVG
+    (prettygraph.native.svg_emit — see its module docstring for fidelity
+    notes) and rasterize with the same local Chromium the viewer.diagrams.net
+    fallback below uses, but with no outbound network call at all. Returns
+    False (never raises) on any failure so callers degrade further, same
+    contract as the other two PNG paths."""
+    try:
+        from playwright.sync_api import sync_playwright
+
+        from prettygraph.native.svg_emit import to_svg
+    except Exception:  # noqa: BLE001 — playwright/module not available
+        return False
+    try:
+        xml = drawio_path.read_text(encoding="utf-8")
+        svg = to_svg(xml)
+        m = re.search(r'width="([\d.]+)" height="([\d.]+)"', svg)
+        w, h = (float(m.group(1)), float(m.group(2))) if m else (1600.0, 1200.0)
+        html_doc = f"<!doctype html><html><body style='margin:0'>{svg}</body></html>"
+        with sync_playwright() as p:
+            browser = p.chromium.launch(args=["--no-sandbox"])
+            try:
+                page = browser.new_page(
+                    viewport={"width": max(1, round(w)), "height": max(1, round(h))},
+                    device_scale_factor=scale,
+                )
+                page.set_content(html_doc)
+                page.screenshot(path=str(png_path), full_page=True)
+            finally:
+                browser.close()
+    except Exception:  # noqa: BLE001 — degrade gracefully, never raise
+        return False
+    return png_path.exists()
+
+
 def _render_drawio_png(drawio_path: Path, png_path: Path, scale: int = 2) -> bool:
-    """Render a .drawio to PNG: draw.io desktop CLI first (fast, offline), else
-    the Playwright/viewer.diagrams.net fallback (needs outbound HTTPS but no
-    desktop app). False if neither is available/works."""
+    """Render a .drawio to PNG: draw.io desktop CLI first (fast, offline),
+    then the offline SVG reprojection (svg_emit, no network), then the
+    Playwright/viewer.diagrams.net fallback (needs outbound HTTPS but no
+    desktop app). False if none of the three work."""
     import shutil
 
     exe = _find_drawio_cli()
@@ -639,6 +675,8 @@ def _render_drawio_png(drawio_path: Path, png_path: Path, scale: int = 2) -> boo
             pass
         if png_path.exists():
             return True
+    if _render_drawio_png_svg(drawio_path, png_path, scale):
+        return True
     return _render_drawio_png_playwright(drawio_path, png_path, scale)
 
 

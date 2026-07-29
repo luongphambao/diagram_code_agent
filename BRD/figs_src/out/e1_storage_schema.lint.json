@@ -1,0 +1,12 @@
+{
+  "errors": [],
+  "warnings": [],
+  "info": [
+    {
+      "severity": "info",
+      "code": "orphan_table",
+      "message": "Table 'store' has no foreign-key relationship to or from it.",
+      "ref": "store"
+    }
+  ]
+}

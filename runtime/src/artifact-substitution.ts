@@ -1,6 +1,6 @@
 import { artifactStore, artifactUrl } from "./artifact-store.js";
 
-/** The four multi-MB base64 fields worth offloading (plan §A.6). `drawio`
+/** The multi-MB base64 fields worth offloading (plan §A.6). `drawio`
  * stays inline — it's text needed verbatim in `openInDrawio`'s URL
  * fragment, not a binary blob a browser fetches. */
 const ARTIFACT_FIELDS: Record<string, { mime: string; filename: string }> = {
@@ -13,6 +13,10 @@ const ARTIFACT_FIELDS: Record<string, { mime: string; filename: string }> = {
   wbs_xlsx_base64: {
     mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     filename: "wbs.xlsx",
+  },
+  brd_docx_base64: {
+    mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    filename: "out.brd.docx",
   },
 };
 

@@ -11,6 +11,7 @@ here — no changes needed to the compile loop in ``agent/builder.py``.
 
 from __future__ import annotations
 
+from .brd_writer import _brd_writer_spec
 from .critic import _critic_spec
 from .drawer import _drawer_spec
 from .icon_resolver import _icon_resolver_spec
@@ -33,7 +34,7 @@ def build_subagent_specs(
 
     Order matters only for the streaming/log presentation, not correctness —
     kept identical to the original hand-written sequence (icon_resolver,
-    drawer, critic, wbs_planner, ppt_generator) for a minimal diff.
+    drawer, critic, wbs_planner, ppt_generator, brd_writer) for a minimal diff.
     """
     return [
         _icon_resolver_spec(workdir=workdir, icons_root=icons_root, manifest=manifest),
@@ -47,4 +48,5 @@ def build_subagent_specs(
         _critic_spec(style=style, use_vision_relay=drawer_vision_relay),
         _wbs_planner_spec(workdir=workdir),
         _ppt_generator_spec(workdir=workdir),
+        _brd_writer_spec(workdir=workdir),
     ]

@@ -1,0 +1,20 @@
+{
+  "id": "rename_non_code_section_with_children_does_not_revert",
+  "kind": "semantic_preservation",
+  "headings": [
+    { "title": "FUNCTIONAL REQUIREMENTS", "level": 1 },
+    { "title": "FR01 - Login", "level": 2 },
+    { "title": "Description", "level": 3, "paragraphs": ["Noi dung mo ta."] },
+    { "title": "FR02 - Logout", "level": 2 },
+    { "title": "Interface requirements", "level": 3, "paragraphs": ["Noi dung giao dien."] }
+  ],
+  "section": "functional-requirements",
+  "new_title": "FUNCTIONAL SPECIFICATIONS",
+  "expect_old_id_gone": "functional-requirements",
+  "expect_new_id_present": "functional-specifications",
+  "expect_descendant_ids_present": [
+    "functional-specifications/fr01",
+    "functional-specifications/fr01/description",
+    "functional-specifications/fr02/interface-requirements"
+  ]
+}

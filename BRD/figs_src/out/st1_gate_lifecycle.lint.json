@@ -1,0 +1,60 @@
+{
+  "errors": [],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition idle->pending (event='interrupt_on fires (g\u1ecdi gate tool)') has no actor.",
+      "ref": "idle->pending"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition pending->approved (event='approve | approve_with_assumptions | accept_risk') has no actor.",
+      "ref": "pending->approved"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition pending->rejected (event='reject | request_evidence | request_alternative') has no actor.",
+      "ref": "pending->rejected"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition pending->edited (event='decision=edit (HITL v2 payload s\u1eeda tay)') has no actor.",
+      "ref": "pending->edited"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition approved->resumed (event='Command(resume={decisions})') has no actor.",
+      "ref": "approved->resumed"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition rejected->resumed (event='Command(resume) \u2014 agent quay l\u1ea1i s\u1eeda') has no actor.",
+      "ref": "rejected->resumed"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition edited->resumed (event='Command(resume) v\u1edbi payload \u0111\u00e3 s\u1eeda') has no actor.",
+      "ref": "edited->resumed"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition pending->restarted (event='process restart') has no actor.",
+      "ref": "pending->restarted"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition restarted->pending (event='checkpoint + pending_gate.json kh\u00f4i ph\u1ee5c') has no actor.",
+      "ref": "restarted->pending"
+    }
+  ],
+  "info": []
+}

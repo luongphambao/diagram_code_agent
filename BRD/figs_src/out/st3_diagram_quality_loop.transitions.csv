@@ -1,0 +1,9 @@
+current_state,event,guard,actor,next_state
+rendered,inspect_render_quality,,,scored
+scored,PASS ⇒ finalize_diagram,,,finalized (GATE 3)
+scored,điểm cải thiện ⇒ giữ bản vá,,,kept (cải thiện)
+scored,tụt > _EDIT_REGRESSION_TOLERANCE=1.0 ⇒ tự động hoàn tác,,,reverted (tụt >1 điểm)
+kept (cải thiện),edit_drawio lần kế (≤2),,,rendered
+reverted (tụt >1 điểm),edit_drawio lần kế (≤2),,,rendered
+rendered,đã dùng hết 2 lượt edit + 2 lượt inspect,,,hết budget (2 edit + 2 inspect)
+hết budget (2 edit + 2 inspect),finalize_diagram với điểm hiện tại (có thể dưới ngưỡng),,,finalized (GATE 3)

@@ -81,6 +81,7 @@ pythonpath = [
     "src/domain/reporting",
     "src/domain/wbs",
     "src/domain/validation",
+    "src/domain/brd",
 ]
 
 [tool.coverage.run]
@@ -127,6 +128,7 @@ extraPaths = [
     "src/domain/reporting",
     "src/domain/wbs",
     "src/domain/validation",
+    "src/domain/brd",
 ]
 pythonVersion = "3.11"
 typeCheckingMode = "basic"

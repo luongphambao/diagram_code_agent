@@ -724,3 +724,39 @@ def test_refined_theme_tokens_json():
     assert j["zone_hues"]["blue"]["tab"] == "#1D4ED8"  # neutral-palette navy accent
     assert j["edge_classes"]["monitoring"]["dashed"] is True
     assert j["geometry"]["page_w"] == 1920
+
+
+def test_wrap_is_pixel_based_not_char_count():
+    """Patch 1 regression: `_wrap` must measure real rendered pixel width
+    (prettygraph.text_metrics), not a flat chars-per-line guess — a run of
+    wide characters (WWWW...) must wrap sooner than a same-length run of
+    narrow ones (iiii...) at the identical card width."""
+    from prettygraph.native.refined import _wrap
+
+    narrow = _wrap(" ".join(["ii"] * 12), has_icon=False)
+    wide = _wrap(" ".join(["WW"] * 12), has_icon=False)
+    assert len(wide) > len(narrow)  # same word/char count, but W is far wider than i
+
+
+def test_wrap_respects_icon_padding():
+    """A card with a left icon badge has less available width than a bare
+    one (see card_text_avail_w) — the same text must wrap to more lines
+    with an icon present."""
+    from prettygraph.native.refined import _wrap
+
+    text = "moderately long body text that sits near the wrap boundary"
+    with_icon = _wrap(text, has_icon=True)
+    without_icon = _wrap(text, has_icon=False)
+    assert len(with_icon) >= len(without_icon)
+
+
+def test_wrap_matches_validate_drawio_edge_label_metric():
+    """refined.py's edge-label free-space check and validate_drawio's own
+    overlap audit must agree on how wide a label renders — both delegate to
+    prettygraph.text_metrics.text_width, so they can never drift back to
+    the two-different-hardcoded-ratios bug Patch 1 fixed."""
+    from prettygraph.text_metrics import text_width
+    from domain.validation.validate_drawio import _TYPE_SCALE
+
+    label = "systems sync"
+    assert text_width(label, RT.TYPE_SCALE["edge"]) == text_width(label, _TYPE_SCALE["edge"])
