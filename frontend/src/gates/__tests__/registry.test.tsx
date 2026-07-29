@@ -125,6 +125,45 @@ const GOLDEN_ARGS: Record<GateType, Record<string, unknown>> = {
     system: "jira",
     dry_run: true,
   },
+  brd_outline_approval: {
+    type: "brd_outline_approval",
+    question: "Review the BRD outline and approve or request changes.",
+    items: [
+      { section_id: "introduction/purpose", title: "Purpose", level: 2, source: "manual", status: "fill" },
+      {
+        section_id: "introduction/scope",
+        title: "Scope",
+        level: 2,
+        source: "manual",
+        status: "skip",
+        notes: "chua co blueprint",
+      },
+    ],
+    fill_count: 1,
+    skip_count: 1,
+  },
+  brd_generate_approval: {
+    type: "brd_generate_approval",
+    question: "Generate out.brd.docx from the approved outline and drafted content?",
+    section_count: 2,
+    fill_count: 1,
+  },
+  brd_edit_approval: {
+    type: "brd_edit_approval",
+    question: "Review the change(s) to the BRD section(s) below and approve or reject.",
+    op_count: 1,
+    sections: [
+      {
+        section_id: "introduction/purpose",
+        diff: [
+          { type: "equal", text: "Muc tieu tai lieu nay." },
+          { type: "delete", text: "cu." },
+          { type: "insert", text: "moi." },
+        ],
+      },
+    ],
+    failed: [],
+  },
 };
 
 describe("gate registry exhaustiveness", () => {
@@ -268,6 +307,33 @@ describe("gate card golden payloads", () => {
     await user.click(screen.getByRole("button", { name: /generate ppt/i }));
     expect(respond).toHaveBeenCalledWith(expect.objectContaining({ action: "approve", approved: true }));
   });
+
+  it("brd_outline_approval: approve sends {action:approve, approved:true}", async () => {
+    const user = userEvent.setup();
+    const respond = vi.fn().mockResolvedValue(undefined);
+    const { Card } = GATE_REGISTRY.brd_outline_approval;
+    render(<Card toolCallId="tc1" args={GOLDEN_ARGS.brd_outline_approval} status={ToolCallStatus.Executing} respond={respond} />);
+    await user.click(screen.getByRole("button", { name: /approve outline/i }));
+    expect(respond).toHaveBeenCalledWith(expect.objectContaining({ action: "approve", approved: true }));
+  });
+
+  it("brd_generate_approval: approve sends {action:approve, approved:true}", async () => {
+    const user = userEvent.setup();
+    const respond = vi.fn().mockResolvedValue(undefined);
+    const { Card } = GATE_REGISTRY.brd_generate_approval;
+    render(<Card toolCallId="tc1" args={GOLDEN_ARGS.brd_generate_approval} status={ToolCallStatus.Executing} respond={respond} />);
+    await user.click(screen.getByRole("button", { name: /generate \.docx/i }));
+    expect(respond).toHaveBeenCalledWith({ action: "approve", approved: true });
+  });
+
+  it("brd_edit_approval: approve sends {action:approve, approved:true}", async () => {
+    const user = userEvent.setup();
+    const respond = vi.fn().mockResolvedValue(undefined);
+    const { Card } = GATE_REGISTRY.brd_edit_approval;
+    render(<Card toolCallId="tc1" args={GOLDEN_ARGS.brd_edit_approval} status={ToolCallStatus.Executing} respond={respond} />);
+    await user.click(screen.getByRole("button", { name: /apply changes/i }));
+    expect(respond).toHaveBeenCalledWith({ action: "approve", approved: true });
+  });
 });
 
 describe("malformed payload fallback (parseGatePayload)", () => {
@@ -277,6 +343,8 @@ describe("malformed payload fallback (parseGatePayload)", () => {
     { type: "slot_picker", bad: { type: "slot_picker", question: "x" }, reason: /slots/ },
     { type: "email_approval", bad: { type: "email_approval", question: "x" }, reason: /recipient_email/ },
     { type: "meeting_approval", bad: { type: "meeting_approval", question: "x" }, reason: /attendee_email/ },
+    { type: "brd_outline_approval", bad: { type: "brd_outline_approval", question: "x" }, reason: /items/ },
+    { type: "brd_edit_approval", bad: { type: "brd_edit_approval", question: "x" }, reason: /sections/ },
   ];
 
   it.each(cases)("$type: missing required field -> ok:false", ({ type, bad, reason }) => {

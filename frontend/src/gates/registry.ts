@@ -14,15 +14,19 @@ import WbsCard from "./cards/WbsCard";
 import WbsExcelCard from "./cards/WbsExcelCard";
 import BusinessCaseCard from "./cards/BusinessCaseCard";
 import DeliveryExportCard from "./cards/DeliveryExportCard";
+import BrdOutlineCard from "./cards/BrdOutlineCard";
+import BrdGenerateCard from "./cards/BrdGenerateCard";
+import BrdEditCard from "./cards/BrdEditCard";
 
 /**
- * The 13 real backend gate names (backend/src/session/gate_decisions.py::
+ * The 16 real backend gate names (backend/src/session/gate_decisions.py::
  * _card_for's `card["type"]` values — the exact string chat.py:879 sends as
  * `toolCallName`, which IS the whole binding: `name` in each
  * useHumanInTheLoop registration below must equal one of these). Plan §F
  * corrections baked in: `brief_approval` dropped (BriefApproval.tsx was
  * never mounted — no `_card_for` branch produces it), `business_case_approval`
- * added (backend gate with no prior frontend component).
+ * added (backend gate with no prior frontend component). The 3 BRD gates
+ * (docs/plans/2026-07-29-brd-agent.md §E3) added for the BRD Agent.
  */
 export const GATE_TYPES = [
   "techstack_approval",
@@ -38,6 +42,9 @@ export const GATE_TYPES = [
   "wbs_excel_approval",
   "business_case_approval",
   "delivery_export_approval",
+  "brd_outline_approval",
+  "brd_generate_approval",
+  "brd_edit_approval",
 ] as const;
 
 export type GateType = (typeof GATE_TYPES)[number];
@@ -65,4 +72,7 @@ export const GATE_REGISTRY = {
   wbs_excel_approval: { label: "WBS Excel Export", tone: "export", Card: WbsExcelCard },
   business_case_approval: { label: "Business Case", tone: "decision", Card: BusinessCaseCard },
   delivery_export_approval: { label: "Delivery Export", tone: "export", Card: DeliveryExportCard },
+  brd_outline_approval: { label: "BRD Outline", tone: "decision", Card: BrdOutlineCard },
+  brd_generate_approval: { label: "BRD Document", tone: "export", Card: BrdGenerateCard },
+  brd_edit_approval: { label: "BRD Section Edit", tone: "decision", Card: BrdEditCard },
 } satisfies Record<GateType, GateDefinition>;

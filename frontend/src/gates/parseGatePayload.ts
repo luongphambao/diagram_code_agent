@@ -44,6 +44,16 @@ export function parseGatePayload(type: string, args: unknown): ParsedGatePayload
         return { ok: false, reason: "attendee_email is missing." };
       }
       break;
+    case "brd_outline_approval":
+      if (!Array.isArray(data.items)) {
+        return { ok: false, reason: "items is missing or not an array." };
+      }
+      break;
+    case "brd_edit_approval":
+      if (!Array.isArray(data.sections)) {
+        return { ok: false, reason: "sections is missing or not an array." };
+      }
+      break;
     default:
       // Every other gate only needs a well-formed object; each card renders
       // its own optional fields defensively (matches the old components'

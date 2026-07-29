@@ -3,7 +3,7 @@ import { downloadBase64File, downloadBlob, MIME_TYPES } from "../lib/downloadBas
 import { isArtifactRef, type Base64OrArtifact } from "../lib/artifacts";
 
 export interface ExportDescriptor {
-  id: "png" | "drawio" | "pdf" | "ppt" | "wbs";
+  id: "png" | "drawio" | "pdf" | "ppt" | "wbs" | "brd";
   label: string;
   mime: string;
   ext: string;
@@ -24,6 +24,7 @@ export const EXPORTS: ExportDescriptor[] = [
   { id: "pdf", label: "PDF", mime: MIME_TYPES.pdf, ext: "pdf", basename: "architecture_report", kind: "base64", select: (s) => s.pdf_base64 },
   { id: "ppt", label: "PPT", mime: MIME_TYPES.pptx, ext: "pptx", basename: "architecture_proposal", kind: "base64", select: (s) => s.pptx_base64 },
   { id: "wbs", label: "WBS", mime: MIME_TYPES.xlsx, ext: "xlsx", basename: "wbs", kind: "base64", select: (s) => s.wbs_xlsx_base64 },
+  { id: "brd", label: "BRD", mime: MIME_TYPES.docx, ext: "docx", basename: "brd", kind: "base64", select: (s) => s.brd_docx_base64 },
 ];
 
 function versionedName(base: string, ext: string, iteration?: number): string {
