@@ -8,15 +8,6 @@
 #   main:   claude-sonnet-4-6   → uses ANTHROPIC_API_KEY
 
 models:
-<<<<<<< HEAD
-  main:           cx/gpt-5.6-so
-  icon_resolver:  cx/gpt-5.6-so
-  drawer:         cx/gpt-5.6-so
-  critic:         cx/gpt-5.6-so
-  wbs_planner:    cx/gpt-5.6-so
-  ppt_outline:    cx/gpt-5.6-so
-  ppt_generator:  cx/gpt-5.6-so
-=======
   main:           mimo-v2.5-pro
   icon_resolver:  mimo-v2.5-pro
   drawer:         mimo-v2.5-pro
@@ -25,7 +16,6 @@ models:
   ppt_outline:    mimo-v2.5-pro
   ppt_generator:  mimo-v2.5-pro
   brd_writer:     mimo-v2.5-pro
->>>>>>> 6c5f44dac820acb8c580ce2416600bf5200ec627
 
 
 # ─── Provider Configurations ──────────────────────────────────────────────────
