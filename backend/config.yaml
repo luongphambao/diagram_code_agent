@@ -15,6 +15,7 @@ models:
   wbs_planner:    mimo-v2.5-pro
   ppt_outline:    mimo-v2.5-pro
   ppt_generator:  mimo-v2.5-pro
+  brd_writer:     mimo-v2.5-pro
 
 
 # ─── Provider Configurations ──────────────────────────────────────────────────

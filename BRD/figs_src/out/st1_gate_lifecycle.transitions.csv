@@ -1,0 +1,10 @@
+current_state,event,guard,actor,next_state
+idle,interrupt_on fires (gọi gate tool),,,pending
+pending,approve | approve_with_assumptions | accept_risk,,,approved
+pending,reject | request_evidence | request_alternative,,,rejected
+pending,decision=edit (HITL v2 payload sửa tay),,,edited
+approved,Command(resume={decisions}),,,resumed
+rejected,Command(resume) — agent quay lại sửa,,,resumed
+edited,Command(resume) với payload đã sửa,,,resumed
+pending,process restart,,,service restart
+service restart,checkpoint + pending_gate.json khôi phục,,,pending

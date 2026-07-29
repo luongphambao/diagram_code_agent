@@ -213,7 +213,7 @@ def quality_history() -> list[dict]:
     return history if isinstance(history, list) else []
 
 
-def clear_stage_markers(*, preserve_wbs: bool = False) -> None:
+def clear_stage_markers(*, preserve_wbs: bool = False, preserve_brd: bool = False) -> None:
     """Reset the staged-flow markers at the start of a fresh run.
 
     These are the per-thread JSON markers and stores (resolved against the current
@@ -258,6 +258,19 @@ def clear_stage_markers(*, preserve_wbs: bool = False) -> None:
                 ws / "wbs_filled.xlsx",
             ]
         )
+    if not preserve_brd:
+        files.extend(
+            [
+                ws / "template_map.json",
+                ws / "brd_outline_draft.json",
+                ws / "brd_outline.json",
+                ws / "brd_validation.json",
+                ws / "out.brd.docx",
+            ]
+        )
+        for stale_dir in (ws / "brd_sections", ws / "brd_revisions"):
+            if stale_dir.exists():
+                shutil.rmtree(stale_dir, ignore_errors=True)
     for f in files:
         if f.exists():
             f.unlink()

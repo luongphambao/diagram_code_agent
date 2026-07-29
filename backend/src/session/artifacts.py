@@ -38,6 +38,9 @@ def _artifacts(workspace) -> dict:
     xlsx = workspace / "wbs_filled.xlsx"
     if xlsx.exists():
         out["wbs_xlsx_base64"] = base64.b64encode(xlsx.read_bytes()).decode("ascii")
+    brd = workspace / "out.brd.docx"
+    if brd.exists():
+        out["brd_docx_base64"] = base64.b64encode(brd.read_bytes()).decode("ascii")
     return out
 
 
@@ -72,6 +75,11 @@ def _stage_artifacts(workspace) -> dict:
         out["pending_gate"] = pending_gate
     if tool_summary:
         out["tool_budget_summary"] = tool_summary
+    brd_outline = _read_json(workspace / "brd_outline.json") or _read_json(
+        workspace / "brd_outline_draft.json"
+    )
+    if brd_outline:
+        out["brd_outline"] = brd_outline
     if wbs:
         totals = wbs.get("effort_totals") or {}
         timeline = wbs.get("timeline") or {}

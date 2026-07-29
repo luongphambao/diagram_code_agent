@@ -1,0 +1,30 @@
+{
+  "errors": [],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition idle->pending (event='gate_raised') has no actor.",
+      "ref": "idle->pending"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition pending->approved (event='approve') has no actor.",
+      "ref": "pending->approved"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition pending->rejected (event='reject') has no actor.",
+      "ref": "pending->rejected"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition rejected->pending (event='resubmit') has no actor.",
+      "ref": "rejected->pending"
+    }
+  ],
+  "info": []
+}

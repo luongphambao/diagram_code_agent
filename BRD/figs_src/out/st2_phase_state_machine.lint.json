@@ -1,0 +1,79 @@
+{
+  "errors": [],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition intake->blueprint (event='tech_stack.json \u2228 architecture_analysis.json t\u1ed3n t\u1ea1i') has no actor.",
+      "ref": "intake->blueprint"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition blueprint->draw (event='out.png \u2228 blueprint.json t\u1ed3n t\u1ea1i') has no actor.",
+      "ref": "blueprint->draw"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition draw->wbs (event='wbs.json t\u1ed3n t\u1ea1i') has no actor.",
+      "ref": "draw->wbs"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition wbs->ppt (event='deck_plan.json t\u1ed3n t\u1ea1i') has no actor.",
+      "ref": "wbs->ppt"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition ppt->report (event='out.pdf t\u1ed3n t\u1ea1i') has no actor.",
+      "ref": "ppt->report"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition report->intake (event='reset (clear_stage_markers)') has no actor.",
+      "ref": "report->intake"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition blueprint->missing_artifact (event='tech_stack.json b\u1ecb thi\u1ebfu') has no actor.",
+      "ref": "blueprint->missing_artifact"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition missing_artifact->blueprint (event='gi\u1eef propose_tech_stack trong allowed set (backfill)') has no actor.",
+      "ref": "missing_artifact->blueprint"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition draw->pending_gate (event='pending_gate.json t\u1ed3n t\u1ea1i') has no actor.",
+      "ref": "draw->pending_gate"
+    },
+    {
+      "severity": "warning",
+      "code": "missing_actor",
+      "message": "Transition pending_gate->draw (event='gi\u1eef tool \u0111ang ch\u1edd duy\u1ec7t trong allowed set') has no actor.",
+      "ref": "pending_gate->draw"
+    },
+    {
+      "severity": "warning",
+      "code": "exitless_loop",
+      "message": "States ['blueprint', 'draw', 'intake', 'missing_artifact', 'pending_gate', 'ppt', 'report', 'wbs'] form a cycle with no exit transition.",
+      "ref": ""
+    }
+  ],
+  "info": [
+    {
+      "severity": "info",
+      "code": "no_final_state",
+      "message": "No state declared with kind='final'.",
+      "ref": ""
+    }
+  ]
+}

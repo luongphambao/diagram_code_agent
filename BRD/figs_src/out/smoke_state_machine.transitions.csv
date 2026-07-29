@@ -1,0 +1,5 @@
+current_state,event,guard,actor,next_state
+Idle,gate_raised,,,Pending
+Pending,approve,,,Approved
+Pending,reject,,,Rejected
+Rejected,resubmit,,,Pending

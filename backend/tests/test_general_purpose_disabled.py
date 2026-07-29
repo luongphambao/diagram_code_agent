@@ -60,15 +60,16 @@ def test_general_purpose_disabled_everywhere(monkeypatch, fake_llm_keys):
     monkeypatch.setattr(agent_builder, "create_deep_agent", recording_create)
     main_graph = agent_module.build_agent()
 
-    # 6 create_deep_agent calls: wbs_planner, 4 workers, then main.
-    assert len(snapshots) == 6, snapshots
+    # 7 create_deep_agent calls: icon_resolver, drawer, critic, wbs_planner,
+    # ppt_generator, brd_writer, then main.
+    assert len(snapshots) == 7, snapshots
     # Every single one is built with general-purpose disabled.
     assert all(enabled is False for _, enabled in snapshots), snapshots
 
     # Behavioral check on the compiled graphs: only the MAIN graph exposes
-    # `task` (for its five named subagents). No subagent — wbs_planner
+    # `task` (for its six named subagents). No subagent — wbs_planner
     # included — may expose `task`.
-    subagent_graphs = graphs[:5]
+    subagent_graphs = graphs[:6]
     assert "task" in _tool_names(main_graph)
     for subagent_graph in subagent_graphs:
         assert "task" not in _tool_names(subagent_graph)
