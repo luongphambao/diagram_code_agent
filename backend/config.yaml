@@ -8,13 +8,13 @@
 #   main:   claude-sonnet-4-6   → uses ANTHROPIC_API_KEY
 
 models:
-  main:           gpt-5.4-mini
-  icon_resolver:  gpt-5.4-mini
-  drawer:         gpt-5.4-mini
-  critic:         gpt-5.4-mini
-  wbs_planner:    gpt-5.4-mini
-  ppt_outline:    gpt-5.4-mini
-  ppt_generator:  gpt-5.4-mini
+  main:           mimo-v2.5-pro
+  icon_resolver:  mimo-v2.5-pro
+  drawer:         mimo-v2.5-pro
+  critic:         mimo-v2.5-pro
+  wbs_planner:    mimo-v2.5-pro
+  ppt_outline:    mimo-v2.5-pro
+  ppt_generator:  mimo-v2.5-pro
 
 
 # ─── Provider Configurations ──────────────────────────────────────────────────
@@ -65,3 +65,4 @@ model_prefixes:
   "mimo-":   mimo
   "deepseek-ai/": aiand
   "gemini":  bnk
+  "openai":  bnk
