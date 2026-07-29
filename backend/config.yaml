@@ -43,10 +43,6 @@ providers:
     api_key_env: AIAND_API_KEY
     base_url: https://api.aiand.com/v1   # OpenAI-compatible endpoint
 
-  bnk:
-    api_key_env: BNK_API_KEY
-    base_url: https://router.bnksolution.com/v1   # OpenAI-compatible endpoint (BnK internal router)
-
   anthropic:
     api_key_env: ANTHROPIC_API_KEY
     max_tokens: 16000
@@ -69,9 +65,5 @@ model_prefixes:
   "claude-": anthropic
   "mimo-":   mimo
   "deepseek-ai/": aiand
-<<<<<<< HEAD
-  "cx/":     bnk
-=======
   "gemini":  bnk
   "openai":  bnk
->>>>>>> 6c5f44dac820acb8c580ce2416600bf5200ec627
