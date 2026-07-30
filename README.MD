@@ -13,6 +13,7 @@ Diagram Code Agent turns plain-English system requirements into architecture dia
 - Runs a deterministic native layout/repair pass (edge bundling, layer reordering, crossing-reduction scoring) before every export — see [Diagram Quality Engine](#diagram-quality-engine).
 - Supports BPMN/swimlane process diagrams (auto-detected), a dense `poster` layout mode, and `upgrade_drawio` to restyle a user-supplied `.drawio` file.
 - Optionally generates a Work Breakdown Structure (phases, modules, effort, timeline) and exports it to an Excel workbook — see [Work Breakdown Structure (WBS)](#work-breakdown-structure-wbs).
+- Optionally generates or edits a Business Requirements Document as `out.brd.docx` — either drafted from the approved solution + BnK template, or imported from an existing `.docx` — with section-by-section HITL-gated patching — see [Business Requirements Document (BRD)](#business-requirements-document-brd).
 - Optionally generates a HITL-approved PDF report as `out.pdf`.
 - Optionally generates a HITL-approved PowerPoint proposal deck (`out.pptx`), storyboarded from the same requirements/decisions/WBS data.
 - Optionally emails the report via Gmail through Composio (HITL-gated).
@@ -122,6 +123,7 @@ Deep Agent (backend/src/diagram_mcp/agent.py)
 14. If the user asks to email the report, agent calls `send_email` — frontend shows an email approval card before sending via Gmail through Composio.
 15. If the user asks to schedule a meeting, agent queries Google Calendar with `propose_meeting_slots`, user picks a slot, then `create_client_meeting` books it — HITL gate.
 16. If the user asks for an effort/project estimate, agent calls `propose_wbs_skeleton` then `propose_wbs` (both HITL gates) using the already-approved brief/stack/blueprint, then `export_wbs_excel` writes the estimation workbook. See [Work Breakdown Structure (WBS)](#work-breakdown-structure-wbs).
+17. If the user asks for a BRD, agent either imports a client-supplied `.docx` with `import_brd_docx` or has the `brd_writer` subagent draft a section outline, proposes it with `propose_brd_outline` (HITL gate), drafts content for the approved sections, then calls `generate_brd_docx` (HITL gate) to render `out.brd.docx`. Further "edit section X" requests go through `edit_brd_section` (HITL gate, shows a diff) instead of regenerating the document. See [Business Requirements Document (BRD)](#business-requirements-document-brd).
 
 ### Human-in-the-loop Gates
 
@@ -137,6 +139,9 @@ These tools are configured as approval gates:
 - `create_client_meeting`: confirms meeting details before booking the Google Calendar event.
 - `propose_wbs_skeleton`: confirms the phase/module breakdown before effort estimation.
 - `propose_wbs`: confirms estimated effort, timeline, and team plan before export.
+- `propose_brd_outline`: confirms which BRD sections to draft, keep, or skip before content generation.
+- `generate_brd_docx`: confirms rendering settings before creating `out.brd.docx` from the template + drafted content.
+- `edit_brd_section`: confirms a section-level patch (shown as a diff) before it's applied to `out.brd.docx`.
 
 When the user rejects a gate, the frontend sends feedback to the server. The server resumes the LangGraph run with `Command(resume=...)`, and the agent revises the current step.
 
@@ -158,6 +163,12 @@ Planning / approval (main agent):
 - `propose_wbs_skeleton`: proposes phases/modules for a project estimate — pauses for HITL approval.
 - `propose_wbs`: proposes effort, timeline, and team plan built on the approved skeleton — pauses for HITL approval.
 - `export_wbs_excel`: writes the approved WBS to an Excel workbook; also used to re-export without re-planning on a WBS follow-up request.
+- `import_brd_docx`: imports a client-supplied `.docx` as `out.brd.docx` and indexes its sections for editing.
+- `read_brd_outline`: one-line-per-section inventory of `out.brd.docx` (id, level, checksum) — always read before editing a section.
+- `validate_brd`: structural/traceability lint of `out.brd.docx` (numbering, placeholders, FR/requirement coverage).
+- `propose_brd_outline`: proposes which BRD sections to draft/keep/skip — pauses for HITL approval.
+- `generate_brd_docx`: renders the approved outline + drafted content into `out.brd.docx` — pauses for HITL approval.
+- `edit_brd_section`: applies a targeted patch to one BRD section (block-level, checksum-guarded) — pauses for HITL approval showing a diff.
 - `export_adr_pack`: renders architecture decisions to an `adr_pack.md` Architecture Decision Record pack.
 - `reality_sync`: read-only diff of the proposed design against a real repo/Terraform/Kubernetes state.
 - `upgrade_drawio`: restyles a user-supplied `.drawio` file into a refined two-page typographic preset.
@@ -186,6 +197,14 @@ WBS planner subagent:
 - Reads the approved `diagram_brief.json`, `tech_stack.json`, and `blueprint.json`.
 - Decomposes the solution into phases → modules → features, estimates dev effort, and derives BA/QC/PM effort from dev via fixed ratios.
 - Plans timeline, team composition, and milestones, then hands off to `propose_wbs_skeleton` / `propose_wbs` on the main agent.
+
+BRD writer subagent:
+- `load_brd_context`: assembles session artifacts (brief, tech stack, blueprint, WBS, PDF, business case) into a BRD-ready context.
+- `inspect_brd_template`: reads the BnK `.docx` template's section structure.
+- `draft_brd_outline`: proposes which template sections to fill, keep as boilerplate, or skip, given what the session actually has.
+- `draft_section_content`: writes the content for one "fill" section at a time.
+- `read_brd_outline` / `validate_brd`: same inspection tools as the main agent, used while drafting.
+- Never writes `out.brd.docx` or `brd_revisions/` directly and never calls the BRD HITL gates itself — it only drafts; the main agent renders and edits.
 
 PPT generator subagent:
 - `plan_deck`: reads `blueprint.json`/`diagram_brief.json`/`tech_stack.json`/`solution_model.json` and writes `deck_plan.json`, a fixed storyboard with every slide grounded in the canonical solution model (requirements, decisions, components, WBS effort, risks).
@@ -257,6 +276,19 @@ Exported from the [AI Financial Analysis, Evidence & Reference-Check Platform](#
 
 **4. Master Data** — configurable effort ratios (PM/BA/QC on dev) and role rates used to derive the estimate.
 ![WBS sheet: Master Data](example/wbs-sheet-4-master-data.png)
+
+## Business Requirements Document (BRD)
+
+On top of diagram, WBS, and PDF/PPTX generation, the agent can produce or edit a full Business Requirements Document as `out.brd.docx`, rendered from the internal BnK template — or by importing a client-supplied `.docx` and editing it in place.
+
+- Trigger: only when the user explicitly asks for a BRD (e.g. "generate the BRD", "draft the requirements document", or the Vietnamese equivalent "soạn tài liệu BRD"). It never runs unprompted.
+- Two content sources:
+  - **Generate new** — the `brd_writer` subagent reads the approved brief/tech-stack/blueprint (plus WBS/PDF/business-case artifacts when present), drafts a section-by-section outline (fill/keep/skip) and content for each "fill" section, then the main agent calls `propose_brd_outline` (HITL) → `generate_brd_docx` (HITL) to render the template into `out.brd.docx`.
+  - **Import existing** — `import_brd_docx` adopts a client-supplied `.docx` as `out.brd.docx` and indexes its sections, so an already-written document can be edited the same way as a generated one.
+- Section-by-section editing: every section has a stable, hierarchical `section_id` derived purely from the document structure (e.g. `fr07/description`), not from brittle position-based slugs. `edit_brd_section` patches one section at a time — block-level insert/replace/delete, table cell edits, or a new subsection — guarded by an optimistic-lock checksum of that section's own content (not its subtree), so an edit to one section can never silently clobber a sibling or parent. Every edit is a HITL gate that shows a diff before it's applied.
+- Safety: writes are atomic (validated in a temp file, then swapped in) and every apply keeps a snapshot under `brd_revisions/` for undo; a failed semantic-preservation or validation check reverts with the on-disk file untouched.
+- Follow-up handling: "edit/sửa" requests are routed to the BRD flow (not the PDF-report flow, despite both using words like "document"/"report") whenever a BRD already exists in the workspace.
+- Artifacts: `out.brd.docx`, `brd_outline_draft.json`, and `brd_revisions/` (snapshots) under the run's workspace.
 
 ## Diagram Quality Engine
 
@@ -669,7 +701,7 @@ VITE_BACKEND_URL=http://localhost:8001
 
 ## Generated Files
 
-Runtime artifacts are created under `backend/agent_space/`, including uploaded docs, memory files, workspace files, rendered PNGs, DOT files, `.drawio` exports, and optional `out.pdf` reports. This folder is ignored by Git.
+Runtime artifacts are created under `backend/agent_space/`, including uploaded docs, memory files, workspace files, rendered PNGs, DOT files, `.drawio` exports, optional `out.pdf` reports, and optional `out.brd.docx` (plus its `brd_revisions/` snapshots). This folder is ignored by Git.
 
 ## Troubleshooting
 
