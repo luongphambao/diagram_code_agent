@@ -202,6 +202,32 @@ def _section_content_filename(section_id: str) -> str:
     return safe_filename(section_id.replace("/", "__")) + ".json"
 
 
+def _resolve_content_image_paths(ws: Path, content: list[dict]) -> None:
+    """Rewrite each image block's `path` in place to an absolute path inside
+    the workspace. The model only ever sees/writes workspace-relative paths
+    (e.g. "out.png"); python-docx just does open(path) with no notion of the
+    workspace, so without this it resolves against the process cwd instead
+    and fails even for a correct filename. Leaves an unresolvable/escaping
+    path untouched — build_block's image step reports that as a clean
+    per-op failure rather than crashing the batch."""
+    for block in content:
+        if isinstance(block, dict) and block.get("type") == "image" and block.get("path"):
+            try:
+                block["path"] = str(safe_workspace_path(ws, block["path"]))
+            except ValueError:
+                pass
+
+
+def _resolve_op_image_paths(ws: Path, op: dict) -> None:
+    if op.get("content"):
+        _resolve_content_image_paths(ws, op["content"])
+    if op.get("image_path"):
+        try:
+            op["image_path"] = str(safe_workspace_path(ws, op["image_path"]))
+        except ValueError:
+            pass
+
+
 @tool(parse_docstring=True)
 def draft_section_content(section_id: str, content: list[Block]) -> str:
     """Write the drafted content for ONE outline section.
@@ -441,6 +467,7 @@ def generate_brd_docx(
         if not drafted or not drafted.get("content"):
             missing.append(f"{sid} (chưa có draft_section_content)")
             continue
+        _resolve_content_image_paths(ws, drafted["content"])
         ops.append(
             {"op": "replace_body", "section": sid, "expect": sec.own_checksum, "content": drafted["content"]}
         )
@@ -488,6 +515,8 @@ def edit_brd_section(ops: list[BrdOp]) -> str:
         return f"Quá nhiều op trong một lần gọi ({len(ops)} > {_MAX_OPS_PER_CALL}) — chia nhỏ lại."
 
     op_dicts = [op.model_dump(exclude_none=True) for op in ops]
+    for op_dict in op_dicts:
+        _resolve_op_image_paths(ws, op_dict)
     result = apply_brd_ops(path, op_dicts, revisions_dir=ws / _REVISIONS_DIR_NAME)
 
     if result.reverted:

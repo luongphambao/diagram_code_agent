@@ -329,6 +329,38 @@ def doc_bytes_of(doc) -> bytes:
     return buf.getvalue()
 
 
+def test_replace_body_with_a_missing_image_fails_the_op_without_crashing_or_losing_content(tmp_path):
+    """Regression: a hallucinated/unresolved image path used to raise a bare
+    FileNotFoundError out of apply_ops (crashing the whole agent run instead
+    of failing just this op), and op_replace_body detached the section's
+    original body before building the replacement — so even a caught failure
+    lost the original content. Both must be fixed: the op fails cleanly and
+    the section keeps its original body."""
+    doc = _make_doc()
+    path = tmp_path / "doc.docx"
+    doc.save(path)
+    _, sections = bd.index_document(path)
+    sec = bd.resolve_section_ref(sections, "introduction/purpose")
+
+    result = bd.apply_brd_ops(
+        path,
+        [
+            {
+                "op": "replace_body",
+                "section": sec.section_id,
+                "expect": sec.own_checksum,
+                "reason": "t",
+                "content": [{"type": "image", "path": str(tmp_path / "does-not-exist.png")}],
+            }
+        ],
+    )
+    assert not result.ok
+    assert any("không nhúng được ảnh" in f for f in result.failed)
+
+    # file on disk must be byte-identical to before the rejected op
+    assert path.read_bytes() == doc_bytes_of(doc)
+
+
 def test_unknown_section_ref_fails_without_creating_anything(tmp_path):
     doc = _make_doc()
     path = tmp_path / "doc.docx"

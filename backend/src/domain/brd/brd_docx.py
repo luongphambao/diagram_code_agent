@@ -77,6 +77,10 @@ class CascadeRequiredError(BrdOpError):
     pass
 
 
+class ImageEmbedError(BrdOpError):
+    pass
+
+
 # --------------------------------------------------------------------------- #
 # block helpers
 # --------------------------------------------------------------------------- #
@@ -533,7 +537,11 @@ def _new_table(
 def _new_image(doc: _Doc, image_path: str, width_in: float = 6.1) -> Paragraph:
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p.add_run().add_picture(image_path, width=Inches(width_in))
+    try:
+        p.add_run().add_picture(image_path, width=Inches(width_in))
+    except Exception as exc:
+        _detach(p)
+        raise ImageEmbedError(f"không nhúng được ảnh '{image_path}': {exc}") from exc
     return p
 
 
@@ -594,9 +602,12 @@ def _detach(block):
 def op_replace_body(doc: _Doc, sec: Section, content: list[dict], style_cache: StyleCache) -> str:
     own = _own_body(doc, sec)
     heading_el = _element(blocks(doc)[sec.heading_idx])
+    # Build the new blocks BEFORE detaching the old ones — a failed build (e.g.
+    # a bad image path) then leaves the section's original body intact instead
+    # of losing it to a failed op.
+    new_els = [_element(build_block(doc, spec, style_cache)) for spec in content]
     for b in own:
         _detach(b)
-    new_els = [_element(build_block(doc, spec, style_cache)) for spec in content]
     cursor = heading_el
     for el in new_els:
         el.getparent().remove(el)
