@@ -12,14 +12,24 @@ from wbs_tools import LeafIn
 
 def _item(ref, dur, preds=None, pert=0.0):
     """A minimal leaf dict: critical_path uses pert_expected_md or total as duration."""
-    return {"ref_code": ref, "total": dur, "pert_expected_md": pert,
-            "predecessors": preds or [], "dependencies": []}
+    return {
+        "ref_code": ref,
+        "total": dur,
+        "pert_expected_md": pert,
+        "predecessors": preds or [],
+        "dependencies": [],
+    }
 
 
 def _item_v2(ref, dur, deps=None, preds=None, pert=0.0):
     """Leaf with rich dependency edges (WBS v2)."""
-    return {"ref_code": ref, "total": dur, "pert_expected_md": pert,
-            "predecessors": preds or [], "dependencies": deps or []}
+    return {
+        "ref_code": ref,
+        "total": dur,
+        "pert_expected_md": pert,
+        "predecessors": preds or [],
+        "dependencies": deps or [],
+    }
 
 
 def _by_ref(result):
@@ -28,9 +38,10 @@ def _by_ref(result):
 
 # --- PERT formula -----------------------------------------------------------
 
+
 def test_pert_formula_expected_value():
     # (O + 4M + P) / 6
-    assert round((2 + 4 * 5 + 14) / 6, 4) == 6.0      # classic textbook example
+    assert round((2 + 4 * 5 + 14) / 6, 4) == 6.0  # classic textbook example
     assert round((1 + 4 * 2 + 3) / 6, 4) == 2.0
     assert round((3 + 4 * 6 + 9) / 6, 4) == 6.0
 
@@ -43,6 +54,7 @@ def test_pert_expected_md_used_as_duration_over_total():
 
 
 # --- linear chain A -> B -> C ----------------------------------------------
+
 
 def test_linear_chain_all_critical():
     items = [
@@ -62,23 +74,25 @@ def test_linear_chain_all_critical():
 
 # --- diamond A -> {B, C} -> D ----------------------------------------------
 
+
 def test_diamond_critical_path_follows_longer_branch():
     items = [
         _item("A", 2),
-        _item("B", 5, preds=["A"]),   # long branch
-        _item("C", 1, preds=["A"]),   # short branch -> has float
+        _item("B", 5, preds=["A"]),  # long branch
+        _item("C", 1, preds=["A"]),  # short branch -> has float
         _item("D", 3, preds=["B", "C"]),
     ]
     res = critical_path(items)
-    assert res["project_duration_md"] == 10.0          # 2 + 5 + 3
+    assert res["project_duration_md"] == 10.0  # 2 + 5 + 3
     assert res["critical_path_ref_codes"] == ["A", "B", "D"]
     b = _by_ref(res)
-    assert b["C"]["float_md"] == 4.0                   # 5 - 1 slack on the short branch
+    assert b["C"]["float_md"] == 4.0  # 5 - 1 slack on the short branch
     assert b["C"]["critical"] is False
     assert b["B"]["float_md"] == 0 and b["B"]["critical"] is True
 
 
 # --- isolated tasks ---------------------------------------------------------
+
 
 def test_isolated_task_has_no_float():
     items = [_item("A", 3), _item("B", 5, preds=["A"]), _item("X", 4)]  # X is standalone
@@ -92,23 +106,29 @@ def test_isolated_task_has_no_float():
 
 # --- missing predecessor refs ----------------------------------------------
 
+
 def test_missing_predecessor_ref_is_ignored():
     items = [_item("A", 3, preds=["GHOST"]), _item("B", 2, preds=["A"])]
-    res = critical_path(items)              # GHOST does not exist -> dropped, no crash
+    res = critical_path(items)  # GHOST does not exist -> dropped, no crash
     assert res["project_duration_md"] == 5.0
     assert res["critical_path_ref_codes"] == ["A", "B"]
 
 
 # --- cycle degrades gracefully ---------------------------------------------
 
+
 def test_cycle_does_not_raise():
     items = [_item("A", 3, preds=["B"]), _item("B", 5, preds=["A"])]
-    res = critical_path(items)             # A<->B cycle
+    res = critical_path(items)  # A<->B cycle
     assert res["critical_path_ref_codes"] == []
     b = _by_ref(res)
     assert b["A"]["float_md"] is None and b["B"]["float_md"] is None
-    # project duration falls back to the longest single task
-    assert res["project_duration_md"] == 5.0
+    # HIGH-5 fix: a cycle used to fall back to the longest single task's
+    # duration dressed up as "the project duration" — schedule_status now
+    # makes an unresolvable schedule explicit instead of a plausible-looking
+    # number with no real basis.
+    assert res["schedule_status"] == "cycle_detected"
+    assert res["project_duration_md"] is None
 
 
 def test_empty_items():
@@ -118,6 +138,7 @@ def test_empty_items():
 
 
 # --- pert_percentile ---------------------------------------------------------
+
 
 def test_pert_p50_equals_mean():
     # P50: q=0, result = mu = (O + 4M + P) / 6 = (2 + 20 + 14) / 6 = 6.0
@@ -133,6 +154,7 @@ def test_pert_p80():
 
 # --- assign_sprints ----------------------------------------------------------
 
+
 def test_assign_sprints_sprint1_when_es0():
     items = [{"early_start": 0}]
     assign_sprints(items, 1.0)
@@ -146,6 +168,7 @@ def test_assign_sprints_none_when_no_es():
 
 
 # --- CPM with lag (FS + lag_days) --------------------------------------------
+
 
 def test_cpm_fs_with_lag():
     # A(3d) -FS+2-> B(5d): ES(B) = EF(A) + lag = 3 + 2 = 5
@@ -162,6 +185,7 @@ def test_cpm_fs_with_lag():
 
 # --- CPM SS relationship -----------------------------------------------------
 
+
 def test_cpm_ss_relationship():
     # A(10d) -SS+1-> B(5d): ES(B) = ES(A) + lag = 0 + 1 = 1, EF(B) = 6
     items = [
@@ -175,6 +199,7 @@ def test_cpm_ss_relationship():
 
 
 # --- CPM FF relationship -----------------------------------------------------
+
 
 def test_cpm_ff_relationship():
     # A(10d) -FF+0-> B(5d): EF(B) >= EF(A) = 10, so ES(B) >= 10 - 5 = 5
@@ -190,9 +215,11 @@ def test_cpm_ff_relationship():
 
 # --- DoD fields ---------------------------------------------------------------
 
+
 def test_leaf_in_acceptance_criteria():
-    leaf = LeafIn(phase_code="I", module_code="I.A", name="Login",
-                  acceptance_criteria=["Tests pass", "PR reviewed"])
+    leaf = LeafIn(
+        phase_code="I", module_code="I.A", name="Login", acceptance_criteria=["Tests pass", "PR reviewed"]
+    )
     assert len(leaf.acceptance_criteria) == 2
     assert leaf.acceptance_criteria[0] == "Tests pass"
 
@@ -215,8 +242,7 @@ from wbs_effort import level_resources, MANDAYS_PER_WEEK  # noqa: E402
 
 
 def _sprint_item(sprint, be=0, fe_mobile=0, ba=0, qc=0, pm=0):
-    return {"assigned_sprint": sprint, "be": be, "fe_mobile": fe_mobile,
-            "ba": ba, "qc": qc, "pm": pm}
+    return {"assigned_sprint": sprint, "be": be, "fe_mobile": fe_mobile, "ba": ba, "qc": qc, "pm": pm}
 
 
 def test_level_resources_no_overload():
@@ -239,8 +265,7 @@ def test_level_resources_overload_when_demand_exceeds_capacity():
 
 def test_level_resources_capacity_math():
     """capacity = fte × weeks_per_sprint × MANDAYS_PER_WEEK."""
-    result = level_resources([], role_fte={"dev": 3.0, "ba": 1.0, "qc": 1.0, "pm": 1.0},
-                             weeks_per_sprint=2)
+    result = level_resources([], role_fte={"dev": 3.0, "ba": 1.0, "qc": 1.0, "pm": 1.0}, weeks_per_sprint=2)
     assert result["capacity"]["dev"] == 3.0 * 2 * MANDAYS_PER_WEEK
 
 
@@ -265,7 +290,7 @@ def test_level_resources_multi_sprint_aggregation():
     """Demand aggregates per sprint; only the overloaded sprint reports."""
     items = [
         _sprint_item(1, be=15),  # over 10 MD cap (1 FTE × 2 weeks)
-        _sprint_item(2, be=5),   # under cap
+        _sprint_item(2, be=5),  # under cap
     ]
     result = level_resources(items, role_fte={"dev": 1.0, "ba": 1.0, "qc": 1.0, "pm": 1.0})
     overloads = result["overloads"]

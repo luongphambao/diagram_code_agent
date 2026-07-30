@@ -8,14 +8,14 @@
 #   main:   claude-sonnet-4-6   → uses ANTHROPIC_API_KEY
 
 models:
-  main:           moonshotai/kimi-k3-free
-  icon_resolver:  moonshotai/kimi-k3-free
-  drawer:         moonshotai/kimi-k3-free
-  critic:         moonshotai/kimi-k3-free
-  wbs_planner:    moonshotai/kimi-k3-free
-  ppt_outline:    moonshotai/kimi-k3-free
-  ppt_generator:  moonshotai/kimi-k3-free
-  brd_writer:     moonshotai/kimi-k3-free
+  main:           mimo-v2.5
+  icon_resolver:  mimo-v2.5
+  drawer:         mimo-v2.5
+  critic:         mimo-v2.5
+  wbs_planner:    mimo-v2.5
+  ppt_outline:    mimo-v2.5
+  ppt_generator:  mimo-v2.5
+  brd_writer:     mimo-v2.5
 
 
 # ─── Provider Configurations ──────────────────────────────────────────────────

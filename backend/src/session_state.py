@@ -69,6 +69,7 @@ from session import (  # noqa: F401 — re-exported for backward compatibility
     _tool_selection_detail,
     _tool_selection_tools,
     decision_record_from_payload,
+    resolve_pending_gate,
 )
 
 logger = logging.getLogger("diagram-agent")

@@ -6,7 +6,7 @@ import json
 import logging
 
 import httpx
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.errors import GraphRecursionError
@@ -25,7 +25,7 @@ from domain.reporting.reporting import record_report_step
 from observability import new_id, reset_context, set_context
 from security.auth import Identity, require_identity
 from security.ownership import ensure_owner
-from tools import GATE_TOOL_NAMES, allowed_decisions_for, clear_stage_markers
+from tools import GATE_TOOL_NAMES, allowed_decisions_for, can_approve, clear_stage_markers
 import session_state as ss
 from session_state import (
     _artifacts,
@@ -57,6 +57,7 @@ from session_state import (
     _tool_output_detail,
     _tool_selection_detail,
     _tool_selection_tools,
+    resolve_pending_gate,
 )
 
 logger = logging.getLogger("diagram-agent")
@@ -91,10 +92,11 @@ def _persist_decision_record(payload: dict, gate: str | None, approver: str, app
     """Append a HITL v2 DecisionRecord to the workspace log (no-op for plain
     approve/reject or on any failure — must never break the resume).
 
-    Records the approver's role (§8.6) and, when a role is supplied, checks it against
-    the gate's role policy (can_approve): a disallowed role is logged as a warning but
-    still recorded for the audit trail (advisory enforcement — the streaming resume must
-    not hard-fail until the frontend reliably supplies roles)."""
+    Records the approver's role (§8.6). CRITICAL-1 fix: role enforcement itself
+    now happens in agui_endpoint, BEFORE the streaming response (and this
+    function, which only runs inside it) ever starts — a disallowed role gets
+    a real HTTP 403 there. This function no longer re-checks can_approve: by
+    the time it runs, the caller has already been authorized."""
     if not gate or payload.get("action") not in ss.HITL_V2_ACTIONS:
         return
     try:
@@ -102,12 +104,7 @@ def _persist_decision_record(payload: dict, gate: str | None, approver: str, app
 
         from memory.stores.decisions import append_decision, next_seq
         from session_state import decision_record_from_payload
-        from tools import can_approve
 
-        if approver_role and not can_approve(approver_role, gate):
-            logger.warning(
-                "role %r is not permitted to approve gate %s (recorded anyway)", approver_role, gate
-            )
         from backends import current_workspace
 
         rec = decision_record_from_payload(
@@ -252,6 +249,67 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
     )
     last_tool = _last_tool_msg(messages)
 
+    # CRITICAL-1 fix: precompute the resume decision BEFORE the streaming
+    # response starts, so a disallowed role gets a real HTTP 403 instead of a
+    # mid-stream event — once RUN_STARTED is yielded inside stream() below,
+    # the response is committed to a 200 body and can no longer carry an
+    # error status. This used to live entirely inside stream(), where
+    # `can_approve()` returning False only produced a `logger.warning(...)`
+    # (see docs/codex/multi-agent-architecture-review-2026-07-30.md
+    # CRITICAL-1) — the resume still ran regardless of the role check's
+    # result, so the "enforcement" never actually blocked anything.
+    resume_payload: dict = {}
+    resume_pending_name: str | None = None
+    resume_decision: dict = {}
+    if last_tool is not None:
+        try:
+            resume_payload = json.loads(last_tool.get("content", "{}"))
+        except Exception:  # noqa: BLE001
+            resume_payload = {}
+        resume_pending_name = _pending_action_name(await _pending_interrupt(config))
+        resume_decision = _decision_from_payload(resume_payload, resume_pending_name)
+        if (
+            resume_decision.get("type") == "approve"
+            and resume_pending_name in GATE_TOOL_NAMES
+            and not can_approve(identity.role, resume_pending_name)
+        ):
+            logger.warning(
+                "DENIED: role %r may not approve gate %s (thread %s, user %s)",
+                identity.role,
+                resume_pending_name,
+                thread_id,
+                identity.email,
+            )
+            # Audit the denial explicitly — but as its own "denied" outcome,
+            # never as an approve/reject decision record. A denied attempt
+            # must never become (or be mistaken for) an approval.
+            try:
+                record_report_step(
+                    ws,
+                    f"{resume_pending_name}_gate",
+                    status="denied",
+                    summary=(
+                        f"{identity.email} (role={identity.role or '-'}) was denied approval "
+                        f"of {resume_pending_name}: role not permitted for this gate."
+                    ),
+                    data={"gate": resume_pending_name, "decision": "denied", "role": identity.role or ""},
+                )
+                await conv_db.record_gate_outcome(
+                    request.app.state.pool,
+                    thread_id=thread_id,
+                    gate=resume_pending_name,
+                    decision="denied",
+                    note=f"role={identity.role or '-'}",
+                )
+            except Exception as exc:  # noqa: BLE001 — the 403 below must fire regardless
+                logger.warning("failed to persist denied-approval audit record: %s", exc)
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    f"role '{identity.role or ''}' is not permitted to approve gate '{resume_pending_name}'"
+                ),
+            )
+
     async def stream():
         _ws_token = set_current_workspace(ws)
         # §1.4: bind correlation ids for every log line this run emits, reset
@@ -264,12 +322,13 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
         try:
             if last_tool is not None:
                 # Resume from a HITL gate with the user's approve/reject decision.
-                try:
-                    payload = json.loads(last_tool.get("content", "{}"))
-                except Exception:  # noqa: BLE001
-                    payload = {}
-                pending_name = _pending_action_name(await _pending_interrupt(config))
-                decision = _decision_from_payload(payload, pending_name)
+                # payload/pending_name/decision were already computed above (before
+                # this streaming response started) so the RBAC check could run
+                # before we were committed to a 200 — reuse them here rather than
+                # re-parsing the payload and re-querying the checkpoint state.
+                payload = resume_payload
+                pending_name = resume_pending_name
+                decision = resume_decision
                 logger.info(
                     "resume %s → %s (action=%s)", pending_name, decision["type"], payload.get("action")
                 )
@@ -288,6 +347,15 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                         archive_approved_revision(ws)
                     except Exception as exc:  # noqa: BLE001
                         logger.debug("approved-revision archive skipped: %s", exc)
+                    # MEDIUM-1 fix: resolve pending_gate.json on approve, BEFORE the
+                    # resume actually runs, so the UI stops showing a stale approval
+                    # card and phase_filter stops keeping an already-approved gate's
+                    # tool artificially alive (see resolve_pending_gate's docstring).
+                    # Deliberately NOT called on reject/revise — a rejected gate is
+                    # still awaiting a decision on the SAME tool call, and clearing
+                    # the file here would re-lock the agent out of re-proposing it
+                    # (the exact bug _pending_gate_tools exists to prevent).
+                    resolve_pending_gate(ws)
                 if pending_name in GATE_TOOL_NAMES:
                     note = payload.get("feedback") or payload.get("modifications") or ""
                     record_report_step(

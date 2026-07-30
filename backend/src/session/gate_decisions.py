@@ -68,6 +68,48 @@ def _persist_pending_gate(name: str, args: dict) -> None:
         return
 
 
+def resolve_pending_gate(workspace) -> None:
+    """Mark pending_gate.json resolved (and remove it) after a gate decision
+    has been applied — MEDIUM-1 fix.
+
+    Before this, the resume path never touched the file: the only `unlink` of
+    pending_gate.json anywhere in the backend was in the FRESH-run branch of
+    clear_stage_markers (tools/stage_markers.py), which the common
+    preserve_artifacts=True continuation skips entirely. So a resolved gate's
+    draft kept being served to the UI as `pending_gate` (session/artifacts.py)
+    and kept its tool artificially alive past its normal phase
+    (agent/middleware/phase_filter.py's `_pending_gate_tools`) — forever.
+
+    Call this right before `Command(resume=...)` runs. Writes
+    status=resolved+resolved_at first (atomically, via a tmp file + replace)
+    so a consumer that reads but can't delete the file still sees it is no
+    longer pending, then removes the file outright. Best-effort: the on-disk
+    file is a UI-display shadow, not the resume authority (the LangGraph
+    checkpoint is) — a crash between the write and the unlink is safe either
+    way, so any error here must never break the resume itself.
+    """
+    try:
+        from datetime import datetime, timezone
+
+        path = workspace / "pending_gate.json"
+        if not path.exists():
+            return
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            data = {}
+        if not isinstance(data, dict):
+            data = {}
+        data["status"] = "resolved"
+        data["resolved_at"] = datetime.now(timezone.utc).isoformat()
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(path)
+        path.unlink(missing_ok=True)
+    except Exception:
+        return
+
+
 def _coerce_card_list(val) -> list:
     """Coerce a gate-card array field to a real list for the frontend.
 

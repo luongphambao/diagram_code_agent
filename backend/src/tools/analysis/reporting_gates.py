@@ -38,7 +38,7 @@ from domain.reporting.reporting import (
     record_report_step,
 )
 from ..stage_markers import _bump_tool_summary, _read_json_file
-from .gates import _epistemic_note, _solution_gate_note
+from .gates import _epistemic_note, run_solution_gate
 
 
 class PdfReportConfig(BaseModel):
@@ -95,6 +95,16 @@ def generate_pdf_report(
         )
         include_sections = None
 
+    # HIGH-4 fix: check the release gate BEFORE writing out.pdf/out.report.html,
+    # not after. `_solution_gate_note(block=True)` used to only APPEND a
+    # "do NOT send this to the client" sentence to the return text after the
+    # file was already on disk — a blocking finding never actually stopped the
+    # export. `blocked` also covers the validator being unavailable (a crash
+    # fails closed here, same as a real contradiction).
+    blocked, gate_note = run_solution_gate("pdf_export", block=True)
+    if blocked:
+        return "RELEASE GATE BLOCKED — generate_pdf_report did NOT run; no out.pdf was written." + gate_note
+
     try:
         html_path, pdf_path, sections, unrecognized = generate_report(
             current_workspace(),
@@ -122,7 +132,7 @@ def generate_pdf_report(
         missing = [s for s in DEFAULT_REPORT_SECTIONS if s not in sections]
         if missing:
             msg += f" NOTE: {len(missing)} section(s) were omitted from this run: " + ", ".join(missing) + "."
-    msg += _solution_gate_note("pdf_export", block=True)
+    msg += gate_note
     return msg
 
 
@@ -185,6 +195,15 @@ def generate_ppt_proposal(
         )
         include_sections = None
 
+    # HIGH-4 fix: same pre-write gate as generate_pdf_report — see the comment
+    # there. A blocking finding (or an unavailable validator) must stop
+    # out.pptx from being written, not just get appended as a warning after.
+    blocked, gate_note = run_solution_gate("ppt_export", block=True)
+    if blocked:
+        return (
+            "RELEASE GATE BLOCKED — generate_ppt_proposal did NOT run; no out.pptx was written." + gate_note
+        )
+
     try:
         pptx_path, sections, unrecognized = generate_ppt_proposal_file(
             current_workspace(),
@@ -214,7 +233,7 @@ def generate_ppt_proposal(
         missing = [s for s in DEFAULT_PPT_SECTIONS if s not in sections]
         if missing:
             msg += f" NOTE: {len(missing)} section(s) were omitted from this run: " + ", ".join(missing) + "."
-    msg += _solution_gate_note("ppt_export", block=True)
+    msg += gate_note
     msg += _deck_qa_note()
     msg += _visual_audit_note(pptx_path)
     return msg
@@ -518,8 +537,7 @@ def propose_deck_plan(title: str = "", subtitle: str = "", brand: str = "") -> s
     case_slides = [s for s in plan.slides if s.narrative_role == "case_study"]
     if case_slides:
         case_lines = [
-            f"  • {s.title} — client: {s.params.get('client') or 'n/a'}"
-            f" (slug: {s.params.get('slug') or '?'})"
+            f"  • {s.title} — client: {s.params.get('client') or 'n/a'} (slug: {s.params.get('slug') or '?'})"
             for s in case_slides
         ]
         case_note = (

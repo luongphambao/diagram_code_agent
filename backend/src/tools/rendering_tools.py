@@ -1059,8 +1059,14 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
         from prettygraph.native.repair import semantic_stats
 
         stats["semantic"] = semantic_stats(spec, xml, plan)
-    except Exception:  # noqa: BLE001 — best-effort, never block a render
-        pass
+    except Exception as exc:  # noqa: BLE001 — never block a render, but don't
+        # silently read as "100% recall" either (production_scorecard's
+        # sem.get("node_recall", 1.0) default treats an ABSENT key as a pass).
+        # Populate the recall fields at 0.0 so a validator crash fails closed
+        # through the existing scoring path, and tag status=unavailable so
+        # callers can tell "validator crashed" apart from "genuinely 0% recall".
+        logger.warning("semantic_stats() failed, treating as unavailable (fail-closed): %s", exc)
+        stats["semantic"] = {"status": "unavailable", "node_recall": 0.0, "edge_recall": 0.0}
     # Well-Architected semantic advice (0 LLM tokens) — spec-level twin of
     # validate_drawio.audit_architecture() for refined/non-AWS diagrams, where
     # the XML never carries mxgraph.aws4.* stencils for the XML-level gate to
@@ -1075,8 +1081,10 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
     stats["fallback_icons"] = int(spec.get("_fallback_icons") or 0)
     try:  # persist stats so the diagram gate / finalize can score without the spec
         (workspace / "out.native_stats.json").write_text(json.dumps(stats), encoding="utf-8")
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as exc:  # noqa: BLE001 — every downstream reader (finalize_diagram,
+        # _diagram_gate_note, inspect_render_quality) silently loses ALL stats if this
+        # write fails; a bare `pass` gave no trace of why. Log so it's at least visible.
+        logger.error("failed to persist out.native_stats.json: %s", exc)
     _reset_drawio_edit_rounds()  # fresh export -> fresh edit_drawio budget
     return stats
 
@@ -1169,8 +1177,15 @@ def export_drawio_native(style_preset: str = "") -> str:
             else f"\nInspection recommended: no ({reason}) — finalize, don't call inspect_render_quality."
         )
         append_quality_history("export_drawio_native", sc)
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as exc:  # noqa: BLE001 — a crash here used to leave lint="" and the
+        # tool reported success with NO lint/scorecard section, indistinguishable from a
+        # diagram that was actually checked and found clean. Make "the validator didn't
+        # run" visible instead of silently reading as "the validator ran and passed".
+        logger.warning("export_drawio_native: lint/scorecard computation failed: %s", exc)
+        lint = (
+            "\nLint: VALIDATION UNAVAILABLE (validator crashed) — production scorecard "
+            "withheld. Do NOT treat this as a pass; re-run or inspect out.png manually."
+        )
     # Persist lint findings as durable SolutionFindings — the native path is
     # the DEFAULT render path, but until now only the deprecated Graphviz
     # export_drawio() called this, so a native diagram's defects never became
@@ -2530,8 +2545,13 @@ def finalize_diagram(kind: str = "architecture") -> str:
                 "scorecard_pass": sc["pass"],
                 "breakdown": sc["breakdown"],
             }
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001 — advisory (this is a HITL gate; the
+            # human already approved before this code runs), but an empty quality_note
+            # used to be indistinguishable from "nothing to score" — fail closed instead
+            # of leaving scorecard_pass silently absent (which the template-harvest check
+            # below reads as falsy anyway, but now the reason is on record).
+            logger.warning("finalize_diagram: scorecard computation failed: %s", exc)
+            quality_note = {"status": "unavailable", "scorecard_total": None, "scorecard_pass": False}
     if _CRITIQUE_FILE.exists():
         try:
             findings = json.loads(_CRITIQUE_FILE.read_text(encoding="utf-8"))
@@ -2596,13 +2616,17 @@ def finalize_diagram(kind: str = "architecture") -> str:
         },
     )
     quality_text = ""
-    if quality_note.get("scorecard_total") is not None:
+    if quality_note.get("status") == "unavailable":
+        quality_text = (
+            " Production scorecard: UNAVAILABLE (validator error) — not scored; do not read this as a pass."
+        )
+    elif quality_note.get("scorecard_total") is not None:
         quality_text = (
             f" Production scorecard: {quality_note['scorecard_total']}/100 "
             f"({'PASS' if quality_note.get('scorecard_pass') else 'below gate'})."
         )
-        if quality_note.get("residual_findings"):
-            quality_text += f" {len(quality_note['residual_findings'])} residual critic finding(s)."
+    if quality_note.get("residual_findings"):
+        quality_text += f" {len(quality_note['residual_findings'])} residual critic finding(s)."
     return f"Diagram ({kind}) finalized and approved by the user.{quality_text}"
 
 

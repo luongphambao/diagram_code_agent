@@ -71,7 +71,11 @@ def _stage_artifacts(workspace) -> dict:
     solution_model = _read_json(workspace / "solution_model.json")
     if solution_model:
         out["solution_model"] = solution_model
-    if pending_gate:
+    # MEDIUM-1 fix: a resolved gate (resolve_pending_gate, called on resume)
+    # is kept on disk with status="resolved" as a durability fallback (see its
+    # docstring) — it must not be re-shown to the UI as if still awaiting a
+    # decision. Absent status = pending, for files written before this fix.
+    if pending_gate and pending_gate.get("status", "pending") == "pending":
         out["pending_gate"] = pending_gate
     if tool_summary:
         out["tool_budget_summary"] = tool_summary

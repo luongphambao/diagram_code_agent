@@ -8,8 +8,11 @@
 from __future__ import annotations
 
 import json
+import logging
 
 from langchain_core.tools import tool
+
+logger = logging.getLogger("diagram-agent")
 
 from backends import current_workspace
 from memory.stores.csm import SolutionModel
@@ -74,7 +77,7 @@ def _epistemic_note(model, *, cap: int = 8) -> str:
     return "\n\nEPISTEMIC SUMMARY (confirm assumptions / request evidence at the gate):\n" + "\n".join(lines)
 
 
-def _solution_gate_note(stage: str = "export", *, block: bool = False) -> str:
+def run_solution_gate(stage: str = "export", *, block: bool = False) -> tuple[bool, str]:
     """Run the cross-artifact validator + refresh trace_links.json at a pipeline gate.
 
     Called after a stage (`blueprint`/`wbs`, advisory) and before an export
@@ -84,13 +87,30 @@ def _solution_gate_note(stage: str = "export", *, block: bool = False) -> str:
     waived defect can never re-block an export (docx §4.3, §7.1). The summary's first
     line is `VALIDATION: PASS|AUTO-REPAIR|HUMAN-DECISION|WARN|BLOCK` for the three gate
     outcomes (pass / auto-repair / human-decision), plus an epistemic summary.
+
+    Returns ``(blocked, note)``. ``blocked`` is only meaningful when
+    ``block=True``: it is True when either an unresolved BLOCK-level finding
+    remains, or the validator itself failed to run — HIGH-4 fix: a crash used
+    to be swallowed into an empty string and the caller then wrote the export
+    file anyway (fail-open on the exact code path meant to protect the
+    client). A validator that didn't run must fail CLOSED, the same as a
+    validator that found a real contradiction. Callers implementing a real
+    release gate (not just an advisory note) must check ``blocked`` BEFORE
+    writing the deliverable file — see ``reporting_gates.py``.
     """
     try:
         model = build_solution_model(current_workspace())  # materialize/refresh the CSM projection
         write_trace_links(current_workspace())
         findings, _ = validate_solution(current_workspace(), block=block)
-    except Exception:
-        return ""
+    except Exception as exc:
+        if block:
+            logger.warning("release gate [%s]: validator unavailable, failing closed: %s", stage, exc)
+            return True, (
+                f"\n\nVALIDATION: UNAVAILABLE — the cross-artifact validator failed to run ({exc}). "
+                "RELEASE GATE: treated as a hard block, not a pass — the export was NOT produced. "
+                "Fix the underlying error and re-run."
+            )
+        return False, ""
     # Merge compliance-pack findings (required controls missing/ungrounded, §4 P2).
     # No-op unless a pack was selected via apply_compliance_pack.
     try:
@@ -117,16 +137,27 @@ def _solution_gate_note(stage: str = "export", *, block: bool = False) -> str:
     )
     csm_note += _epistemic_note(model)
     if not findings:
-        return csm_note
+        return False, csm_note
     note = csm_note + f"\n\nCROSS-ARTIFACT CHECK [{stage}] — " + summary
-    if block and summary.startswith("VALIDATION: BLOCK"):
+    blocked = block and summary.startswith("VALIDATION: BLOCK")
+    if blocked:
         note += (
             "\n\nRELEASE GATE: blocking contradiction(s) remain — do NOT send this to the "
-            "client. Either fix the artifact and re-run, or, if it is an accepted trade-off, "
-            "call waive_finding(finding_id, reason) / resolve_finding(finding_id, fix_applied) "
-            "to record the decision and clear the block."
+            "client. The export was NOT produced. Either fix the artifact and re-run, or, if "
+            "it is an accepted trade-off, call waive_finding(finding_id, reason) / "
+            "resolve_finding(finding_id, fix_applied) to record the decision and clear the "
+            "block, then re-run the export."
         )
-    return note
+    return blocked, note
+
+
+def _solution_gate_note(stage: str = "export", *, block: bool = False) -> str:
+    """Advisory wrapper over :func:`run_solution_gate` for non-release call sites
+    (``propose_blueprint``/wbs stages) that only ever want the note text, never
+    a blocking decision. Release gates (pdf/ppt export) call
+    ``run_solution_gate`` directly so they can act on ``blocked`` before
+    writing the deliverable file."""
+    return run_solution_gate(stage, block=block)[1]
 
 
 def _diagram_gate_note(*, block: bool = False, include_scorecard: bool = True) -> str:

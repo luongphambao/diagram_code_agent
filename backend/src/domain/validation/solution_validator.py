@@ -579,6 +579,48 @@ def evaluate_solution(
             )
         )
 
+    # Rule 11 — sprint-assignment anomaly (feasibility, high). A multi-sprint
+    # timeline where nearly every task landed in sprint 1 is the signature of
+    # plan_timeline_and_sprints running assign_sprints() over a CPM result
+    # that never actually had real dependency edges (see
+    # wbs_effort.critical_path's schedule_status / compute_wbs_rollup) — every
+    # early_start collapses to 0, so every task maps to sprint 1 regardless of
+    # the declared project length. This is a defense-in-depth net for data
+    # already on disk (and any path the schedule_status gate itself misses);
+    # new WBS runs should already avoid triggering it because compute_wbs_rollup
+    # no longer runs CPM on PERT estimates alone. high severity → blocks the
+    # release gate, matching HIGH-5's finding that this shipped in real WBS.json
+    # deliverables (9 of 12 audited runs).
+    timeline = wbs.get("timeline") or {}
+    sprints_total = timeline.get("sprints")
+    assigned = [it.get("assigned_sprint") for it in wbs_items if it.get("assigned_sprint") is not None]
+    if sprints_total and sprints_total > 1 and assigned:
+        sprint1_count = sum(1 for s in assigned if s == 1)
+        if sprint1_count / len(assigned) >= 0.9:
+            pct = round(100 * sprint1_count / len(assigned))
+            findings.append(
+                SolutionFinding(
+                    severity="high",
+                    confidence="high",
+                    dimension="feasibility",
+                    artifact_type="wbs",
+                    repair_strategy="human_decision",
+                    entity_ids=[],
+                    requires_human_decision=True,
+                    title="Sprint assignment anomaly: nearly all tasks in sprint 1",
+                    detail=(
+                        f"Timeline declares {sprints_total} sprints but {sprint1_count}/{len(assigned)} "
+                        f"tasks ({pct}%) are assigned to sprint 1 — the signature of a schedule "
+                        "computed without real task dependencies (critical path never actually ran)."
+                    ),
+                    recommendation=(
+                        "Supply predecessors/dependencies for delivery tasks so compute_wbs_rollup "
+                        "can run a real critical path, or accept the WBS as effort-only "
+                        "(no per-task sprint plan)."
+                    ),
+                )
+            )
+
     return findings
 
 

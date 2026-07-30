@@ -265,13 +265,20 @@ def critical_path(items: list[dict]) -> dict:
 
     Returns::
 
-        {"project_duration_md": float,
+        {"schedule_status": "planned" | "not_planned" | "cycle_detected",
+         "project_duration_md": float | None,
          "critical_path_ref_codes": [ref_code, ...],
          "items": [{"ref_code", "early_start", "early_finish",
                     "late_start", "late_finish", "float_md", "critical"}, ...]}
 
-    Isolated tasks (no predecessors and no successors) get ``float_md=None`` and
-    ``critical=False``.
+    ``schedule_status`` is ``"not_planned"`` when NO item declares a real
+    dependency edge (a PERT/3-point estimate alone is NOT a dependency) —
+    ``project_duration_md`` and every item's ``early_start``/etc. are ``None``
+    in that case, not a number derived from the single longest task dressed
+    up as "the project duration". ``"cycle_detected"`` is the same shape for a
+    dependency cycle. Only ``"planned"`` carries a real forward/backward pass.
+    Isolated tasks within an otherwise-planned graph (no predecessors and no
+    successors) get ``float_md=None`` and ``critical=False``.
     """
     nodes = [it for it in items if it.get("ref_code")]
     by_ref = {it["ref_code"]: it for it in nodes}
@@ -307,7 +314,18 @@ def critical_path(items: list[dict]) -> dict:
         for p, *_ in edges:
             succs[p].append(r)
 
-    def _bare(reason_no_path: bool) -> dict:
+    def _bare(status: str) -> dict:
+        # HIGH-5 fix: this used to return project_duration_md=max(dur) — the
+        # single longest task's duration — dressed up as "the project
+        # duration" with an empty critical path. A caller reading only
+        # project_duration_md/timeline (plan_timeline_and_sprints,
+        # assign_sprints, the Excel Delivery Plan) could not tell "genuinely
+        # computed" apart from "no dependencies were ever supplied, this
+        # number is meaningless". `schedule_status` makes that distinction
+        # explicit, and `project_duration_md=None` stops the bogus number
+        # from propagating (assign_sprints already treats early_start=None as
+        # "don't assign a sprint" — leaving early_start unset here, not 0, is
+        # what makes that work).
         out = [
             {
                 "ref_code": r,
@@ -321,10 +339,24 @@ def critical_path(items: list[dict]) -> dict:
             for r in by_ref
         ]
         return {
-            "project_duration_md": _round(max(dur.values(), default=0.0)),
+            "schedule_status": status,
+            "project_duration_md": None,
             "critical_path_ref_codes": [],
             "items": out,
         }
+
+    # No dependency edges at all across MULTIPLE tasks — every task is
+    # isolated. Running Kahn/CPM over an edgeless graph "succeeds" trivially
+    # (every node has indeg=0) and silently produces early_start=0 for every
+    # task, which is exactly the "everything piles into sprint 1" bug this
+    # status guards against. A single task (or zero tasks) has no scheduling
+    # ambiguity to get wrong regardless of dependency data — "the project
+    # duration is that one task's duration" is correct whether or not anyone
+    # supplied a predecessor, so those trivial sizes fall through to the
+    # normal computation below instead of being flagged not_planned.
+    edge_count = sum(len(v) for v in preds.values())
+    if edge_count == 0 and len(by_ref) > 1:
+        return _bare("not_planned")
 
     # Kahn topological order.
     queue = [r for r in by_ref if indeg[r] == 0]
@@ -338,7 +370,7 @@ def critical_path(items: list[dict]) -> dict:
             if rem[s] == 0:
                 queue.append(s)
     if len(topo) != len(by_ref):
-        return _bare(reason_no_path=True)
+        return _bare("cycle_detected")
 
     # Forward pass: compute ES/EF per relationship type.
     es: dict[str, float] = {r: 0.0 for r in by_ref}
@@ -396,7 +428,12 @@ def critical_path(items: list[dict]) -> dict:
                 "critical": is_crit,
             }
         )
-    return {"project_duration_md": _round(project_ef), "critical_path_ref_codes": crit, "items": out}
+    return {
+        "schedule_status": "planned",
+        "project_duration_md": _round(project_ef),
+        "critical_path_ref_codes": crit,
+        "items": out,
+    }
 
 
 def assign_sprints(items: list[dict], peak_dev_fte: float, weeks_per_sprint: int = 2) -> None:

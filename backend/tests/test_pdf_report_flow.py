@@ -76,7 +76,10 @@ def _write_report_inputs(tmp_path) -> None:
                 "pattern_rationale": "A three-tier pattern separates access, application, and data layers.",
                 "key_decisions": ["Use managed database for operational resilience."],
                 "clusters": [{"id": "app", "label": "Application Layer", "tier": "backend"}],
-                "nodes": [{"id": "api", "label": "API Service", "tech": "FastAPI", "cluster": "app"}],
+                "nodes": [
+                    {"id": "portal", "label": "Customer Portal", "tech": "React", "cluster": "app"},
+                    {"id": "api", "label": "API Service", "tech": "FastAPI", "cluster": "app"},
+                ],
                 "edges": [{"from": "portal", "to": "api", "label": "HTTPS", "protocol": "HTTP"}],
             }
         ),

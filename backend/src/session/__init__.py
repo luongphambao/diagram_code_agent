@@ -60,5 +60,6 @@ from .gate_decisions import (
     _pending_action_name,
     _revise_message,
     decision_record_from_payload,
+    resolve_pending_gate,
 )
 from .artifacts import _artifacts, _read_json, _run_metrics, _stage_artifacts

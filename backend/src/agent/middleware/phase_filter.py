@@ -224,10 +224,20 @@ def _missing_artifact_tools(workspace: "Path") -> set[str]:
 
 
 def _pending_gate_tools(workspace: "Path") -> set[str]:
-    """Tool names needed to revise or resume a gate already shown to the user."""
+    """Tool names needed to revise or resume a gate already shown to the user.
+
+    MEDIUM-1 fix: a resolved gate (status="resolved", written by
+    resolve_pending_gate on resume) must stop keeping its tool artificially
+    alive past its normal phase — before this check, an approved gate's tool
+    stayed in the allowed set forever, because nothing on the resume path
+    ever touched pending_gate.json. Absent status = pending (files written
+    before this fix, or a genuinely still-open gate).
+    """
     try:
         pending = json.loads((workspace / "pending_gate.json").read_text(encoding="utf-8"))
     except Exception:
+        return set()
+    if not isinstance(pending, dict) or pending.get("status", "pending") != "pending":
         return set()
     tool = pending.get("tool")
     return {tool} if isinstance(tool, str) and tool else set()

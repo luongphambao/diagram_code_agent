@@ -748,24 +748,39 @@ def compute_wbs_rollup() -> str:
     wbs["phases_nested"] = nested
     wbs["effort_by_module"] = by_mod
     wbs["effort_totals"] = totals
-    # Critical path (only when the agent supplied dependencies or 3-point estimates).
+    # Critical path — HIGH-5 fix: only run CPM when the agent supplied REAL
+    # dependency edges. A PERT/3-point estimate alone used to be enough to
+    # trigger CPM, which — with zero actual edges — silently degrades to
+    # "every task's early_start=0, project_duration=the single longest task,
+    # critical path empty" while LOOKING like a computed schedule. That
+    # bogus-but-plausible number is exactly what made 9 of 12 real WBS runs
+    # ship a Delivery Plan where every task landed in sprint 1 (see
+    # docs/codex/multi-agent-architecture-review-2026-07-30.md HIGH-5).
     cp_msg = ""
-    if any(
-        it.get("predecessors") or it.get("dependencies") or it.get("pert_expected_md") for it in wbs["items"]
-    ):
+    wbs["schedule_status"] = "not_planned"
+    if any(it.get("predecessors") or it.get("dependencies") for it in wbs["items"]):
         cp = critical_path(wbs["items"])
-        sched = {s["ref_code"]: s for s in cp["items"]}
-        sched_keys = ("early_start", "early_finish", "late_start", "late_finish", "float_md", "critical")
-        for it in wbs["items"]:
-            s = sched.get(it["ref_code"])
-            if s:
-                it.update({k: s[k] for k in sched_keys})
-        wbs["critical_path"] = {
-            "project_duration_md": cp["project_duration_md"],
-            "ref_codes": cp["critical_path_ref_codes"],
-        }
+        wbs["schedule_status"] = cp.get("schedule_status", "not_planned")
+        if wbs["schedule_status"] == "planned":
+            sched = {s["ref_code"]: s for s in cp["items"]}
+            sched_keys = ("early_start", "early_finish", "late_start", "late_finish", "float_md", "critical")
+            for it in wbs["items"]:
+                s = sched.get(it["ref_code"])
+                if s:
+                    it.update({k: s[k] for k in sched_keys})
+            wbs["critical_path"] = {
+                "project_duration_md": cp["project_duration_md"],
+                "ref_codes": cp["critical_path_ref_codes"],
+            }
+            cp_msg = (
+                f" Critical path: {len(cp['critical_path_ref_codes'])} tasks, {cp['project_duration_md']} MD."
+            )
+    if wbs["schedule_status"] != "planned":
         cp_msg = (
-            f" Critical path: {len(cp['critical_path_ref_codes'])} tasks, {cp['project_duration_md']} MD."
+            f" Schedule NOT planned ({wbs['schedule_status']}): no valid task dependency edges "
+            "were found. Timeline will show an effort-derived duration only — no critical path, "
+            "no per-task sprint assignment. Supply predecessors/dependencies on delivery tasks "
+            "for a real schedule."
         )
     # the builder reads wbs["phases"] as the nested tree → swap it in for export,
     # but keep the skeleton meta under phases_meta so add_wbs_items stays valid.
@@ -817,6 +832,7 @@ def plan_timeline_and_sprints(duration_weeks: Optional[int] = None, peak_dev_fte
         months = max(1, round(total_md / (MANDAYS_PER_MONTH * max(0.5, peak_dev_fte))))
         duration_weeks = months * 4
     grid = delivery_grid(duration_weeks)
+    schedule_status = wbs.get("schedule_status", "not_planned")
     wbs["timeline"] = {
         "weeks": grid["weeks"],
         "sprints": grid["sprints"],
@@ -825,15 +841,32 @@ def plan_timeline_and_sprints(duration_weeks: Optional[int] = None, peak_dev_fte
         "weeks_per_month": 4,
         "project_start_date": "TBD",
         "project_end_date": "TBD",
+        # HIGH-5 fix: the effort-derived duration above is always meaningful,
+        # but per-task sprint assignment below is only meaningful when
+        # compute_wbs_rollup actually ran a real critical path (real
+        # dependency edges were supplied) — carry that distinction into the
+        # artifact so downstream (Excel Delivery Plan, the anomaly check in
+        # solution_validator.py) doesn't have to re-derive it from item shape.
+        "schedule_status": schedule_status,
     }
-    # Sprint assignment: if CPM Early Start exists (from compute_wbs_rollup), assign sprints now.
-    if any(it.get("early_start") is not None for it in wbs.get("items", [])):
+    # Sprint assignment: only when compute_wbs_rollup ran a real critical path
+    # (early_start populated on every planned item). Previously this checked
+    # `early_start is not None` per-item, which used to be true even for a
+    # degenerate all-isolated CPM run (early_start=0 everywhere) — that's
+    # exactly the "everything piles into sprint 1" bug this status guards.
+    status_note = ""
+    if schedule_status == "planned" and any(it.get("early_start") is not None for it in wbs.get("items", [])):
         assign_sprints(wbs["items"], peak_dev_fte, weeks_per_sprint=2)
+    else:
+        status_note = (
+            " NOTE: schedule not planned (no task dependencies were supplied) — sprint "
+            "assignment was skipped; only the effort-derived duration above is meaningful."
+        )
     _write_json(_WBS_FILE, wbs)
     return (
         f"Timeline: {grid['weeks']} weeks = {grid['months']} months / "
         f"{grid['sprints']} sprints (2-week sprints). Delivery Plan will render "
-        f"{grid['months']} month columns."
+        f"{grid['months']} month columns." + status_note
     )
 
 
@@ -1260,8 +1293,23 @@ def export_wbs_excel(
             "propose_wbs_skeleton approval, create/finalize wbs.json, get "
             "propose_wbs approval, then call export_wbs_excel again."
         )
-    if not wbs or not wbs.get("phases"):
-        return "No approved WBS to export — run the planning pipeline first."
+    # HIGH-4/HIGH-5 fix: this used to run the cross-artifact validator with
+    # block=False AFTER build_wbs_workbook had already written wbs_filled.xlsx
+    # — the exact same fail-open pattern as the old generate_pdf_report/
+    # generate_ppt_proposal (see tools/analysis/gates.py::run_solution_gate).
+    # A blocking finding — including the sprint-assignment anomaly rule that
+    # catches a Delivery Plan piling every task into sprint 1 (see
+    # solution_validator.py rule 11 / wbs_effort.critical_path's
+    # schedule_status) — must stop the export, not just get appended as a
+    # warning after the file is already on disk.
+    from tools.analysis.gates import run_solution_gate
+
+    blocked, gate_note = run_solution_gate("wbs_export", block=True)
+    if blocked:
+        return (
+            "RELEASE GATE BLOCKED — export_wbs_excel did NOT run; no wbs_filled.xlsx was written." + gate_note
+        )
+
     try:
         layout = wbs_excel.build_wbs_workbook(wbs, _WBS_XLSX)
     except Exception as exc:  # noqa: BLE001
@@ -1285,34 +1333,7 @@ def export_wbs_excel(
         f"Delivery Plan spans {dly.get('months', '?')} months / {dly.get('weeks', '?')} weeks. "
         f"All effort columns are live formulas linked to the Master Data ratios."
     )
-    # Per-stage cross-artifact check (refresh CSM + trace links + flag drift, advisory).
-    # Persists findings to findings_log.json (stable id + waive/resolve lifecycle) and
-    # drops settled ones, mirroring analysis_tools._solution_gate_note (docx §4.3, §7.1).
-    try:
-        from csm_adapter import build_solution_model
-        from solution_validator import format_validation, validate_solution
-        from traceability import write_trace_links
-
-        model = build_solution_model(current_workspace())  # the WBS is now in scope — refresh the CSM
-        write_trace_links(current_workspace())
-        findings, _ = validate_solution(current_workspace(), block=False)
-        try:
-            from finding_store import active_findings, upsert_findings
-
-            upsert_findings(findings, revision=model.revision)
-            findings = active_findings(findings)
-        except Exception:
-            pass
-        msg += (
-            f"\n\nSOLUTION MODEL — revision {model.revision}: "
-            f"{len(model.work_items)} task linked via {len(model.trace_links)} trace link(s) "
-            "(solution_model.json)."
-        )
-        if findings:
-            msg += "\n\nCROSS-ARTIFACT CHECK [wbs] — " + format_validation(findings, block=False)
-    except Exception:
-        pass
-    return msg
+    return msg + gate_note
 
 
 # ── tool collections (imported by tools.py) ──────────────────────────────────

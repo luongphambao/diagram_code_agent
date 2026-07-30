@@ -458,15 +458,26 @@ ROLE_GATE_PERMISSIONS: dict[str, set[str]] = {
 def can_approve(role: str, gate: str) -> bool:
     """Whether ``role`` is permitted to sign off ``gate``.
 
-    Permissive by default: an empty/unknown role (the current frontend does not yet send
-    one) or a gate with no role restriction returns True, so enabling roles never blocks
-    an existing flow. Enforcement tightens only when a real role is supplied AND the gate
-    restricts it.
+    A gate with no role restriction (not a key in ROLE_GATE_PERMISSIONS — e.g. the
+    draft/skeleton gates ``propose_wbs_skeleton``/``propose_deck_plan``, deliberately
+    left open since they're not yet a client-facing artifact) is open to anyone,
+    role included or not.
+
+    A gate that DOES restrict roles requires a real, allowed role — an empty or
+    unknown role is DENIED, not silently waved through. CRITICAL-1 fix: this used
+    to default-permit an empty role on every gate, including technical-design
+    (propose_blueprint) and client-send (send_email) gates, on the stated
+    rationale that "the frontend does not yet send one". The frontend has since
+    shipped a role selector (frontend/src/App.tsx's userRole, defaulting to
+    "lead") that sends ``userRole`` on every /agui request, so that rationale no
+    longer holds — the permissive default only ever helped a caller that skipped
+    the frontend (a bare curl/API request), which is exactly the caller a
+    role gate exists to stop.
     """
     allowed = ROLE_GATE_PERMISSIONS.get(gate)
     if not allowed:
         return True
     role = (role or "").strip().lower()
     if not role:
-        return True
+        return False
     return role in allowed

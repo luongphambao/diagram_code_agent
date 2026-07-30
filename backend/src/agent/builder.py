@@ -6,6 +6,7 @@ import logging
 import os
 
 from deepagents import create_deep_agent
+from deepagents.middleware.filesystem import FilesystemPermission
 from langgraph.checkpoint.memory import MemorySaver
 
 from backends import (
@@ -26,6 +27,21 @@ from .streaming import _StreamingSubAgentRunnable
 from .subagents import build_subagent_specs
 
 logger = logging.getLogger(__name__)
+
+# CRITICAL-2 fix: every subagent used to inherit the full deepagents filesystem
+# toolset (write_file/edit_file included) regardless of its declared `tools`
+# list, and `/global-memories/` is a plain writable FilesystemBackend (see
+# backends.py) — so "read-only, don't touch memory" in the drawer/critic
+# prompts (prompts/drawer_agent.py, prompts/critic_agent.py) was advisory only.
+# The repo already proved prompt-only guards aren't enough for icon_resolver
+# (icon_plan.json) and brd_writer (out.brd.docx); apply the same principle here,
+# once, at the compile loop, so every subagent — present and future — is
+# covered without having to remember to add this rule to each new spec.
+_GLOBAL_MEMORY_WRITE_DENY = FilesystemPermission(
+    operations=["write"],
+    paths=["/global-memories/**"],
+    mode="deny",
+)
 
 
 def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE, checkpointer=None, store=None):
@@ -137,7 +153,7 @@ def build_agent(model: str | None = None, *, style: str = DEFAULT_STYLE, checkpo
                         backend=backend,
                         memory=[GLOBAL_MEMORY_PATH, MEMORY_PATH],
                         skills=spec.skills,
-                        permissions=spec.permissions,
+                        permissions=[_GLOBAL_MEMORY_WRITE_DENY, *(spec.permissions or [])],
                         middleware=_middleware(
                             run_limit=spec.run_limit,
                             agent_name=spec.name,

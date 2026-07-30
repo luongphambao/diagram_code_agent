@@ -36,8 +36,10 @@ class AuthConfigError(RuntimeError):
 @dataclass(frozen=True)
 class Identity:
     """A server-resolved caller identity. ``role`` is one of
-    ``tools.ROLE_GATE_PERMISSIONS``'s roles (architect/pm/lead/admin/...) or empty
-    (permissive — see ``tools.can_approve``)."""
+    ``tools.ROLE_GATE_PERMISSIONS``'s roles (architect/pm/lead/admin/...) or empty.
+    An empty role is permissive ONLY for a gate that has no entry in
+    ROLE_GATE_PERMISSIONS; for a restricted gate it is DENIED, not waved
+    through — see ``tools.can_approve``."""
 
     email: str
     role: str = ""
