@@ -8,14 +8,14 @@
 #   main:   claude-sonnet-4-6   → uses ANTHROPIC_API_KEY
 
 models:
-  main:           mimo-v2.5-pro
-  icon_resolver:  mimo-v2.5-pro
-  drawer:         mimo-v2.5-pro
-  critic:         mimo-v2.5-pro
-  wbs_planner:    mimo-v2.5-pro
-  ppt_outline:    mimo-v2.5-pro
-  ppt_generator:  mimo-v2.5-pro
-  brd_writer:     mimo-v2.5-pro
+  main:           moonshotai/kimi-k3-free
+  icon_resolver:  moonshotai/kimi-k3-free
+  drawer:         moonshotai/kimi-k3-free
+  critic:         moonshotai/kimi-k3-free
+  wbs_planner:    moonshotai/kimi-k3-free
+  ppt_outline:    moonshotai/kimi-k3-free
+  ppt_generator:  moonshotai/kimi-k3-free
+  brd_writer:     moonshotai/kimi-k3-free
 
 
 # ─── Provider Configurations ──────────────────────────────────────────────────
@@ -52,6 +52,10 @@ providers:
     base_url: https://llm-gateway.idpuat.bnksolution.com/   # OpenAI-compatible endpoint
     supports_structured_output: false  # gateway doesn't honor the Literal enum in with_structured_output's JSON schema → LLMToolSelectorMiddleware picks tool names outside the allowed set ("Model selected invalid tools")
 
+  tokenrouter:
+    api_key_env: TOKENROUTER_API_KEY
+    base_url: https://api.tokenrouter.com/v1   # OpenAI-compatible endpoint
+
 
 # ─── Model-name prefix → provider mapping ─────────────────────────────────────
 # Rules are matched in order; first match wins.
@@ -67,3 +71,4 @@ model_prefixes:
   "deepseek-ai/": aiand
   "gemini":  bnk
   "openai":  bnk
+  "moonshotai/": tokenrouter
