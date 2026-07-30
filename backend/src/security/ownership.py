@@ -1,7 +1,7 @@
 """Thread-ownership checks (improvement plan §0.6).
 
 ``threadId`` used to be the entire isolation boundary (see
-``runtime/backends.py``'s per-thread workspace) with no binding to *who* may use a
+``backends.py``'s per-thread workspace) with no binding to *who* may use a
 given thread id — any caller supplying a known/guessed ``threadId`` could read,
 resume, comment on, or approve HITL gates for it. This module adds a thin
 ownership layer on top of the existing ``conversations`` table (see

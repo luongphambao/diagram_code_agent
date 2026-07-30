@@ -38,7 +38,7 @@ backend/ — FastAPI + Deep Agent, :8001
 | `routers/` | `chat.py` (`POST /agui`, SSE + HITL resume — file lớn nhất), `upload.py`, `conversations.py`, `comments.py` |
 | `agent/` | `builder.py::build_agent()` gọi `create_deep_agent(...)`; `constants.py` (limit, skill path); `harness.py` (tuỳ biến deepagents harness, kill switch general-purpose); `persistence.py`; `streaming.py` (relay tool-call của subagent ra stream ngoài) |
 | `agent/middleware/` | Chuỗi middleware — **thứ tự là contract**, xem `agent-design.md` §5 |
-| `agent/subagents/` | 5 `SubagentSpec`: `icon_resolver`, `drawer`, `critic`, `wbs_planner`, `ppt_generator` |
+| `agent/subagents/` | 6 `SubagentSpec`: `icon_resolver`, `drawer`, `critic`, `wbs_planner`, `ppt_generator`, `brd_writer` |
 | `tools/` | Tool LangChain hướng agent + các list `*_TOOLS` + bảng gate (`GATE_TOOL_NAMES`, `GATE_DECISIONS`, `ROLE_GATE_PERMISSIONS`) |
 | `prompts/` | Builder system prompt theo agent; `_blocks.py` chứa các khối prose dùng chung + span `[[PHASE ...]]` |
 | `domain/diagram|deck|reporting|wbs|validation/` | Logic nghiệp vụ thuần, không phụ thuộc LLM |
@@ -120,4 +120,4 @@ Không có fallback tự động Modal→local: Modal chết thì render fail, c
 
 ## 7. Model
 
-`backend/config.yaml` map role → model: `main`, `icon_resolver`, `drawer`, `critic`, `wbs_planner`, `ppt_outline`, `ppt_generator`. `config/models.py::make_llm()` chọn provider theo prefix tên model (`gpt-`/`o1-` → openai, `claude-` → anthropic, `mimo-` → mimo, `deepseek-ai/` → aiand) và đọc API key từ env tương ứng. Không hardcode model ở call site — luôn qua `get_model(role, fallback)`.
+`backend/config.yaml` map role → model: `main`, `icon_resolver`, `drawer`, `critic`, `wbs_planner`, `ppt_outline`, `ppt_generator`, `brd_writer`. `config/models.py::make_llm()` chọn provider theo prefix tên model (`gpt-`/`o1-` → openai, `claude-` → anthropic, `mimo-` → mimo, `deepseek-ai/` → aiand) và đọc API key từ env tương ứng. Không hardcode model ở call site — luôn qua `get_model(role, fallback)`.

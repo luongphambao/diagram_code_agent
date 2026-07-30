@@ -18,11 +18,14 @@ NOTE: this module stays a top-level module (not moved into runtime/) because
 the test suite monkeypatches its module-level state directly (WORKSPACE,
 MEMORIES_DIR, OUTPUTS_DIR, WORKSPACES_DIR, _current_workspace) across many
 test files, expecting the real backend functions defined HERE to read the
-patched value. A re-export-shim split (real logic in runtime/backends.py,
-shim here) breaks that: functions defined in a different module resolve
-these names via THEIR OWN module globals, not the shim's copy — see
+patched value. A re-export-shim split (real logic in a runtime/ copy, shim
+here) breaks that: functions defined in a different module resolve these
+names via THEIR OWN module globals, not the shim's copy — see
 tests/test_workspace_isolation.py and the sibling tests that patch
-``backends._current_workspace``/``WORKSPACE``/etc. directly.
+``backends._current_workspace``/``WORKSPACE``/etc. directly. (A stale
+runtime/backends.py duplicate of this exact file — drifted, zero importers,
+and its own docstring claimed the reverse of this — was deleted; see
+docs/decisions/ or git history if you're looking for it.)
 """
 
 from __future__ import annotations

@@ -13,7 +13,7 @@ Hai trace thật cho thấy hậu quả:
 
 ## Quyết định
 
-Tắt subagent `general-purpose` cho **mọi** model tại thời điểm build: `_set_general_purpose_enabled(False, ...)` trong `agent/harness.py`, gọi từ `agent/builder.py`. Tool `task` chỉ còn tồn tại ở main agent để dispatch 5 subagent đã khai báo tường minh.
+Tắt subagent `general-purpose` cho **mọi** model tại thời điểm build: `_set_general_purpose_enabled(False, ...)` trong `agent/harness.py`, gọi từ `agent/builder.py`. Tool `task` chỉ còn tồn tại ở main agent để dispatch 6 subagent đã khai báo tường minh.
 
 Chốt canh bằng test: `tests/test_general_purpose_disabled.py` kiểm cả 6 lần gọi `create_deep_agent`.
 

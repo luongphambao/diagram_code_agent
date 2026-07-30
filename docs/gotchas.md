@@ -208,5 +208,5 @@ Mắc lỗi mới vì một đặc thù không hiển nhiên? Thêm một mục.
 ## Tài liệu
 
 ### `README.MD` ở root mâu thuẫn với code
-- **Nguyên nhân:** nó auto-generated và đã cũ — mô tả `backend/src/diagram_mcp/`, `agent.py`, `tools.py`, `RECURSION_LIMIT = 160`, 4 gate. Thực tế: `backend/src/server.py`, package `agent/`, 450, 13 gate.
+- **Nguyên nhân:** nó auto-generated và đã cũ — mô tả `backend/src/diagram_mcp/`, `agent.py`, `tools.py`, `RECURSION_LIMIT = 160`, 4 gate. Thực tế: `backend/src/server.py`, package `agent/`, 450, 16 gate.
 - **Đúng:** coi `AGENTS.md` + `docs/` là contract. Đừng trích README như nguồn sự thật.

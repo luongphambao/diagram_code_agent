@@ -7,7 +7,7 @@ Hợp đồng thiết kế của Deep Agent: tool nào dùng khi nào, subagent 
 
 ## 1. Hình dạng agent
 
-`agent/builder.py::build_agent()` gọi `create_deep_agent(...)` với: model theo role, `MAIN_TOOLS`, system prompt, `CompositeBackend`, `memory=[/global-memories/AGENTS.md, /memories/AGENTS.md]`, skills từ `backend/skills/`, 5 subagent đã compile, chuỗi middleware, checkpointer + store, `interrupt_on` (gate), `context_schema=SessionContext`.
+`agent/builder.py::build_agent()` gọi `create_deep_agent(...)` với: model theo role, `MAIN_TOOLS`, system prompt, `CompositeBackend`, `memory=[/global-memories/AGENTS.md, /memories/AGENTS.md]`, skills từ `backend/skills/`, 6 subagent đã compile, chuỗi middleware, checkpointer + store, `interrupt_on` (gate), `context_schema=SessionContext`.
 
 `RECURSION_LIMIT = 450` (`agent/constants.py`) — dùng **chung** cho main và mọi subagent được `task` gọi xuống. Đó là lý do nó phải cao; cái chặn thật sự là `ModelCallLimitMiddleware` theo từng agent.
 
@@ -22,6 +22,7 @@ Hợp đồng thiết kế của Deep Agent: tool nào dùng khi nào, subagent 
 | `critic` | Review chỉ-đọc `out.png` đối chiếu blueprint → `VERDICT: PASS/REVISE` | 2 | `CRITIC_CALL_LIMIT`=40 |
 | `wbs_planner` | Phân rã WBS theo format BnK + ước lượng → `wbs.json` / `wbs_skeleton.json` (gate ở lại main) | 5 + `run_python` | `WBS_CALL_LIMIT`=60 |
 | `ppt_generator` | Đọc artifact đã duyệt → `out.pptx` từ template BnK | 3 | `PPT_CALL_LIMIT`=60 |
+| `brd_writer` | Soạn outline + nội dung từng section BRD → `out.brd.docx` (gate ở lại main) | 6 | `BRD_CALL_LIMIT`=60 |
 
 Ba quy tắc bất di bất dịch khi thêm subagent:
 
@@ -35,7 +36,7 @@ Mọi subagent được bọc `_StreamingSubAgentRunnable` (`agent/streaming.py`
 
 ## 3. Tool — dùng cái nào khi nào
 
-Tool định nghĩa rải theo domain nhưng **danh sách** tập trung ở `tools/__init__.py` (`MAIN_TOOLS` 41 mục, cộng các list cho từng subagent). Thêm tool = thêm hàm `@tool` trong `tools/**` **và** đăng ký vào đúng list.
+Tool định nghĩa rải theo domain nhưng **danh sách** tập trung ở `tools/__init__.py` (`MAIN_TOOLS` 47 mục, cộng các list cho từng subagent). Thêm tool = thêm hàm `@tool` trong `tools/**` **và** đăng ký vào đúng list.
 
 Theo phase:
 
@@ -46,6 +47,7 @@ Theo phase:
 | draw | `task(icon_resolver)` → `task(drawer)` → `task(critic)` → `finalize_diagram` ⛩ | Architecture đi **native path**; `render_typed_diagram` cho sequence/erd/state_machine |
 | wbs | `task(wbs_planner)`, `propose_wbs_skeleton` ⛩, `propose_wbs` ⛩, `export_wbs_excel` ⛩, `get_effort_norms`, `benchmark_solution` | BA/QC/PM luôn **derive**, không tự ước lượng |
 | ppt / report | `propose_deck_plan` ⛩, `generate_ppt_proposal` ⛩, `generate_pdf_report` ⛩, `export_proposal_package` | Gọi `generate_pdf_report({})` **không tham số** trừ khi có lý do rõ |
+| brd | `task(brd_writer)`, `propose_brd_outline` ⛩, `generate_brd_docx` ⛩, `edit_brd_section` ⛩ | Xem `docs/plans/2026-07-29-brd-agent.md` |
 | delivery | `export_to_delivery` ⛩, `send_email` ⛩, `create_client_meeting` ⛩, `reality_sync` | |
 
 ⛩ = HITL gate.
@@ -56,9 +58,9 @@ Nhóm tool ngang: findings/evidence (`record_evidence`, `waive_finding`, `qualit
 
 ## 4. HITL gate
 
-- 13 gate liệt kê ở `GATE_TOOL_NAMES` (`tools/__init__.py`), nối vào `create_deep_agent` qua `interrupt_on` trong `builder.py`. deepagents interrupt **trước khi** tool chạy.
+- 16 gate liệt kê ở `GATE_TOOL_NAMES` (`tools/__init__.py`), nối vào `create_deep_agent` qua `interrupt_on` trong `builder.py`. deepagents interrupt **trước khi** tool chạy.
 - `GATE_DECISIONS` định nghĩa menu hành động cấp sản phẩm (`approve`, `approve_with_assumptions`, `accept_risk`, `request_evidence`, `request_alternative`, `reject`); `session/gate_decisions.py::_decision_from_payload` gấp chúng về approve/reject của langchain, và `decision_record_from_payload` lưu `DecisionRecord` có cấu trúc.
-- `ROLE_GATE_PERMISSIONS` + `can_approve(role, gate)` giới hạn ai được duyệt gate nào. Role đến từ `Identity` server resolve, **không bao giờ** từ body request.
+- `ROLE_GATE_PERMISSIONS` (14/16 gate — 2 gate soạn-thảo/skeleton, `propose_deck_plan` và `propose_wbs_skeleton`, cố ý để mở cho mọi role vì chưa phải deliverable khách thấy) + `can_approve(role, gate)` giới hạn ai được duyệt gate còn lại. Role đến từ `Identity` server resolve, **không bao giờ** từ body request. Role rỗng/không có trong danh sách bị **từ chối** ở gate có giới hạn (không còn mặc định cho qua); `agui_endpoint` (`routers/chat.py`) chặn bằng HTTP 403 **trước khi** stream response bắt đầu, trước cả `Command(resume=...)`.
 - Trước khi duyệt, `_persist_pending_gate` ghi `pending_gate.json` (+ bản nháp như `tech_stack_draft.json`) để gate sống sót qua reload.
 - Ngoại lệ: `propose_meeting_slots` dùng `interrupt()` nội bộ và **cố ý** không nằm trong `GATE_TOOL_NAMES`.
 

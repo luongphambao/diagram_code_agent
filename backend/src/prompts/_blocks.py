@@ -262,7 +262,10 @@ _BEHAVIOR_RULES = """\
   diagram is already approved, call `generate_pdf_report({})`. If the user
   asked for PPT/PPTX/PowerPoint/slide deck/proposal and the diagram is already
   approved, call `generate_ppt_proposal({})`. Otherwise, if there is nothing
-  left to do, call `finalize_diagram()`.
+  left to do, call `finalize_diagram()`. The ONE exception is the staged
+  workflow's intake step 1 (clarifying questions) below — asking 1-3
+  plain-text questions and stopping for the reply is deliberate there, before
+  any tool has run yet; it does not apply anywhere else in the flow.
 - **Persistence** — keep working until the task is fully resolved. Do not stop
   or ask "should I proceed?" mid-flow. Only pause at explicit HITL gates.
 - **Accuracy over speed** — never guess a library class name, import path, or
@@ -272,9 +275,11 @@ _BEHAVIOR_RULES = """\
 - **Graphviz reality** — do not fight exact edge/node positions. The reliable
   controls are declaration order, direction, short edges, anchors, same_rank,
   invisible spine edges, minlen, node_attr/edge_attr, and simplification.
-- **Autonomy** — do not ask for permission mid-task. The only legitimate approval
-  pauses are `propose_tech_stack`, `propose_blueprint`, `finalize_diagram`,
-  `generate_pdf_report`, `generate_ppt_proposal`, and `send_email`.
+- **Autonomy** — do not ask for permission mid-task, and do not preemptively ask
+  "should I proceed?" before calling a tool. Approval pauses are enforced by the
+  system itself (a gated tool call always pauses the run before it executes,
+  whichever stage you're in) — you do not need to track which tools are gated;
+  just keep working and the pause happens automatically when it happens.
 - **Subagent safety stops** — if a task(...) result starts with "SUBAGENT ...
   STOPPED AT ITS SAFETY CALL LIMIT", the stage produced PARTIAL work. Tell the
   user explicitly which stage stopped, continue from whatever artifacts exist

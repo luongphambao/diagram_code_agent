@@ -2,7 +2,7 @@
 
 Threads request_id/thread_id/run_id/render_job_id/sandbox_id through every log
 line for the duration of a request, using the same contextvars pattern already
-established for per-thread workspace binding (see runtime/backends.py's
+established for per-thread workspace binding (see backends.py's
 ``_current_workspace``). Without this, correlating log lines for one
 problematic run means grepping unstructured prose and hoping the thread_id
 happens to appear in the message text.
@@ -49,7 +49,7 @@ class ContextFilter(logging.Filter):
 def set_context(**fields: str) -> contextvars.Token:
     """Manual set/reset pair for call sites that can't use a ``with`` block —
     e.g. an async generator whose body already manages another contextvar
-    (``current_workspace()``, see runtime/backends.py) via a token stashed
+    (``current_workspace()``, see backends.py) via a token stashed
     across many ``yield`` statements and reset in one shared ``finally:``.
     Prefer :func:`bind_context` (the context-manager form) everywhere else.
     """
