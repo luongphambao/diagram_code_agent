@@ -39,6 +39,12 @@ CREATE TABLE IF NOT EXISTS conversations (
 
 `outcomes_json` lưu kết quả gate (`record_gate_outcome`). `owner_email` là quyền sở hữu thread: caller đã xác thực đầu tiên chạm vào thread sẽ **claim** nó (`security/ownership.py`); người khác nhận 404. Chuỗi rỗng nghĩa là **chưa ai sở hữu** — hàng dữ liệu cũ trước khi tính năng này ra đời, hoặc thread chưa ai claim; hàng chưa sở hữu vẫn hiện với mọi người để không khoá người dùng cũ ra ngoài.
 
+### Advisory run lease (không có bảng)
+
+`POST /agui` dùng `pg_try_advisory_lock(bigint)` trên một connection riêng để serialize run theo `(tenant_id, thread_id)`. Đây là session-level lock, không phải row/table: connection được giữ đến khi SSE kết thúc hoặc disconnect, rồi gọi `pg_advisory_unlock`; nếu process/connection chết PostgreSQL tự nhả lock. Vì vậy không có TTL table hay migration, và tuyệt đối không trả connection giữ lock về pool trước khi response kết thúc.
+
+Không có `DATABASE_URL` (dev), cùng contract được mô phỏng bằng map process-local; nó không phải distributed lock và không thay thế Postgres trong multi-process deployment.
+
 ---
 
 ## 3. Luật migration

@@ -136,6 +136,7 @@ async def test_allowed_role_proceeds_without_403(fake_agent):
     from fastapi.responses import StreamingResponse
 
     assert isinstance(result, StreamingResponse)
+    await result.background()
 
 
 @pytest.mark.anyio
@@ -149,6 +150,7 @@ async def test_unrestricted_gate_allows_any_role(fake_agent):
     from fastapi.responses import StreamingResponse
 
     assert isinstance(result, StreamingResponse)
+    await result.background()
 
 
 @pytest.mark.anyio
@@ -162,3 +164,48 @@ async def test_reject_decision_is_never_blocked_by_role(fake_agent):
     from fastapi.responses import StreamingResponse
 
     assert isinstance(result, StreamingResponse)
+    await result.background()
+
+
+@pytest.mark.anyio
+async def test_busy_thread_returns_stable_409_before_stream(monkeypatch, fake_agent):
+    fake_agent("propose_blueprint")
+
+    async def _busy(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr("routers.chat.try_acquire_run_lease", _busy)
+    with pytest.raises(HTTPException) as exc_info:
+        await _call_endpoint(
+            _resume_body(thread_id="busy-thread"),
+            Identity(email="arch@bnk.vn", role="architect"),
+        )
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.detail["code"] == "THREAD_BUSY"
+
+
+@pytest.mark.anyio
+async def test_stale_gate_card_returns_409_and_never_resumes(monkeypatch, tmp_path, fake_agent):
+    agent = fake_agent("propose_blueprint")
+    monkeypatch.setattr("routers.chat.resolve_workspace", lambda _thread_id: tmp_path)
+    (tmp_path / "pending_gate.json").write_text(
+        json.dumps(
+            {
+                "tool": "propose_blueprint",
+                "args": {},
+                "gate_id": "gate-current",
+                "revision": 4,
+            }
+        ),
+        encoding="utf-8",
+    )
+    body = _resume_body(thread_id="stale-gate-thread")
+    body["messages"][-1]["content"] = json.dumps(
+        {"approved": True, "gate_id": "gate-old", "gate_revision": 3}
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await _call_endpoint(body, Identity(email="arch@bnk.vn", role="architect"))
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.detail["code"] == "STALE_GATE"
+    assert agent.astream_called is False

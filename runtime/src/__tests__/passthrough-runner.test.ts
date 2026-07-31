@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { firstValueFrom, toArray } from "rxjs";
 import type { AbstractAgent, BaseEvent } from "@ag-ui/client";
 import { DiagramHttpAgent } from "../diagram-agent.js";
-import { PassthroughRunner } from "../passthrough-runner.js";
+import { PassthroughRunner, ThreadBusyError } from "../passthrough-runner.js";
 
 /**
  * Verifies the two properties PassthroughRunner exists for (plan §A.2/§A.5,
@@ -96,6 +96,40 @@ describe("PassthroughRunner", () => {
   it("stop() on an unknown thread returns false", async () => {
     const runner = new PassthroughRunner();
     expect(await runner.stop({ threadId: "never-ran" })).toBe(false);
+  });
+
+  it("rejects a second run for the same thread without replacing the owner", async () => {
+    const runner = new PassthroughRunner();
+    let resolveRun: () => void = () => {};
+    const first = new DiagramHttpAgent({ url: "http://backend:8001/agui" });
+    first.subscribe = vi.fn(() => ({ unsubscribe: vi.fn() })) as AbstractAgent["subscribe"];
+    first.runAgent = vi.fn(
+      () => new Promise((resolve) => { resolveRun = () => resolve({} as never); }),
+    ) as AbstractAgent["runAgent"];
+    first.abortRun = vi.fn();
+
+    const firstSub = runner.run({
+      threadId: "same-thread",
+      agent: first as unknown as AbstractAgent,
+      input: { threadId: "same-thread", runId: "r1", messages: [] } as never,
+    }).subscribe();
+
+    const second = mockAgent(fakeEvents());
+    await expect(
+      firstValueFrom(
+        runner.run({
+          threadId: "same-thread",
+          agent: second,
+          input: { threadId: "same-thread", runId: "r2", messages: [] } as never,
+        }),
+      ),
+    ).rejects.toBeInstanceOf(ThreadBusyError);
+    expect(second.runAgent).not.toHaveBeenCalled();
+    expect(await runner.stop({ threadId: "same-thread" })).toBe(true);
+    expect(first.abortRun).toHaveBeenCalledOnce();
+
+    resolveRun();
+    firstSub.unsubscribe();
   });
 
   describe("connect()", () => {

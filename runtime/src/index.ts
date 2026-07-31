@@ -6,6 +6,7 @@ import { DiagramHttpAgent } from "./diagram-agent.js";
 import { PassthroughRunner } from "./passthrough-runner.js";
 import { CONFIG } from "./config.js";
 import { artifactStore } from "./artifact-store.js";
+import { authorizeArtifactDownload } from "./artifact-authz.js";
 
 /** Forward whatever identity headers backend/src/security/auth.py's
  *  `require_identity` understands (header mode: X-Auth-Request-Email /
@@ -61,7 +62,7 @@ const listener = createCopilotNodeListener({
 
 const ARTIFACTS_PREFIX = "/api/artifacts/";
 
-const server = createServer((req, res) => {
+const server = createServer(async (req, res) => {
   if (req.url === "/healthz") {
     res.writeHead(200, { "Content-Type": "text/plain" }).end("ok");
     return;
@@ -72,6 +73,13 @@ const server = createServer((req, res) => {
   // (artifact-store.ts), so a cache hit is safe to mark immutable.
   if (req.method === "GET" && req.url?.startsWith(ARTIFACTS_PREFIX)) {
     const key = decodeURIComponent(req.url.slice(ARTIFACTS_PREFIX.length).split("?")[0]);
+    const authz = await authorizeArtifactDownload(key, req.headers);
+    if (!authz.ok) {
+      const status = authz.status === 401 ? 401 : authz.status === 502 ? 502 : 404;
+      res.writeHead(status, { "Content-Type": "text/plain", "Cache-Control": "no-store" })
+        .end(status === 502 ? "artifact authorization unavailable" : "artifact not found");
+      return;
+    }
     const entry = artifactStore.get(key);
     if (!entry) {
       res.writeHead(404, { "Content-Type": "text/plain" }).end("artifact not found or expired");

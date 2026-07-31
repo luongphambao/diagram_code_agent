@@ -16,6 +16,15 @@ interface ConversationHistoryResponse {
   state: Record<string, unknown>;
 }
 
+export class ThreadBusyError extends Error {
+  readonly code = "THREAD_BUSY";
+
+  constructor(threadId: string) {
+    super(`Another run is already active for thread ${threadId}`);
+    this.name = "ThreadBusyError";
+  }
+}
+
 /**
  * `InMemoryAgentRunner` (the built-in default) keeps a module-global
  * `Map<threadId, {subject: ReplaySubject<BaseEvent>(Infinity), historicRuns}>`
@@ -29,6 +38,10 @@ export class PassthroughRunner extends AgentRunner {
 
   run(request: AgentRunnerRunRequest): Observable<BaseEvent> {
     return new Observable<BaseEvent>((subscriber) => {
+      if (this.inflight.has(request.threadId)) {
+        subscriber.error(new ThreadBusyError(request.threadId));
+        return;
+      }
       this.inflight.set(request.threadId, request.agent);
 
       const subscription = request.agent.subscribe({

@@ -8,6 +8,7 @@ import logging
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from starlette.background import BackgroundTask
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.errors import GraphRecursionError
 from langgraph.types import Command
@@ -59,6 +60,11 @@ from session_state import (
     _tool_selection_tools,
     resolve_pending_gate,
 )
+from session.gate_decisions import (
+    bind_pending_gate_identity,
+    validate_pending_gate_identity,
+)
+from session.run_lease import try_acquire_run_lease
 
 logger = logging.getLogger("diagram-agent")
 
@@ -218,19 +224,6 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
     # dir. Only /global-memories/ stays shared across threads — see backends.py.
     ws = resolve_workspace(thread_id)
 
-    # Typed-diagram foundation: an explicit frontend type selection outranks
-    # both the LLM's own DiagramBrief.diagram_kind and the deterministic
-    # keyword suggestion (architecture_analysis.json's suggested_diagram_kind).
-    # "" / "auto" means "Auto detect" — leave no override file, same as today.
-    if diagram_kind_override and diagram_kind_override != "auto":
-        try:
-            ws.mkdir(parents=True, exist_ok=True)
-            (ws / "diagram_kind_override.json").write_text(
-                json.dumps({"diagram_kind": diagram_kind_override}), encoding="utf-8"
-            )
-        except OSError:
-            logger.warning("failed to persist diagram_kind_override for thread %s", thread_id)
-
     config = {
         "configurable": {"thread_id": thread_id},
         "recursion_limit": RECURSION_LIMIT,
@@ -249,6 +242,41 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
     )
     last_tool = _last_tool_msg(messages)
 
+    # HIGH-1: serialize all mutable work for one thread before reading its
+    # checkpoint or touching its workspace. Advisory locks are session-scoped,
+    # so this lease stays on a dedicated DB connection until the SSE response
+    # finishes or the client disconnects. The internal deployment is one tenant;
+    # retaining tenant in the key keeps the lock contract ready for future
+    # tenant-aware ownership without changing its hash shape.
+    lease = await try_acquire_run_lease(
+        request.app.state.pool,
+        tenant_id="bnk-internal",
+        thread_id=thread_id,
+        run_id=run_id,
+    )
+    if lease is None:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "THREAD_BUSY",
+                "message": "Another run is already active for this thread.",
+                "thread_id": thread_id,
+            },
+        )
+
+    # Typed-diagram foundation: an explicit frontend type selection outranks
+    # both the LLM's own DiagramBrief.diagram_kind and the deterministic
+    # keyword suggestion (architecture_analysis.json's suggested_diagram_kind).
+    # "" / "auto" means "Auto detect" — leave no override file, same as today.
+    if diagram_kind_override and diagram_kind_override != "auto":
+        try:
+            ws.mkdir(parents=True, exist_ok=True)
+            (ws / "diagram_kind_override.json").write_text(
+                json.dumps({"diagram_kind": diagram_kind_override}), encoding="utf-8"
+            )
+        except OSError:
+            logger.warning("failed to persist diagram_kind_override for thread %s", thread_id)
+
     # CRITICAL-1 fix: precompute the resume decision BEFORE the streaming
     # response starts, so a disallowed role gets a real HTTP 403 instead of a
     # mid-stream event — once RUN_STARTED is yielded inside stream() below,
@@ -266,8 +294,25 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
             resume_payload = json.loads(last_tool.get("content", "{}"))
         except Exception:  # noqa: BLE001
             resume_payload = {}
-        resume_pending_name = _pending_action_name(await _pending_interrupt(config))
+        try:
+            resume_pending_name = _pending_action_name(await _pending_interrupt(config))
+        except Exception:
+            await lease.release()
+            raise
         resume_decision = _decision_from_payload(resume_payload, resume_pending_name)
+        gate_matches, mismatch_reason = validate_pending_gate_identity(
+            ws, resume_pending_name, resume_payload
+        )
+        if not gate_matches:
+            await lease.release()
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "STALE_GATE",
+                    "message": mismatch_reason,
+                    "gate": resume_pending_name or "",
+                },
+            )
         if (
             resume_decision.get("type") == "approve"
             and resume_pending_name in GATE_TOOL_NAMES
@@ -303,6 +348,7 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                 )
             except Exception as exc:  # noqa: BLE001 — the 403 below must fire regardless
                 logger.warning("failed to persist denied-approval audit record: %s", exc)
+            await lease.release()
             raise HTTPException(
                 status_code=403,
                 detail=(
@@ -347,6 +393,13 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                         archive_approved_revision(ws)
                     except Exception as exc:  # noqa: BLE001
                         logger.debug("approved-revision archive skipped: %s", exc)
+                    if pending_name == "propose_blueprint":
+                        try:
+                            from session.artifact_manifest import archive_approved_blueprint
+
+                            archive_approved_blueprint(ws)
+                        except Exception as exc:  # noqa: BLE001
+                            logger.debug("approved-blueprint archive skipped: %s", exc)
                     # MEDIUM-1 fix: resolve pending_gate.json on approve, BEFORE the
                     # resume actually runs, so the UI stops showing a stale approval
                     # card and phase_filter stops keeping an already-approved gate's
@@ -1014,6 +1067,19 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                     gate_name = _pending_action_name(val)
                     if gate_name:
                         card.setdefault("allowed_decisions", allowed_decisions_for(gate_name))
+                        gate_id = f"gate-{new_id()}"
+                        action_requests = val.get("action_requests") if isinstance(val, dict) else []
+                        gate_args = (action_requests or [{}])[0].get("args") or {}
+                        if isinstance(val, dict) and val.get("type") == "slot_picker":
+                            gate_args = val
+                        gate_revision = bind_pending_gate_identity(
+                            ws,
+                            gate_name,
+                            gate_id,
+                            args=gate_args if isinstance(gate_args, dict) else {},
+                        )
+                        card["gate_id"] = gate_id
+                        card["gate_revision"] = gate_revision
                     logger.info("PAUSED at gate: %s", card["type"])
                     state_delta = [{"op": "add", "path": "/current_step", "value": step}]
                     for k, v in _stage_artifacts(ws).items():
@@ -1126,4 +1192,5 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
         stream(),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+        background=BackgroundTask(lease.release),
     )

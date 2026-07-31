@@ -4,6 +4,16 @@ Ngày viết: 2026-07-31
 Nguồn: `docs/codex/multi-agent-architecture-review-2026-07-30.md` (§4 Findings, §8 Target
 architecture, §9 Roadmap).
 
+## Trạng thái triển khai 2026-07-31
+
+Đã hoàn tất các mục bounded không cần dependency mới trong tài liệu này:
+
+- **HIGH-1:** backend advisory run lease + HTTP `THREAD_BUSY`, runtime collision defense, gate identity/revision chống stale resume.
+- **HIGH-2 runtime:** `/api/artifacts/:key` gọi backend artifact-authz và forward identity header trước khi đọc store.
+- **P1.3:** snapshot blueprint được duyệt và validator blocking cho chain approved blueprint → render spec → Draw.io; PDF/PPT release gate dùng validator này trước khi tạo file.
+
+P1.1 vẫn giữ quyết định không làm. P1.6 và P2 vẫn để lại vì cần chốt phạm vi/refactor/dependency riêng.
+
 ## Bối cảnh
 
 Sau review, đã fix xong: CRITICAL-1 (RBAC), CRITICAL-2 (global memory write), HIGH-2 (artifact
@@ -15,7 +25,7 @@ tường minh, `session/workflow_state.py` — xong 2026-07-31), MEDIUM-3 (Docke
 
 Tài liệu này chỉ liệt kê phần **chưa làm**, để tránh lặp lại phân tích đã xong ở review gốc.
 
-## 1. HIGH-1 — Same-thread run lease (chưa làm, ưu tiên cao nhất còn lại)
+## 1. HIGH-1 — Same-thread run lease (đã làm 2026-07-31)
 
 **Hiện trạng đã xác minh (2026-07-31):**
 
@@ -50,7 +60,7 @@ vì đó là nơi duy nhất có Postgres pool và đã có precompute-before-st
 (CRITICAL-1 fix là tiền lệ trực tiếp). Cần một research pass riêng (đọc `chat.py` toàn bộ luồng resume
 + `conv_db` pool lifecycle) trước khi viết plan chi tiết như đã làm cho MEDIUM-2 — **chưa làm pass đó**.
 
-## 1b. HIGH-2 phần còn thiếu — runtime chưa gọi artifact-authz
+## 1b. HIGH-2 phần runtime (đã làm 2026-07-31)
 
 Backend đã có `GET /conversations/{thread_id}/artifact-authz` (commit `cb13ac4`). Nhưng
 `runtime/src/index.ts` (`ARTIFACTS_PREFIX` handler, dòng ~73) vẫn serve `artifactStore.get(key)` trực
@@ -71,7 +81,7 @@ Nếu sau này cần làm đúng đề xuất gốc của review (StateGraph th�
 điều phối**, rủi ro cao (đụng resume protocol, checkpointer schema, cách subagent được gọi) — cần một
 plan mode riêng, không nối vào việc nhỏ lẻ.
 
-## 3. P1.3 — End-to-end semantic check xuyên toàn bộ chain (partial, chưa xong)
+## 3. P1.3 — End-to-end semantic check xuyên toàn bộ chain (đã làm 2026-07-31)
 
 **Đã có:** `session/artifact_manifest.py::is_stale` phát hiện artifact lệch so với upstream đã ghi
 nhận (`derived_from` hash chain), dùng bởi `solution_validator._staleness_findings` — nhưng đây là

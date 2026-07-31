@@ -749,6 +749,157 @@ def _staleness_findings(workspace: Path) -> list[SolutionFinding]:
     return findings
 
 
+def _semantic_chain_findings(workspace: Path) -> list[SolutionFinding]:
+    """Block semantic loss from the approved blueprint through the renderer.
+
+    PDF/PPT generation already runs this validator with ``block=True`` before
+    writing client-facing files, so proving the approved blueprint survives
+    both ``render_spec.json`` and ``out.drawio`` closes the export chain too.
+    Legacy workspaces without an immutable approved-blueprint snapshot remain
+    backward compatible and produce no finding here.
+    """
+    try:
+        from session.artifact_manifest import load_approved_blueprint
+
+        approved, index = load_approved_blueprint(workspace)
+    except Exception:
+        return []
+    if not approved:
+        if (workspace / "approved_blueprint.json").exists():
+            return [
+                SolutionFinding(
+                    severity="high",
+                    confidence="high",
+                    dimension="completeness",
+                    artifact_type="blueprint",
+                    repair_strategy="auto_repair",
+                    title="Approved blueprint snapshot is unavailable",
+                    detail="approved_blueprint.json exists but its immutable snapshot cannot be loaded.",
+                    recommendation="Restore or re-approve the blueprint before export.",
+                )
+            ]
+        return []
+
+    approved_nodes = [
+        str(node.get("id"))
+        for node in _as_list(approved.get("nodes"))
+        if isinstance(node, dict) and node.get("id")
+    ]
+    approved_edges = [
+        _edge_endpoints(edge) for edge in _as_list(approved.get("edges")) if isinstance(edge, dict)
+    ]
+    approved_edges = [(source, target) for source, target in approved_edges if source and target]
+    revision = str(index.get("revision") or "unknown")
+    findings: list[SolutionFinding] = []
+
+    render_spec = _read_json(workspace / "render_spec.json", {}) or {}
+    if not render_spec:
+        findings.append(
+            SolutionFinding(
+                severity="high",
+                confidence="high",
+                dimension="completeness",
+                artifact_type="diagram",
+                repair_strategy="auto_repair",
+                title="Approved blueprint has no render specification",
+                detail=f"Approved blueprint revision {revision} cannot be traced to render_spec.json.",
+                recommendation="Regenerate render_spec.json from the approved blueprint before export.",
+            )
+        )
+        return findings
+
+    spec_nodes = {
+        str(node.get("id"))
+        for node in _as_list(render_spec.get("nodes"))
+        if isinstance(node, dict) and node.get("id")
+    }
+    spec_edges = {
+        _edge_endpoints(edge) for edge in _as_list(render_spec.get("edges")) if isinstance(edge, dict)
+    }
+    missing_spec_nodes = [node_id for node_id in approved_nodes if node_id not in spec_nodes]
+    missing_spec_edges = [edge for edge in approved_edges if edge not in spec_edges]
+    if missing_spec_nodes or missing_spec_edges:
+        entity_ids = missing_spec_nodes + [f"{source}->{target}" for source, target in missing_spec_edges]
+        findings.append(
+            SolutionFinding(
+                severity="high",
+                confidence="high",
+                dimension="diagram_structural",
+                artifact_type="diagram",
+                repair_strategy="auto_repair",
+                entity_ids=entity_ids,
+                title="Render specification loses approved blueprint semantics",
+                detail=(
+                    f"Approved blueprint revision {revision} is missing "
+                    f"{len(missing_spec_nodes)} node(s) and {len(missing_spec_edges)} edge(s) "
+                    "in render_spec.json."
+                ),
+                recommendation="Rebuild render_spec.json from the approved blueprint without dropping IDs.",
+            )
+        )
+
+    drawio = workspace / "out.drawio"
+    if not drawio.exists():
+        findings.append(
+            SolutionFinding(
+                severity="high",
+                confidence="high",
+                dimension="completeness",
+                artifact_type="diagram",
+                repair_strategy="auto_repair",
+                title="Approved blueprint has no Draw.io output",
+                detail=f"Approved blueprint revision {revision} cannot be traced to out.drawio.",
+                recommendation="Render and finalize out.drawio before producing client-facing exports.",
+            )
+        )
+        return findings
+    try:
+        from prettygraph.native.repair import semantic_stats
+
+        layout_plan = _read_json(workspace / "layout_plan.json", {}) or {}
+        stats = semantic_stats(
+            render_spec,
+            drawio.read_text(encoding="utf-8"),
+            layout_plan,
+        )
+    except Exception as exc:
+        findings.append(
+            SolutionFinding(
+                severity="high",
+                confidence="high",
+                dimension="diagram_structural",
+                artifact_type="diagram",
+                repair_strategy="auto_repair",
+                title="Draw.io semantic validation is unavailable",
+                detail=f"Could not verify approved blueprint revision {revision}: {type(exc).__name__}.",
+                recommendation="Regenerate out.drawio and rerun semantic validation before export.",
+            )
+        )
+        return findings
+    missing_drawio_nodes = [str(value) for value in stats.get("missing_nodes") or []]
+    missing_drawio_edges = [tuple(value) for value in stats.get("missing_edges") or []]
+    if missing_drawio_nodes or missing_drawio_edges:
+        entity_ids = missing_drawio_nodes + [f"{source}->{target}" for source, target in missing_drawio_edges]
+        findings.append(
+            SolutionFinding(
+                severity="high",
+                confidence="high",
+                dimension="diagram_structural",
+                artifact_type="diagram",
+                repair_strategy="auto_repair",
+                entity_ids=entity_ids,
+                title="Draw.io output loses approved blueprint semantics",
+                detail=(
+                    f"Approved blueprint revision {revision} has node recall "
+                    f"{float(stats.get('node_recall', 0.0)):.0%} and edge recall "
+                    f"{float(stats.get('edge_recall', 0.0)):.0%} in out.drawio."
+                ),
+                recommendation="Re-render out.drawio from the approved render specification.",
+            )
+        )
+    return findings
+
+
 def validate_solution(
     workspace: Optional[Path] = None,
     *,
@@ -778,4 +929,5 @@ def validate_solution(
         model = None
     findings = evaluate_solution(brief, blueprint, wbs, model=model)
     findings += _staleness_findings(workspace)
+    findings += _semantic_chain_findings(workspace)
     return findings, format_validation(findings, block=block)

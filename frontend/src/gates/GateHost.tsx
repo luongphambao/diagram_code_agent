@@ -23,6 +23,7 @@ import UnknownGateCard from "./UnknownGateCard";
 import WildcardGateCard from "./WildcardGateCard";
 import { useWildcardHumanInTheLoop } from "./useWildcardHumanInTheLoop";
 import { useDiagramWorkspaceContext } from "../context/AgentContext";
+import { attachGateIdentity } from "./gateIdentity";
 
 type OnDecision = (toolCallId: string, args: unknown, decision: unknown) => void;
 
@@ -45,18 +46,32 @@ function GateRegistrar({ type, onDecision }: { type: GateType; onDecision: OnDec
       const parsed = parseGatePayload(type, props.args);
       const wrappedRespond = props.respond
         ? (payload: unknown) => {
-            onDecision(props.toolCallId, props.args, payload);
-            return props.respond!(payload);
+            const identifiedPayload = attachGateIdentity(props.args, payload);
+            onDecision(props.toolCallId, props.args, identifiedPayload);
+            return props.respond!(identifiedPayload);
           }
         : undefined;
 
       if (!parsed.ok) {
         return (
-          <UnknownGateCard label={def.label} reason={parsed.reason} rawArgs={props.args} status={props.status} respond={wrappedRespond} />
+          <UnknownGateCard
+            label={def.label}
+            reason={parsed.reason}
+            rawArgs={props.args}
+            status={props.status}
+            respond={wrappedRespond}
+          />
         );
       }
 
-      return <def.Card toolCallId={props.toolCallId} args={parsed.data} status={props.status} respond={wrappedRespond} />;
+      return (
+        <def.Card
+          toolCallId={props.toolCallId}
+          args={parsed.data}
+          status={props.status}
+          respond={wrappedRespond}
+        />
+      );
     },
   });
 
@@ -89,8 +104,9 @@ export default function GateHost() {
         respond={
           props.respond
             ? (payload) => {
-                onDecision(props.toolCallId, props.args, payload);
-                return props.respond!(payload);
+                const identifiedPayload = attachGateIdentity(props.args, payload);
+                onDecision(props.toolCallId, props.args, identifiedPayload);
+                return props.respond!(identifiedPayload);
               }
             : undefined
         }

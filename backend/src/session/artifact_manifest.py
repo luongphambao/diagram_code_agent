@@ -23,6 +23,7 @@ import json
 from pathlib import Path
 
 _MANIFEST_NAME = "artifact_manifest.json"
+_APPROVED_BLUEPRINT_INDEX = "approved_blueprint.json"
 
 
 def _manifest_path(workspace: Path) -> Path:
@@ -108,3 +109,70 @@ def is_stale(workspace: Path, name: str) -> tuple[bool, list[str]]:
         if current is not None and current != recorded_rev:
             drifted.append(upstream_name)
     return bool(drifted), drifted
+
+
+def archive_approved_blueprint(workspace: Path) -> Path | None:
+    """Archive the exact proposed blueprint before its gated tool executes.
+
+    Deep Agents interrupts before ``propose_blueprint`` runs, so the approved
+    payload lives in ``pending_gate.json`` rather than canonical
+    ``blueprint.json`` at decision time. The immutable snapshot becomes the
+    semantic source of truth for every downstream preservation check.
+    """
+    workspace = Path(workspace)
+    try:
+        pending = json.loads((workspace / "pending_gate.json").read_text(encoding="utf-8"))
+        if not isinstance(pending, dict) or pending.get("tool") != "propose_blueprint":
+            return None
+        args = pending.get("args") or {}
+        blueprint = args.get("blueprint", args) if isinstance(args, dict) else {}
+        if not isinstance(blueprint, dict) or not blueprint:
+            return None
+        canonical = json.dumps(blueprint, ensure_ascii=False, indent=2, sort_keys=True)
+        revision = hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+        approved_dir = workspace / "approved"
+        approved_dir.mkdir(parents=True, exist_ok=True)
+        dest = approved_dir / f"blueprint-{revision}.json"
+        if not dest.exists():
+            dest.write_text(canonical, encoding="utf-8")
+            try:
+                import stat
+
+                dest.chmod(stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
+            except OSError:
+                pass
+        index = {
+            "revision": revision,
+            "path": str(dest.relative_to(workspace)),
+            "gate_id": pending.get("gate_id") or "",
+            "gate_revision": pending.get("revision") or 0,
+        }
+        tmp = workspace / f"{_APPROVED_BLUEPRINT_INDEX}.tmp"
+        tmp.write_text(json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(workspace / _APPROVED_BLUEPRINT_INDEX)
+        return dest
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def load_approved_blueprint(workspace: Path) -> tuple[dict, dict]:
+    """Return ``(blueprint, index)`` or two empty dicts for legacy workspaces."""
+    workspace = Path(workspace)
+    try:
+        index = json.loads((workspace / _APPROVED_BLUEPRINT_INDEX).read_text(encoding="utf-8"))
+        if not isinstance(index, dict):
+            return {}, {}
+        rel = index.get("path")
+        rel_path = Path(rel) if isinstance(rel, str) else Path()
+        if (
+            not rel
+            or rel_path.is_absolute()
+            or not rel_path.parts
+            or rel_path.parts[0] != "approved"
+            or ".." in rel_path.parts
+        ):
+            return {}, {}
+        blueprint = json.loads((workspace / rel_path).read_text(encoding="utf-8"))
+        return (blueprint, index) if isinstance(blueprint, dict) else ({}, {})
+    except Exception:  # noqa: BLE001
+        return {}, {}

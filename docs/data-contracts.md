@@ -148,3 +148,11 @@ ArtifactRef = { __artifact: string, mime: string, filename: string }
 
 `runtime/src/artifact-substitution.ts` thay 4 field — `png_base64`, `pdf_base64`, `pptx_base64`, `wbs_xlsx_base64` — bằng ref, phục vụ tại `GET /api/artifacts/:key`.
 Field `drawio` **giữ nguyên inline**: nội dung XML cần nguyên văn trong URL fragment để mở draw.io.
+
+---
+
+## 10. Approved blueprint + gate identity
+
+- `pending_gate.json`: `{tool, args, status:"pending", revision, gate_id}`. `gate_id` là opaque token theo lần card được phát; `revision` tăng khi proposal gate mới được persist. Resume phải echo thành `gate_id` + `gate_revision`.
+- `approved_blueprint.json`: index `{revision, path, gate_id, gate_revision}` trỏ tới snapshot immutable-ish `approved/blueprint-<sha256-prefix>.json` chứa đúng payload blueprint mà người duyệt đã approve (interrupt xảy ra trước khi tool ghi `blueprint.json`).
+- Release validator so node/edge ID từ snapshot approved → `render_spec.json` → `out.drawio`. Mất semantic ở một hop là finding `high`, vì vậy PDF/PPT gate (`block=True`) không tạo artifact khách hàng khi chain bị đứt.

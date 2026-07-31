@@ -40,10 +40,11 @@ Request theo giao thức AG-UI: `threadId`, `runId`, `messages[]`, `state`, `for
 
 Backend làm, theo thứ tự:
 1. Resolve `Identity` từ header → `ensure_owner(thread_id)`.
-2. `set_current_workspace(resolve_workspace(thread_id))` — bind ContextVar workspace cho toàn bộ request.
-3. Phân biệt **chat thường** vs **resume gate** (xem §4).
-4. `AGENT.astream(...)` với stream mode có `custom`, để tool call bên trong subagent nổi lên thành ACTIVITY event.
-5. Dịch event LangGraph → event AG-UI (`session/sse.py`).
+2. Acquire run lease `(bnk-internal, thread_id)` bằng PostgreSQL advisory lock; nếu thread đang chạy trả HTTP `409` với `detail.code="THREAD_BUSY"` **trước SSE**.
+3. `set_current_workspace(resolve_workspace(thread_id))` — bind ContextVar workspace cho toàn bộ request.
+4. Phân biệt **chat thường** vs **resume gate** (xem §4).
+5. `AGENT.astream(...)` với stream mode có `custom`, để tool call bên trong subagent nổi lên thành ACTIVITY event.
+6. Dịch event LangGraph → event AG-UI (`session/sse.py`); lease được nhả khi response hoàn tất hoặc client disconnect.
 
 Yêu cầu hạ tầng: SSE cần `proxy_buffering off` và timeout dài (nginx đặt 3600s). Thêm hop proxy nào cũng phải giữ hai điều này, nếu không stream sẽ bị đệm rồi chết.
 
@@ -59,6 +60,8 @@ Yêu cầu hạ tầng: SSE cần `proxy_buffering off` và timeout dài (nginx 
 _pending_interrupt(config) → _decision_from_payload(payload, pending_name)
   → AGENT.astream(Command(resume={"decisions": [decision]}), ...)
 ```
+
+Mỗi card mang `gate_id` + `gate_revision`; frontend phải echo hai field này trong decision payload. Backend đối chiếu với `pending_gate.json` trước resume. Card cũ/stale trả HTTP `409` với `detail.code="STALE_GATE"`, không chạy `Command(resume=...)`.
 
 **Menu quyết định.** `GATE_DECISIONS` khai các hành động cấp sản phẩm cho từng gate: `approve`, `approve_with_assumptions`, `accept_risk`, `request_evidence`, `request_alternative`, `reject`. `_decision_from_payload` **gấp** chúng về `approve`/`reject` mà langchain hiểu, còn `decision_record_from_payload` lưu `DecisionRecord` đầy đủ ngữ nghĩa. Thêm hành động mới thì phải làm cả hai vế — nếu không, ngữ nghĩa mất.
 
@@ -77,6 +80,8 @@ Backend trả file nhị phân trong payload dưới dạng base64. Node runtime
 ```
 
 phục vụ tại `GET /api/artifacts/:key`. Frontend resolve qua `src/lib/artifacts.ts`.
+
+Runtime gọi `GET /conversations/{thread_id}/artifact-authz` và forward header identity trước khi đọc artifact store. Authz fail được che thành 404 (401 giữ nguyên; backend unavailable trả 502), nên biết key không đủ để tải artifact của thread khác.
 
 Field `drawio` **cố ý không bị thay**: XML phải có nguyên văn ở client để dựng URL fragment mở draw.io.
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import difflib
 import json
+from pathlib import Path
 
 from domain.reporting.business_case import (
     BusinessCaseInputs,
@@ -49,8 +50,18 @@ def _persist_pending_gate(name: str, args: dict) -> None:
 
         workspace = current_workspace()
         workspace.mkdir(parents=True, exist_ok=True)
-        (workspace / "pending_gate.json").write_text(
-            json.dumps({"tool": name, "args": args}, ensure_ascii=False, indent=2),
+        path = workspace / "pending_gate.json"
+        try:
+            previous = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            previous = {}
+        revision = int(previous.get("revision") or 0) + 1 if isinstance(previous, dict) else 1
+        path.write_text(
+            json.dumps(
+                {"tool": name, "args": args, "revision": revision, "status": "pending"},
+                ensure_ascii=False,
+                indent=2,
+            ),
             encoding="utf-8",
         )
         if name == "propose_tech_stack":
@@ -66,6 +77,61 @@ def _persist_pending_gate(name: str, args: dict) -> None:
             )
     except Exception:
         return
+
+
+def bind_pending_gate_identity(
+    workspace: Path,
+    gate: str,
+    gate_id: str,
+    *,
+    args: dict | None = None,
+) -> int:
+    """Attach the UI-visible identity used to reject stale gate resumes."""
+    workspace = Path(workspace)
+    workspace.mkdir(parents=True, exist_ok=True)
+    path = workspace / "pending_gate.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    except Exception:
+        data = {}
+    if not isinstance(data, dict) or data.get("tool") != gate:
+        data = {"tool": gate, "args": args or {}, "revision": 1, "status": "pending"}
+    elif args is not None:
+        data["args"] = args
+    revision = int(data.get("revision") or 1)
+    data.update({"gate_id": gate_id, "revision": revision, "status": "pending"})
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(path)
+    return revision
+
+
+def validate_pending_gate_identity(workspace: Path, gate: str | None, payload: dict) -> tuple[bool, str]:
+    """Validate a resume against the exact gate card currently on disk.
+
+    Legacy workspaces without a gate identity remain resumable. Once a card has
+    an identity, both its opaque id and monotonic revision are mandatory.
+    """
+    try:
+        data = json.loads((Path(workspace) / "pending_gate.json").read_text(encoding="utf-8"))
+    except Exception:
+        if payload.get("gate_id"):
+            return False, "current pending gate identity is unavailable"
+        return True, ""
+    if not isinstance(data, dict) or not data.get("gate_id"):
+        return True, ""
+    if data.get("tool") != gate:
+        return False, "pending gate changed"
+    if payload.get("gate_id") != data.get("gate_id"):
+        return False, "gate id does not match the current pending gate"
+    try:
+        payload_revision = int(payload.get("gate_revision"))
+        current_revision = int(data.get("revision"))
+    except (TypeError, ValueError):
+        return False, "gate revision is missing or invalid"
+    if payload_revision != current_revision:
+        return False, "gate revision does not match the current pending gate"
+    return True, ""
 
 
 def resolve_pending_gate(workspace) -> None:
@@ -193,8 +259,9 @@ def _card_for(val, summary: str):
     ars = (val or {}).get("action_requests") or [{}]
     name = ars[0].get("name")
     args = ars[0].get("args") or {}
-    if name == "propose_tech_stack":
+    if name:
         _persist_pending_gate(name, args)
+    if name == "propose_tech_stack":
         ts = _normalize_tech_stack(args.get("tech_stack"))
         scaling_roadmap = _coerce_list(args.get("scaling_roadmap"))
         assumptions = _coerce_assumptions(args.get("assumptions"))
@@ -218,7 +285,6 @@ def _card_for(val, summary: str):
         }
         return (card_data, "awaiting_techstack", state_delta)
     if name == "propose_blueprint":
-        _persist_pending_gate(name, args)
         bp = _normalize_blueprint(args.get("blueprint", {}))
         return (
             {
