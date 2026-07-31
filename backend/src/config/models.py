@@ -90,8 +90,11 @@ def make_llm(model: str):
 
     # Streaming needs a long read window: the raw httpx read timeout is inter-byte
     # and, for endpoints that go fully silent (no SSE keepalives), fires as a bare
-    # httpx.ReadTimeout. Do not pass stream_chunk_timeout here: current
-    # langchain-openai forwards unknown kwargs to the provider API payload.
+    # httpx.ReadTimeout. `stream_chunk_timeout` (below, provider-configurable) is a
+    # real ChatOpenAI field on langchain-openai>=1.2 that fires sooner, on genuine
+    # content silence between parsed chunks — leave other kwargs alone since
+    # anything NOT a recognized field gets silently forwarded into the provider
+    # API payload instead of erroring.
     kwargs: dict[str, Any] = dict(
         model=model,
         api_key=api_key,
@@ -109,6 +112,10 @@ def make_llm(model: str):
 
     if pcfg.get("use_responses_api"):
         kwargs["use_responses_api"] = True
+
+    stream_chunk_timeout = pcfg.get("stream_chunk_timeout")
+    if stream_chunk_timeout is not None:
+        kwargs["stream_chunk_timeout"] = float(stream_chunk_timeout)
 
     extra_body = pcfg.get("extra_body")
     if extra_body:
