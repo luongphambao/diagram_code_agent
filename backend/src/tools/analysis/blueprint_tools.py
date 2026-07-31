@@ -583,9 +583,51 @@ def _build_render_spec(blueprint: Blueprint, provider: str) -> dict:
 
 
 def _preseed_icon_plan(blueprint: Blueprint, provider: str) -> None:
-    """Run deterministic icon lookups for every node label and write icon_plan.json."""
+    """Run deterministic icon lookups for every node label and write icon_plan.json.
+
+    Merges into any existing icon_plan.json instead of overwriting it outright.
+    The icon_resolver subagent sometimes runs BEFORE propose_blueprint in a
+    session (e.g. the main agent pre-resolves icons off an early draft) and
+    writes its own fuller list-format resolution (FOUND paths for most nodes).
+    Blindly overwriting here — the previous behavior — discarded that work the
+    moment propose_blueprint ran afterward, leaving AWS-heavy diagrams with
+    mostly-empty icon candidate lists even though icon_resolver had already
+    found them. See rendering_tools._bake_icon_plan's docstring, which already
+    normalizes both icon_plan.json shapes for this exact reason on the read
+    side — this mirrors that same key normalization on the write side.
+    """
+    from ..rendering_tools import _icon_key
+
+    resolved: dict[str, str] = {}
+    if _ICON_PLAN_FILE.exists():
+        try:
+            raw_plan = json.loads(_ICON_PLAN_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            raw_plan = None
+        if isinstance(raw_plan, dict):
+            for k, v in raw_plan.items():
+                path = v[0] if isinstance(v, list) and v else v if isinstance(v, str) else None
+                if path and _icon_key(k):
+                    resolved[_icon_key(k)] = path
+        elif isinstance(raw_plan, list):
+            for entry in raw_plan:
+                if not isinstance(entry, dict) or entry.get("status") == "NOT_FOUND":
+                    continue
+                path = entry.get("icon") or entry.get("path")
+                if not path:
+                    continue
+                for key in (entry.get("id"), entry.get("label"), entry.get("name")):
+                    if key and _icon_key(key):
+                        resolved[_icon_key(key)] = path
+
     plan: dict[str, list[str]] = {}
     for node in blueprint.nodes:
+        match = resolved.get(_icon_key(node.id)) or (
+            resolved.get(_icon_key(node.label)) if node.label else None
+        )
+        if match:
+            plan[node.id] = [match]
+            continue
         query = node.label or node.id
         hits = _search_icon_hits(query, provider or None, limit=5)
         plan[node.id] = [_icon_rel(h) for h in hits]

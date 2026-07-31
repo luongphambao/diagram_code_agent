@@ -7,6 +7,7 @@ Covers the client-deliverable upgrade of the refined preset:
   4. refined edges going through the deterministic router (ports + waypoints)
   5. icon coverage counting refined "__ic" badge cells (parented to root "1")
 """
+
 from __future__ import annotations
 
 import base64
@@ -20,24 +21,26 @@ from prettygraph.native.topology import _resolve_node_icon, build_drawio_from_sp
 
 # 1x1 transparent PNG
 _PNG = base64.b64decode(
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAC"
-    "hwGA60e6kgAAAABJRU5ErkJggg==")
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+)
 
 
 def _refined_min_spec(**over):
     spec = {
-        "style_preset": "refined", "provider": "aws", "diagram_title": "T",
-        "clusters": [{"id": "z1", "label": "Edge", "number": 1},
-                     {"id": "z2", "label": "App", "number": 2}],
+        "style_preset": "refined",
+        "provider": "aws",
+        "diagram_title": "T",
+        "clusters": [{"id": "z1", "label": "Edge", "number": 1}, {"id": "z2", "label": "App", "number": 2}],
         "nodes": [
             {"id": "waf", "cluster": "z1", "label": "AWS WAF"},
             {"id": "kms", "cluster": "z1", "label": "AWS KMS"},
             {"id": "api", "cluster": "z2", "label": "API Gateway"},
             {"id": "fund", "cluster": "z2", "label": "Fund Management Service"},
         ],
-        "edges": [{"from": "waf", "to": "api", "label": "Route request",
-                   "flow": "data"},
-                  {"from": "kms", "to": "fund", "label": "Decrypt", "flow": "control"}],
+        "edges": [
+            {"from": "waf", "to": "api", "label": "Route request", "flow": "data"},
+            {"from": "kms", "to": "fund", "label": "Decrypt", "flow": "control"},
+        ],
     }
     spec.update(over)
     return spec
@@ -45,16 +48,24 @@ def _refined_min_spec(**over):
 
 # ---- 1. icon_plan bake + fallback chain ---------------------------------- #
 
+
 def test_bake_icon_plan_bakes_for_aws(tmp_path):
     from tools.rendering_tools import _bake_icon_plan
+
     icon = tmp_path / "route-53.png"
     icon.write_bytes(_PNG)
-    (tmp_path / "icon_plan.json").write_text(json.dumps([
-        {"label": "Route 53", "status": "FOUND", "icon": str(icon)},
-    ]), encoding="utf-8")
-    spec = {"provider": "aws",
-            "nodes": [{"id": "r53", "label": "Route 53"},
-                      {"id": "mystery", "label": "Zorbly Flux Unit"}]}
+    (tmp_path / "icon_plan.json").write_text(
+        json.dumps(
+            [
+                {"label": "Route 53", "status": "FOUND", "icon": str(icon)},
+            ]
+        ),
+        encoding="utf-8",
+    )
+    spec = {
+        "provider": "aws",
+        "nodes": [{"id": "r53", "label": "Route 53"}, {"id": "mystery", "label": "Zorbly Flux Unit"}],
+    }
     _bake_icon_plan(spec, tmp_path)
     # AWS is no longer exempt: the plan entry becomes a data URI
     assert spec["nodes"][0]["icon_data_uri"].startswith("data:image/png;base64,")
@@ -65,18 +76,83 @@ def test_bake_icon_plan_bakes_for_aws(tmp_path):
 
 def test_bake_icon_plan_normalized_label_match(tmp_path):
     from tools.rendering_tools import _bake_icon_plan
+
     icon = tmp_path / "x.png"
     icon.write_bytes(_PNG)
-    (tmp_path / "icon_plan.json").write_text(json.dumps([
-        {"label": "route-53", "status": "FOUND", "icon": str(icon)},
-    ]), encoding="utf-8")
+    (tmp_path / "icon_plan.json").write_text(
+        json.dumps(
+            [
+                {"label": "route-53", "status": "FOUND", "icon": str(icon)},
+            ]
+        ),
+        encoding="utf-8",
+    )
     spec = {"provider": "aws", "nodes": [{"id": "n1", "label": "Route 53"}]}
     _bake_icon_plan(spec, tmp_path)
     assert "icon_data_uri" in spec["nodes"][0]  # "Route 53" ~ "route-53"
 
 
+def test_preseed_icon_plan_preserves_icon_resolver_resolution(tmp_path, monkeypatch):
+    """propose_blueprint must not clobber icon_plan.json when icon_resolver already
+    resolved it first (session order: icon_resolver runs, THEN propose_blueprint) —
+    the exact sequence that left AWS-heavy diagrams with mostly-empty icon
+    candidate lists (see rendering_tools._bake_icon_plan's docstring)."""
+    from tools.analysis.blueprint_tools import _preseed_icon_plan
+    import tools.analysis.blueprint_tools as blueprint_tools
+    from types import SimpleNamespace
+
+    icon_plan_file = tmp_path / "icon_plan.json"
+    monkeypatch.setattr(blueprint_tools, "_ICON_PLAN_FILE", icon_plan_file)
+    icon_plan_file.write_text(
+        json.dumps(
+            [
+                {
+                    "label": "Amazon CloudFront",
+                    "id": "cloudfront",
+                    "status": "FOUND",
+                    "icon": "aws/network/cloudfront.png",
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    def _fake_search_hits(query, provider, limit=5):
+        raise AssertionError(f"should not re-search already-resolved node: {query!r}")
+
+    monkeypatch.setattr(blueprint_tools, "_search_icon_hits", _fake_search_hits)
+    blueprint = SimpleNamespace(nodes=[SimpleNamespace(id="cloudfront", label="Amazon CloudFront")])
+
+    _preseed_icon_plan(blueprint, "aws")
+
+    plan = json.loads(icon_plan_file.read_text(encoding="utf-8"))
+    assert plan["cloudfront"] == ["aws/network/cloudfront.png"]
+
+
+def test_preseed_icon_plan_still_searches_unresolved_nodes(tmp_path, monkeypatch):
+    """A node with no existing resolution still gets a fresh deterministic search."""
+    from tools.analysis.blueprint_tools import _preseed_icon_plan
+    import tools.analysis.blueprint_tools as blueprint_tools
+    from types import SimpleNamespace
+
+    icon_plan_file = tmp_path / "icon_plan.json"
+    monkeypatch.setattr(blueprint_tools, "_ICON_PLAN_FILE", icon_plan_file)
+
+    monkeypatch.setattr(
+        blueprint_tools, "_search_icon_hits", lambda query, provider, limit=5: ["hit1", "hit2"]
+    )
+    monkeypatch.setattr(blueprint_tools, "_icon_rel", lambda h: h)
+    blueprint = SimpleNamespace(nodes=[SimpleNamespace(id="new_node", label="Some New Service")])
+
+    _preseed_icon_plan(blueprint, "aws")
+
+    plan = json.loads(icon_plan_file.read_text(encoding="utf-8"))
+    assert plan["new_node"] == ["hit1", "hit2"]
+
+
 def test_category_glyph_is_deterministic_and_neutral():
     from tools.rendering_tools import _category_glyph
+
     assert _category_glyph({"label": "Investors / Advisors"}) == "users"
     assert _category_glyph({"label": "Session Cache", "type": "cache"}) == "generic_database"
     assert _category_glyph({"label": "Payment Gateway"}) == "internet"
@@ -85,25 +161,32 @@ def test_category_glyph_is_deterministic_and_neutral():
 
 # ---- 2. catalog aliases + generic-token guard ---------------------------- #
 
-@pytest.mark.parametrize("label,expected", [
-    ("AWS KMS", "key_management_service"),
-    ("SQS FIFO Queue", "sqs"),
-    ("SNS Topics", "sns"),
-    ("S3 Bucket", "s3"),
-    ("AWS WAF", "waf"),
-    ("CloudWatch", "cloudwatch_2"),
-    ("Application Load Balancer", "application_load_balancer"),
-])
+
+@pytest.mark.parametrize(
+    "label,expected",
+    [
+        ("AWS KMS", "key_management_service"),
+        ("SQS FIFO Queue", "sqs"),
+        ("SNS Topics", "sns"),
+        ("S3 Bucket", "s3"),
+        ("AWS WAF", "waf"),
+        ("CloudWatch", "cloudwatch_2"),
+        ("Application Load Balancer", "application_load_balancer"),
+    ],
+)
 def test_catalog_alias_resolution(label, expected):
     cat = load_catalog()
     assert _resolve_node_icon(cat, {"label": label}, "aws") == expected
 
 
-@pytest.mark.parametrize("label", [
-    "Fund Management Service",   # would mis-rank to key_management_service
-    "Transaction Service",
-    "Payment Service",
-])
+@pytest.mark.parametrize(
+    "label",
+    [
+        "Fund Management Service",  # would mis-rank to key_management_service
+        "Transaction Service",
+        "Payment Service",
+    ],
+)
 def test_generic_token_guard_returns_none(label):
     cat = load_catalog()
     assert _resolve_node_icon(cat, {"label": label}, "aws") is None
@@ -124,20 +207,25 @@ def test_exact_token_bonus_prefers_earlier_token():
 
 # ---- 3. remote image URL hard-fails validation --------------------------- #
 
+
 def test_validator_errors_on_remote_image_url():
     import domain.validation.validate_drawio as vd
-    xml = ('<mxfile><diagram name="p"><mxGraphModel><root>'
-           '<mxCell id="0"/><mxCell id="1" parent="0"/>'
-           '<mxCell id="c" vertex="1" parent="1" '
-           'style="shape=image;image=https://icon2c.com/route53.svg;">'
-           '<mxGeometry x="0" y="0" width="40" height="40" as="geometry"/></mxCell>'
-           '</root></mxGraphModel></diagram></mxfile>')
+
+    xml = (
+        '<mxfile><diagram name="p"><mxGraphModel><root>'
+        '<mxCell id="0"/><mxCell id="1" parent="0"/>'
+        '<mxCell id="c" vertex="1" parent="1" '
+        'style="shape=image;image=https://icon2c.com/route53.svg;">'
+        '<mxGeometry x="0" y="0" width="40" height="40" as="geometry"/></mxCell>'
+        "</root></mxGraphModel></diagram></mxfile>"
+    )
     rep = vd.validate_xml(xml)
     assert any("Remote image URL" in e for e in rep["errors"])
     assert rep["ok"] is False
 
 
 # ---- 4. refined edges are ROUTED (ports + not raw) ----------------------- #
+
 
 def test_refined_edges_carry_router_ports():
     xml, _ = build_drawio_from_spec(_refined_min_spec(), "T")
@@ -153,15 +241,16 @@ def test_refined_edges_carry_router_ports():
 def test_refined_label_boxes_do_not_overlap():
     """The post-routing label solver must never leave two labels overprinting."""
     spec = _refined_min_spec()
-    spec["edges"].append({"from": "waf", "to": "fund",
-                          "label": "Second parallel flow", "flow": "data"})
+    spec["edges"].append({"from": "waf", "to": "fund", "label": "Second parallel flow", "flow": "data"})
     xml, _ = build_drawio_from_spec(spec, "T")
     import domain.validation.validate_drawio as vd
+
     rep = vd.validate_xml(xml)
     assert (rep["layout_metrics"].get("edge_label_overlaps") or 0) == 0
 
 
 # ---- 5. icon coverage counts refined __ic badges ------------------------- #
+
 
 def test_icon_coverage_counts_root_parented_badges():
     uri = "data:image/png;base64," + base64.b64encode(_PNG).decode()
@@ -170,6 +259,7 @@ def test_icon_coverage_counts_root_parented_badges():
         n["icon_data_uri"] = uri
     xml, stats = build_drawio_from_spec(spec, "T")
     import domain.validation.validate_drawio as vd
+
     rep = vd.validate_xml(xml, stats=stats)
     assert rep["layout_metrics"].get("icon_coverage") == 1.0
     sc = vd.production_scorecard(rep, stats)
