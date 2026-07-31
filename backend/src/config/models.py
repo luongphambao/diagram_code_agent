@@ -110,5 +110,9 @@ def make_llm(model: str):
     if pcfg.get("use_responses_api"):
         kwargs["use_responses_api"] = True
 
+    extra_body = pcfg.get("extra_body")
+    if extra_body:
+        kwargs["extra_body"] = extra_body
+
     logger.debug("make_llm  model=%s  provider=%s  base_url=%s", model, provider_name, base_url)
     return ChatOpenAI(**kwargs)

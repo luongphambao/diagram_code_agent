@@ -8,14 +8,14 @@
 #   main:   claude-sonnet-4-6   → uses ANTHROPIC_API_KEY
 
 models:
-  main:           mimo-v2.5
-  icon_resolver:  mimo-v2.5
-  drawer:         mimo-v2.5
-  critic:         mimo-v2.5
-  wbs_planner:    mimo-v2.5
-  ppt_outline:    mimo-v2.5
-  ppt_generator:  mimo-v2.5
-  brd_writer:     mimo-v2.5
+  main:           GLM-5.2
+  icon_resolver:  GLM-5.2
+  drawer:         GLM-5.2
+  critic:         GLM-5.2
+  wbs_planner:    GLM-5.2
+  ppt_outline:    GLM-5.2
+  ppt_generator:  GLM-5.2
+  brd_writer:     GLM-5.2
 
 
 # ─── Provider Configurations ──────────────────────────────────────────────────
@@ -56,6 +56,13 @@ providers:
     api_key_env: TOKENROUTER_API_KEY
     base_url: https://api.tokenrouter.com/v1   # OpenAI-compatible endpoint
 
+  fpt:
+    api_key_env: FPT_API_KEY
+    base_url: https://mkp-api.fptcloud.com   # OpenAI-compatible endpoint
+    extra_body:
+      thinking:
+        type: disabled   # GLM-5.2 is a reasoning model; disable to skip reasoning_content and save tokens
+
 
 # ─── Model-name prefix → provider mapping ─────────────────────────────────────
 # Rules are matched in order; first match wins.
@@ -72,3 +79,4 @@ model_prefixes:
   "gemini":  bnk
   "openai":  bnk
   "moonshotai/": tokenrouter
+  "GLM-":    fpt
