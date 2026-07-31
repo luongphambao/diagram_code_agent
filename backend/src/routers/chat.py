@@ -358,6 +358,21 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                     resolve_pending_gate(ws)
                 if pending_name in GATE_TOOL_NAMES:
                     note = payload.get("feedback") or payload.get("modifications") or ""
+                    # MEDIUM-2 fix: record the human decision explicitly (approve/reject),
+                    # independent of file existence -- see session/workflow_state.py.
+                    # Covers all 16 GATE_TOOL_NAMES from this one call site; only the two
+                    # gates in BLOCKING_GATE_PHASES actually affect phase detection, the
+                    # rest are recorded as an inert audit trail. Placed before the first
+                    # await below so the state write completes even if a client disconnect
+                    # cancels the resume that follows.
+                    try:
+                        from session.workflow_state import record_gate_decision
+
+                        record_gate_decision(
+                            ws, pending_name, decision["type"], note=str(note) if note else ""
+                        )
+                    except Exception as exc:  # noqa: BLE001 — audit-only; must never break a resume
+                        logger.debug("workflow-state gate record skipped: %s", exc)
                     record_report_step(
                         ws,
                         f"{pending_name}_gate",

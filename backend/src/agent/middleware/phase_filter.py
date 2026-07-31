@@ -172,20 +172,52 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
 }
 
 
+# Ordered most-advanced-wins evidence chain -- same order as the original
+# if-chain (test_brd_registration.py::test_brd_phase_outranks_report_phase
+# pins "brd" above "report"), now data instead of code so _blocked_phases can
+# skip a phase without duplicating the chain.
+_PHASE_EVIDENCE: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("brd", ("out.brd.docx", "brd_outline_draft.json")),
+    ("report", ("out.pdf",)),
+    ("ppt", ("deck_plan.json",)),
+    ("wbs", ("wbs.json",)),
+    ("draw", ("out.png", "blueprint.json")),
+    ("blueprint", ("tech_stack.json", "architecture_analysis.json")),
+)
+
+
+def _blocked_phases(workspace: "Path") -> frozenset[str]:
+    """Phases held back by an explicit gate rejection (session/workflow_state.py,
+    MEDIUM-2). Fails open to "nothing blocked" on any error, same shape as
+    _waived_artifacts above -- a broken/absent state file can never make phase
+    detection worse than plain file-existence."""
+    try:
+        from session.workflow_state import blocked_phases
+
+        return blocked_phases(workspace)
+    except Exception:  # noqa: BLE001
+        return frozenset()
+
+
 def _detect_phase(workspace: "Path") -> str:
-    """Infer the current workflow phase from workspace files (most-advanced wins)."""
-    if (workspace / "out.brd.docx").exists() or (workspace / "brd_outline_draft.json").exists():
-        return "brd"
-    if (workspace / "out.pdf").exists():
-        return "report"
-    if (workspace / "deck_plan.json").exists():
-        return "ppt"
-    if (workspace / "wbs.json").exists():
-        return "wbs"
-    if (workspace / "out.png").exists() or (workspace / "blueprint.json").exists():
-        return "draw"
-    if (workspace / "tech_stack.json").exists() or (workspace / "architecture_analysis.json").exists():
-        return "blueprint"
+    """Infer the current workflow phase from workspace files (most-advanced wins),
+    skipping any phase whose authorizing gate was explicitly REJECTED
+    (session/workflow_state.py) and any evidence file that is missing or fails
+    the minimum-content check (_ready) -- a partial write no longer counts as
+    "stage complete" (MEDIUM-2).
+
+    A blocked phase is skipped for ONE rung only: if a higher phase's evidence
+    is independently ready (e.g. deck_plan.json already exists even though
+    "draw" was just rejected), that higher phase still wins. State can only
+    ever hold detection BACK relative to file evidence, never push it forward
+    past what a rejection actually blocks.
+    """
+    blocked = _blocked_phases(workspace)
+    for phase, evidence in _PHASE_EVIDENCE:
+        if phase in blocked:
+            continue
+        if any(_ready(workspace, name) for name in evidence):
+            return phase
     return "intake"
 
 
@@ -214,12 +246,46 @@ _ARTIFACT_BACKFILL_TOOLS: dict[str, str] = {
 }
 
 
+def _ready(workspace: "Path", name: str) -> bool:
+    """exists() + minimum-content gate (session/workflow_state.py, MEDIUM-2).
+
+    Falls back to plain .exists() on ANY failure (missing module, corrupt
+    state file, etc.), so a broken/absent session.workflow_state can never
+    narrow phase detection relative to the pre-existing exists()-only
+    behavior -- same fail-open shape as _stale_artifact_tools' import guard.
+    """
+    try:
+        from session.workflow_state import artifact_ready
+
+        return artifact_ready(workspace, name)
+    except Exception:  # noqa: BLE001
+        return (workspace / name).exists()
+
+
+def _waived_artifacts(workspace: "Path") -> frozenset[str]:
+    try:
+        from session.workflow_state import waived_artifacts
+
+        return waived_artifacts(workspace)
+    except Exception:  # noqa: BLE001
+        return frozenset()
+
+
 def _missing_artifact_tools(workspace: "Path") -> set[str]:
-    """Tool names that produce a foundational artifact currently missing from workspace."""
+    """Tool names that produce a foundational artifact currently missing (or
+    present-but-empty/corrupt, see _ready) from the workspace.
+
+    An artifact explicitly WAIVED via session/workflow_state.py::record_waiver
+    is treated as intentionally absent, so its producer tool stops being
+    carried into every downstream phase forever -- the one place this whole
+    module narrows the allowed toolset, and only on an explicit recorded
+    human decision, never as a side effect of file state.
+    """
+    waived = _waived_artifacts(workspace)
     return {
         tool_name
         for filename, tool_name in _ARTIFACT_BACKFILL_TOOLS.items()
-        if not (workspace / filename).exists()
+        if filename not in waived and not _ready(workspace, filename)
     }
 
 

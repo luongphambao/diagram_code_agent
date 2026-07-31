@@ -24,6 +24,7 @@ import json
 
 import backends
 from session.gate_decisions import resolve_pending_gate
+from tools.stage_markers import clear_stage_markers
 
 
 def _bind(monkeypatch, ws):
@@ -149,3 +150,17 @@ def test_resolve_pending_gate_called_only_on_approve_not_reject():
             continue
         line_indent = len(line) - len(line.lstrip())
         assert line_indent > guard_indent, f"found a line back at/above the guard's indent: {line!r}"
+
+
+def test_clear_stage_markers_removes_workflow_state(monkeypatch, tmp_path):
+    """MEDIUM-2: workflow_state.json must be in the unconditional fresh-run
+    delete list, same as artifact_manifest.json — a fresh run always degrades
+    back to plain file-existence phase detection, the safest failure mode."""
+    _bind(monkeypatch, tmp_path)
+    (tmp_path / "workflow_state.json").write_text(
+        json.dumps({"gates": {"propose_blueprint": {"status": "rejected"}}}), encoding="utf-8"
+    )
+
+    clear_stage_markers()
+
+    assert not (tmp_path / "workflow_state.json").exists()
