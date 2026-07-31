@@ -624,6 +624,21 @@ def propose_blueprint(blueprint: Blueprint) -> str:
     _BLUEPRINT_FILE.write_text(json.dumps(blueprint_data, indent=2), encoding="utf-8")
     _RENDER_SPEC_FILE.write_text(json.dumps(render_spec, indent=2), encoding="utf-8")
 
+    # Provenance (H-3): record blueprint.json's revision + what it was built from,
+    # so a later diagram/deck/WBS re-render can detect the blueprint moved on.
+    try:
+        from session.artifact_manifest import current_revision, record_artifact
+
+        ws = current_workspace()
+        derived_from = [
+            (n, current_revision(ws, n))
+            for n in ("tech_stack.json", "diagram_brief.json")
+            if (ws / n).exists()
+        ]
+        record_artifact(ws, "blueprint.json", derived_from=derived_from)
+    except Exception:  # noqa: BLE001 — provenance is advisory, never block approval
+        pass
+
     # Pre-compute style_plan.json + label_fits.json code-side (pure functions of
     # the spec) so the drawer reads them instead of spending 2 model calls.
     try:

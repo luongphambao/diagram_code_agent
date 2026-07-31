@@ -325,6 +325,16 @@ def _refresh_deck_plan(title: str = "", subtitle: str = "", brand: str = ""):
         brand=brand,
     )
     write_deck_plan(plan, current_workspace())
+    try:
+        from session.artifact_manifest import current_revision, record_artifact
+
+        ws = current_workspace()
+        derived_from = [
+            (n, current_revision(ws, n)) for n in ("blueprint.json", "wbs.json") if (ws / n).exists()
+        ]
+        record_artifact(ws, "deck_plan.json", derived_from=derived_from)
+    except Exception:  # noqa: BLE001 — provenance is advisory, never block deck refresh
+        pass
     return model, plan
 
 

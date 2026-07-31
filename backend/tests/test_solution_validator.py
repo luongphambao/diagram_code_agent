@@ -46,11 +46,11 @@ def test_evaluate_flags_every_seeded_defect():
     assert {"correctness", "completeness", "coverage", "traceability"} <= dims
 
     titles = " || ".join(f.title for f in findings).lower()
-    assert "missing component" in titles          # dangling edge
-    assert "zero total effort" in titles          # rollup not run
-    assert "missing cluster" in titles            # ghost cluster
+    assert "missing component" in titles  # dangling edge
+    assert "zero total effort" in titles  # rollup not run
+    assert "missing cluster" in titles  # ghost cluster
     assert "no recorded key decisions" in titles  # empty decisions
-    assert "traces to no requirement" in titles   # orphan WBS task
+    assert "traces to no requirement" in titles  # orphan WBS task
 
 
 def test_high_severity_blocks_release():
@@ -70,8 +70,7 @@ def test_clean_workspace_passes():
         "edges": [],
         "key_decisions": ["Use a managed API gateway for routing and auth."],
     }
-    wbs = {"items": [{"id": "1.1", "name": "API Gateway setup"}],
-           "effort_totals": {"total_mandays": 12}}
+    wbs = {"items": [{"id": "1.1", "name": "API Gateway setup"}], "effort_totals": {"total_mandays": 12}}
     findings = evaluate_solution(brief, blueprint, wbs)
     assert findings == []
     assert format_validation(findings) == "VALIDATION: PASS (no cross-artifact contradictions found)"
@@ -107,8 +106,49 @@ def test_validate_solution_uses_csm_ids(tmp_path):
     # building the CSM is a side effect of validate_solution
     assert (tmp_path / "solution_model.json").exists()
     ids = {i for f in findings for i in f.entity_ids}
-    assert any(i.startswith("REQ-") for i in ids)   # unmapped requirement anchored
-    assert any(i.startswith("WBS-") for i in ids)   # orphan WBS anchored
+    assert any(i.startswith("REQ-") for i in ids)  # unmapped requirement anchored
+    assert any(i.startswith("WBS-") for i in ids)  # orphan WBS anchored
+
+
+def test_validate_solution_flags_stale_diagram(tmp_path):
+    """Tier D1 / H-3: out.drawio recorded as derived from blueprint.json, then
+    blueprint.json changes out-of-band -> a medium, non-blocking finding surfaces
+    (not "high" -- a stale diagram is a signal to re-render, not automatically
+    wrong, and must not silently block export the way BLOCKING_SEVERITY does)."""
+    from session.artifact_manifest import record_artifact
+
+    (tmp_path / "diagram_brief.json").write_text(json.dumps(BRIEF))
+    (tmp_path / "blueprint.json").write_text(json.dumps(BLUEPRINT))
+    (tmp_path / "wbs.json").write_text(json.dumps(WBS))
+    bp_rev = record_artifact(tmp_path, "blueprint.json")
+    (tmp_path / "out.drawio").write_text("<mxfile/>", encoding="utf-8")
+    record_artifact(tmp_path, "out.drawio", derived_from=[("blueprint.json", bp_rev)])
+
+    # Out-of-band edit (e.g. via edit_file), never re-run through propose_blueprint.
+    (tmp_path / "blueprint.json").write_text(json.dumps({**BLUEPRINT, "key_decisions": ["changed"]}))
+    record_artifact(tmp_path, "blueprint.json")
+
+    findings, summary = validate_solution(tmp_path, block=True)
+    stale = [f for f in findings if f.artifact_type == "diagram"]
+    assert stale, f"expected a diagram staleness finding, got: {[f.title for f in findings]}"
+    assert stale[0].severity == "medium"
+    assert not summary.startswith("VALIDATION: BLOCK") or any(
+        is_blocking(f) for f in findings if f.artifact_type != "diagram"
+    )
+
+
+def test_validate_solution_no_staleness_when_upstream_unchanged(tmp_path):
+    from session.artifact_manifest import record_artifact
+
+    (tmp_path / "diagram_brief.json").write_text(json.dumps(BRIEF))
+    (tmp_path / "blueprint.json").write_text(json.dumps(BLUEPRINT))
+    (tmp_path / "wbs.json").write_text(json.dumps(WBS))
+    bp_rev = record_artifact(tmp_path, "blueprint.json")
+    (tmp_path / "out.drawio").write_text("<mxfile/>", encoding="utf-8")
+    record_artifact(tmp_path, "out.drawio", derived_from=[("blueprint.json", bp_rev)])
+
+    findings, _ = validate_solution(tmp_path)
+    assert not [f for f in findings if f.artifact_type == "diagram"]
 
 
 def test_write_trace_links_projects_csm(tmp_path):
@@ -121,8 +161,15 @@ def test_write_trace_links_projects_csm(tmp_path):
     model = json.loads((tmp_path / "solution_model.json").read_text(encoding="utf-8"))
     model_ids = {
         e["id"]
-        for group in ("requirements", "constraints", "assumptions", "decisions",
-                      "components", "risks", "work_items")
+        for group in (
+            "requirements",
+            "constraints",
+            "assumptions",
+            "decisions",
+            "components",
+            "risks",
+            "work_items",
+        )
         for e in model.get(group, [])
     }
     endpoints = {l["from"] for l in graph["links"]} | {l["to"] for l in graph["links"]}
@@ -147,6 +194,7 @@ def test_write_trace_links_fallback(tmp_path, monkeypatch):
 
 
 # --- traceability sidecar ----------------------------------------------------
+
 
 def test_trace_links_connect_req_to_component_and_wbs():
     graph = build_trace_links(BRIEF, BLUEPRINT, WBS)
@@ -180,13 +228,11 @@ _CLEAN_BLUEPRINT = {
 
 def test_feasibility_finding_when_overloads_present():
     wbs_overloaded = {
-        "items": [{"id": "1.1", "name": "API implementation", "be": 30, "total": 30,
-                   "assigned_sprint": 1}],
+        "items": [{"id": "1.1", "name": "API implementation", "be": 30, "total": 30, "assigned_sprint": 1}],
         "effort_totals": {"total_mandays": 30},
         "resource_leveling": {
             "overloads": [
-                {"sprint": 1, "role": "dev", "demand_md": 30.0,
-                 "capacity_md": 10.0, "overflow_md": 20.0}
+                {"sprint": 1, "role": "dev", "demand_md": 30.0, "capacity_md": 10.0, "overflow_md": 20.0}
             ]
         },
     }

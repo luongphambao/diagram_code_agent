@@ -1113,6 +1113,15 @@ def finalize_wbs(
         # guard message instead of cascading confusing errors.
         if label == "rollup" and "add_wbs_items first" in result:
             return result
+    try:
+        from backends import current_workspace
+        from session.artifact_manifest import current_revision, record_artifact
+
+        ws = current_workspace()
+        derived_from = [(n, current_revision(ws, n)) for n in ("blueprint.json",) if (ws / n).exists()]
+        record_artifact(ws, "wbs.json", derived_from=derived_from)
+    except Exception:  # noqa: BLE001 — provenance is advisory, never block finalize_wbs
+        pass
     return "\n".join(lines)
 
 

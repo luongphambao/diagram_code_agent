@@ -690,6 +690,65 @@ def format_validation(findings: list[SolutionFinding], *, block: bool = False) -
     return "\n".join(lines)
 
 
+# Rule 12 — artifact rendered from a now-stale upstream (H-3, revision drift).
+# The artifact -> human-readable type mapping for the manifest-backed staleness
+# check below; each key is a filename record_artifact() is called on at its
+# write site (propose_blueprint / finalize_wbs / _refresh_deck_plan /
+# finalize_diagram — see session/artifact_manifest.py).
+_STALENESS_ARTIFACT_TYPE: dict[str, str] = {
+    "blueprint.json": "blueprint",
+    "wbs.json": "wbs",
+    "deck_plan.json": "deck",
+    "out.drawio": "diagram",
+}
+
+
+def _staleness_findings(workspace: Path) -> list[SolutionFinding]:
+    """Findings for artifacts whose recorded upstream has since changed.
+
+    Reads artifact_manifest.json via session.artifact_manifest.is_stale — a
+    workspace whose artifacts never went through record_artifact yields no
+    findings here (backward compatible, never a false positive). Severity is
+    medium (visible, non-blocking): a stale artifact is a signal to re-render,
+    not automatically wrong, so it doesn't auto-block export the way a "high"
+    finding would (BLOCKING_SEVERITY="high") — this is a deliberate, narrower
+    scope than the review's original HIGH rating for H-3, appropriate for an
+    internal tool where an architect reviews before export anyway.
+    """
+    try:
+        from session.artifact_manifest import is_stale
+    except Exception:
+        return []
+    findings: list[SolutionFinding] = []
+    for name, artifact_type in _STALENESS_ARTIFACT_TYPE.items():
+        if not (workspace / name).exists():
+            continue
+        stale, drifted = is_stale(workspace, name)
+        if not stale:
+            continue
+        upstream = ", ".join(drifted)
+        findings.append(
+            SolutionFinding(
+                severity="medium",
+                confidence="high",
+                dimension="consistency",
+                artifact_type=artifact_type,
+                repair_strategy="human_decision",
+                entity_ids=[],
+                requires_human_decision=True,
+                title=f"{name} may be stale relative to {upstream}",
+                detail=(
+                    f"{name} was recorded as derived from {upstream}, but "
+                    f"{'that file has' if len(drifted) == 1 else 'those files have'} "
+                    "changed since — the artifact on disk may no longer reflect its "
+                    "upstream source (revision drift)."
+                ),
+                recommendation=f"Re-generate {name} from the current upstream, or waive if the drift is expected.",
+            )
+        )
+    return findings
+
+
 def validate_solution(
     workspace: Optional[Path] = None,
     *,
@@ -718,4 +777,5 @@ def validate_solution(
     except Exception:
         model = None
     findings = evaluate_solution(brief, blueprint, wbs, model=model)
+    findings += _staleness_findings(workspace)
     return findings, format_validation(findings, block=block)

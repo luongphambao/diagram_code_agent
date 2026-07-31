@@ -66,3 +66,23 @@ async def get_conversation_history(
     if hist is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
     return hist
+
+
+@router.get("/{thread_id}/artifact-authz")
+async def check_artifact_authz(
+    thread_id: str, request: Request, identity: Identity = Depends(require_identity)
+):
+    """Tier D3 / H-2: called by the Node runtime before serving an artifact download
+    (``/api/artifacts/*`` in ``runtime/src/index.ts``), which previously read no auth
+    header at all — anyone holding the ``threadId:field:hash`` key could download
+    within its 30-minute TTL. Reuses the exact identity+ownership check ``/agui``
+    and the rest of this router already use (``check_owner`` — read-only, does not
+    claim an unowned thread, unlike ``ensure_owner``) instead of inventing HMAC
+    URL-signing, which would only prove the key wasn't forged and would not
+    authenticate the requester.
+
+    200 on success (same permissive default as ``check_owner``: an unowned thread,
+    or no pool in dev mode, is allowed); ``check_owner`` raises 404 on a mismatch,
+    which the runtime treats as "deny"."""
+    await check_owner(request.app.state.pool, thread_id, identity.email)
+    return {"ok": True}

@@ -516,4 +516,18 @@ def build_solution_model(
 
     workspace.mkdir(parents=True, exist_ok=True)
     (workspace / SOLUTION_MODEL_NAME).write_text(model.to_json(), encoding="utf-8")
+    try:
+        from session.artifact_manifest import current_revision, record_artifact
+
+        source_names = (
+            "diagram_brief.json",
+            "blueprint.json",
+            "wbs.json",
+            "tech_stack.json",
+            "architecture_analysis.json",
+        )
+        derived_from = [(n, current_revision(workspace, n)) for n in source_names if (workspace / n).exists()]
+        record_artifact(workspace, SOLUTION_MODEL_NAME, derived_from=derived_from)
+    except Exception:  # noqa: BLE001 — provenance is advisory, never block CSM projection
+        pass
     return model

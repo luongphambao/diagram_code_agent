@@ -223,6 +223,42 @@ def _missing_artifact_tools(workspace: "Path") -> set[str]:
     }
 
 
+# Artifacts tracked by session/artifact_manifest.py -> their producer tool.
+# Extends _ARTIFACT_BACKFILL_TOOLS with a downstream case: deck_plan.json's
+# producer (propose_deck_plan) is phase-gated OUT once phase reaches "report"
+# (see _PHASE_TOOLS["report"]) — if the blueprint/wbs deck_plan.json was built
+# from has since changed, the model needs propose_deck_plan back to rebuild it,
+# exactly the same "producer tool locked out past its phase" problem
+# _missing_artifact_tools solves for a MISSING file, here for a STALE one.
+_ARTIFACT_PRODUCER_TOOLS: dict[str, str] = {
+    **_ARTIFACT_BACKFILL_TOOLS,
+    "deck_plan.json": "propose_deck_plan",
+}
+
+
+def _stale_artifact_tools(workspace: "Path") -> set[str]:
+    """Tool names that produce an artifact currently on disk but stale relative
+    to an upstream it was derived from (session/artifact_manifest.py, H-3).
+
+    Mirrors _missing_artifact_tools' shape exactly, for the drifted-not-missing
+    case: a workspace with no artifact_manifest.json (or an artifact never
+    passed through record_artifact) yields an empty set here, so this is a pure
+    addition — it can never narrow the allowed toolset relative to today.
+    """
+    try:
+        from session.artifact_manifest import is_stale
+    except Exception:
+        return set()
+    tools: set[str] = set()
+    for filename, tool_name in _ARTIFACT_PRODUCER_TOOLS.items():
+        if not (workspace / filename).exists():
+            continue
+        stale, _drifted = is_stale(workspace, filename)
+        if stale:
+            tools.add(tool_name)
+    return tools
+
+
 def _pending_gate_tools(workspace: "Path") -> set[str]:
     """Tool names needed to revise or resume a gate already shown to the user.
 
@@ -265,7 +301,12 @@ class PhaseToolFilterMiddleware(AgentMiddleware):
         # Keep a foundational artifact's producing tool available even past its normal
         # phase — never let "most-advanced phase wins" permanently lock out backfilling
         # a step that got skipped (see _missing_artifact_tools).
-        allowed = allowed | _missing_artifact_tools(workspace) | _pending_gate_tools(workspace)
+        allowed = (
+            allowed
+            | _missing_artifact_tools(workspace)
+            | _pending_gate_tools(workspace)
+            | _stale_artifact_tools(workspace)
+        )
         # Always keep built-ins (filesystem tools, task, write_todos) which don't
         # appear in _PHASE_TOOLS but are always injected by deepagents.
         allowed = allowed | _DEEP_AGENT_BUILTIN_TOOLS

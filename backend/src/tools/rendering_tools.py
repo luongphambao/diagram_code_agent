@@ -2526,6 +2526,19 @@ def finalize_diagram(kind: str = "architecture") -> str:
         _snapshot_diagram(current_workspace(), kind)
     except Exception:  # noqa: BLE001 — advisory; never block finalization
         pass
+    # Provenance (H-3): the architecture diagram is rendered FROM blueprint.json —
+    # record that dependency so a later blueprint edit can be detected as drift
+    # against an already-finalized out.drawio (the exact case Codex's review flagged:
+    # nothing previously checked whether a rendered diagram had gone stale).
+    if kind == "architecture":
+        try:
+            from session.artifact_manifest import current_revision, record_artifact
+
+            ws = current_workspace()
+            derived_from = [(n, current_revision(ws, n)) for n in ("blueprint.json",) if (ws / n).exists()]
+            record_artifact(ws, "out.drawio", derived_from=derived_from)
+        except Exception:  # noqa: BLE001 — provenance is advisory, never block finalize_diagram
+            pass
     # Surface how good the diagram actually is at the ONE gate a human sees it
     # at. finalize_diagram never blocked on quality (it's a HITL gate — the
     # approver decides, not the tool) and previously only checked out.png

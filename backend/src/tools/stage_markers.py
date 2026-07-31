@@ -249,6 +249,7 @@ def clear_stage_markers(*, preserve_wbs: bool = False, preserve_brd: bool = Fals
         ws / "current_state_model.json",
         ws / "drift_report.json",
         ws / "quality_history.json",
+        ws / "artifact_manifest.json",
     ]
     if not preserve_wbs:
         files.extend(
