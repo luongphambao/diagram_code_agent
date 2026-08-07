@@ -1571,16 +1571,28 @@ def validate_xml(xml: str, profile: str = "auto", stats: dict | None = None) -> 
             e, w = check_page(page)
             errors += e
             warns += w
-    # Spec-level semantic gates (I1-I4 — orphan components, relationship
-    # density, weak primary labels, icon-family mixing). Computed by
-    # prettygraph.native.repair.semantic_stats on the SPEC before layout_plan
-    # bundles/suppresses edges (see semantic_gates.py's module docstring for
-    # why gating the rendered XML directly produces false positives) and
-    # threaded through here via `stats["semantic"]["gate_findings"]`. `hard`
-    # findings are real errors — they force REVISE via patch_blueprint, the
-    # same as a dangling edge or a duplicate id.
+    # Spec-level semantic gates (I1-I4/I6 — orphan components, relationship
+    # density, weak primary labels, icon-family mixing, bundle integrity).
+    # Computed by prettygraph.native.repair.semantic_stats on the SPEC before
+    # layout_plan bundles/suppresses edges (see semantic_gates.py's module
+    # docstring for why gating the rendered XML directly produces false
+    # positives) and threaded through here via `stats["semantic"]["gate_findings"]`.
+    #
+    # Deliberately routed to `warns`, never `errors`, regardless of the gate's
+    # own "hard"/"warn" severity label: these findings are computed on the
+    # SPEC, which is identical across every layout candidate `auto_repair`
+    # tries in one round (native/repair.py) — a real "hard" finding here
+    # (e.g. I2's edge/component ratio, which flags a perfectly valid tree
+    # topology) can NEVER be cleared by trying a different layout, so routing
+    # it to `errors` forced `passed=False` (and editability=0) for every
+    # candidate in the round unconditionally, burning the full repair budget
+    # (up to 6 builds) for an issue no candidate could have fixed, and
+    # pressuring the drawer to pad the blueprint with filler edges/labels just
+    # to clear the gate. Surfacing it as a warning still gets it in front of
+    # the critic/drawer for a genuine spec revision, without holding every
+    # layout candidate hostage to a spec-level judgment call.
     for gf in (stats or {}).get("semantic", {}).get("gate_findings") or []:
-        (errors if gf.get("severity") == "hard" else warns).append(gf.get("message") or "")
+        warns.append(gf.get("message") or "")
     advice: list[str] = []
     polish: list[str] = []
     collisions: list[str] = []
@@ -1724,13 +1736,23 @@ def _effective_icon_coverage(metrics: dict, stats: dict) -> float | None:
     the two means a diagram can only score as well as its WORST icon signal,
     never better. Falls back to the metrics-only value when fallback_icons
     isn't available (e.g. the Graphviz/mingrammer path, which doesn't set it).
+
+    ``stats["annotation_nodes"]`` (note/legend/kpi cards) is subtracted from
+    the denominator: those are text cards with no vendor-icon slot to fill
+    (_bake_icon_plan skips them entirely, so they never count toward
+    fallback_icons either) — leaving them in the denominator penalized a
+    diagram for having MORE explanatory notes, a signal icon coverage was
+    never meant to measure.
     """
     coverage = metrics.get("icon_coverage")
     fallback_icons = stats.get("fallback_icons")
     total_nodes = stats.get("nodes")
     if fallback_icons is None or not total_nodes:
         return coverage
-    real_coverage = max(0.0, (int(total_nodes) - int(fallback_icons)) / int(total_nodes))
+    icon_eligible_nodes = int(total_nodes) - int(stats.get("annotation_nodes") or 0)
+    if icon_eligible_nodes <= 0:
+        return coverage
+    real_coverage = max(0.0, (icon_eligible_nodes - int(fallback_icons)) / icon_eligible_nodes)
     return real_coverage if coverage is None else min(coverage, real_coverage)
 
 

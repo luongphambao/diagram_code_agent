@@ -421,8 +421,16 @@ async def agui_endpoint(request: Request, identity: Identity = Depends(require_i
                     try:
                         from session.workflow_state import record_gate_decision
 
+                        # audit_status distinguishes a soft "revise" (request_evidence /
+                        # request_alternative) from a hard "reject" -- only the latter
+                        # should ever satisfy blocked_phases()'s status == "rejected"
+                        # check. Falls back to decision["type"] for any caller that
+                        # didn't go through _decision_from_payload.
                         record_gate_decision(
-                            ws, pending_name, decision["type"], note=str(note) if note else ""
+                            ws,
+                            pending_name,
+                            decision.get("audit_status", decision["type"]),
+                            note=str(note) if note else "",
                         )
                     except Exception as exc:  # noqa: BLE001 — audit-only; must never break a resume
                         logger.debug("workflow-state gate record skipped: %s", exc)

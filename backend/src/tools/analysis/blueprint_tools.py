@@ -598,7 +598,14 @@ def _preseed_icon_plan(blueprint: Blueprint, provider: str) -> None:
     """
     from ..rendering_tools import _icon_key
 
-    resolved: dict[str, str] = {}
+    # Each resolved entry carries the provider it was resolved under (None
+    # when unknown, e.g. the dict-format shape written by an earlier call to
+    # THIS function — which doesn't record per-node provider, so it's treated
+    # as always-eligible, same as before this fix). A prior resolution from a
+    # DIFFERENT provider (e.g. blueprint switched AWS -> GCP mid-session) must
+    # not be reused: it points at that other provider's icon catalog and, if
+    # it happens to attach at all, silently mislabels the diagram.
+    resolved: dict[str, tuple[str, str | None]] = {}
     if _ICON_PLAN_FILE.exists():
         try:
             raw_plan = json.loads(_ICON_PLAN_FILE.read_text(encoding="utf-8"))
@@ -608,7 +615,7 @@ def _preseed_icon_plan(blueprint: Blueprint, provider: str) -> None:
             for k, v in raw_plan.items():
                 path = v[0] if isinstance(v, list) and v else v if isinstance(v, str) else None
                 if path and _icon_key(k):
-                    resolved[_icon_key(k)] = path
+                    resolved[_icon_key(k)] = (path, None)
         elif isinstance(raw_plan, list):
             for entry in raw_plan:
                 if not isinstance(entry, dict) or entry.get("status") == "NOT_FOUND":
@@ -616,21 +623,33 @@ def _preseed_icon_plan(blueprint: Blueprint, provider: str) -> None:
                 path = entry.get("icon") or entry.get("path")
                 if not path:
                     continue
+                entry_provider = str(entry.get("provider") or "").strip().lower() or None
                 for key in (entry.get("id"), entry.get("label"), entry.get("name")):
                     if key and _icon_key(key):
-                        resolved[_icon_key(key)] = path
+                        resolved[_icon_key(key)] = (path, entry_provider)
 
+    current_provider = (provider or "").strip().lower() or None
     plan: dict[str, list[str]] = {}
     for node in blueprint.nodes:
-        match = resolved.get(_icon_key(node.id)) or (
+        entry = resolved.get(_icon_key(node.id)) or (
             resolved.get(_icon_key(node.label)) if node.label else None
         )
-        if match:
-            plan[node.id] = [match]
-            continue
         query = node.label or node.id
-        hits = _search_icon_hits(query, provider or None, limit=5)
-        plan[node.id] = [_icon_rel(h) for h in hits]
+        # Always search — a prior resolution is a strong first guess, not a
+        # substitute for having real fallback candidates. Blindly trusting it
+        # alone (the previous behavior) meant a path that no longer attaches
+        # (renamed/moved icon, or reused across a provider switch) left the
+        # node with ZERO candidates and no way to recover but a placeholder
+        # glyph; _bake_icon_plan already tries each candidate in order, so a
+        # bad first entry costs nothing once real fallbacks are present.
+        hits = [_icon_rel(h) for h in _search_icon_hits(query, provider or None, limit=5)]
+        if entry is not None:
+            match_path, match_provider = entry
+            if match_provider is None or match_provider == current_provider:
+                ordered = [match_path] + [h for h in hits if h != match_path]
+                plan[node.id] = ordered[:5]
+                continue
+        plan[node.id] = hits
     try:
         _ICON_PLAN_FILE.write_text(json.dumps(plan, indent=2), encoding="utf-8")
     except Exception:

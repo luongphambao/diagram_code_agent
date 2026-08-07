@@ -39,17 +39,38 @@ LINE_HEIGHT = 1.2  # mxConstants.LINE_HEIGHT — draw.io's own line-height facto
 _FALLBACK_RATIO = {False: 0.56, True: 0.60}
 
 # Search order matches slide.py's existing convention (DejaVu first, then
-# Liberation) plus both common Debian package layouts for Liberation Sans.
+# Liberation) plus both common Debian package layouts for Liberation Sans, for
+# the Docker/Modal/CI hosts this always runs on in production (backend
+# Dockerfile installs fonts-liberation + fonts-dejavu-core; the Modal image
+# installs fonts-dejavu-core — see runtime/sandbox/runners/modal_runner.py).
+#
+# Windows and macOS entries were missing entirely, so `uv run` on a bare
+# Windows dev box (no path here resolves) silently dropped to
+# _FALLBACK_RATIO, which measures ~7-15% narrower than the real Arial/Helvetica
+# glyph widths this whole module exists to replace — cards/labels/tabs get
+# sized for text narrower than what's actually drawn, and
+# domain/validation/validate_drawio.py's own overlap checks (which call this
+# same text_width) under-count the resulting overlap right along with it.
+# Windows ships Arial (metric-compatible with Helvetica, same rationale as the
+# Liberation Sans entries above); Segoe UI is listed as a same-box fallback
+# for the (deliberately minimal) Windows Server / Server Core font set that
+# lacks Arial. macOS ships Arial.ttf under Supplemental on any modern release.
 _CANDIDATES: dict[bool, tuple[str, ...]] = {
     False: (
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "C:\\Windows\\Fonts\\arial.ttf",
+        "C:\\Windows\\Fonts\\segoeui.ttf",
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
     ),
     True: (
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
         "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "C:\\Windows\\Fonts\\arialbd.ttf",
+        "C:\\Windows\\Fonts\\segoeuib.ttf",
+        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
     ),
 }
 

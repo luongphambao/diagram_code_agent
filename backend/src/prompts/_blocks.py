@@ -2,6 +2,24 @@
 
 from __future__ import annotations
 
+import os
+
+# Kill switch for the diagram-as-code fork (render_typed_diagram / Sequence /
+# ERD / State Machine). Defaults OFF: this path bypasses the tech-stack and
+# blueprint HITL gates entirely (render_typed_diagram sits outside
+# GATE_TOOL_NAMES and is reachable from the "intake" phase — see
+# agent/middleware/phase_filter.py), which regressed the diagram flow's gate
+# ordering when it was on by default. The corresponding tool names are also
+# stripped at the tool-schema layer in phase_filter.py's PhaseToolFilterMiddleware
+# — set here AND there so a model that never sees the prompt text still can't
+# reach the tools, per AGENTS.md's "block at the permission/filter layer, not
+# just the prompt" rule. Set TYPED_DIAGRAM_ENABLED=1 to re-enable.
+_TYPED_DIAGRAM_ENABLED = os.getenv("TYPED_DIAGRAM_ENABLED", "0").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+)
+
 
 def design_token_block() -> str:
     """Render the refined preset's design tokens as prompt text, generated
@@ -276,10 +294,17 @@ _BEHAVIOR_RULES = """\
   controls are declaration order, direction, short edges, anchors, same_rank,
   invisible spine edges, minlen, node_attr/edge_attr, and simplification.
 - **Autonomy** — do not ask for permission mid-task, and do not preemptively ask
-  "should I proceed?" before calling a tool. Approval pauses are enforced by the
-  system itself (a gated tool call always pauses the run before it executes,
-  whichever stage you're in) — you do not need to track which tools are gated;
-  just keep working and the pause happens automatically when it happens.
+  "should I proceed?" before calling a tool. The only legitimate approval pauses
+  are `propose_tech_stack`, `propose_blueprint`, `finalize_diagram`,
+  `generate_pdf_report`, `propose_deck_plan`, `generate_ppt_proposal`,
+  `send_email`, `create_client_meeting`, `propose_wbs_skeleton`, `propose_wbs`,
+  `export_wbs_excel`, `export_to_delivery`, `propose_business_case`,
+  `propose_brd_outline`, `generate_brd_docx`, and `edit_brd_section` — every
+  other tool call runs immediately, no permission needed. These pauses are also
+  enforced by the system itself (a gated tool call always pauses the run before
+  it executes, whichever stage you're in), so this list is a mental model of
+  where the natural checkpoints are, not something you have to defend against
+  calling elsewhere.
 - **Subagent safety stops** — if a task(...) result starts with "SUBAGENT ...
   STOPPED AT ITS SAFETY CALL LIMIT", the stage produced PARTIAL work. Tell the
   user explicitly which stage stopped, continue from whatever artifacts exist
@@ -338,6 +363,52 @@ _BEHAVIOR_RULES = """\
 # stages relevant to the current workflow phase. Text outside any span is
 # always kept. Phases: intake | blueprint | draw | wbs | ppt | report
 # (see agent._detect_phase). Markers never reach the model.
+
+# Wrapped in [[PHASE intake]] (unlike the old unconditional placement, which
+# put this outside every phase span and so re-sent it — and its bypass-the-
+# gates instruction — on every single call regardless of phase) so it only
+# shows up while there's actually a fork decision to make.
+_TYPED_DIAGRAM_FORK = (
+    """\
+[[PHASE intake]]
+**Fork here on `diagram_brief.json`'s `diagram_kind`.** Architecture (the
+default) continues to steps 4-9 below. `sequence` / `erd` / `state_machine`
+SKIP steps 4-8 entirely (no tech stack, no WAF blueprint, no icon resolver,
+no drawer subagent) — call `render_typed_diagram(kind, code)` directly with a
+short script:
+  sequence      -> from prettygraph.sequence_dsl import Sequence
+  erd           -> from prettygraph.erd_dsl import ERD (or first call
+                   `sql_to_erd_script(sql)` if the user pasted/uploaded DDL,
+                   then review/adjust the returned script before running it)
+  state_machine -> from prettygraph.state_machine_dsl import StateMachine
+Then go straight to step 9 (finalize_diagram) — its result-review card works
+identically regardless of which kind produced `out.png`. `c4` still uses the
+architecture-style flow through the drawer subagent (step 7), which composes
+`diagrams.c4` primitives — see the drawer's own prompt for that notation.
+[[/PHASE]]
+"""
+    if _TYPED_DIAGRAM_ENABLED
+    else ""
+)
+
+_TYPED_DIAGRAM_9A = (
+    """\
+9a. **Optional: additional diagrams for a richer proposal deck.** Only when the user
+   asked for a more comprehensive/"VIP" proposal, or the solution clearly benefits
+   from illustrating a key flow or data model beyond the architecture picture — render
+   UP TO 2 extra diagrams (never more; each is one deck slide, not the main deliverable):
+   `render_typed_diagram(kind="sequence", code=...)` for the main request flow, and/or
+   `render_typed_diagram(kind="erd", code=...)` for the data model. After each one,
+   call `finalize_diagram(kind="sequence")` / `finalize_diagram(kind="erd")` (the SAME
+   kind you just rendered) — this snapshots it into `diagram_manifest.json` WITHOUT
+   overwriting the primary architecture diagram already finalized in step 9 (which stays
+   under kind="architecture", the default). Every finalized kind becomes its own slide
+   in the proposal deck automatically. Skip this step entirely for a standard deck.
+"""
+    if _TYPED_DIAGRAM_ENABLED
+    else ""
+)
+
 _STAGED_FLOW = """\
 ## Staged workflow (follow these stages IN ORDER)
 You design the solution step by step; the user reviews and approves the gated stages.
@@ -364,21 +435,7 @@ You design the solution step by step; the user reviews and approves the gated st
    what you treat as **known facts** from **assumptions** (put unconfirmed ones in
    the brief's `assumptions`) so the epistemic split surfaces them downstream.
 [[/PHASE]]
-
-**Fork here on `diagram_brief.json`'s `diagram_kind`.** Architecture (the
-default) continues to steps 4-9 below. `sequence` / `erd` / `state_machine`
-SKIP steps 4-8 entirely (no tech stack, no WAF blueprint, no icon resolver,
-no drawer subagent) — call `render_typed_diagram(kind, code)` directly with a
-short script:
-  sequence      -> from prettygraph.sequence_dsl import Sequence
-  erd           -> from prettygraph.erd_dsl import ERD (or first call
-                   `sql_to_erd_script(sql)` if the user pasted/uploaded DDL,
-                   then review/adjust the returned script before running it)
-  state_machine -> from prettygraph.state_machine_dsl import StateMachine
-Then go straight to step 9 (finalize_diagram) — its result-review card works
-identically regardless of which kind produced `out.png`. `c4` still uses the
-architecture-style flow through the drawer subagent (step 7), which composes
-`diagrams.c4` primitives — see the drawer's own prompt for that notation.
+@@TYPED_DIAGRAM_FORK@@
 [[PHASE intake,blueprint]]
 4. **Tech stack.** State the sizing basis FIRST, then the choices.
    - Call `web_research(topic="tech_stack")` with ONE batched query covering managed-
@@ -448,18 +505,7 @@ architecture-style flow through the drawer subagent (step 7), which composes
    is blocked). If the user rejects a third time, call `finalize_diagram` once more
    with a note "PARTIAL — pending further client polish" and proceed to the next
    stage instead of looping again.
-9a. **Optional: additional diagrams for a richer proposal deck.** Only when the user
-   asked for a more comprehensive/"VIP" proposal, or the solution clearly benefits
-   from illustrating a key flow or data model beyond the architecture picture — render
-   UP TO 2 extra diagrams (never more; each is one deck slide, not the main deliverable):
-   `render_typed_diagram(kind="sequence", code=...)` for the main request flow, and/or
-   `render_typed_diagram(kind="erd", code=...)` for the data model. After each one,
-   call `finalize_diagram(kind="sequence")` / `finalize_diagram(kind="erd")` (the SAME
-   kind you just rendered) — this snapshots it into `diagram_manifest.json` WITHOUT
-   overwriting the primary architecture diagram already finalized in step 9 (which stays
-   under kind="architecture", the default). Every finalized kind becomes its own slide
-   in the proposal deck automatically. Skip this step entirely for a standard deck.
-[[/PHASE]]
+@@TYPED_DIAGRAM_9A@@[[/PHASE]]
 [[PHASE draw,wbs,ppt,report]]
 10. **PDF report** (optional — generate if the user asks or the output clearly
    warrants a document): ALWAYS call `generate_pdf_report({})` with NO arguments.
@@ -497,6 +543,15 @@ model exists (e.g. "change requirement X", "actually the scale is 10× larger",
      to the user — which requirements, components, WBS tasks and trace links shifted.
   3. Only THEN continue: re-propose the affected gate(s) (tech_stack, blueprint,
      or wbs) so downstream artifacts stay consistent with the new requirement."""
+
+# Plain .replace() rather than an f-string / .format(): the staged-flow text
+# above contains literal "{}"/"{...}" (e.g. generate_pdf_report({}),
+# nfr_mapping's {nfr, mechanism, node_ids}) that would otherwise need escaping
+# and would silently break again the next time someone edits the prose and
+# forgets to double a brace.
+_STAGED_FLOW = _STAGED_FLOW.replace("@@TYPED_DIAGRAM_FORK@@", _TYPED_DIAGRAM_FORK).replace(
+    "@@TYPED_DIAGRAM_9A@@", _TYPED_DIAGRAM_9A
+)
 
 _PLAIN_DIAGRAM_DETAIL = """\
 ## Diagram detail (render-refine loop)

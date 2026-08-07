@@ -34,7 +34,13 @@ from pathlib import Path
 _STATE_NAME = "workflow_state.json"
 
 PHASES: tuple[str, ...] = ("intake", "blueprint", "draw", "wbs", "ppt", "report", "brd")
-STATUSES: tuple[str, ...] = ("pending", "approved", "rejected", "waived")
+# "revise" = a HITL v2 send-back-to-revise action (request_evidence,
+# request_alternative) that is NOT a full rejection: the agent should
+# re-propose using the same phase's tools, not lose them. Only "rejected"
+# ever blocks a phase (see blocked_phases below) -- "revise" is audit-only,
+# same as every other recorded status besides the two BLOCKING_GATE_PHASES
+# entries.
+STATUSES: tuple[str, ...] = ("pending", "approved", "rejected", "revise", "waived")
 
 # gate tool name -> the phase that gate's approval AUTHORIZES. Deliberately NOT
 # every entry in GATE_TOOL_NAMES (tools/__init__.py): blocking a phase whose
@@ -90,7 +96,7 @@ def _write_state(workspace: Path, state: dict) -> None:
 
 
 def record_gate_decision(workspace: Path, gate: str, decision: str, *, note: str = "") -> None:
-    """Record a human decision on *gate* ("approve" | "reject").
+    """Record a human decision on *gate* ("approve" | "reject" | "revise").
 
     Called once per resolved gate from routers/chat.py's gate-outcome block --
     the same funnel that already calls record_report_step/record_gate_outcome
@@ -100,11 +106,17 @@ def record_gate_decision(workspace: Path, gate: str, decision: str, *, note: str
     still recorded (status/attempts/history) so the state file stays a
     complete audit trail, just an inert one for those gates today.
 
+    "revise" (a HITL v2 request_evidence/request_alternative action -- the
+    user wants more before deciding, not a hard no) is recorded distinctly
+    from "reject" precisely so it does NOT satisfy the ``status == "rejected"``
+    check in ``blocked_phases`` below: those actions send the agent back to
+    re-propose the same gate without stripping the current phase's tools.
+
     Never raises -- an audit-only write must not break a resume in progress.
     """
-    if decision not in ("approve", "reject"):
+    if decision not in ("approve", "reject", "revise"):
         return
-    status = "approved" if decision == "approve" else "rejected"
+    status = {"approve": "approved", "reject": "rejected", "revise": "revise"}[decision]
     try:
         state = read_state(workspace)
         entry = state["gates"].get(gate, {})

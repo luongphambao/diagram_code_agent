@@ -9,9 +9,23 @@ actually needs.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from langchain.agents.middleware import AgentMiddleware, ModelRequest
+
+# Same kill switch as prompts/_blocks.py's _TYPED_DIAGRAM_ENABLED (env var
+# shared, not imported from there, to keep this module import-light and
+# independent of the prompts package). Both must agree: this is the
+# enforcement layer (blocks the tool schema itself, per AGENTS.md's "block at
+# the permission/filter layer, not just the prompt"); _blocks.py just keeps
+# the prompt from mentioning a tool the model can't call anyway.
+_TYPED_DIAGRAM_ENABLED = os.getenv("TYPED_DIAGRAM_ENABLED", "0").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+)
+_TYPED_DIAGRAM_TOOLS = frozenset({"render_typed_diagram", "sql_to_erd_script"})
 
 # Phase-based static tool filter: send only the tools relevant to the current
 # stage instead of all 34 MAIN_TOOLS every call. Phase is inferred from the most
@@ -353,6 +367,17 @@ class PhaseToolFilterMiddleware(AgentMiddleware):
     Only modifies the request.tools list; doesn't touch messages or state.
     """
 
+    @staticmethod
+    def _drop_disabled_typed_diagram(tools):
+        """Strip render_typed_diagram/sql_to_erd_script when the kill switch is
+        off. Applied on every return path of _filtered_tools (including the
+        phase-detection-failed fallback) so a workspace/backends error can
+        never re-expose these tools — the exclusion must hold unconditionally,
+        not just on the happy path."""
+        if _TYPED_DIAGRAM_ENABLED:
+            return tools
+        return [t for t in tools if _tool_name(t) not in _TYPED_DIAGRAM_TOOLS]
+
     def _filtered_tools(self, tools):
         try:
             from backends import current_workspace
@@ -360,10 +385,10 @@ class PhaseToolFilterMiddleware(AgentMiddleware):
             workspace = current_workspace()
             phase = _detect_phase(workspace)
         except Exception:
-            return tools  # safe fallback: no filtering
+            return self._drop_disabled_typed_diagram(tools)  # safe fallback: no phase filtering
         allowed = _PHASE_TOOLS.get(phase)
         if not allowed:
-            return tools
+            return self._drop_disabled_typed_diagram(tools)
         # Keep a foundational artifact's producing tool available even past its normal
         # phase — never let "most-advanced phase wins" permanently lock out backfilling
         # a step that got skipped (see _missing_artifact_tools).
@@ -376,6 +401,8 @@ class PhaseToolFilterMiddleware(AgentMiddleware):
         # Always keep built-ins (filesystem tools, task, write_todos) which don't
         # appear in _PHASE_TOOLS but are always injected by deepagents.
         allowed = allowed | _DEEP_AGENT_BUILTIN_TOOLS
+        if not _TYPED_DIAGRAM_ENABLED:
+            allowed = allowed - _TYPED_DIAGRAM_TOOLS
         return [t for t in tools if _tool_name(t) in allowed or not _tool_name(t)]
 
     async def awrap_model_call(self, request: ModelRequest, handler):

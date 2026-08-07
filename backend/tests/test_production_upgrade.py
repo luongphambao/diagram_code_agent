@@ -92,11 +92,15 @@ def test_bake_icon_plan_normalized_label_match(tmp_path):
     assert "icon_data_uri" in spec["nodes"][0]  # "Route 53" ~ "route-53"
 
 
-def test_preseed_icon_plan_preserves_icon_resolver_resolution(tmp_path, monkeypatch):
+def test_preseed_icon_plan_prioritizes_resolution_but_still_gathers_fallbacks(tmp_path, monkeypatch):
     """propose_blueprint must not clobber icon_plan.json when icon_resolver already
     resolved it first (session order: icon_resolver runs, THEN propose_blueprint) —
     the exact sequence that left AWS-heavy diagrams with mostly-empty icon
-    candidate lists (see rendering_tools._bake_icon_plan's docstring)."""
+    candidate lists (see rendering_tools._bake_icon_plan's docstring). The prior
+    resolution still wins the first slot, but a fresh search now always runs too
+    (see _preseed_icon_plan's docstring) — a single trusted-but-unverified path with
+    zero fallbacks meant a renamed/moved icon left the node with nothing to recover to
+    but a placeholder glyph."""
     from tools.analysis.blueprint_tools import _preseed_icon_plan
     import tools.analysis.blueprint_tools as blueprint_tools
     from types import SimpleNamespace
@@ -111,22 +115,67 @@ def test_preseed_icon_plan_preserves_icon_resolver_resolution(tmp_path, monkeypa
                     "id": "cloudfront",
                     "status": "FOUND",
                     "icon": "aws/network/cloudfront.png",
+                    "provider": "aws",
                 },
             ]
         ),
         encoding="utf-8",
     )
 
+    search_calls = []
+
     def _fake_search_hits(query, provider, limit=5):
-        raise AssertionError(f"should not re-search already-resolved node: {query!r}")
+        search_calls.append(query)
+        return ["aws/network/other1.png", "aws/network/other2.png"]
 
     monkeypatch.setattr(blueprint_tools, "_search_icon_hits", _fake_search_hits)
+    monkeypatch.setattr(blueprint_tools, "_icon_rel", lambda h: h)
     blueprint = SimpleNamespace(nodes=[SimpleNamespace(id="cloudfront", label="Amazon CloudFront")])
 
     _preseed_icon_plan(blueprint, "aws")
 
+    assert search_calls, "a fresh search must still run to gather fallback candidates"
     plan = json.loads(icon_plan_file.read_text(encoding="utf-8"))
-    assert plan["cloudfront"] == ["aws/network/cloudfront.png"]
+    assert plan["cloudfront"][0] == "aws/network/cloudfront.png"
+    assert "aws/network/other1.png" in plan["cloudfront"]
+
+
+def test_preseed_icon_plan_ignores_resolution_from_a_different_provider(tmp_path, monkeypatch):
+    """A prior resolution recorded under a different provider (e.g. the blueprint
+    switched AWS -> GCP mid-session) must not be reused — it points at the wrong
+    provider's icon catalog and would silently mislabel the diagram if it happened
+    to attach at all."""
+    from tools.analysis.blueprint_tools import _preseed_icon_plan
+    import tools.analysis.blueprint_tools as blueprint_tools
+    from types import SimpleNamespace
+
+    icon_plan_file = tmp_path / "icon_plan.json"
+    monkeypatch.setattr(blueprint_tools, "_ICON_PLAN_FILE", icon_plan_file)
+    icon_plan_file.write_text(
+        json.dumps(
+            [
+                {
+                    "label": "Cloud CDN",
+                    "id": "cdn",
+                    "status": "FOUND",
+                    "icon": "aws/network/cloudfront.png",
+                    "provider": "aws",
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        blueprint_tools, "_search_icon_hits", lambda query, provider, limit=5: ["gcp/network/cdn.png"]
+    )
+    monkeypatch.setattr(blueprint_tools, "_icon_rel", lambda h: h)
+    blueprint = SimpleNamespace(nodes=[SimpleNamespace(id="cdn", label="Cloud CDN")])
+
+    _preseed_icon_plan(blueprint, "gcp")
+
+    plan = json.loads(icon_plan_file.read_text(encoding="utf-8"))
+    assert plan["cdn"] == ["gcp/network/cdn.png"]
+    assert "aws/network/cloudfront.png" not in plan["cdn"]
 
 
 def test_preseed_icon_plan_still_searches_unresolved_nodes(tmp_path, monkeypatch):

@@ -8,14 +8,19 @@
 #   main:   claude-sonnet-4-6   → uses ANTHROPIC_API_KEY
 
 models:
-  main:           cx/gpt-5.6-luna
-  icon_resolver:  cx/gpt-5.6-luna
-  drawer:         cx/gpt-5.6-luna
-  critic:         cx/gpt-5.6-luna
-  wbs_planner:    cx/gpt-5.6-luna
-  ppt_outline:    cx/gpt-5.6-luna
-  ppt_generator:  cx/gpt-5.6-luna
-  brd_writer:     cx/gpt-5.6-luna
+  # NOTE: routed through `openai` (prefix "gpt-"), not `cx/` (bnk_router). bnk_router
+  # has supports_structured_output: false, which disables SafeLLMToolSelectorMiddleware
+  # (see builder.py) and leaves every phase's full tool set on the wire uncapped —
+  # regressed token usage + flow ordering. Keep on openai unless bnk_router adds
+  # structured-output support.
+  main:           gpt-5.6-luna
+  icon_resolver:  gpt-5.6-luna
+  drawer:         gpt-5.6-luna
+  critic:         gpt-5.6-luna
+  wbs_planner:    gpt-5.6-luna
+  ppt_outline:    gpt-5.6-luna
+  ppt_generator:  gpt-5.6-luna
+  brd_writer:     gpt-5.6-luna
 
 
 # ─── Provider Configurations ──────────────────────────────────────────────────

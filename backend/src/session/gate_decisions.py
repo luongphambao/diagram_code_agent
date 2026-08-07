@@ -621,6 +621,9 @@ def _revise_message(action: str, payload: dict) -> str:
     )
 
 
+_SOFT_REVISE_ACTIONS = {"request_evidence", "request_alternative"}
+
+
 def _decision_from_payload(payload: dict, pending_name: str | None) -> dict:
     """Map a gate payload to the langchain HITL decision dict (approve/reject).
 
@@ -628,6 +631,14 @@ def _decision_from_payload(payload: dict, pending_name: str | None) -> dict:
     before (finalize_diagram uses `satisfied`; other gates use `approved`). A HITL v2
     `action` (accept_risk, request_evidence, ...) maps onto approve/reject here; the
     structured record is created separately by `decision_record_from_payload`.
+
+    ``type`` drives the langchain graph resume (must stay approve/reject -- the
+    graph only understands those two) and the human-readable audit trail
+    (record_report_step etc). ``audit_status`` is what callers should pass to
+    ``session.workflow_state.record_gate_decision`` instead: for
+    request_evidence/request_alternative it is "revise", not "reject", so a
+    user asking for more evidence doesn't get recorded as having rejected the
+    gate and block the phase it authorizes (BLOCKING_GATE_PHASES).
     """
     action = payload.get("action")
     if action is None:
@@ -642,13 +653,14 @@ def _decision_from_payload(payload: dict, pending_name: str | None) -> dict:
         msg = payload.get("modifications") or payload.get("comment")
 
     if action in _PROCEED_ACTIONS:
-        decision: dict = {"type": "approve"}
+        decision: dict = {"type": "approve", "audit_status": "approve"}
         if "selected_slot" in payload:
             decision["selected_slot"] = payload["selected_slot"]
         return decision
     # Revise path (reject / request_evidence / request_alternative / unknown).
     return {
         "type": "reject",
+        "audit_status": "revise" if action in _SOFT_REVISE_ACTIONS else "reject",
         "message": _revise_message(action, payload)
         if action in _REVISE_ACTIONS
         else (msg or "Please revise based on the user's feedback."),

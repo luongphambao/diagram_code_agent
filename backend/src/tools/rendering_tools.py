@@ -798,8 +798,25 @@ def _bake_icon_plan(spec: dict, workspace: Path) -> None:
 
     root = Path(LOCAL_ICONS)
     fallback_icons = 0
+    annotation_nodes = 0
     for node in spec.get("nodes", []):
         if node.get("icon_data_uri") or node.get("icon"):
+            continue
+        # Annotation nodes (note/legend/kpi) are text cards, not architecture
+        # components — refined.py's renderer (d.note_card) doesn't even accept
+        # an icon parameter for them, so nothing downstream ever draws what
+        # this loop would attach. Running them through the 4-tier icon search
+        # anyway only guarantees a miss, which _effective_icon_coverage
+        # (domain/validation/validate_drawio.py) then counts as a real
+        # iconography defect — a diagram with more explanatory notes scored
+        # WORSE on icon coverage than the identical diagram with fewer notes,
+        # for a signal notes were never part of. Skip them entirely: no
+        # search, no fallback_icons increment. Counted separately so
+        # _effective_icon_coverage can also drop them from its denominator
+        # (stats["nodes"] still includes them — that's a legitimate total
+        # node count used elsewhere, not something to change globally).
+        if str(node.get("kind") or "").lower() in {"note", "legend", "kpi"}:
+            annotation_nodes += 1
             continue
         # 1) icon_plan resolution (normalized id/label/tech match)
         rel = next(
@@ -846,6 +863,7 @@ def _bake_icon_plan(spec: dict, workspace: Path) -> None:
         node["icon"] = _category_glyph(node)
         fallback_icons += 1
     spec["_fallback_icons"] = fallback_icons
+    spec["_annotation_nodes"] = annotation_nodes
 
 
 def _render_typed_native(spec: dict, workspace: Path, entry) -> dict:
@@ -1079,6 +1097,7 @@ def _render_native_from_spec(spec: dict, workspace: Path) -> dict:
         pass
     _render_drawio_png(out, workspace / "out.png")
     stats["fallback_icons"] = int(spec.get("_fallback_icons") or 0)
+    stats["annotation_nodes"] = int(spec.get("_annotation_nodes") or 0)
     try:  # persist stats so the diagram gate / finalize can score without the spec
         (workspace / "out.native_stats.json").write_text(json.dumps(stats), encoding="utf-8")
     except Exception as exc:  # noqa: BLE001 — every downstream reader (finalize_diagram,

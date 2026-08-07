@@ -13,6 +13,12 @@ from backends import current_workspace
 # embedding it rather than risk bloating the dispatch message itself — drawer
 # still has read_file as a fallback.
 _MAX_EMBED_CHARS = 20_000
+# Hard ceiling on the whole injected block, independent of the per-file cap
+# above. Without this, adding more optional files to _FILES silently scales
+# the dispatch message injected on EVERY task(drawer) call (re-sent each of
+# up to _DRAWER_CALL_LIMIT calls) — this caps that regardless of how many
+# files are listed below.
+_MAX_TOTAL_EMBED_CHARS = 60_000
 
 _FILES = (
     "render_spec.json",
@@ -29,7 +35,13 @@ _FILES = (
     # None and the block is simply skipped for that file.
     "critique.json",
     "engineer_report.json",
-    "quality_history.json",
+    # quality_history.json deliberately NOT included: it's append-only
+    # (tools/stage_markers.append_quality_history) and never trimmed, so it
+    # grows unbounded across a long session. The _MAX_EMBED_CHARS per-file
+    # cap only protects against a single oversized read, not against slowly
+    # crossing that cap round after round and flipping between "included" and
+    # "skipped" — drawer can still read_file() it directly if it needs
+    # history, same fallback as any file that trips the per-file cap.
 )
 
 
@@ -48,11 +60,19 @@ def _read_workspace_file(name: str) -> str | None:
 
 def _build_context_block() -> str:
     parts = []
+    budget = _MAX_TOTAL_EMBED_CHARS
     for name in _FILES:
         content = _read_workspace_file(name)
         if content is None:
             continue
-        parts.append(f"\n\n--- {name} (already on disk, use the content below) ---\n{content}")
+        chunk = f"\n\n--- {name} (already on disk, use the content below) ---\n{content}"
+        if len(chunk) > budget:
+            # Stop rather than truncate mid-JSON — a partial file is worse
+            # than no file (drawer would parse garbage); it can still
+            # read_file() this one directly.
+            break
+        parts.append(chunk)
+        budget -= len(chunk)
     if not parts:
         return ""
     return (
