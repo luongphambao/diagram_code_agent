@@ -432,9 +432,17 @@ def strip_accents(value: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFD", value) if unicodedata.category(c) != "Mn")
 
 
-def _key(value: str) -> str:
-    """Normalise a free-text label to an alias-table lookup key."""
+def normalize_key(value: str) -> str:
+    """Normalise a free-text label to an alias-table / node-identity lookup key.
+
+    Public because callers outside this module (:mod:`kg_transform`, notably)
+    need the exact same fold to mint a Technology or Client node id that a
+    second differently-spelled mention of the same thing will collide with.
+    """
     return re.sub(r"[^a-z0-9]+", "", strip_accents(clean_text(value)).lower())
+
+
+_key = normalize_key  # short alias for call sites within this module
 
 
 # ════════════════════════════════════════════════════════════════════════════

@@ -15,7 +15,31 @@ services:
       timeout: 5s
       retries: 10
     # Expose only if you want to inspect the DB from the host:
-    # ports: ["5432:5432"]
+    ports: ["5432:5432"]
+
+  # Knowledge graph store for backend/src/domain/kg (see [[kg-project-2026-08-08]]
+  # in project memory). Pinned to the 5.26 LTS line (CalVer releases after it are
+  # a monthly-upgrade treadmill; LTS is supported to 2028-06). Community Edition:
+  # single instance, no clustering/RBAC — fine for this corpus's size (~2.5k
+  # nodes). Ports exposed by default (not commented like postgres above) because
+  # the whole point of running this service is host-side Browser inspection at
+  # http://localhost:7474.
+  neo4j:
+    image: neo4j:5.26
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-diagramgraph}
+      NEO4J_server_memory_pagecache_size: 256m
+      NEO4J_server_memory_heap_max__size: 512m
+    ports:
+      - "7474:7474" # Browser UI + HTTP query API
+      - "7687:7687" # Bolt (unused by this project's httpx-based loader, kept for the Browser/cypher-shell)
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   # qdrant:
   #   image: qdrant/qdrant:v1.9.7
@@ -155,3 +179,4 @@ volumes:
   pgdata:
   agentspace:
   qdrant_storage:
+  neo4j_data:

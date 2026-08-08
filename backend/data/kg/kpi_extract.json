@@ -1,0 +1,187 @@
+[
+  {
+    "folder": "_Aquila_ Proposal - Tran Duc Brilliant Factory",
+    "deck_subject_client": "Trần Đức Group",
+    "kpis": [
+      {
+        "metric": "Tự động hóa thu thập dữ liệu",
+        "value": "Tự động bằng IoT sensor / Scan QR / AI sensor, thay thế nhập tay",
+        "attributed_client": "Trần Đức Group",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Mean Time To Repair (MTTR)",
+        "value": "Giảm",
+        "attributed_client": "Trần Đức Group",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Mean Time Between Failures (MTBF)",
+        "value": "Tăng",
+        "attributed_client": "Trần Đức Group",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Chi phí bảo trì",
+        "value": "Giảm",
+        "attributed_client": "Trần Đức Group",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Thời gian máy chết ngoài kế hoạch",
+        "value": "Giảm",
+        "attributed_client": "Trần Đức Group",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Chi phí điện trên sản phẩm",
+        "value": "Giảm",
+        "attributed_client": "Trần Đức Group",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Khả dụng của máy CNC",
+        "value": "75%",
+        "attributed_client": "Không xác định; ví dụ minh họa máy CNC cắt gỗ",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Hiệu suất của máy CNC",
+        "value": "93.3%",
+        "attributed_client": "Không xác định; ví dụ minh họa máy CNC cắt gỗ",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Chất lượng của máy CNC",
+        "value": "85.7%",
+        "attributed_client": "Không xác định; ví dụ minh họa máy CNC cắt gỗ",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "OEE của máy CNC",
+        "value": "59.5%",
+        "attributed_client": "Không xác định; ví dụ minh họa máy CNC cắt gỗ",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Chi phí thất thoát do khả dụng thấp",
+        "value": "10,000,000 VND",
+        "attributed_client": "Không xác định; ví dụ minh họa máy CNC cắt gỗ",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Chi phí thất thoát do chất lượng thấp",
+        "value": "8,000,000 VND",
+        "attributed_client": "Không xác định; ví dụ minh họa máy CNC cắt gỗ",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Chi phí năng lượng",
+        "value": "270,000 VND/ca",
+        "attributed_client": "Không xác định; ví dụ minh họa máy CNC cắt gỗ",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1782819274.651394,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_ARM Control System_ Proposal_EN",
+    "deck_subject_client": "Nichietsu",
+    "kpis": [
+      {
+        "metric": "Mold-changing process automation",
+        "value": "100%",
+        "attributed_client": "Nichietsu",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority I urgent support response time",
+        "value": "1 hour",
+        "attributed_client": "Nichietsu",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority I urgent support resolution time",
+        "value": "8 hours",
+        "attributed_client": "Nichietsu",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority II high support response time",
+        "value": "2 hours",
+        "attributed_client": "Nichietsu",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority II high support resolution time",
+        "value": "16 hours",
+        "attributed_client": "Nichietsu",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority III medium support response time",
+        "value": "4 hours",
+        "attributed_client": "Nichietsu",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority III medium support resolution time",
+        "value": "24 hours",
+        "attributed_client": "Nichietsu",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority IV low support response time",
+        "value": "16 hours",
+        "attributed_client": "Nichietsu",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority IV low support resolution time",
+        "value": "40 hours",
+        "attributed_client": "Nichietsu",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781885423.119534,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK - TSWork_ HDX - WoW in ODC",
+    "deck_subject_client": "TSwork (HDX)",
+    "kpis": [
+      {
+        "metric": "Code review time reduction",
+        "value": "25% reduction in one pilot sprint",
+        "attributed_client": "BnK Solution (internal example, not TSwork)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781915970.17264,
+    "_model": "cx/gpt-5.6-luna"
+  }
+]
