@@ -34,6 +34,9 @@ from typing import Any
 
 import psycopg
 
+from domain.kg.kg_transform import domain_id as _domain_id
+from domain.kg.kg_transform import tech_id as _tech_id
+
 logger = logging.getLogger("diagram-agent")
 
 _DDL_NODES = """
@@ -153,8 +156,13 @@ def find_similar_opportunities(
     optionally, a domain tag) they share — a graph analogue of tag-overlap
     search, cheap because it's two indexed joins, not a vector search."""
     url = _database_url(database_url)
-    tech_ids = [f"tech:{t}" for t in technologies] if technologies else None
-    domain_id = f"domain:{domain}" if domain else None
+    # Node ids are built with kg_transform's normalize_key (accent-folded,
+    # lowercased, alnum-only) — matching that exactly here, not re-deriving a
+    # slightly different id, is what makes "UiPath" (natural caller spelling)
+    # actually hit the "tech:uipath" node instead of silently returning zero
+    # rows. Same reasoning for domain_id below.
+    tech_ids = [_tech_id(t) for t in technologies] if technologies else None
+    domain_id = _domain_id(domain) if domain else None
     with psycopg.connect(url) as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -194,7 +202,7 @@ def benchmark_effort_by_role(
     benchmark, see kg_vocab's estimator-confusion note."""
     url = _database_url(database_url)
     role_filter = f"role:{role}" if role else None
-    domain_id = f"domain:{domain}" if domain else None
+    domain_id = _domain_id(domain) if domain else None
     with psycopg.connect(url) as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -251,7 +259,7 @@ def tech_cooccurrence(
     Opportunity and WbsProject USES_TECH edges — a reuse-recommendation
     primitive ("projects using UiPath also tend to use...")."""
     url = _database_url(database_url)
-    tech_id_ = f"tech:{technology}"
+    tech_id_ = _tech_id(technology)
     with psycopg.connect(url) as conn:
         with conn.cursor() as cur:
             cur.execute(

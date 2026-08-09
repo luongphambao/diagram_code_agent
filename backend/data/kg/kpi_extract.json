@@ -183,5 +183,3885 @@
     ],
     "_source_mtime": 1781915970.17264,
     "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ BCA Finance - Case Study",
+    "deck_subject_client": "BCA Finance",
+    "kpis": [
+      {
+        "metric": "Giảm chi phí truyền thông",
+        "value": "Giảm chi phí truyền thông",
+        "attributed_client": "BCA Finance",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Tiếp cận đúng khách hàng qua đúng kênh",
+        "value": "Tiếp đúng khách hàng qua đúng kênh",
+        "attributed_client": "BCA Finance",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Tăng doanh thu cross-sell/up-sell",
+        "value": "Tăng doanh thu Cross-sell / Up-sell",
+        "attributed_client": "BCA Finance",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Cá nhân hóa dịch vụ và nâng cao trải nghiệm khách hàng",
+        "value": "Cá nhân hóa dịch vụ; nâng cao trải nghiệm khách hàng",
+        "attributed_client": "BCA Finance",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Tăng tỷ lệ giữ chân khách hàng",
+        "value": "Tăng tỷ lệ giữ chân; cải thiện vòng đời và giá trị khách hàng",
+        "attributed_client": "BCA Finance",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Phát hiện nhanh giao dịch bất thường",
+        "value": "Phát hiện nhanh giao dịch bất thường",
+        "attributed_client": "BCA Finance",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Giảm rủi ro tài chính",
+        "value": "Giảm rủi ro tài chính",
+        "attributed_client": "BCA Finance",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Tỷ lệ test case được tự động hóa",
+        "value": "98%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Độ chính xác kiểm thử",
+        "value": "100%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Giảm effort thực thi thủ công",
+        "value": "99%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Tăng tốc độ testing",
+        "value": "Tăng tốc độ testing",
+        "attributed_client": "MBAL (MB Ageas Life)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Tăng độ chính xác testing",
+        "value": "Tăng độ chính xác testing",
+        "attributed_client": "MBAL (MB Ageas Life)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Phát hiện lỗi sớm",
+        "value": "Phát hiện lỗi sớm",
+        "attributed_client": "MBAL (MB Ageas Life)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Giảm workload lặp đi lặp lại",
+        "value": "Giảm workload lặp đi lặp lại",
+        "attributed_client": "MBAL (MB Ageas Life)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Nâng cao hiệu quả sử dụng nguồn lực",
+        "value": "Nâng cao sử dụng nguồn lực",
+        "attributed_client": "MBAL (MB Ageas Life)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781915852.5480785,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ Clinic Management - Proposal",
+    "deck_subject_client": "Clinic",
+    "kpis": [],
+    "_source_mtime": 1781916002.0856285,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ DAMS Phase 2 - Proposal",
+    "deck_subject_client": "Tineken Shipping Limited",
+    "kpis": [
+      {
+        "metric": "Invoice/vendor bill approval coverage",
+        "value": "100%",
+        "attributed_client": "Tineken Shipping Limited",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781917184.994352,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ Driver Safe Application - Proposal",
+    "deck_subject_client": "EUP",
+    "kpis": [
+      {
+        "metric": "Battery consumption",
+        "value": "Dưới 13% pin/giờ khi GPS polling mỗi giây",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "GPS dropout rate",
+        "value": "Dưới 5% trong kiểm thử thực tế",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Driving event detection accuracy",
+        "value": "Đạt ngưỡng chính xác đã thống nhất",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 1 support response time",
+        "value": "1 giờ",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 1 issue resolution time",
+        "value": "8 giờ",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 2 support response time",
+        "value": "2 giờ",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 2 issue resolution time",
+        "value": "16 giờ",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 3 support response time",
+        "value": "4 giờ",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 3 issue resolution time",
+        "value": "24 giờ",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 4 support response time",
+        "value": "16 giờ",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 4 issue resolution time",
+        "value": "40 giờ",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Operational efficiency improvement",
+        "value": "30%",
+        "attributed_client": "Một nhà sản xuất thiết bị nông nghiệp trong success story của BnK",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781918728.974533,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ eExpense System Revamp - Proposal",
+    "deck_subject_client": "Unnamed client",
+    "kpis": [
+      {
+        "metric": "UAT acceptance",
+        "value": "UAT Sign-Off achieved",
+        "attributed_client": "Unnamed client",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Migrated data validation",
+        "value": "Data validated to requirements in the target environment",
+        "attributed_client": "Unnamed client",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Load-test performance",
+        "value": "System passes the defined load-test scenarios",
+        "attributed_client": "Unnamed client",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Critical defects after post-go-live support",
+        "value": "Zero critical defects after the Nursing Period",
+        "attributed_client": "Unnamed client",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781915910.1459334,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ EUP - Long-term Care System - Proposal 20250805",
+    "deck_subject_client": "EUP",
+    "kpis": [
+      {
+        "metric": "SLA Priority I (Urgent) response and resolution time",
+        "value": "Response: 1 hour / Resolution: 8 hours",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "SLA Priority II (High) response and resolution time",
+        "value": "Response: 2 hours / Resolution: 16 hours",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "SLA Priority III (Medium) response and resolution time",
+        "value": "Response: 4 hours / Resolution: 24 hours",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "SLA Priority IV (Low) response and resolution time",
+        "value": "Response: 16 hours / Resolution: 40 hours",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781885122.002283,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ Ex Umbra - Proposal -AI",
+    "deck_subject_client": "Tible",
+    "kpis": [],
+    "_source_mtime": 1781882916.7775688,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ FSD Chat - Proposal",
+    "deck_subject_client": "Mouxidea",
+    "kpis": [
+      {
+        "metric": "Concurrent users supported",
+        "value": "Minimum 11,000 users concurrently",
+        "attributed_client": "Mouxidea (FSD application)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "End-to-end message encryption coverage",
+        "value": "100% of messages",
+        "attributed_client": "Mouxidea (FSD application)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Watermarked upload coverage",
+        "value": "100% of uploaded files/images",
+        "attributed_client": "Mouxidea (FSD application)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Screenshot watermark coverage",
+        "value": "Every screenshot in the chat module",
+        "attributed_client": "Mouxidea (FSD application)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781918744.860965,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ FSD Instant Messager - Proposal",
+    "deck_subject_client": "Mouxidea",
+    "kpis": [
+      {
+        "metric": "Concurrent-user capacity",
+        "value": "11,000 concurrent users without interruption",
+        "attributed_client": "Mouxidea",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Watermark coverage",
+        "value": "100% of file uploads and screenshots",
+        "attributed_client": "Mouxidea",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Message encryption",
+        "value": "End-to-end encryption",
+        "attributed_client": "Mouxidea",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Load and security testing",
+        "value": "Pass Load Test and Security Test",
+        "attributed_client": "Mouxidea",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Critical defects at go-live",
+        "value": "Zero critical bugs",
+        "attributed_client": "Mouxidea",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "UAT acceptance",
+        "value": "UAT passed with client approval",
+        "attributed_client": "Mouxidea",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Post-launch serious defects",
+        "value": "No serious defects",
+        "attributed_client": "Mouxidea",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781918667.1270318,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ GE - Solution Proposal_Ver_2",
+    "deck_subject_client": "GE HP Factory",
+    "kpis": [
+      {
+        "metric": "Độ chính xác định vị",
+        "value": "cm-level",
+        "attributed_client": "GE HP Factory",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Độ trễ xử lý/cảnh báo",
+        "value": "~1 giây",
+        "attributed_client": "GE HP Factory",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781918826.9001286,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ GGF_ Sync Feature Boom to Martignani_CR",
+    "deck_subject_client": "GGF",
+    "kpis": [],
+    "_source_mtime": 1781917023.4349785,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ LTC - Proposal",
+    "deck_subject_client": "EUP",
+    "kpis": [
+      {
+        "metric": "P1 urgent SLA response time",
+        "value": "1 giờ",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "P1 urgent SLA resolution time",
+        "value": "8 giờ",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "P2 high SLA response time",
+        "value": "4 giờ",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "P2 high SLA resolution time",
+        "value": "16 giờ",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "P3 medium SLA response time",
+        "value": "8 giờ",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "P3 medium SLA resolution time",
+        "value": "24 giờ",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "P4 low SLA response time",
+        "value": "16 giờ",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "P4 low SLA resolution time",
+        "value": "40 giờ",
+        "attributed_client": "EUP",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781919498.6344683,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ Maritime ERP - Proposal 20250401",
+    "deck_subject_client": "",
+    "kpis": [
+      {
+        "metric": "Tỷ lệ chứng chỉ được theo dõi tự động",
+        "value": "100%",
+        "attributed_client": "Khách hàng trong lĩnh vực hàng hải / shipping company chưa nêu tên",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Thời gian phản hồi hỗ trợ P1 - Urgent",
+        "value": "1 giờ",
+        "attributed_client": "Khách hàng trong lĩnh vực hàng hải / shipping company chưa nêu tên",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "23"
+      },
+      {
+        "metric": "Thời gian xử lý hỗ trợ P1 - Urgent",
+        "value": "8 giờ",
+        "attributed_client": "Khách hàng trong lĩnh vực hàng hải / shipping company chưa nêu tên",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "23"
+      },
+      {
+        "metric": "Thời gian phản hồi hỗ trợ P2 - High",
+        "value": "2 giờ",
+        "attributed_client": "Khách hàng trong lĩnh vực hàng hải / shipping company chưa nêu tên",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "23"
+      },
+      {
+        "metric": "Thời gian xử lý hỗ trợ P2 - High",
+        "value": "16 giờ",
+        "attributed_client": "Khách hàng trong lĩnh vực hàng hải / shipping company chưa nêu tên",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "23"
+      },
+      {
+        "metric": "Thời gian phản hồi hỗ trợ P3 - Medium",
+        "value": "4 giờ",
+        "attributed_client": "Khách hàng trong lĩnh vực hàng hải / shipping company chưa nêu tên",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "23"
+      },
+      {
+        "metric": "Thời gian xử lý hỗ trợ P3 - Medium",
+        "value": "24 giờ",
+        "attributed_client": "Khách hàng trong lĩnh vực hàng hải / shipping company chưa nêu tên",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "23"
+      },
+      {
+        "metric": "Thời gian phản hồi hỗ trợ P4 - Low",
+        "value": "16 giờ",
+        "attributed_client": "Khách hàng trong lĩnh vực hàng hải / shipping company chưa nêu tên",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "23"
+      },
+      {
+        "metric": "Thời gian xử lý hỗ trợ P4 - Low",
+        "value": "40 giờ",
+        "attributed_client": "Khách hàng trong lĩnh vực hàng hải / shipping company chưa nêu tên",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "23"
+      }
+    ],
+    "_source_mtime": 1781918729.8908658,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ NUEIP - Offshore Delivery Center",
+    "deck_subject_client": "NUEIP",
+    "kpis": [
+      {
+        "metric": "Code review time reduction",
+        "value": "25% reduction within 1 sprint",
+        "attributed_client": "Not specified; illustrative ODC example",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "15"
+      }
+    ],
+    "_source_mtime": 1781918193.4855702,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ NUEIP HDX ODC Proposal",
+    "deck_subject_client": "NUEIP HDX",
+    "kpis": [
+      {
+        "metric": "ODC vision and roadmap confirmation",
+        "value": "ODC Vision Confirmed",
+        "attributed_client": "NUEIP HDX",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Pilot feasibility validation",
+        "value": "Pilot Validated",
+        "attributed_client": "NUEIP HDX",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Governance model completion",
+        "value": "Assessment Completed",
+        "attributed_client": "NUEIP HDX",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Full-scale ODC operational launch",
+        "value": "ODC Launched; fully operational and on schedule",
+        "attributed_client": "NUEIP HDX",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Scalability readiness",
+        "value": "Primed for Scalability",
+        "attributed_client": "NUEIP HDX",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781916374.5803983,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ Oi - VPS Assessment",
+    "deck_subject_client": "Oi",
+    "kpis": [],
+    "_source_mtime": 1781916173.555322,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ Precious Metals Trading - Proposal - v4",
+    "deck_subject_client": "ValueMax (Singapore)",
+    "kpis": [
+      {
+        "metric": "Priority 1 urgent SLA response time",
+        "value": "1 hour",
+        "attributed_client": "ValueMax (Singapore)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 1 urgent SLA resolution time",
+        "value": "8 hours",
+        "attributed_client": "ValueMax (Singapore)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 2 high SLA response time",
+        "value": "2 hours",
+        "attributed_client": "ValueMax (Singapore)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 2 high SLA resolution time",
+        "value": "16 hours",
+        "attributed_client": "ValueMax (Singapore)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 3 medium SLA response time",
+        "value": "4 hours",
+        "attributed_client": "ValueMax (Singapore)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 3 medium SLA resolution time",
+        "value": "24 hours",
+        "attributed_client": "ValueMax (Singapore)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 4 low SLA response time",
+        "value": "16 hours",
+        "attributed_client": "ValueMax (Singapore)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 4 low SLA resolution time",
+        "value": "40 hours",
+        "attributed_client": "ValueMax (Singapore)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781916216.1022558,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ Proposal - HLAS",
+    "deck_subject_client": "HL Assurance (HLAS)",
+    "kpis": [],
+    "_source_mtime": 1781886018.6653097,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ PT Constrans Asia -Solution Proposal_Pilot",
+    "deck_subject_client": "PT Constrans Asia",
+    "kpis": [
+      {
+        "metric": "PPE violation detection automation",
+        "value": "100% automated",
+        "attributed_client": "PT Constrans Asia",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "System availability",
+        "value": "24/7 operation",
+        "attributed_client": "PT Constrans Asia",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 1 SLA response time",
+        "value": "1 hour",
+        "attributed_client": "PT Constrans Asia",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 2 SLA response time",
+        "value": "2 hours",
+        "attributed_client": "PT Constrans Asia",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 3 SLA response time",
+        "value": "4 hours",
+        "attributed_client": "PT Constrans Asia",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 4 SLA response time",
+        "value": "16 hours",
+        "attributed_client": "PT Constrans Asia",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 1 SLA resolution time",
+        "value": "8 hours",
+        "attributed_client": "PT Constrans Asia",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 2 SLA resolution time",
+        "value": "16 hours",
+        "attributed_client": "PT Constrans Asia",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 3 SLA resolution time",
+        "value": "24 hours",
+        "attributed_client": "PT Constrans Asia",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 4 SLA resolution time",
+        "value": "40 hours",
+        "attributed_client": "PT Constrans Asia",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781916286.3786054,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ Surbana Tech - HDX ODC Proposal",
+    "deck_subject_client": "Surbana Tech",
+    "kpis": [
+      {
+        "metric": "Active users delivered",
+        "value": "60k+ active users",
+        "attributed_client": "Vietnam Real Estate client",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781883866.59481,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ Surbana Tech - HDX ODC Proposal - Updated",
+    "deck_subject_client": "Surbana Tech",
+    "kpis": [],
+    "_source_mtime": 1781882082.4494326,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ Surbana Tech - HDX ODC Proposal_PDF",
+    "deck_subject_client": "Surbana Tech",
+    "kpis": [
+      {
+        "metric": "Development speed improvement",
+        "value": "3-10x faster than traditional development",
+        "attributed_client": "Surbana Tech",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Critical production defects",
+        "value": "0 critical defects in production",
+        "attributed_client": "Surbana Tech",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Application uptime",
+        "value": ">= 99.5%",
+        "attributed_client": "Surbana Tech",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Security compliance",
+        "value": "100% compliance",
+        "attributed_client": "Surbana Tech",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Monthly cost savings from complimentary Delivery Manager",
+        "value": "~3,400 USD/month",
+        "attributed_client": "Surbana Tech",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Active users served",
+        "value": "60,000+ active users",
+        "attributed_client": "Unspecified real-estate client in Vietnam",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Application delivery",
+        "value": "1 complete application integrated with SAP",
+        "attributed_client": "Unspecified client in the Application Tracking System case study",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Mobile application delivery",
+        "value": "1 complete mobile application",
+        "attributed_client": "Unspecified telecom client in the SIM Seller App case study",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781885384.8106658,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ Template - Proposal",
+    "deck_subject_client": "",
+    "kpis": [
+      {
+        "metric": "Efficiency improvement",
+        "value": "30%",
+        "attributed_client": "Unspecified Smart Agriculture case-study client",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 9"
+      },
+      {
+        "metric": "Cost savings",
+        "value": "Significant cost savings",
+        "attributed_client": "Unspecified Smart Agriculture case-study client",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 9"
+      },
+      {
+        "metric": "Environmental impact reduction",
+        "value": "Reduced environmental impact",
+        "attributed_client": "Unspecified Smart Agriculture case-study client",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 9"
+      },
+      {
+        "metric": "Industry innovator reputation",
+        "value": "Enhanced reputation as an industry innovator",
+        "attributed_client": "Unspecified Smart Agriculture case-study client",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 9"
+      }
+    ],
+    "_source_mtime": 1781917436.2623427,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ Template Deck",
+    "deck_subject_client": "",
+    "kpis": [],
+    "_source_mtime": 1781916122.5128992,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ TrailWatch Revamp - Proposal",
+    "deck_subject_client": "TrailWatch",
+    "kpis": [
+      {
+        "metric": "System uptime",
+        "value": "99.9%",
+        "attributed_client": "TrailWatch",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Efficiency improvement",
+        "value": "30%",
+        "attributed_client": "BnK Smart Agriculture Success Story client (client name not stated)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781883320.5706377,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ ValueMax - Success Auto Modernization Proposal_Updated",
+    "deck_subject_client": "ValueMax",
+    "kpis": [
+      {
+        "metric": "AS-IS system baseline confirmed",
+        "value": "AS-IS system fully documented",
+        "attributed_client": "ValueMax",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Gap analysis completed",
+        "value": "Feature, integration, security, performance, and data-governance gaps identified",
+        "attributed_client": "ValueMax",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "TO-BE architecture defined",
+        "value": "AWS and microservices-based target architecture specified",
+        "attributed_client": "ValueMax",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Blueprint document completed",
+        "value": "Blueprint sufficient to begin the subsequent system-build phase",
+        "attributed_client": "ValueMax",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "BRD approved",
+        "value": "Business Requirement Document accepted by ValueMax",
+        "attributed_client": "ValueMax",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Desktop-to-web modernization",
+        "value": "Web application replacing the legacy desktop application; user-friendly and cross-platform",
+        "attributed_client": "ValueMax",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Scalability and integration",
+        "value": "Microservices/cloud-native architecture designed for easier scaling and integration",
+        "attributed_client": "ValueMax",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Performance",
+        "value": "High performance and low latency",
+        "attributed_client": "ValueMax",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Operational cost reduction",
+        "value": "Reduced operating costs through AWS pay-per-use",
+        "attributed_client": "ValueMax",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Real-time data access and reporting",
+        "value": "Real-time reporting and data access",
+        "attributed_client": "ValueMax",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781918079.0013628,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_BnK_ Zoustec Application - Proposal",
+    "deck_subject_client": "Zoustec",
+    "kpis": [
+      {
+        "metric": "Priority 1 urgent support response time",
+        "value": "1 giờ",
+        "attributed_client": "Zoustec",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 1 urgent issue resolution time",
+        "value": "8 giờ",
+        "attributed_client": "Zoustec",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 2 high-priority support response time",
+        "value": "2 giờ",
+        "attributed_client": "Zoustec",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 2 high-priority issue resolution time",
+        "value": "16 giờ",
+        "attributed_client": "Zoustec",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 3 medium-priority support response time",
+        "value": "4 giờ",
+        "attributed_client": "Zoustec",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 3 medium-priority issue resolution time",
+        "value": "24 giờ",
+        "attributed_client": "Zoustec",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 4 low-priority support response time",
+        "value": "16 giờ",
+        "attributed_client": "Zoustec",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Priority 4 low-priority issue resolution time",
+        "value": "40 giờ",
+        "attributed_client": "Zoustec",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781916427.258122,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_Bnk_CAG_HIVE_Highlevel Solution _v1_1",
+    "deck_subject_client": "CAG",
+    "kpis": [
+      {
+        "metric": "Business disruption during migration",
+        "value": "Zero/minimal disruption",
+        "attributed_client": "CAG",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781883330.8817556,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_EN_ BnK-IKM 2",
+    "deck_subject_client": "",
+    "kpis": [
+      {
+        "metric": "Knowledge access time",
+        "value": "Within a few minutes instead of many days",
+        "attributed_client": "Unnamed Case Study 1 client in commercial/retail transaction analysis",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Information retrieval speed",
+        "value": "Faster information retrieval",
+        "attributed_client": "Unnamed Case Study 2 client in government/public administration",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Analysis accuracy",
+        "value": "More accurate analysis",
+        "attributed_client": "Unnamed Case Study 2 client in government/public administration",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Customer-support staffing cost",
+        "value": "Reduced staffing costs",
+        "attributed_client": "Unnamed Case Study 3 client in services, retail, or utilities",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Customer-service availability",
+        "value": "24/7 service, without interruption from holidays or weekends",
+        "attributed_client": "Unnamed Case Study 3 client in services, retail, or utilities",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Customer-response consistency and accuracy",
+        "value": "More consistent and accurate responses",
+        "attributed_client": "Unnamed Case Study 3 client in services, retail, or utilities",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Employee workload",
+        "value": "Reduced through automation of customer support and repetitive question answering",
+        "attributed_client": "Generic BnK IKM product outcome; no specific client identified",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Answer traceability",
+        "value": "Every answer includes a specific document source citation",
+        "attributed_client": "Generic BnK IKM product outcome; no specific client identified",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Unauthorized information exposure",
+        "value": "Restricted access so only authorized users can access important information",
+        "attributed_client": "Generic BnK IKM product outcome; no specific client identified",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Data containment",
+        "value": "Data remains within the organization with the on-premise option",
+        "attributed_client": "Generic BnK IKM product outcome; no specific client identified",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781885519.143275,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_JNP_ - E-invoice System Modernize - Proposal - V3_0",
+    "deck_subject_client": "J & P Consulting Pte. Ltd.",
+    "kpis": [
+      {
+        "metric": "OpenPeppol and IMDA compliance",
+        "value": "100% compliance",
+        "attributed_client": "J & P Consulting Pte. Ltd.",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "IMDA Peppol Access Point certification",
+        "value": "Certification achieved",
+        "attributed_client": "J & P Consulting Pte. Ltd.",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "ERP-to-Peppol connectivity",
+        "value": "Successful connection",
+        "attributed_client": "J & P Consulting Pte. Ltd.",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Manual B2B invoice-exchange effort",
+        "value": "Reduced manual processing",
+        "attributed_client": "J & P Consulting Pte. Ltd.",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Transaction monitoring and audit trail",
+        "value": "Real-time monitoring and complete audit trail for every transaction",
+        "attributed_client": "J & P Consulting Pte. Ltd.",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Certificate lifecycle continuity",
+        "value": "Continuous operation enabled by automatic certificate rotation",
+        "attributed_client": "J & P Consulting Pte. Ltd.",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781883300.2413228,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_MC x BnK_ Landscape Tree App Revamp - Proposal",
+    "deck_subject_client": "Master Concept (MC)",
+    "kpis": [],
+    "_source_mtime": 1781883255.3201842,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_Oi_ - Commission Calculation System - Proposal -V2_0",
+    "deck_subject_client": "Otto International (OI)",
+    "kpis": [
+      {
+        "metric": "Commission lifecycle automation",
+        "value": "100% of the commission lifecycle, from extraction through DN/CN generation, automated",
+        "attributed_client": "Otto International (OI)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "Slides 5–6"
+      },
+      {
+        "metric": "Manual calculation and verification error reduction",
+        "value": "Eliminate errors in commission calculation and verification",
+        "attributed_client": "Otto International (OI)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "Slides 5–6"
+      },
+      {
+        "metric": "Process traceability",
+        "value": "Complete audit trail for all processing steps",
+        "attributed_client": "Otto International (OI)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "Slides 5–6"
+      },
+      {
+        "metric": "Commission processing time reduction",
+        "value": "Reduced time for periodic commission processing, supported by real-time reporting",
+        "attributed_client": "Otto International (OI)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "Slides 5–6"
+      },
+      {
+        "metric": "Audit and compliance readiness",
+        "value": "Meet internal and external audit requirements",
+        "attributed_client": "Otto International (OI)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "Slides 5–6"
+      },
+      {
+        "metric": "Multi-office and regional processing support",
+        "value": "Process regional variations and custom grouping logic across multiple offices",
+        "attributed_client": "Otto International (OI)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "Slides 5–6"
+      },
+      {
+        "metric": "Ecosystem integration",
+        "value": "Successful integration with CBX, Navision, Qlik, Teams, and Azure AD",
+        "attributed_client": "Otto International (OI)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "Slides 5–6"
+      },
+      {
+        "metric": "System performance and security test compliance",
+        "value": "Meet load-test and security-test standards",
+        "attributed_client": "Otto International (OI)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "Slides 5–6"
+      }
+    ],
+    "_source_mtime": 1781918053.8045812,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_Oi_ - eInvoice Interface System - Proposal -V1_1",
+    "deck_subject_client": "Otto International (OI) / Otto Group",
+    "kpis": [
+      {
+        "metric": "Manual invoice-transfer work eliminated",
+        "value": "Completely eliminated",
+        "attributed_client": "Otto International (OI)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Financial data accuracy and consistency",
+        "value": "Financial data validated and consistent before transmission to SAP/ESB",
+        "attributed_client": "Otto International (OI)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "XML invoice compliance",
+        "value": "Invoices conform to Otto Group's required XML standard",
+        "attributed_client": "Otto International (OI) / Otto Group",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Invoice-process transparency",
+        "value": "End-to-end monitoring through logging, audit trail, and email alerts",
+        "attributed_client": "Otto International (OI)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Scheduled processing reliability",
+        "value": "Automated weekly execution at Tuesday 6 PM, adjustable for holidays",
+        "attributed_client": "Otto International (OI)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781917392.2725308,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "_Project Proposal_ Aila_AI-Powered Legal Assistant_ _v0_4_",
+    "deck_subject_client": "AILA Corporation",
+    "kpis": [
+      {
+        "metric": "Response time for ordinary questions",
+        "value": "< 5 seconds",
+        "attributed_client": "AILA Corporation",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Response time for complex questions involving calendar checks",
+        "value": "< 10 seconds",
+        "attributed_client": "AILA Corporation",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Monthly uptime",
+        "value": ">= 99%",
+        "attributed_client": "AILA Corporation",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Concurrent-user support",
+        "value": "A few hundred CCU without lag",
+        "attributed_client": "AILA Corporation",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Operating cost",
+        "value": "Reduction through automation of basic questions",
+        "attributed_client": "AILA Corporation",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Conversion rate",
+        "value": "Increase through instant 24/7 responses",
+        "attributed_client": "AILA Corporation",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Customer retention",
+        "value": "Improvement through faster booking and clearer answers",
+        "attributed_client": "AILA Corporation",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Recovery time objective",
+        "value": "A few hours",
+        "attributed_client": "AILA Corporation",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Recovery point objective",
+        "value": "Within the current day",
+        "attributed_client": "AILA Corporation",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781916369.4216173,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "AI Data Analytics MVP Proposal",
+    "deck_subject_client": "Beacon Business Systems",
+    "kpis": [
+      {
+        "metric": "Time-to-insight",
+        "value": "Reduced from days to minutes",
+        "attributed_client": "Beacon Business Systems",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 5"
+      },
+      {
+        "metric": "Time-to-insight",
+        "value": "Reduced from days to seconds",
+        "attributed_client": "Beacon Business Systems",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 12"
+      },
+      {
+        "metric": "Data access speed",
+        "value": "Near-real-time access to insights",
+        "attributed_client": "Beacon Business Systems",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slides 5, 16"
+      },
+      {
+        "metric": "IT dependency",
+        "value": "Reduced dependency on IT for analytics and reporting",
+        "attributed_client": "Beacon Business Systems",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 16"
+      },
+      {
+        "metric": "Decision speed",
+        "value": "Faster business decision-making through AI-assisted analytics",
+        "attributed_client": "Beacon Business Systems",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 16"
+      },
+      {
+        "metric": "Decision accuracy",
+        "value": "More accurate and consistent decisions",
+        "attributed_client": "Beacon Business Systems",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 16"
+      }
+    ],
+    "_source_mtime": 1781883443.3298209,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK - CMC RPA Proposal_Full",
+    "deck_subject_client": "CMC Telecom",
+    "kpis": [
+      {
+        "metric": "Khối lượng thủ công được tự động hóa",
+        "value": "95%",
+        "attributed_client": "Eximbank (dự án điển hình, không phải CMC Telecom)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "32–37"
+      },
+      {
+        "metric": "Độ chính xác dữ liệu",
+        "value": "100%",
+        "attributed_client": "Eximbank (dự án điển hình, không phải CMC Telecom)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "32–37"
+      },
+      {
+        "metric": "Thời gian xử lý giao dịch giảm",
+        "value": "80%",
+        "attributed_client": "Eximbank (dự án điển hình, không phải CMC Telecom)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "32–37"
+      },
+      {
+        "metric": "Độ chính xác dữ liệu AI-OCR",
+        "value": "95%",
+        "attributed_client": "Eximbank (dự án điển hình, không phải CMC Telecom)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "32–37"
+      },
+      {
+        "metric": "Điều khoản LC được kiểm tra",
+        "value": "90%",
+        "attributed_client": "Eximbank (dự án điển hình, không phải CMC Telecom)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "32–37"
+      },
+      {
+        "metric": "Loại tài liệu xử lý được",
+        "value": "10 loại",
+        "attributed_client": "Eximbank (dự án điển hình, không phải CMC Telecom)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "32–37"
+      },
+      {
+        "metric": "Khối lượng chuyển từ thủ công sang tự động",
+        "value": "70%",
+        "attributed_client": "BIDV (dự án điển hình, không phải CMC Telecom)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "32–37"
+      },
+      {
+        "metric": "Độ chính xác",
+        "value": "100%",
+        "attributed_client": "BIDV (dự án điển hình, không phải CMC Telecom)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "32–37"
+      },
+      {
+        "metric": "Thời gian xử lý giảm",
+        "value": "70%",
+        "attributed_client": "BIDV (dự án điển hình, không phải CMC Telecom)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "32–37"
+      },
+      {
+        "metric": "Danh sách chi lương được áp dụng",
+        "value": "100%",
+        "attributed_client": "Eximbank (dự án điển hình, không phải CMC Telecom)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "32–37"
+      },
+      {
+        "metric": "Độ chính xác OCR",
+        "value": ">95%",
+        "attributed_client": "Eximbank (dự án điển hình, không phải CMC Telecom)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "32–37"
+      },
+      {
+        "metric": "Bộ chứng từ xử lý được",
+        "value": ">700 bộ",
+        "attributed_client": "Eximbank (dự án điển hình, không phải CMC Telecom)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "32–37"
+      },
+      {
+        "metric": "Uptime hệ thống",
+        "value": "99,9%",
+        "attributed_client": "Sacombank (dự án điển hình, không phải CMC Telecom)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "32–37"
+      },
+      {
+        "metric": "Tiết kiệm thời gian xử lý thủ công",
+        "value": ">60%",
+        "attributed_client": "Sacombank (dự án điển hình, không phải CMC Telecom)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "32–37"
+      },
+      {
+        "metric": "Lỗi/ngoại lệ được loại bỏ",
+        "value": "100%",
+        "attributed_client": "Sacombank (dự án điển hình, không phải CMC Telecom)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "32–37"
+      }
+    ],
+    "_source_mtime": 1784888799.5257914,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK - Shiseido RPA Proposal v 1_1",
+    "deck_subject_client": "Shiseido Singapore",
+    "kpis": [
+      {
+        "metric": "Tỷ lệ khối lượng thủ công được tự động hóa",
+        "value": "90%",
+        "attributed_client": "Khách hàng Consumer không nêu tên trong case study CFO Office Finance Automation, không phải Shiseido Singapore",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29-38"
+      },
+      {
+        "metric": "Độ chính xác dữ liệu",
+        "value": "100%",
+        "attributed_client": "Khách hàng Consumer không nêu tên trong case study CFO Office Finance Automation, không phải Shiseido Singapore",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29-38"
+      },
+      {
+        "metric": "Mức giảm thời gian xử lý hóa đơn",
+        "value": "85%",
+        "attributed_client": "Khách hàng Consumer không nêu tên trong case study CFO Office Finance Automation, không phải Shiseido Singapore",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29-38"
+      },
+      {
+        "metric": "Thời gian tiết kiệm mỗi ngày",
+        "value": "8+ giờ/ngày",
+        "attributed_client": "Khách hàng Consumer không nêu tên trong case study CFO Office Finance Automation, không phải Shiseido Singapore",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29-38"
+      },
+      {
+        "metric": "Tỷ lệ khối lượng được tự động hóa",
+        "value": "75%",
+        "attributed_client": "Khách hàng Consumer không nêu tên trong case study Supply Chain RPA & AI",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29-38"
+      },
+      {
+        "metric": "Độ chính xác",
+        "value": "100%",
+        "attributed_client": "Khách hàng Consumer không nêu tên trong case study Supply Chain RPA & AI",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29-38"
+      },
+      {
+        "metric": "Mức giảm thời gian xử lý giao dịch",
+        "value": "80%",
+        "attributed_client": "Khách hàng Consumer không nêu tên trong case study Supply Chain RPA & AI",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29-38"
+      },
+      {
+        "metric": "Tỷ lệ khối lượng được tự động hóa",
+        "value": "95%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29-38"
+      },
+      {
+        "metric": "Độ chính xác",
+        "value": "100%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29-38"
+      },
+      {
+        "metric": "Mức giảm thời gian xử lý",
+        "value": "80%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29-38"
+      },
+      {
+        "metric": "Tỷ lệ điều khoản LC được kiểm tra",
+        "value": "90%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29-38"
+      },
+      {
+        "metric": "Độ chính xác kiểm tra điều khoản LC",
+        "value": "95%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29-38"
+      },
+      {
+        "metric": "Tỷ lệ loại bỏ trường hợp không hợp lệ",
+        "value": "100%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29-38"
+      },
+      {
+        "metric": "Uptime",
+        "value": "99,9%",
+        "attributed_client": "Sacombank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29-38"
+      },
+      {
+        "metric": "Thời gian tiết kiệm",
+        "value": ">60%",
+        "attributed_client": "Sacombank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29-38"
+      },
+      {
+        "metric": "Tỷ lệ loại bỏ lỗi/ngoại lệ",
+        "value": "100%",
+        "attributed_client": "Sacombank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29-38"
+      },
+      {
+        "metric": "Tỷ lệ khối lượng được chuyển đổi",
+        "value": "70%",
+        "attributed_client": "BIDV",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29-38"
+      },
+      {
+        "metric": "Độ chính xác",
+        "value": "100%",
+        "attributed_client": "BIDV",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29-38"
+      },
+      {
+        "metric": "Mức giảm thời gian xử lý",
+        "value": "70%",
+        "attributed_client": "BIDV",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29-38"
+      }
+    ],
+    "_source_mtime": 1784888750.678001,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK iDP Workflow Introduction",
+    "deck_subject_client": "",
+    "kpis": [
+      {
+        "metric": "Manual data-entry cost reduction",
+        "value": "Reduces costs",
+        "attributed_client": "No specific client; BnK IDP product claim",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Data-extraction error reduction",
+        "value": "Minimizes errors",
+        "attributed_client": "No specific client; BnK IDP product claim",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Process efficiency improvement",
+        "value": "Improves efficiency",
+        "attributed_client": "No specific client; BnK IDP product claim",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Data-processing accuracy improvement",
+        "value": "Improves accuracy",
+        "attributed_client": "No specific client; BnK IDP product claim",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Processing speed improvement",
+        "value": "Faster processing through end-to-end automation",
+        "attributed_client": "No specific client; BnK IDP product claim",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "AI benchmark ranking",
+        "value": "#1 on the VMLU leaderboard",
+        "attributed_client": "BnKAI-Medium-v2 / BnK IDP",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781883469.9025862,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK Intelligent Automation - Copy",
+    "deck_subject_client": "",
+    "kpis": [
+      {
+        "metric": "Invoice processing time",
+        "value": "5 minutes reduced to 15 seconds per invoice",
+        "attributed_client": "Häfele",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "6"
+      },
+      {
+        "metric": "Invoice processing automated by robots",
+        "value": "90%",
+        "attributed_client": "Häfele",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "6"
+      },
+      {
+        "metric": "Invoice processing time reduction",
+        "value": "95%",
+        "attributed_client": "Häfele",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "6"
+      },
+      {
+        "metric": "Invoice data accuracy",
+        "value": "99%",
+        "attributed_client": "Häfele",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "6"
+      },
+      {
+        "metric": "Loan processing time reduction",
+        "value": "70%",
+        "attributed_client": "Multinational Bank – Vietnam Branch (anonymous)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "7"
+      },
+      {
+        "metric": "Loan processing cost reduction",
+        "value": "60%",
+        "attributed_client": "Multinational Bank – Vietnam Branch (anonymous)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "7"
+      },
+      {
+        "metric": "Loyalty program processing time reduction",
+        "value": "80%",
+        "attributed_client": "Unnamed client (Loyalty Program Processing case study)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "8"
+      },
+      {
+        "metric": "FTE reduction",
+        "value": "90%",
+        "attributed_client": "Unnamed client (Loyalty Program Processing case study)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "8"
+      },
+      {
+        "metric": "Labor cost reduction",
+        "value": "90%",
+        "attributed_client": "Unnamed client (Loyalty Program Processing case study)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "8"
+      },
+      {
+        "metric": "Annual work hours saved",
+        "value": "Approximately 410,000 hours per year",
+        "attributed_client": "TPBank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "9"
+      },
+      {
+        "metric": "Human error reduction",
+        "value": "98%",
+        "attributed_client": "TPBank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "9"
+      },
+      {
+        "metric": "Processing time reduction",
+        "value": "70%",
+        "attributed_client": "Eximbank, HSBC, HDBank and BIDV (Fast Automation case study)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "10"
+      },
+      {
+        "metric": "Workforce capacity released",
+        "value": "50%",
+        "attributed_client": "Eximbank, HSBC, HDBank and BIDV (Fast Automation case study)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "10"
+      },
+      {
+        "metric": "Defect reduction",
+        "value": "80%",
+        "attributed_client": "Unspecified client(s) in the Enterprise Automation Test Platform case study",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "15"
+      },
+      {
+        "metric": "Automation rate",
+        "value": "90%",
+        "attributed_client": "Unspecified client(s) in the Enterprise Automation Test Platform case study",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "15"
+      },
+      {
+        "metric": "Release speed improvement",
+        "value": "3X",
+        "attributed_client": "Unspecified client(s) in the Enterprise Automation Test Platform case study",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "15"
+      },
+      {
+        "metric": "Component reuse rate",
+        "value": "70%",
+        "attributed_client": "Unspecified client(s) in the Enterprise Automation Test Platform case study",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "15"
+      },
+      {
+        "metric": "Cost reduction",
+        "value": "30–40%",
+        "attributed_client": "Unspecified client(s) in the Enterprise Automation Test Platform case study",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "15"
+      },
+      {
+        "metric": "Modules tested before release",
+        "value": "100%",
+        "attributed_client": "Unnamed Digital Banking client",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "19"
+      },
+      {
+        "metric": "Automation testing adoption",
+        "value": "100% target",
+        "attributed_client": "No specific client; generic KPI framework",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "21"
+      },
+      {
+        "metric": "Automation defect rate",
+        "value": "TBD – 50% target",
+        "attributed_client": "No specific client; generic KPI framework",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "21"
+      },
+      {
+        "metric": "Automated test case rate",
+        "value": "TBD – 50% target",
+        "attributed_client": "No specific client; generic KPI framework",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "21"
+      },
+      {
+        "metric": "FTE savings",
+        "value": "TBD – 80% target",
+        "attributed_client": "No specific client; generic KPI framework",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "21"
+      },
+      {
+        "metric": "Manual effort automated",
+        "value": "95%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "34"
+      },
+      {
+        "metric": "Data accuracy",
+        "value": "100%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "34"
+      },
+      {
+        "metric": "Transaction processing time reduction",
+        "value": "80%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "34"
+      },
+      {
+        "metric": "LC clauses checked",
+        "value": "90%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "35"
+      },
+      {
+        "metric": "LC checking accuracy",
+        "value": "95%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "35"
+      },
+      {
+        "metric": "Non-standard situations detected",
+        "value": "100%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "35"
+      },
+      {
+        "metric": "System uptime",
+        "value": "99.9%",
+        "attributed_client": "Sacombank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "36"
+      },
+      {
+        "metric": "Time saved",
+        "value": ">60%",
+        "attributed_client": "Sacombank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "36"
+      },
+      {
+        "metric": "Workload shifted from manual to automated",
+        "value": "70%",
+        "attributed_client": "BIDV",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "37"
+      },
+      {
+        "metric": "Processing accuracy",
+        "value": "100%",
+        "attributed_client": "BIDV",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "37"
+      },
+      {
+        "metric": "Processing time reduction",
+        "value": "70%",
+        "attributed_client": "BIDV",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "37"
+      },
+      {
+        "metric": "Manual effort automated",
+        "value": "90%",
+        "attributed_client": "Häfele",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "38"
+      },
+      {
+        "metric": "Data accuracy",
+        "value": "100%",
+        "attributed_client": "Häfele",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "38"
+      },
+      {
+        "metric": "Invoice processing time reduction",
+        "value": "85%",
+        "attributed_client": "Häfele",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "38"
+      }
+    ],
+    "_source_mtime": 1784889392.8595295,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK Intelligent Automation- RPA_IDP Prudential",
+    "deck_subject_client": "",
+    "kpis": [
+      {
+        "metric": "FTE savings",
+        "value": "45 FTE saved",
+        "attributed_client": "TPBank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 9"
+      },
+      {
+        "metric": "Annual processing time saved",
+        "value": "Approximately 410,000 hours/year saved",
+        "attributed_client": "TPBank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 9"
+      },
+      {
+        "metric": "Human error reduction",
+        "value": "98% reduction",
+        "attributed_client": "TPBank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 9"
+      },
+      {
+        "metric": "Automated task volume",
+        "value": "400+ automation tasks",
+        "attributed_client": "TPBank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 9"
+      },
+      {
+        "metric": "Processing time reduction",
+        "value": "70% reduction",
+        "attributed_client": "Fast Automation case study; specific client not explicitly identified, with references to Eximbank, HSBC, HDBank, and BIDV",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 10"
+      },
+      {
+        "metric": "Workforce capacity released",
+        "value": "50% of workforce released for other work",
+        "attributed_client": "Fast Automation case study; specific client not explicitly identified, with references to Eximbank, HSBC, HDBank, and BIDV",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 10"
+      },
+      {
+        "metric": "Automation rate",
+        "value": "95% automated",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Accuracy rate",
+        "value": "100% accuracy",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Processing time reduction",
+        "value": "80% reduction",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Payroll request coverage",
+        "value": "100% of payroll requests processed by the solution",
+        "attributed_client": "PAI case-study client; client not named",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 26"
+      },
+      {
+        "metric": "Data accuracy",
+        "value": "95% accuracy",
+        "attributed_client": "PAI case-study client; client not named",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 26"
+      },
+      {
+        "metric": "Invalid-case validation coverage",
+        "value": "100% of invalid cases checked",
+        "attributed_client": "PAI case-study client; client not named",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 26"
+      },
+      {
+        "metric": "Document-type processing coverage",
+        "value": "More than 700 document types processed",
+        "attributed_client": "PAI case-study client; client not named",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 26"
+      },
+      {
+        "metric": "Contract processing throughput",
+        "value": "Approximately 2,000 contracts/month processed",
+        "attributed_client": "MB Ageas Life",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 29"
+      },
+      {
+        "metric": "Operational effort reduction",
+        "value": "90% reduction",
+        "attributed_client": "MB Ageas Life",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 29"
+      }
+    ],
+    "_source_mtime": 1784888928.5370133,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK RPA - Case study_EN",
+    "deck_subject_client": "",
+    "kpis": [
+      {
+        "metric": "Manual workload automated",
+        "value": "95%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "13, 16, 17"
+      },
+      {
+        "metric": "Data accuracy",
+        "value": "100%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "13, 16, 17"
+      },
+      {
+        "metric": "Transaction processing time reduction",
+        "value": "80%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "13, 16, 17"
+      },
+      {
+        "metric": "Processes automated/applied",
+        "value": "12 processes",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "13, 16, 17"
+      },
+      {
+        "metric": "LC clauses checked",
+        "value": "90%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "14, 18"
+      },
+      {
+        "metric": "Data accuracy",
+        "value": "95%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "14, 18"
+      },
+      {
+        "metric": "Invalid cases detected",
+        "value": "100%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "14, 18"
+      },
+      {
+        "metric": "Document types covered",
+        "value": "10 document types",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "14, 18"
+      },
+      {
+        "metric": "Payroll requirements automated/applied",
+        "value": "100%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "15, 22, 23"
+      },
+      {
+        "metric": "Data accuracy",
+        "value": "95%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "15, 22, 23"
+      },
+      {
+        "metric": "Invalid cases detected",
+        "value": "100%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "15, 22, 23"
+      },
+      {
+        "metric": "Payroll form types processed",
+        "value": ">700 form types",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "15, 22, 23"
+      },
+      {
+        "metric": "Manual workload shifted to automation",
+        "value": "70%",
+        "attributed_client": "BIDV",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "19-21"
+      },
+      {
+        "metric": "Data accuracy",
+        "value": "100%",
+        "attributed_client": "BIDV",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "19-21"
+      },
+      {
+        "metric": "Processing time reduction",
+        "value": "70%",
+        "attributed_client": "BIDV",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "19-21"
+      },
+      {
+        "metric": "System uptime",
+        "value": "99.9%",
+        "attributed_client": "Sacombank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "24, 25"
+      },
+      {
+        "metric": "Time savings",
+        "value": ">60%",
+        "attributed_client": "Sacombank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "24, 25"
+      },
+      {
+        "metric": "Invalid cases checked",
+        "value": "100%",
+        "attributed_client": "Sacombank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "24, 25"
+      },
+      {
+        "metric": "Manual workload automated",
+        "value": "90%",
+        "attributed_client": "HOYA",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "26"
+      },
+      {
+        "metric": "Matching accuracy",
+        "value": "100%",
+        "attributed_client": "HOYA",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "26"
+      },
+      {
+        "metric": "Invoice processing time reduction",
+        "value": "80%",
+        "attributed_client": "HOYA",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "26"
+      },
+      {
+        "metric": "Labor time saved",
+        "value": "16+ hours",
+        "attributed_client": "HOYA",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "26"
+      },
+      {
+        "metric": "Manual workload automated",
+        "value": "90%",
+        "attributed_client": "Häfele",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "27"
+      },
+      {
+        "metric": "Processing accuracy",
+        "value": "100%",
+        "attributed_client": "Häfele",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "27"
+      },
+      {
+        "metric": "Processing time reduction",
+        "value": "85%",
+        "attributed_client": "Häfele",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "27"
+      },
+      {
+        "metric": "Labor time saved",
+        "value": "8+ hours",
+        "attributed_client": "Häfele",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "27"
+      },
+      {
+        "metric": "Manual test cases automated",
+        "value": "98%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29"
+      },
+      {
+        "metric": "Test accuracy",
+        "value": "100%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29"
+      },
+      {
+        "metric": "Test execution manpower reduction",
+        "value": "99%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "29"
+      },
+      {
+        "metric": "Contracts processed",
+        "value": "~2,000 contracts per month",
+        "attributed_client": "MB Ageas Life",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "31"
+      },
+      {
+        "metric": "Operational effort reduction for error correction",
+        "value": "90%",
+        "attributed_client": "MB Ageas Life",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "31"
+      }
+    ],
+    "_source_mtime": 1784889001.9634635,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK RPA - Case study_VN",
+    "deck_subject_client": "",
+    "kpis": [
+      {
+        "metric": "Tỷ lệ khối lượng công việc thủ công được tự động hóa",
+        "value": "95%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "13"
+      },
+      {
+        "metric": "Độ chính xác dữ liệu",
+        "value": "100%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "13"
+      },
+      {
+        "metric": "Mức giảm thời gian thực hiện giao dịch",
+        "value": "80%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "13"
+      },
+      {
+        "metric": "Tỷ lệ điều khoản L/C được kiểm tra",
+        "value": "90%",
+        "attributed_client": "Eximbank Trade Finance",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "14"
+      },
+      {
+        "metric": "Độ chính xác dữ liệu",
+        "value": "95%",
+        "attributed_client": "Eximbank Trade Finance",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "14"
+      },
+      {
+        "metric": "Tỷ lệ tình huống không phù hợp được loại bỏ",
+        "value": "100%",
+        "attributed_client": "Eximbank Trade Finance",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "14"
+      },
+      {
+        "metric": "Tỷ lệ khối lượng công việc chuyển từ thủ công sang tự động",
+        "value": "70%",
+        "attributed_client": "BIDV",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "15"
+      },
+      {
+        "metric": "Độ chính xác dữ liệu",
+        "value": "100%",
+        "attributed_client": "BIDV",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "15"
+      },
+      {
+        "metric": "Mức giảm thời gian xử lý giao dịch",
+        "value": "70%",
+        "attributed_client": "BIDV",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "15"
+      },
+      {
+        "metric": "Tỷ lệ danh sách chi lương được áp dụng",
+        "value": "100%",
+        "attributed_client": "Eximbank Payroll",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "16"
+      },
+      {
+        "metric": "Độ chính xác dữ liệu sau OCR",
+        "value": ">95%",
+        "attributed_client": "Eximbank Payroll",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "16"
+      },
+      {
+        "metric": "Tỷ lệ trường hợp lỗi/ngoại lệ được loại bỏ",
+        "value": "100%",
+        "attributed_client": "Eximbank Payroll",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "16"
+      },
+      {
+        "metric": "Số bộ chứng từ có thể xử lý",
+        "value": ">700 bộ chứng từ",
+        "attributed_client": "Eximbank Payroll",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "16"
+      },
+      {
+        "metric": "Mức đảm bảo hệ thống hoạt động",
+        "value": "99,9%",
+        "attributed_client": "Sacombank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "17"
+      },
+      {
+        "metric": "Mức tiết kiệm thời gian xử lý thủ công",
+        "value": ">60%",
+        "attributed_client": "Sacombank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "17"
+      },
+      {
+        "metric": "Tỷ lệ trường hợp lỗi/ngoại lệ được loại bỏ",
+        "value": "100%",
+        "attributed_client": "Sacombank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "17"
+      },
+      {
+        "metric": "Tỷ lệ khối lượng công việc thủ công được tự động hóa",
+        "value": "75%",
+        "attributed_client": "Häfele",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "18"
+      },
+      {
+        "metric": "Độ chính xác dữ liệu",
+        "value": "100%",
+        "attributed_client": "Häfele",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "18"
+      },
+      {
+        "metric": "Mức giảm thời gian xử lý giao dịch",
+        "value": "80%",
+        "attributed_client": "Häfele",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "18"
+      },
+      {
+        "metric": "Tỷ lệ test case thủ công được tự động hóa",
+        "value": "98%",
+        "attributed_client": "Eximbank Automation Testing",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "19"
+      },
+      {
+        "metric": "Độ chính xác kiểm thử",
+        "value": "100%",
+        "attributed_client": "Eximbank Automation Testing",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "19"
+      },
+      {
+        "metric": "Mức giảm công sức nhân lực thực thi kiểm thử",
+        "value": "99%",
+        "attributed_client": "Eximbank Automation Testing",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "19"
+      }
+    ],
+    "_source_mtime": 1784888834.0019033,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK Solution - DAT Solar App Proposal",
+    "deck_subject_client": "DAT Group / DAT Solar",
+    "kpis": [
+      {
+        "metric": "EMS deployments delivered",
+        "value": "800+ EMS",
+        "attributed_client": "Exro",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "23"
+      }
+    ],
+    "_source_mtime": 1784889121.117541,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK Solution - DAT Solar App Proposal - VN",
+    "deck_subject_client": "DAT Group / DAT Solar",
+    "kpis": [
+      {
+        "metric": "Mobile operating system compatibility",
+        "value": "iOS 13+ and Android 7+",
+        "attributed_client": "DAT Group / DAT Solar",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Energy Management Systems supported",
+        "value": "800+ EMS",
+        "attributed_client": "Exro",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "23"
+      }
+    ],
+    "_source_mtime": 1784889011.7439153,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK Solution - GGF VAT Stream 2 Proposal_20230912 1",
+    "deck_subject_client": "Great Giant Foods (GGF)",
+    "kpis": [
+      {
+        "metric": "Sensor data delivery",
+        "value": "100% of data points delivered from MCU to tablet",
+        "attributed_client": "Great Giant Foods (GGF)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Operational monitoring freshness",
+        "value": "Real-time dashboard display",
+        "attributed_client": "Great Giant Foods (GGF)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Spraying plan adherence",
+        "value": "Reported adherence against the FMS plan",
+        "attributed_client": "Great Giant Foods (GGF)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Incident detection and notification",
+        "value": "Alerts for abnormalities via Push, Email, and WhatsApp",
+        "attributed_client": "Great Giant Foods (GGF)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "ERP and farm-system synchronization",
+        "value": "Task data synchronized with SAP and FMS",
+        "attributed_client": "Great Giant Foods (GGF)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Security compliance",
+        "value": "SSL/TLS, secure authentication, network segmentation, and OWASP compliance",
+        "attributed_client": "Great Giant Foods (GGF)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Data-platform scalability",
+        "value": "Ability to scale to a Big Data pipeline, Data Warehouse, or Data Lake as data volume grows",
+        "attributed_client": "Great Giant Foods (GGF)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781915867.4007158,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK Solution - Introduction - General - 2024-06- Include ODC",
+    "deck_subject_client": "",
+    "kpis": [
+      {
+        "metric": "OutSystems active users",
+        "value": "60K",
+        "attributed_client": "Unspecified OutSystems solution/client",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "AI OCR accuracy",
+        "value": "Up to 95%",
+        "attributed_client": "Unspecified AI/OCR solution client",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Speech recognition processing speed",
+        "value": "60x speed",
+        "attributed_client": "Unspecified AI audio solution client",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Agricultural plant-counting accuracy",
+        "value": "100%",
+        "attributed_client": "Unspecified agricultural AI case-study client",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781883612.2849596,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK Solution - MSM Workflow Proposal ver1_3",
+    "deck_subject_client": "",
+    "kpis": [],
+    "_source_mtime": 1784888424.521796,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK Solution - Store Push Order Automation_ML",
+    "deck_subject_client": "GGF (Great Giant Foods)",
+    "kpis": [
+      {
+        "metric": "Machine-learning forecast accuracy",
+        "value": "R-squared >= 0.85",
+        "attributed_client": "GGF (Great Giant Foods), for Rejuve",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "24"
+      },
+      {
+        "metric": "Manual Excel/email process automation",
+        "value": "Completely eliminate manual Excel/email operations",
+        "attributed_client": "GGF (Great Giant Foods), for Rejuve",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "3-4"
+      },
+      {
+        "metric": "Automatic sales-order generation frequency",
+        "value": "1 time per week at 4:00 AM Thursday",
+        "attributed_client": "GGF (Great Giant Foods), for Rejuve",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "5, 7"
+      },
+      {
+        "metric": "Regular-order delivery batching",
+        "value": "1-3 delivery batches per week",
+        "attributed_client": "GGF (Great Giant Foods), for Rejuve",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "5, 7"
+      }
+    ],
+    "_source_mtime": 1784888540.908011,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BNK X Seoul semi - AI driven sentiment system",
+    "deck_subject_client": "Seoul Semi",
+    "kpis": [
+      {
+        "metric": "Email processing latency",
+        "value": "< 2 giây/email",
+        "attributed_client": "Seoul Semi",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Email processing throughput",
+        "value": "~40,000 emails/ngày (~1,000,000 emails/tháng)",
+        "attributed_client": "Seoul Semi",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "AI data retention for training",
+        "value": "Zero-Data Retention; không dùng dữ liệu của Seoul Semi để train model",
+        "attributed_client": "Seoul Semi",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Security and regulatory compliance",
+        "value": "Tuân thủ GDPR và ISO standards",
+        "attributed_client": "Seoul Semi",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781915733.0154119,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK-ITL-Proposal",
+    "deck_subject_client": "ITL Logistics",
+    "kpis": [
+      {
+        "metric": "Tỷ lệ tự động hóa To-Be",
+        "value": "80% robot / 20% con người",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slides 12-13, 22-23"
+      },
+      {
+        "metric": "Thời gian xử lý mỗi giao dịch",
+        "value": "Giảm từ 8 phút xuống 4 phút, giảm 50%",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slides 12-13, 22-23"
+      },
+      {
+        "metric": "Automation potential",
+        "value": "57%-79% tùy quy trình",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slides 6, 22-23"
+      },
+      {
+        "metric": "Bandwidth được giải phóng - Update Schedule of Vessels",
+        "value": "971 man-hours/năm",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "Bandwidth được giải phóng - Input SI to carriers' systems",
+        "value": "~1.050 man-hours/năm",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "Bandwidth được giải phóng - Cargo information declaration",
+        "value": "777 man-hours/năm",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "Bandwidth được giải phóng - Input and submit bill to eFMS",
+        "value": "1.144 man-hours/năm",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "Bandwidth được giải phóng - Input and submit invoice to eFMS",
+        "value": "1.144 man-hours/năm",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "Bandwidth được giải phóng - Payment process on eFMS",
+        "value": "1.144 man-hours/năm",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "Tổng bandwidth được giải phóng",
+        "value": "~6.230 man-hours/năm trên 6 quy trình",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "Error reduction",
+        "value": "57%-88% tùy quy trình",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "AHT reduction",
+        "value": "50%-80% tùy quy trình",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "Error reduction - Update Schedule of Vessels",
+        "value": "75%",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "Error reduction - Input SI to carriers' systems",
+        "value": "~79%",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "Error reduction - Cargo information declaration",
+        "value": "57%",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "Error reduction - Input and submit bill to eFMS",
+        "value": "88%",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "Error reduction - Input and submit invoice to eFMS",
+        "value": "88%",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "Error reduction - Payment process on eFMS",
+        "value": "88%",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "AHT reduction - Update Schedule of Vessels",
+        "value": "50%",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "AHT reduction - Input SI to carriers' systems",
+        "value": "53%",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "AHT reduction - Cargo information declaration",
+        "value": "60%",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "AHT reduction - Input and submit bill to eFMS",
+        "value": "80%",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "AHT reduction - Input and submit invoice to eFMS",
+        "value": "80%",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "AHT reduction - Payment process on eFMS",
+        "value": "80%",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 7"
+      }
+    ],
+    "_source_mtime": 1784888791.315684,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK-ITL-Proposal without IDP",
+    "deck_subject_client": "ITL Logistics",
+    "kpis": [
+      {
+        "metric": "Tỷ lệ tự động hóa",
+        "value": "60% robot / 40% con người",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "Slide 9"
+      },
+      {
+        "metric": "Automation Potential - Update Schedule of Vessels",
+        "value": "29%",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "Slide 5"
+      },
+      {
+        "metric": "Automation Potential - Input SI to carriers' systems",
+        "value": "29%",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "Slide 5"
+      },
+      {
+        "metric": "Automation Potential - Cargo information declaration",
+        "value": "29%",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "Slide 5"
+      },
+      {
+        "metric": "Automation Potential - Input and submit bill to eFMS",
+        "value": "45%",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "Slide 5"
+      },
+      {
+        "metric": "Automation Potential - Input and submit invoice to eFMS",
+        "value": "45%",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "Slide 5"
+      },
+      {
+        "metric": "Bandwidth giải phóng mỗi năm",
+        "value": "Khoảng 3.557 mandays/năm tổng cộng; theo quy trình: 562, khoảng 620, 449, 963 và 963 mandays/năm",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "Error Reduction",
+        "value": "43%-68% tùy quy trình",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "AHT Reduction",
+        "value": "29%-45% tùy quy trình",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "Slide 7"
+      },
+      {
+        "metric": "Thời gian xử lý To Be",
+        "value": "10 phút/quy trình, so với 8 phút trước tự động hóa",
+        "attributed_client": "ITL Logistics",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "Slide 9"
+      }
+    ],
+    "_source_mtime": 1784888686.931124,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK-Modena _ AI Solution",
+    "deck_subject_client": "Modena",
+    "kpis": [
+      {
+        "metric": "OCR accuracy",
+        "value": "up to 95%",
+        "attributed_client": "PAI case-study client (unnamed)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Data accuracy after OCR",
+        "value": ">95%",
+        "attributed_client": "PAI case-study client (unnamed)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Salary expense list coverage",
+        "value": "100%",
+        "attributed_client": "PAI case-study client (unnamed)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Error and exception elimination",
+        "value": "100%",
+        "attributed_client": "PAI case-study client (unnamed)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Payroll document templates supported",
+        "value": ">700 templates",
+        "attributed_client": "PAI case-study client (unnamed)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Fraud detection response",
+        "value": "Real-time blocking of abnormal transactions",
+        "attributed_client": "Modena",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781915775.096594,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK-SME-Automate-Test-And-EOD-Automation-Proposal",
+    "deck_subject_client": "CIMB Bank Philippines",
+    "kpis": [
+      {
+        "metric": "Percentage of projects applying automation testing",
+        "value": "50% (TBD)",
+        "attributed_client": "CIMB Bank Philippines",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "7, 15"
+      },
+      {
+        "metric": "Automation defect rate",
+        "value": "50% (TBD)",
+        "attributed_client": "CIMB Bank Philippines",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "7, 15"
+      },
+      {
+        "metric": "Percentage of test cases automated",
+        "value": "50% (TBD)",
+        "attributed_client": "CIMB Bank Philippines",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "7, 15"
+      },
+      {
+        "metric": "FTE savings from automation",
+        "value": "50% (TBD)",
+        "attributed_client": "CIMB Bank Philippines",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "7, 15"
+      }
+    ],
+    "_source_mtime": 1784888556.2148306,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK_CMA Solution Proposal_EN_v0_1",
+    "deck_subject_client": "CMA",
+    "kpis": [
+      {
+        "metric": "Product information retrieval time reduction",
+        "value": "20% reduction",
+        "attributed_client": "CMA",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Product comparison time reduction",
+        "value": "20% reduction",
+        "attributed_client": "CMA",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Consistency of product comparisons",
+        "value": "Increase",
+        "attributed_client": "CMA",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Manual effort for sales and product teams",
+        "value": "Significant reduction",
+        "attributed_client": "CMA",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Reuse of approved product knowledge",
+        "value": "Improvement",
+        "attributed_client": "CMA",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Readiness for internal advisory",
+        "value": "Improvement",
+        "attributed_client": "CMA",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781916059.5961323,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK_Dispatch Management System and Matching Platform",
+    "deck_subject_client": "Khách hàng trong lĩnh vực thu gom và xử lý chất thải công nghiệp (tên ẩn danh, có thể là công ty Nhật Bản vận hành tại Tokyo)",
+    "kpis": [
+      {
+        "metric": "Tối ưu hóa lịch trình",
+        "value": "~200 công việc cho 30 kỹ thuật viên trong ≤ 60 giây",
+        "attributed_client": "Khách hàng T. trong case study tham chiếu",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781917227.2734861,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK_DU proposal_v2",
+    "deck_subject_client": "",
+    "kpis": [
+      {
+        "metric": "Danh sách chi lương được áp dụng",
+        "value": "100%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "32"
+      },
+      {
+        "metric": "Độ chính xác dữ liệu sau OCR",
+        "value": ">95%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "32"
+      },
+      {
+        "metric": "Trường hợp lỗi, ngoại lệ được loại bỏ",
+        "value": "100%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "32"
+      },
+      {
+        "metric": "Bộ chứng từ có thể xử lý",
+        "value": ">700",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "32"
+      },
+      {
+        "metric": "Độ chính xác dữ liệu kiểm tra chứng từ",
+        "value": "95%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "33"
+      },
+      {
+        "metric": "Tình huống không phù hợp được loại bỏ",
+        "value": "100%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "33"
+      },
+      {
+        "metric": "Điều khoản L/C được kiểm tra",
+        "value": "90%",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "33"
+      },
+      {
+        "metric": "Loại tài liệu được định dạng và xử lý",
+        "value": "10 loại",
+        "attributed_client": "Eximbank",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "33"
+      }
+    ],
+    "_source_mtime": 1784888673.2345743,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK_EIB_Automation_Test_Painpoint",
+    "deck_subject_client": "EIB — Ngân hàng TMCP Xuất Nhập Khẩu Việt Nam (Eximbank)",
+    "kpis": [
+      {
+        "metric": "Tỷ lệ tương thích testcase",
+        "value": "tiệm cận 90%",
+        "attributed_client": "EIB (Eximbank)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 5"
+      },
+      {
+        "metric": "Tiết kiệm effort phát hiện visual regression",
+        "value": "99%",
+        "attributed_client": "Người dùng Katalon nói chung; không gắn với EIB",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 11"
+      }
+    ],
+    "_source_mtime": 1784888806.6941245,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK_EIB_Automation_Test_Proposal_2025",
+    "deck_subject_client": "EIB (Eximbank)",
+    "kpis": [],
+    "_source_mtime": 1784888962.0464907,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK_ESG_Disclosure_Proposal",
+    "deck_subject_client": "",
+    "kpis": [],
+    "_source_mtime": 1784888900.6071477,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK_ESG_Disclosure_Proposal_Logoremoved",
+    "deck_subject_client": "",
+    "kpis": [],
+    "_source_mtime": 1784888908.4490845,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK_PA_Case_study_VN",
+    "deck_subject_client": "",
+    "kpis": [
+      {
+        "metric": "Workload automated",
+        "value": "70% workload shifted from manual to automated",
+        "attributed_client": "CMC Telecom",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 12"
+      },
+      {
+        "metric": "Data accuracy",
+        "value": "100%",
+        "attributed_client": "CMC Telecom",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 12"
+      },
+      {
+        "metric": "Transaction processing time reduction",
+        "value": "70% reduction",
+        "attributed_client": "CMC Telecom",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 12"
+      }
+    ],
+    "_source_mtime": 1781881656.1905022,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "BnK_Warehouse Operation Automation Solution Proposal_EN_v1_2",
+    "deck_subject_client": "Wakayama Warehouse",
+    "kpis": [
+      {
+        "metric": "Average end-to-end processing time",
+        "value": "1 minute 47 seconds per case",
+        "attributed_client": "AIG Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Average AI confidence accuracy",
+        "value": "97%",
+        "attributed_client": "AIG Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Ground-truth accuracy",
+        "value": "94.2%",
+        "attributed_client": "AIG Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "False-positive rate",
+        "value": "<1%",
+        "attributed_client": "AIG Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Concurrent case processing",
+        "value": "205 cases",
+        "attributed_client": "AIG Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "AI invocation volume",
+        "value": "12,400 invocations in 30 days",
+        "attributed_client": "AIG Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Cases completed",
+        "value": "1,847 cases in 30 days",
+        "attributed_client": "AIG Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Audit-log coverage",
+        "value": "100%",
+        "attributed_client": "AIG Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Concurrent users supported",
+        "value": "10 users",
+        "attributed_client": "AIG Logistics",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781884805.9401903,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "Catomind-Temi Robot - Kick-Off",
+    "deck_subject_client": "Catomind",
+    "kpis": [],
+    "_source_mtime": 1781915883.1910582,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "CIMB - BnK Automation Test",
+    "deck_subject_client": "CIMB",
+    "kpis": [
+      {
+        "metric": "Tỷ lệ áp dụng automation testing trong dự án",
+        "value": "100%",
+        "attributed_client": "CIMB",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "5"
+      },
+      {
+        "metric": "Tỷ lệ lỗi regression được phát hiện bởi automation",
+        "value": "TBD - 50%",
+        "attributed_client": "CIMB",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "5"
+      },
+      {
+        "metric": "Tỷ lệ test case được tự động hóa",
+        "value": "TBD - 50%",
+        "attributed_client": "CIMB",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "5"
+      },
+      {
+        "metric": "Tỷ lệ FTE sau automation so với trước automation",
+        "value": "TBD - 80%",
+        "attributed_client": "CIMB",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "5"
+      },
+      {
+        "metric": "Giảm lỗi (defects)",
+        "value": "80%",
+        "attributed_client": "UiPath (benchmark marketing chung, không xác thực riêng cho CIMB)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "7"
+      },
+      {
+        "metric": "Tỷ lệ tự động hóa",
+        "value": "90%",
+        "attributed_client": "UiPath (benchmark marketing chung, không xác thực riêng cho CIMB)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "7"
+      },
+      {
+        "metric": "Tốc độ release",
+        "value": "3x",
+        "attributed_client": "UiPath (benchmark marketing chung, không xác thực riêng cho CIMB)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "7"
+      },
+      {
+        "metric": "Tỷ lệ tái sử dụng component",
+        "value": "70%",
+        "attributed_client": "UiPath (benchmark marketing chung, không xác thực riêng cho CIMB)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "7"
+      },
+      {
+        "metric": "Giảm chi phí",
+        "value": "30-40%",
+        "attributed_client": "UiPath (benchmark marketing chung, không xác thực riêng cho CIMB)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "7"
+      }
+    ],
+    "_source_mtime": 1784888910.8638642,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "CIMB_Proposal_April_2026 1",
+    "deck_subject_client": "CIMB",
+    "kpis": [
+      {
+        "metric": "Open-source stack coverage",
+        "value": "100%",
+        "attributed_client": "CIMB",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "On-premise deployment/data residency",
+        "value": "100%",
+        "attributed_client": "CIMB",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Transaction processing throughput",
+        "value": "1000+ transactions",
+        "attributed_client": "CIMB",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781885557.244259,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "CIMB_Proposal_April_2026_1",
+    "deck_subject_client": "CIMB",
+    "kpis": [
+      {
+        "metric": "Transaction processing throughput",
+        "value": "1,000+ transactions per analysis",
+        "attributed_client": "CIMB",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Monthly recommendation throughput",
+        "value": "12,450 recommendations per month",
+        "attributed_client": "CIMB",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "RM customer profiling automation",
+        "value": "Reduced from hours to fully automated",
+        "attributed_client": "CIMB",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Product conversion rate",
+        "value": "Increase through hyper-personalized recommendations; no numeric target stated",
+        "attributed_client": "CIMB",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Cross-sell opportunity detection",
+        "value": "Detect cross-sell opportunities through behavioral gap analysis",
+        "attributed_client": "CIMB",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Data privacy",
+        "value": "100% data privacy with no data leakage outside the CIMB environment",
+        "attributed_client": "CIMB",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781919417.6016123,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "Ciputra Life - IDP Solution Proposal",
+    "deck_subject_client": "Ciputra Life",
+    "kpis": [
+      {
+        "metric": "Tốc độ xử lý hồ sơ",
+        "value": "Tăng đáng kể so với xử lý thủ công (high-speed bulk processing)",
+        "attributed_client": "Ciputra Life",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Độ chính xác trích xuất",
+        "value": "Cao hơn xử lý thủ công nhờ OCR + NLP/LLM",
+        "attributed_client": "Ciputra Life",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Thời gian phê duyệt",
+        "value": "Giảm nhờ automation và suggested conclusions",
+        "attributed_client": "Ciputra Life",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Phát hiện gian lận",
+        "value": "Tự động kiểm tra fraud indicators bằng Business Rules Engine",
+        "attributed_client": "Ciputra Life",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Khả năng mở rộng",
+        "value": "Horizontal scaling không gián đoạn khi khối lượng hồ sơ tăng",
+        "attributed_client": "Ciputra Life",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Tính sẵn sàng hệ thống",
+        "value": "High Availability với kiến trúc Active-Standby DC/DR",
+        "attributed_client": "Ciputra Life",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Xếp hạng benchmark mô hình AI tiếng Việt",
+        "value": "Hạng 1 trên bảng xếp hạng VMLU",
+        "attributed_client": "BnK Solution / mô hình BnkAI Medium v2",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Uptime mục tiêu đề xuất",
+        "value": "99.9%+",
+        "attributed_client": "Ciputra Life",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Độ chính xác OCR mục tiêu đề xuất",
+        "value": "95%+",
+        "attributed_client": "Ciputra Life",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781885571.6861231,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "Data_science_Predict_Case_Study",
+    "deck_subject_client": "Giant Agricultural Plant (tập đoàn nông nghiệp lớn tại Indonesia)",
+    "kpis": [
+      {
+        "metric": "Độ chính xác dự đoán năng suất",
+        "value": "> 95%",
+        "attributed_client": "Giant Agricultural Plant (tập đoàn nông nghiệp lớn tại Indonesia)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Diện tích canh tác được áp dụng",
+        "value": "34.000 ha",
+        "attributed_client": "Giant Agricultural Plant (tập đoàn nông nghiệp lớn tại Indonesia)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Mức giảm chi phí phân bón",
+        "value": "-10%",
+        "attributed_client": "Giant Agricultural Plant (tập đoàn nông nghiệp lớn tại Indonesia)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Tần suất dự báo năng suất",
+        "value": "Theo từng tháng (month-by-month), thay vì chỉ cuối vụ",
+        "attributed_client": "Giant Agricultural Plant (tập đoàn nông nghiệp lớn tại Indonesia)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781885310.0964923,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "EUP-Proposal_DriverSafetyApp",
+    "deck_subject_client": "EUP / EUB Company",
+    "kpis": [],
+    "_source_mtime": 1781882848.0507126,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "GGF-B_K - Yield Prediction_V2",
+    "deck_subject_client": "GGF",
+    "kpis": [
+      {
+        "metric": "Models trained, compared, and optimized",
+        "value": "At least 20 models",
+        "attributed_client": "GGF",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781915725.4467068,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "GTI HK_Quotation",
+    "deck_subject_client": "GTI",
+    "kpis": [],
+    "_source_mtime": 1784888627.0691638,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "Makalot x BnK - AI Proposal",
+    "deck_subject_client": "Makalot",
+    "kpis": [
+      {
+        "metric": "Concurrent processing capacity",
+        "value": "Minimum 20 concurrent processing sessions/users",
+        "attributed_client": "Makalot",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Supported languages",
+        "value": "6 languages: English, Traditional Chinese, Simplified Chinese, French, Vietnamese, and Japanese",
+        "attributed_client": "Makalot",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781917097.9972842,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "Makalot x BnK - AI Proposal_PDF",
+    "deck_subject_client": "Makalot",
+    "kpis": [
+      {
+        "metric": "Information extraction accuracy",
+        "value": ">85%",
+        "attributed_client": "Makalot",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781918624.707913,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "Monday Integration Proposal_FN",
+    "deck_subject_client": "",
+    "kpis": [
+      {
+        "metric": "Post-launch SLA response time",
+        "value": "Priority I: 1 hour; Priority 2: 2 hours; Priority 3: 4 hours; Priority 4: 16 hours",
+        "attributed_client": "Unnamed proposal client",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Post-launch SLA resolution time",
+        "value": "Priority I: 8 hours; Priority 2: 16 hours; Priority 3: 24 hours; Priority 4: 40 hours",
+        "attributed_client": "Unnamed proposal client",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781883971.7897973,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "Odoo_CaseStudy_Template",
+    "deck_subject_client": "",
+    "kpis": [
+      {
+        "metric": "OCR accuracy",
+        "value": "95% accuracy",
+        "attributed_client": "Không có khách hàng cụ thể; đây là năng lực/dịch vụ AI của BnK",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "AMS support availability",
+        "value": "24/7",
+        "attributed_client": "Không có khách hàng cụ thể; đây là cam kết dịch vụ AMS chung của BnK",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "14"
+      }
+    ],
+    "_source_mtime": 1784888758.0100732,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "Power Query Instructions Manual",
+    "deck_subject_client": "China Construction (South Pacific) Development Co Pte Ltd (CCSP)",
+    "kpis": [
+      {
+        "metric": "Data standardization",
+        "value": "Contractor data standardized into a single RAPID format",
+        "attributed_client": "China Construction (South Pacific) Development Co Pte Ltd (CCSP)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slides 3-9"
+      },
+      {
+        "metric": "Manual processing time reduction",
+        "value": "Expected reduction through automated Power Query transformation",
+        "attributed_client": "China Construction (South Pacific) Development Co Pte Ltd (CCSP)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slides 3-9"
+      },
+      {
+        "metric": "Data accuracy improvement",
+        "value": "Expected reduction in Planned vs. Actual comparison errors through clear field mapping",
+        "attributed_client": "China Construction (South Pacific) Development Co Pte Ltd (CCSP)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slides 3-6"
+      },
+      {
+        "metric": "Progress reporting speed",
+        "value": "Standardized data enables immediate filtering, sorting, and reporting in RAPID",
+        "attributed_client": "China Construction (South Pacific) Development Co Pte Ltd (CCSP)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slides 3-9"
+      },
+      {
+        "metric": "Delay tracking transparency",
+        "value": "Remarks identify Ahead Schedule or Delay X days",
+        "attributed_client": "China Construction (South Pacific) Development Co Pte Ltd (CCSP)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slides 7-9"
+      }
+    ],
+    "_source_mtime": 1781915790.7928228,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "Proposal - Charm Website",
+    "deck_subject_client": "Avows",
+    "kpis": [],
+    "_source_mtime": 1784888863.7068026,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "Protenlindo Proposal_Update-2 2",
+    "deck_subject_client": "Protelindo (PT Profesional Telekomunikasi Indonesia)",
+    "kpis": [
+      {
+        "metric": "Image processing time",
+        "value": "~3 seconds per image",
+        "attributed_client": "Protelindo (PT Profesional Telekomunikasi Indonesia)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Inspection categories automated",
+        "value": "32 categories",
+        "attributed_client": "Protelindo (PT Profesional Telekomunikasi Indonesia)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Potential operating-cost reduction with Spot Instances",
+        "value": "30-50%",
+        "attributed_client": "Protelindo (PT Profesional Telekomunikasi Indonesia)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781883926.8227453,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "Protenlindo Proposal_Update-2_2",
+    "deck_subject_client": "Protelindo",
+    "kpis": [
+      {
+        "metric": "Image processing time",
+        "value": "~3 seconds/image",
+        "attributed_client": "Protelindo",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "GCP computing cost reduction",
+        "value": "30–50%",
+        "attributed_client": "Protelindo",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Categories performing well in initial AI testing",
+        "value": "9/32 categories",
+        "attributed_client": "Protelindo",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "AI validation outcome",
+        "value": "Pass/Fail according to Protelindo-defined metrics and criteria",
+        "attributed_client": "Protelindo",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781885359.2355766,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "TFSVN - IDP Solution Proposal",
+    "deck_subject_client": "Công ty TNHH MTV Tài Chính Toyota Việt Nam (TFSVN)",
+    "kpis": [
+      {
+        "metric": "Tỷ lệ hồ sơ được kiểm tra theo cùng một bộ quy tắc",
+        "value": "100%",
+        "attributed_client": "TFSVN",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      },
+      {
+        "metric": "Mức độ tự động hóa quy trình thẩm định yêu cầu bồi thường bảo hiểm y tế",
+        "value": "Tự động hóa hoàn toàn",
+        "attributed_client": "Một công ty bảo hiểm",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": ""
+      }
+    ],
+    "_source_mtime": 1781915975.8349113,
+    "_model": "cx/gpt-5.6-luna"
+  },
+  {
+    "folder": "VAT3_4_GGF",
+    "deck_subject_client": "GGF (Great Giant Foods)",
+    "kpis": [
+      {
+        "metric": "Operator score",
+        "value": "92, 86, 75, 64",
+        "attributed_client": "GGF (Great Giant Foods)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 17"
+      },
+      {
+        "metric": "Volume deviation versus plan",
+        "value": "≤ 5%",
+        "attributed_client": "GGF (Great Giant Foods)",
+        "is_commitment_for_subject_client": true,
+        "slide_evidence": "Slide 15"
+      },
+      {
+        "metric": "Route optimization time saving",
+        "value": "28 min",
+        "attributed_client": "GGF (Great Giant Foods)",
+        "is_commitment_for_subject_client": false,
+        "slide_evidence": "Slide 11"
+      }
+    ],
+    "_source_mtime": 1781916000.930684,
+    "_model": "cx/gpt-5.6-luna"
   }
 ]

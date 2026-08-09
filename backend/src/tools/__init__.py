@@ -183,6 +183,13 @@ from .analysis.reporting_gates import (
 )
 from .analysis.research import web_research
 from rag_tools import benchmark_solution, find_similar_solutions  # noqa: E402
+from kg_tools import (  # noqa: E402
+    benchmark_role_effort,
+    find_related_projects,
+    find_related_technologies,
+    find_reusable_modules,
+    trace_project_lineage,
+)
 from .analysis.findings import (
     add_comment,
     apply_compliance_pack,
@@ -275,6 +282,14 @@ MAIN_TOOLS = [
     run_python,  # improvement plan §C-S2: analyze uploaded .xlsx/.csv with pandas
     find_similar_solutions,  # re-enabled: queries the unified bnk_solutions corpus (rag/solution_memory.py)
     benchmark_solution,  # deterministic domain-level effort/tech rollup (rag/benchmarks.py) — no embeddings call
+    # Knowledge-graph tools (rag/kg_store.py + rag/kg_neo4j.py, see [[kg-project-2026-08-08]]) —
+    # exact-overlap / task-level queries over Postgres+Neo4j, complementing the vector/rollup
+    # tools above rather than replacing them; see kg_tools.py's module docstring for the split.
+    find_related_projects,
+    benchmark_role_effort,
+    find_related_technologies,
+    find_reusable_modules,
+    trace_project_lineage,
     web_research,  # 10 Tavily calls/session, split per stage (topic=tech_stack/architecture/wbs/evidence)
     record_evidence,  # persist a grounded claim -> evidence_log.json -> CSM Evidence + supports links
     waive_finding,  # accept a cross-artifact finding as a trade-off -> findings_log.json

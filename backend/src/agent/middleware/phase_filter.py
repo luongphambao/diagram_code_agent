@@ -105,6 +105,11 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
         # find_similar_solutions temporarily disabled: OpenAI embeddings key is broken,
         # so it only errors out. Re-add once the key is fixed.
         "benchmark_solution",
+        # Knowledge-graph exact-overlap tools (rag/kg_store.py) — NOT subject to the
+        # OpenAI-embeddings outage above, these query Postgres directly.
+        "find_related_projects",
+        "find_related_technologies",
+        "trace_project_lineage",
     },
     "blueprint": _UTILITY_TOOLS
     | {
@@ -122,6 +127,9 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
         "propose_business_case",
         # find_similar_solutions temporarily disabled: OpenAI embeddings key is broken.
         "benchmark_solution",
+        "find_related_projects",
+        "find_related_technologies",
+        "trace_project_lineage",
     },
     "draw": _UTILITY_TOOLS
     | _WBS_DELIVERABLE_TOOLS
@@ -152,6 +160,12 @@ _PHASE_TOOLS: dict[str, frozenset[str]] = {
         # a different/narrower domain on demand.
         # find_similar_solutions temporarily disabled: OpenAI embeddings key is broken.
         "benchmark_solution",
+        # Task-level (not whole-project) effort benchmark + module reuse + evidence
+        # drill-down — rag/kg_store.py + rag/kg_neo4j.py, see kg_tools.py.
+        "benchmark_role_effort",
+        "find_related_projects",
+        "find_reusable_modules",
+        "trace_project_lineage",
     },
     "ppt": _UTILITY_TOOLS
     | _WBS_DELIVERABLE_TOOLS

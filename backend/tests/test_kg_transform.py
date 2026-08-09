@@ -354,15 +354,15 @@ def test_case_study_kpi_is_attributed_to_the_real_client_not_the_deck_subject() 
 def test_bnk_self_reference_is_not_a_client_node() -> None:
     """A KPI 'attributed to BnK Solution' describes BnK's own capability, not a
     client outcome — must not mint a pseudo-Client node."""
-    _nodes, edges = kt.transform_kpi_extract(_CMC_STYLE_EXTRACT, {"Demo RPA Deck": "opp:demo-rpa"})
-    capacity_kpi_id = kt.kpi_id("Demo RPA Deck", 2, "Team delivery capacity")
-    assert not [e for e in edges if e["src"] == capacity_kpi_id and e["rel"] == "ATTRIBUTED_TO"]
+    nodes, edges = kt.transform_kpi_extract(_CMC_STYLE_EXTRACT, {"Demo RPA Deck": "opp:demo-rpa"})
+    capacity_kpi = next(n for n in nodes if n["label"] == "Team delivery capacity")
+    assert not [e for e in edges if e["src"] == capacity_kpi["id"] and e["rel"] == "ATTRIBUTED_TO"]
 
 
 def test_unidentified_example_gets_no_attribution_edge() -> None:
-    _nodes, edges = kt.transform_kpi_extract(_CMC_STYLE_EXTRACT, {"Demo RPA Deck": "opp:demo-rpa"})
-    illustrative_kpi_id = kt.kpi_id("Demo RPA Deck", 3, "Illustrative machine OEE")
-    assert not [e for e in edges if e["src"] == illustrative_kpi_id and e["rel"] == "ATTRIBUTED_TO"]
+    nodes, edges = kt.transform_kpi_extract(_CMC_STYLE_EXTRACT, {"Demo RPA Deck": "opp:demo-rpa"})
+    illustrative_kpi = next(n for n in nodes if n["label"] == "Illustrative machine OEE")
+    assert not [e for e in edges if e["src"] == illustrative_kpi["id"] and e["rel"] == "ATTRIBUTED_TO"]
 
 
 def test_every_kpi_gets_a_claims_edge_from_its_deck_opportunity() -> None:
@@ -375,7 +375,8 @@ def test_kpi_from_unmatched_folder_still_creates_a_node_no_claims_edge() -> None
     """A folder with no surviving Opportunity (capability decks with no single
     client) must not silently lose its extracted KPI facts — conventions §4."""
     nodes, edges = kt.transform_kpi_extract(_CMC_STYLE_EXTRACT, {})  # no folder->opportunity mapping at all
-    assert len(nodes) == 4
+    kpi_nodes = [n for n in nodes if n["type"] == "Kpi"]
+    assert len(kpi_nodes) == 4
     assert not [e for e in edges if e["rel"] == "CLAIMS_KPI"]
 
 
@@ -407,8 +408,105 @@ def test_kpi_facet_flows_through_build_graph_and_survives_dedupe() -> None:
     assert claims and claims[0]["src"] == survivor_id
 
 
+def test_identical_kpi_from_both_duplicate_deck_exports_collapses_to_one_node() -> None:
+    """Real corpus case (2026-08-08): 'Protenlindo Proposal_Update-2 2' and
+    '..._2_2' are the same deck exported twice — extract_kpis.py produces a
+    near-identical KPI list for each, independently, since it processes every
+    analysis.md file on its own. Two DIFFERENT raw folder names used to
+    collide on kpi_id's old folder-based scheme (both normalize to the same
+    key), crashing the Postgres load with a duplicate primary key. The fix:
+    content-addressed ids mean identical KPI facts from both folders now
+    deliberately produce the SAME node — one Kpi, evidenced twice."""
+    a = {**_ENTRY, "folder": "Protenlindo Proposal_Update-2 2", "slug": "same-slug", "tech": []}
+    b = {**_ENTRY, "folder": "Protenlindo Proposal_Update-2_2", "slug": "same-slug", "tech": ["UiPath"]}
+    same_kpi = {
+        "metric": "Image processing time",
+        "value": "3s",
+        "attributed_client": "Protenlindo",
+        "is_commitment_for_subject_client": True,
+        "slide_evidence": "",
+    }
+    kpi_extract = [
+        {
+            "folder": "Protenlindo Proposal_Update-2 2",
+            "deck_subject_client": "Protenlindo",
+            "kpis": [same_kpi],
+        },
+        {
+            "folder": "Protenlindo Proposal_Update-2_2",
+            "deck_subject_client": "Protenlindo",
+            "kpis": [same_kpi],
+        },
+    ]
+    nodes, edges = kt.build_graph([a, b], {}, min_tech_project_count=1, kpi_extract=kpi_extract)
+    kpi_nodes = [n for n in nodes if n["type"] == "Kpi"]
+    assert len(kpi_nodes) == 1  # collapsed, not a Postgres primary-key collision
+    claims = [e for e in edges if e["rel"] == "CLAIMS_KPI"]
+    assert len(claims) == 2  # both source folders still evidenced, as two edges to the one node
+    assert {c["props"]["evidence"] for c in claims} == {
+        "Protenlindo Proposal_Update-2 2",
+        "Protenlindo Proposal_Update-2_2",
+    }
+
+
 def test_no_kpi_extract_leaves_graph_unchanged() -> None:
     with_none = kt.build_graph([_ENTRY], {}, min_tech_project_count=1, kpi_extract=None)
     with_empty = kt.build_graph([_ENTRY], {}, min_tech_project_count=1, kpi_extract=[])
     assert {n["id"] for n in with_none[0]} == {n["id"] for n in with_empty[0]}
     assert not any(n["type"] == "Kpi" for n in with_none[0])
+
+
+def test_kpi_attributed_client_gets_a_real_node_not_a_dangling_edge() -> None:
+    """Real bug found loading the full corpus (2026-08-08): kpi_edges used to
+    emit an ATTRIBUTED_TO edge to client_id(attributed) without ensuring that
+    id had a node. Postgres has no FK constraint on kg_edges.dst, so the load
+    "succeeded" with 477 dangling edges; Neo4j's directed MATCH silently
+    skipped every one with no node to match, loading only 217 — same edge
+    list, two different counts, which is what surfaced this."""
+    entry = {**_ENTRY, "wbs_match": None}
+    kpi_extract = [
+        {
+            "folder": "Demo RPA Deck",
+            "deck_subject_client": "Acme Corp",
+            "kpis": [
+                {
+                    "metric": "Accuracy",
+                    "value": "99%",
+                    "attributed_client": "Globex Corp",  # a client mentioned ONLY here, nowhere else
+                    "is_commitment_for_subject_client": False,
+                    "slide_evidence": "",
+                }
+            ],
+        }
+    ]
+    nodes, edges = kt.build_graph([entry], {}, min_tech_project_count=1, kpi_extract=kpi_extract)
+    node_ids = {n["id"] for n in nodes}
+    attributed_edge = next(e for e in edges if e["rel"] == "ATTRIBUTED_TO")
+    assert attributed_edge["dst"] in node_ids  # the edge target must actually exist as a node
+
+
+def test_kpi_attributed_to_an_existing_opportunity_client_does_not_duplicate_it() -> None:
+    """The reverse collision: a KPI attributed to a client who is ALSO some
+    other deck's own subject client mints the same client:* id from both
+    opportunity_client_nodes() and transform_kpi_extract() independently —
+    build_graph's final id-dedup pass must collapse it to one node."""
+    entry = {**_ENTRY, "client": "Globex Corp", "wbs_match": None}
+    kpi_extract = [
+        {
+            "folder": "Demo RPA Deck",
+            "deck_subject_client": "Someone Else",
+            "kpis": [
+                {
+                    "metric": "Accuracy",
+                    "value": "99%",
+                    "attributed_client": "Globex Corp",  # same client as entry's own `client` field
+                    "is_commitment_for_subject_client": False,
+                    "slide_evidence": "",
+                }
+            ],
+        }
+    ]
+    nodes, _edges = kt.build_graph([entry], {}, min_tech_project_count=1, kpi_extract=kpi_extract)
+    globex_id = kt.client_id("Globex Corp")
+    matching = [n for n in nodes if n["id"] == globex_id]
+    assert len(matching) == 1  # not two colliding nodes with the same id

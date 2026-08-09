@@ -36,16 +36,16 @@ Mọi subagent được bọc `_StreamingSubAgentRunnable` (`agent/streaming.py`
 
 ## 3. Tool — dùng cái nào khi nào
 
-Tool định nghĩa rải theo domain nhưng **danh sách** tập trung ở `tools/__init__.py` (`MAIN_TOOLS` 47 mục, cộng các list cho từng subagent). Thêm tool = thêm hàm `@tool` trong `tools/**` **và** đăng ký vào đúng list.
+Tool định nghĩa rải theo domain nhưng **danh sách** tập trung ở `tools/__init__.py` (`MAIN_TOOLS` 52 mục, cộng các list cho từng subagent). Thêm tool = thêm hàm `@tool` trong `tools/**` **và** đăng ký vào đúng list.
 
 Theo phase:
 
 | Phase | Tool chính | Ghi chú |
 |---|---|---|
-| intake | `analyze_architecture_requirements`, `propose_diagram_brief`, `web_research`, `find_similar_solutions` | `find_similar_solutions` gọi **trước** `propose_tech_stack` |
+| intake | `analyze_architecture_requirements`, `propose_diagram_brief`, `web_research`, `find_similar_solutions`, `find_related_projects`, `find_related_technologies`, `trace_project_lineage` | `find_similar_solutions` gọi **trước** `propose_tech_stack`. `find_related_projects`/`find_related_technologies` là truy vấn graph (`kg_tools.py`, exact-overlap tech/domain), không phụ thuộc embeddings — dùng được ngay cả khi `find_similar_solutions` tạm tắt |
 | blueprint | `propose_tech_stack` ⛩, `propose_blueprint` ⛩, `find_diagram_template` | Blueprint là nguồn sự thật cho mọi thứ sau nó |
 | draw | `task(icon_resolver)` → `task(drawer)` → `task(critic)` → `finalize_diagram` ⛩ | Architecture đi **native path**; `render_typed_diagram` cho sequence/erd/state_machine |
-| wbs | `task(wbs_planner)`, `propose_wbs_skeleton` ⛩, `propose_wbs` ⛩, `export_wbs_excel` ⛩, `get_effort_norms`, `benchmark_solution` | BA/QC/PM luôn **derive**, không tự ước lượng |
+| wbs | `task(wbs_planner)`, `propose_wbs_skeleton` ⛩, `propose_wbs` ⛩, `export_wbs_excel` ⛩, `get_effort_norms`, `benchmark_solution`, `benchmark_role_effort`, `find_reusable_modules`, `find_related_projects`, `trace_project_lineage` | BA/QC/PM luôn **derive**, không tự ước lượng. `benchmark_role_effort` là benchmark theo **role** (không phải theo cả dự án như `benchmark_solution`), tính trực tiếp từ task-level `ASSIGNED` edge trong knowledge graph |
 | ppt / report | `propose_deck_plan` ⛩, `generate_ppt_proposal` ⛩, `generate_pdf_report` ⛩, `export_proposal_package` | Gọi `generate_pdf_report({})` **không tham số** trừ khi có lý do rõ |
 | brd | `task(brd_writer)`, `propose_brd_outline` ⛩, `generate_brd_docx` ⛩, `edit_brd_section` ⛩ | Xem `docs/plans/2026-07-29-brd-agent.md` |
 | delivery | `export_to_delivery` ⛩, `send_email` ⛩, `create_client_meeting` ⛩, `reality_sync` | |
@@ -95,7 +95,7 @@ Test canh: `tests/test_middleware_order.py`.
 
 **KHÔNG ghi:** credential/token, thông tin nhất thời ("đang chạy render lần 2"), nội dung có thể suy ra từ artifact trong workspace, dữ liệu khách dán nguyên khối.
 
-**Không dùng làm memory:** Qdrant / `solution_memory.json`. Chúng là corpus past-project truy cập **qua tool** (`find_similar_solutions`, `benchmark_solution`), không nhét vào prompt. Xem ADR `0001`.
+**Không dùng làm memory:** Qdrant / `solution_memory.json` / knowledge graph (Postgres `kg_nodes`/`kg_edges`, Neo4j mirror ở `rag/kg_store.py` + `rag/kg_neo4j.py`, dựng bởi `backend/scripts/build_knowledge_graph.py`). Chúng là corpus past-project truy cập **qua tool** (`find_similar_solutions`, `benchmark_solution`, `find_related_projects`, `benchmark_role_effort`, `find_related_technologies`, `find_reusable_modules`, `trace_project_lineage`), không nhét vào prompt. Xem ADR `0001`.
 
 Trạng thái phiên đi vào **file trong workspace** (`blueprint.json`, `wbs.json`, …), không vào memory — vì phase machine đọc chính các file đó.
 

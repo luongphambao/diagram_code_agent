@@ -35,10 +35,11 @@ output (``kpi_extract.json``); it does not call an LLM itself, keeping the
 
 from __future__ import annotations
 
+import hashlib
 from collections import Counter
 from typing import Any, TypedDict
 
-import kg_vocab as kv
+import domain.kg.kg_vocab as kv
 
 
 class Node(TypedDict):
@@ -515,16 +516,29 @@ def is_attributable_client(raw: str) -> bool:
     return cid.removeprefix("client:") not in _SELF_REFERENCE_KEYS
 
 
-def kpi_id(folder: str, index: int, metric: str) -> str:
-    return f"kpi:{kv.normalize_key(folder)}:{index:03d}:{kv.normalize_key(metric)[:24]}"
+def kpi_id(scope: str, kpi: dict) -> str:
+    """Content-addressed, not folder+index based. Two DIFFERENT analysis.md
+    folders that are the same deck re-exported (the confirmed
+    space-vs-underscore duplicate pattern — see :func:`dedupe_entries` — also
+    duplicates that deck's extracted KPI list) fold to the same
+    :func:`opportunity_id` ``scope`` and, when their extracted KPI content is
+    identical, to the SAME id here too. That is the correct outcome — one Kpi
+    node, evidenced by both source folders via two ``CLAIMS_KPI`` edges —
+    rather than a Postgres primary-key collision on two nodes claiming to be
+    the same fact under different ids."""
+    metric = kv.normalize_key(str(kpi.get("metric") or ""))
+    value = kv.normalize_key(str(kpi.get("value") or ""))
+    attributed = kv.normalize_key(str(kpi.get("attributed_client") or ""))
+    digest = hashlib.sha1(f"{scope}|{metric}|{value}|{attributed}".encode()).hexdigest()[:12]
+    return f"kpi:{digest}"
 
 
-def kpi_node(folder: str, index: int, kpi: dict) -> Node:
+def kpi_node(scope: str, folder: str, kpi: dict) -> Node:
     metric = kv.clean_text(str(kpi.get("metric") or ""))
     return _node(
-        kpi_id(folder, index, metric),
+        kpi_id(scope, kpi),
         "Kpi",
-        metric or f"KPI {index}",
+        metric or "KPI",
         value=kpi.get("value"),
         attributed_client_raw=kpi.get("attributed_client"),
         is_commitment_for_subject_client=bool(kpi.get("is_commitment_for_subject_client")),
@@ -533,42 +547,49 @@ def kpi_node(folder: str, index: int, kpi: dict) -> Node:
     )
 
 
-def kpi_edges(folder: str, opportunity_id_: str | None, index: int, kpi: dict) -> list[Edge]:
-    """``CLAIMS_KPI`` from the Opportunity this deck belongs to (if any — a
-    handful of analysis.md folders don't survive into solution_memory.json's
-    Opportunity set, e.g. capability decks with no single client; the Kpi node
-    still gets created, just without that edge, per conventions §4 — no
-    silent drop of the extracted fact itself, only of the missing link).
-    ``ATTRIBUTED_TO`` the real client the number is about, when identifiable.
-    """
-    metric = kv.clean_text(str(kpi.get("metric") or ""))
-    kid = kpi_id(folder, index, metric)
-    edges: list[Edge] = []
-    if opportunity_id_ is not None:
-        edges.append(_edge(opportunity_id_, "CLAIMS_KPI", kid, evidence=folder))
-    attributed = kpi.get("attributed_client") or ""
-    if is_attributable_client(attributed):
-        cid = client_id(attributed)
-        if cid is not None:
-            edges.append(_edge(kid, "ATTRIBUTED_TO", cid))
-    return edges
-
-
 def transform_kpi_extract(
     kpi_extract: list[dict],
     opportunity_id_by_folder: dict[str, str],
 ) -> tuple[list[Node], list[Edge]]:
     """Everything from ``extract_kpis.py``'s output: one Kpi node + edges per
-    extracted fact, across every deck in the extraction file."""
-    nodes: list[Node] = []
+    DISTINCT extracted fact, across every deck in the extraction file.
+    Deduplicates by :func:`kpi_id` (content-addressed within each
+    Opportunity's scope) so re-exported duplicate decks don't double the
+    node count — see :func:`kpi_id`'s docstring.
+
+    Also mints the ``Client`` node an ``ATTRIBUTED_TO`` edge points to, when
+    that client isn't already one of :func:`opportunity_client_nodes` — an
+    earlier version only emitted the edge and assumed the target existed.
+    It usually didn't: a KPI attributed to (say) "Eximbank" as a case-study
+    reference has no reason to also be some *other* deck's own subject
+    client. Postgres has no foreign-key constraint on ``kg_edges.dst``, so
+    that version loaded "successfully" with 477 dangling edges; Neo4j's
+    ``MATCH (a),(b)`` requires both endpoints to exist and silently skipped
+    every one of them, loading only 217 — the same edge list producing two
+    different counts in the two stores is what surfaced this (2026-08-08).
+    """
+    nodes_by_id: dict[str, Node] = {}
     edges: list[Edge] = []
     for entry in kpi_extract:
         folder = entry.get("folder") or ""
         opp_id = opportunity_id_by_folder.get(folder)
-        for i, kpi in enumerate(entry.get("kpis") or []):
-            nodes.append(kpi_node(folder, i, kpi))
-            edges.extend(kpi_edges(folder, opp_id, i, kpi))
-    return nodes, edges
+        scope = opp_id or f"folder:{kv.normalize_key(folder)}"
+        for kpi in entry.get("kpis") or []:
+            node = kpi_node(scope, folder, kpi)
+            nodes_by_id.setdefault(node["id"], node)
+            kid = node["id"]
+
+            if opp_id is not None:
+                edges.append(_edge(opp_id, "CLAIMS_KPI", kid, evidence=folder))
+
+            attributed = kpi.get("attributed_client") or ""
+            if is_attributable_client(attributed):
+                cnode = client_node(attributed)
+                if cnode is not None:
+                    nodes_by_id.setdefault(cnode["id"], cnode)
+                    edges.append(_edge(kid, "ATTRIBUTED_TO", cnode["id"]))
+
+    return list(nodes_by_id.values()), edges
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -670,4 +691,15 @@ def build_graph(
         nodes.extend(kpi_nodes)
         edges.extend(kpi_edges_)
 
-    return nodes, edges
+    # Cross-facet id collisions are possible by construction (a KPI attributed
+    # to a client who is ALSO some other deck's own subject client mints the
+    # same `client:*` id from both opportunity_client_nodes() and
+    # transform_kpi_extract() independently) — dedupe once here rather than
+    # trust every facet to check against every other facet's output. First
+    # occurrence wins; a Postgres/Neo4j duplicate-id load failure is the
+    # signal this invariant would otherwise be silently violated.
+    nodes_by_id: dict[str, Node] = {}
+    for n in nodes:
+        nodes_by_id.setdefault(n["id"], n)
+
+    return list(nodes_by_id.values()), edges

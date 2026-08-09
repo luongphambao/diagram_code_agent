@@ -11267,3 +11267,952 @@
 {"dst": "tech:semanticsearch", "props": {"raw_label": "Semantic search"}, "rel": "USES_TECH", "src": "wbsproj:wbsttlt2wbsjson"}
 {"dst": "tech:reranking", "props": {"raw_label": "Reranking"}, "rel": "USES_TECH", "src": "wbsproj:wbsttlt2wbsjson"}
 {"dst": "tech:agentbasedoptimizedsearch", "props": {"raw_label": "Agent-based optimized search"}, "rel": "USES_TECH", "src": "wbsproj:wbsttlt2wbsjson"}
+{"dst": "kpi:df425e51ecfe", "props": {"evidence": "_Aquila_ Proposal - Tran Duc Brilliant Factory"}, "rel": "CLAIMS_KPI", "src": "opp:aquila-proposal-tran-duc-brilliant-factory"}
+{"dst": "client:tranucgroup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:df425e51ecfe"}
+{"dst": "kpi:716e777b0151", "props": {"evidence": "_Aquila_ Proposal - Tran Duc Brilliant Factory"}, "rel": "CLAIMS_KPI", "src": "opp:aquila-proposal-tran-duc-brilliant-factory"}
+{"dst": "client:tranucgroup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:716e777b0151"}
+{"dst": "kpi:f65929a6efe3", "props": {"evidence": "_Aquila_ Proposal - Tran Duc Brilliant Factory"}, "rel": "CLAIMS_KPI", "src": "opp:aquila-proposal-tran-duc-brilliant-factory"}
+{"dst": "client:tranucgroup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:f65929a6efe3"}
+{"dst": "kpi:920ae9aae080", "props": {"evidence": "_Aquila_ Proposal - Tran Duc Brilliant Factory"}, "rel": "CLAIMS_KPI", "src": "opp:aquila-proposal-tran-duc-brilliant-factory"}
+{"dst": "client:tranucgroup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:920ae9aae080"}
+{"dst": "kpi:bf91dd057d59", "props": {"evidence": "_Aquila_ Proposal - Tran Duc Brilliant Factory"}, "rel": "CLAIMS_KPI", "src": "opp:aquila-proposal-tran-duc-brilliant-factory"}
+{"dst": "client:tranucgroup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:bf91dd057d59"}
+{"dst": "kpi:f9b50c3cd411", "props": {"evidence": "_Aquila_ Proposal - Tran Duc Brilliant Factory"}, "rel": "CLAIMS_KPI", "src": "opp:aquila-proposal-tran-duc-brilliant-factory"}
+{"dst": "client:tranucgroup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:f9b50c3cd411"}
+{"dst": "kpi:a73b8907b2e8", "props": {"evidence": "_Aquila_ Proposal - Tran Duc Brilliant Factory"}, "rel": "CLAIMS_KPI", "src": "opp:aquila-proposal-tran-duc-brilliant-factory"}
+{"dst": "kpi:21ad012194b0", "props": {"evidence": "_Aquila_ Proposal - Tran Duc Brilliant Factory"}, "rel": "CLAIMS_KPI", "src": "opp:aquila-proposal-tran-duc-brilliant-factory"}
+{"dst": "kpi:ea963f35f71b", "props": {"evidence": "_Aquila_ Proposal - Tran Duc Brilliant Factory"}, "rel": "CLAIMS_KPI", "src": "opp:aquila-proposal-tran-duc-brilliant-factory"}
+{"dst": "kpi:e0c0bfb4ea90", "props": {"evidence": "_Aquila_ Proposal - Tran Duc Brilliant Factory"}, "rel": "CLAIMS_KPI", "src": "opp:aquila-proposal-tran-duc-brilliant-factory"}
+{"dst": "kpi:1e5d448aa74f", "props": {"evidence": "_Aquila_ Proposal - Tran Duc Brilliant Factory"}, "rel": "CLAIMS_KPI", "src": "opp:aquila-proposal-tran-duc-brilliant-factory"}
+{"dst": "kpi:262e6acf6fe2", "props": {"evidence": "_Aquila_ Proposal - Tran Duc Brilliant Factory"}, "rel": "CLAIMS_KPI", "src": "opp:aquila-proposal-tran-duc-brilliant-factory"}
+{"dst": "kpi:28f94fea07cd", "props": {"evidence": "_Aquila_ Proposal - Tran Duc Brilliant Factory"}, "rel": "CLAIMS_KPI", "src": "opp:aquila-proposal-tran-duc-brilliant-factory"}
+{"dst": "kpi:eff07926d1e4", "props": {"evidence": "_ARM Control System_ Proposal_EN"}, "rel": "CLAIMS_KPI", "src": "opp:arm-control-system-proposal-en"}
+{"dst": "client:nichietsu", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:eff07926d1e4"}
+{"dst": "kpi:7eff1a518d41", "props": {"evidence": "_ARM Control System_ Proposal_EN"}, "rel": "CLAIMS_KPI", "src": "opp:arm-control-system-proposal-en"}
+{"dst": "client:nichietsu", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:7eff1a518d41"}
+{"dst": "kpi:48120be4b83d", "props": {"evidence": "_ARM Control System_ Proposal_EN"}, "rel": "CLAIMS_KPI", "src": "opp:arm-control-system-proposal-en"}
+{"dst": "client:nichietsu", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:48120be4b83d"}
+{"dst": "kpi:4831def54762", "props": {"evidence": "_ARM Control System_ Proposal_EN"}, "rel": "CLAIMS_KPI", "src": "opp:arm-control-system-proposal-en"}
+{"dst": "client:nichietsu", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:4831def54762"}
+{"dst": "kpi:7e19f00fe1d2", "props": {"evidence": "_ARM Control System_ Proposal_EN"}, "rel": "CLAIMS_KPI", "src": "opp:arm-control-system-proposal-en"}
+{"dst": "client:nichietsu", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:7e19f00fe1d2"}
+{"dst": "kpi:c1191f45b330", "props": {"evidence": "_ARM Control System_ Proposal_EN"}, "rel": "CLAIMS_KPI", "src": "opp:arm-control-system-proposal-en"}
+{"dst": "client:nichietsu", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:c1191f45b330"}
+{"dst": "kpi:b466c7bb639c", "props": {"evidence": "_ARM Control System_ Proposal_EN"}, "rel": "CLAIMS_KPI", "src": "opp:arm-control-system-proposal-en"}
+{"dst": "client:nichietsu", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b466c7bb639c"}
+{"dst": "kpi:a5b5fd79cade", "props": {"evidence": "_ARM Control System_ Proposal_EN"}, "rel": "CLAIMS_KPI", "src": "opp:arm-control-system-proposal-en"}
+{"dst": "client:nichietsu", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:a5b5fd79cade"}
+{"dst": "kpi:1b4fa43145de", "props": {"evidence": "_ARM Control System_ Proposal_EN"}, "rel": "CLAIMS_KPI", "src": "opp:arm-control-system-proposal-en"}
+{"dst": "client:nichietsu", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:1b4fa43145de"}
+{"dst": "kpi:6a5c4e5ae93d", "props": {"evidence": "_BnK - TSWork_ HDX - WoW in ODC"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-tswork-hdx-wow-in-odc"}
+{"dst": "kpi:98ac2e97e84b", "props": {"evidence": "_BnK_ BCA Finance - Case Study"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-bca-finance-case-study"}
+{"dst": "client:bcafinance", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:98ac2e97e84b"}
+{"dst": "kpi:2898bd73d5c0", "props": {"evidence": "_BnK_ BCA Finance - Case Study"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-bca-finance-case-study"}
+{"dst": "client:bcafinance", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2898bd73d5c0"}
+{"dst": "kpi:8b1789531ed3", "props": {"evidence": "_BnK_ BCA Finance - Case Study"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-bca-finance-case-study"}
+{"dst": "client:bcafinance", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:8b1789531ed3"}
+{"dst": "kpi:67333daff2c3", "props": {"evidence": "_BnK_ BCA Finance - Case Study"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-bca-finance-case-study"}
+{"dst": "client:bcafinance", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:67333daff2c3"}
+{"dst": "kpi:8bef566150a1", "props": {"evidence": "_BnK_ BCA Finance - Case Study"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-bca-finance-case-study"}
+{"dst": "client:bcafinance", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:8bef566150a1"}
+{"dst": "kpi:f11225d7d026", "props": {"evidence": "_BnK_ BCA Finance - Case Study"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-bca-finance-case-study"}
+{"dst": "client:bcafinance", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:f11225d7d026"}
+{"dst": "kpi:9b034a9afc80", "props": {"evidence": "_BnK_ BCA Finance - Case Study"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-bca-finance-case-study"}
+{"dst": "client:bcafinance", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:9b034a9afc80"}
+{"dst": "kpi:2f09824da729", "props": {"evidence": "_BnK_ BCA Finance - Case Study"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-bca-finance-case-study"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2f09824da729"}
+{"dst": "kpi:24ad27a5b601", "props": {"evidence": "_BnK_ BCA Finance - Case Study"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-bca-finance-case-study"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:24ad27a5b601"}
+{"dst": "kpi:eaa1f31b567d", "props": {"evidence": "_BnK_ BCA Finance - Case Study"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-bca-finance-case-study"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:eaa1f31b567d"}
+{"dst": "kpi:d076cbecf28a", "props": {"evidence": "_BnK_ BCA Finance - Case Study"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-bca-finance-case-study"}
+{"dst": "client:mbal", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:d076cbecf28a"}
+{"dst": "kpi:5c53f689a6f6", "props": {"evidence": "_BnK_ BCA Finance - Case Study"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-bca-finance-case-study"}
+{"dst": "client:mbal", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:5c53f689a6f6"}
+{"dst": "kpi:9068bcd35904", "props": {"evidence": "_BnK_ BCA Finance - Case Study"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-bca-finance-case-study"}
+{"dst": "client:mbal", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:9068bcd35904"}
+{"dst": "kpi:17c7219f6698", "props": {"evidence": "_BnK_ BCA Finance - Case Study"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-bca-finance-case-study"}
+{"dst": "client:mbal", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:17c7219f6698"}
+{"dst": "kpi:1549a2241708", "props": {"evidence": "_BnK_ BCA Finance - Case Study"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-bca-finance-case-study"}
+{"dst": "client:mbal", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:1549a2241708"}
+{"dst": "kpi:b8db7c397d07", "props": {"evidence": "_BnK_ DAMS Phase 2 - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-dams-phase-2-proposal"}
+{"dst": "client:tinekenshippinglimited", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b8db7c397d07"}
+{"dst": "kpi:2af486ea5ba3", "props": {"evidence": "_BnK_ Driver Safe Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-driver-safe-application-proposal"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2af486ea5ba3"}
+{"dst": "kpi:58a4313be447", "props": {"evidence": "_BnK_ Driver Safe Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-driver-safe-application-proposal"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:58a4313be447"}
+{"dst": "kpi:a21a01a69d3c", "props": {"evidence": "_BnK_ Driver Safe Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-driver-safe-application-proposal"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:a21a01a69d3c"}
+{"dst": "kpi:50b1174c17f3", "props": {"evidence": "_BnK_ Driver Safe Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-driver-safe-application-proposal"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:50b1174c17f3"}
+{"dst": "kpi:21633bd04695", "props": {"evidence": "_BnK_ Driver Safe Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-driver-safe-application-proposal"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:21633bd04695"}
+{"dst": "kpi:3be538631407", "props": {"evidence": "_BnK_ Driver Safe Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-driver-safe-application-proposal"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:3be538631407"}
+{"dst": "kpi:7aa6c1fcbfa4", "props": {"evidence": "_BnK_ Driver Safe Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-driver-safe-application-proposal"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:7aa6c1fcbfa4"}
+{"dst": "kpi:a31fc852a943", "props": {"evidence": "_BnK_ Driver Safe Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-driver-safe-application-proposal"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:a31fc852a943"}
+{"dst": "kpi:264a80bae891", "props": {"evidence": "_BnK_ Driver Safe Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-driver-safe-application-proposal"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:264a80bae891"}
+{"dst": "kpi:4df01548bdb7", "props": {"evidence": "_BnK_ Driver Safe Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-driver-safe-application-proposal"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:4df01548bdb7"}
+{"dst": "kpi:2fcb42024b89", "props": {"evidence": "_BnK_ Driver Safe Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-driver-safe-application-proposal"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2fcb42024b89"}
+{"dst": "kpi:8c00059ddc22", "props": {"evidence": "_BnK_ Driver Safe Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-driver-safe-application-proposal"}
+{"dst": "client:motnhasanxuatthietbinongnghieptrongsuccessstorycuabnk", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:8c00059ddc22"}
+{"dst": "kpi:7e749fe29ae1", "props": {"evidence": "_BnK_ eExpense System Revamp - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-eexpense-system-revamp-proposal"}
+{"dst": "client:unnamedclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:7e749fe29ae1"}
+{"dst": "kpi:b29010897898", "props": {"evidence": "_BnK_ eExpense System Revamp - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-eexpense-system-revamp-proposal"}
+{"dst": "client:unnamedclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b29010897898"}
+{"dst": "kpi:1a0166fad21e", "props": {"evidence": "_BnK_ eExpense System Revamp - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-eexpense-system-revamp-proposal"}
+{"dst": "client:unnamedclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:1a0166fad21e"}
+{"dst": "kpi:e4185070d499", "props": {"evidence": "_BnK_ eExpense System Revamp - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-eexpense-system-revamp-proposal"}
+{"dst": "client:unnamedclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e4185070d499"}
+{"dst": "kpi:f481c04e6c02", "props": {"evidence": "_BnK_ EUP - Long-term Care System - Proposal 20250805"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-eup-long-term-care-system-proposal-20250805"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:f481c04e6c02"}
+{"dst": "kpi:503a584e5890", "props": {"evidence": "_BnK_ EUP - Long-term Care System - Proposal 20250805"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-eup-long-term-care-system-proposal-20250805"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:503a584e5890"}
+{"dst": "kpi:e537038d4cb7", "props": {"evidence": "_BnK_ EUP - Long-term Care System - Proposal 20250805"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-eup-long-term-care-system-proposal-20250805"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e537038d4cb7"}
+{"dst": "kpi:b61abe1806d3", "props": {"evidence": "_BnK_ EUP - Long-term Care System - Proposal 20250805"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-eup-long-term-care-system-proposal-20250805"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b61abe1806d3"}
+{"dst": "kpi:11bb80c864f8", "props": {"evidence": "_BnK_ FSD Chat - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-fsd-chat-proposal"}
+{"dst": "client:mouxidea", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:11bb80c864f8"}
+{"dst": "kpi:077da2fd74b3", "props": {"evidence": "_BnK_ FSD Chat - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-fsd-chat-proposal"}
+{"dst": "client:mouxidea", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:077da2fd74b3"}
+{"dst": "kpi:f8fe2b7f49c5", "props": {"evidence": "_BnK_ FSD Chat - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-fsd-chat-proposal"}
+{"dst": "client:mouxidea", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:f8fe2b7f49c5"}
+{"dst": "kpi:fe21aeb00091", "props": {"evidence": "_BnK_ FSD Chat - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-fsd-chat-proposal"}
+{"dst": "client:mouxidea", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:fe21aeb00091"}
+{"dst": "kpi:3b238bab08eb", "props": {"evidence": "_BnK_ FSD Instant Messager - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-fsd-instant-messager-proposal"}
+{"dst": "client:mouxidea", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:3b238bab08eb"}
+{"dst": "kpi:af8c72308ee9", "props": {"evidence": "_BnK_ FSD Instant Messager - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-fsd-instant-messager-proposal"}
+{"dst": "client:mouxidea", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:af8c72308ee9"}
+{"dst": "kpi:57a43a8b83f4", "props": {"evidence": "_BnK_ FSD Instant Messager - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-fsd-instant-messager-proposal"}
+{"dst": "client:mouxidea", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:57a43a8b83f4"}
+{"dst": "kpi:246abd0e6b46", "props": {"evidence": "_BnK_ FSD Instant Messager - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-fsd-instant-messager-proposal"}
+{"dst": "client:mouxidea", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:246abd0e6b46"}
+{"dst": "kpi:86244bfd54dc", "props": {"evidence": "_BnK_ FSD Instant Messager - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-fsd-instant-messager-proposal"}
+{"dst": "client:mouxidea", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:86244bfd54dc"}
+{"dst": "kpi:399f98b62189", "props": {"evidence": "_BnK_ FSD Instant Messager - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-fsd-instant-messager-proposal"}
+{"dst": "client:mouxidea", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:399f98b62189"}
+{"dst": "kpi:f309344e4e0f", "props": {"evidence": "_BnK_ FSD Instant Messager - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-fsd-instant-messager-proposal"}
+{"dst": "client:mouxidea", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:f309344e4e0f"}
+{"dst": "kpi:048a84df9896", "props": {"evidence": "_BnK_ GE - Solution Proposal_Ver_2"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-ge-solution-proposal-ver-2"}
+{"dst": "client:gehpfactory", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:048a84df9896"}
+{"dst": "kpi:87f31b3a2c74", "props": {"evidence": "_BnK_ GE - Solution Proposal_Ver_2"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-ge-solution-proposal-ver-2"}
+{"dst": "client:gehpfactory", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:87f31b3a2c74"}
+{"dst": "kpi:ee72c48ccccb", "props": {"evidence": "_BnK_ LTC - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-ltc-proposal"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:ee72c48ccccb"}
+{"dst": "kpi:4fa7d052127d", "props": {"evidence": "_BnK_ LTC - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-ltc-proposal"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:4fa7d052127d"}
+{"dst": "kpi:d9301c525d20", "props": {"evidence": "_BnK_ LTC - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-ltc-proposal"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:d9301c525d20"}
+{"dst": "kpi:ae530243fecb", "props": {"evidence": "_BnK_ LTC - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-ltc-proposal"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:ae530243fecb"}
+{"dst": "kpi:c4a788b40e97", "props": {"evidence": "_BnK_ LTC - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-ltc-proposal"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:c4a788b40e97"}
+{"dst": "kpi:9467a6ddf32c", "props": {"evidence": "_BnK_ LTC - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-ltc-proposal"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:9467a6ddf32c"}
+{"dst": "kpi:32b9856a2592", "props": {"evidence": "_BnK_ LTC - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-ltc-proposal"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:32b9856a2592"}
+{"dst": "kpi:fdda28917dc4", "props": {"evidence": "_BnK_ LTC - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-ltc-proposal"}
+{"dst": "client:eup", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:fdda28917dc4"}
+{"dst": "kpi:d2d3b09ba7af", "props": {"evidence": "_BnK_ Maritime ERP - Proposal 20250401"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-maritime-erp-proposal-20250401"}
+{"dst": "client:khachhangtronglinhvuchanghaishippingcompanychuaneuten", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:d2d3b09ba7af"}
+{"dst": "kpi:bdf81f2b6886", "props": {"evidence": "_BnK_ Maritime ERP - Proposal 20250401"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-maritime-erp-proposal-20250401"}
+{"dst": "client:khachhangtronglinhvuchanghaishippingcompanychuaneuten", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:bdf81f2b6886"}
+{"dst": "kpi:de4182cb7b4f", "props": {"evidence": "_BnK_ Maritime ERP - Proposal 20250401"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-maritime-erp-proposal-20250401"}
+{"dst": "client:khachhangtronglinhvuchanghaishippingcompanychuaneuten", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:de4182cb7b4f"}
+{"dst": "kpi:fea222056c8b", "props": {"evidence": "_BnK_ Maritime ERP - Proposal 20250401"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-maritime-erp-proposal-20250401"}
+{"dst": "client:khachhangtronglinhvuchanghaishippingcompanychuaneuten", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:fea222056c8b"}
+{"dst": "kpi:9e03f7937712", "props": {"evidence": "_BnK_ Maritime ERP - Proposal 20250401"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-maritime-erp-proposal-20250401"}
+{"dst": "client:khachhangtronglinhvuchanghaishippingcompanychuaneuten", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:9e03f7937712"}
+{"dst": "kpi:2c449f73fc99", "props": {"evidence": "_BnK_ Maritime ERP - Proposal 20250401"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-maritime-erp-proposal-20250401"}
+{"dst": "client:khachhangtronglinhvuchanghaishippingcompanychuaneuten", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2c449f73fc99"}
+{"dst": "kpi:38e6018017fa", "props": {"evidence": "_BnK_ Maritime ERP - Proposal 20250401"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-maritime-erp-proposal-20250401"}
+{"dst": "client:khachhangtronglinhvuchanghaishippingcompanychuaneuten", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:38e6018017fa"}
+{"dst": "kpi:1eb1d338c8ac", "props": {"evidence": "_BnK_ Maritime ERP - Proposal 20250401"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-maritime-erp-proposal-20250401"}
+{"dst": "client:khachhangtronglinhvuchanghaishippingcompanychuaneuten", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:1eb1d338c8ac"}
+{"dst": "kpi:4d022f871c33", "props": {"evidence": "_BnK_ Maritime ERP - Proposal 20250401"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-maritime-erp-proposal-20250401"}
+{"dst": "client:khachhangtronglinhvuchanghaishippingcompanychuaneuten", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:4d022f871c33"}
+{"dst": "kpi:101de00e5171", "props": {"evidence": "_BnK_ NUEIP - Offshore Delivery Center"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-nueip-offshore-delivery-center"}
+{"dst": "kpi:866e075da684", "props": {"evidence": "_BnK_ NUEIP HDX ODC Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-nueip-hdx-odc-proposal"}
+{"dst": "client:nueiphdx", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:866e075da684"}
+{"dst": "kpi:39e442b37905", "props": {"evidence": "_BnK_ NUEIP HDX ODC Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-nueip-hdx-odc-proposal"}
+{"dst": "client:nueiphdx", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:39e442b37905"}
+{"dst": "kpi:b35d74562f7f", "props": {"evidence": "_BnK_ NUEIP HDX ODC Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-nueip-hdx-odc-proposal"}
+{"dst": "client:nueiphdx", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b35d74562f7f"}
+{"dst": "kpi:84a40eb74518", "props": {"evidence": "_BnK_ NUEIP HDX ODC Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-nueip-hdx-odc-proposal"}
+{"dst": "client:nueiphdx", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:84a40eb74518"}
+{"dst": "kpi:883e8f66e727", "props": {"evidence": "_BnK_ NUEIP HDX ODC Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-nueip-hdx-odc-proposal"}
+{"dst": "client:nueiphdx", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:883e8f66e727"}
+{"dst": "kpi:d7790d9a0c94", "props": {"evidence": "_BnK_ Precious Metals Trading - Proposal - v4"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-precious-metals-trading-proposal-v4"}
+{"dst": "client:valuemax", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:d7790d9a0c94"}
+{"dst": "kpi:2a5ec29ccb64", "props": {"evidence": "_BnK_ Precious Metals Trading - Proposal - v4"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-precious-metals-trading-proposal-v4"}
+{"dst": "client:valuemax", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2a5ec29ccb64"}
+{"dst": "kpi:ca5c5ca837ae", "props": {"evidence": "_BnK_ Precious Metals Trading - Proposal - v4"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-precious-metals-trading-proposal-v4"}
+{"dst": "client:valuemax", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:ca5c5ca837ae"}
+{"dst": "kpi:ca42ca4dd779", "props": {"evidence": "_BnK_ Precious Metals Trading - Proposal - v4"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-precious-metals-trading-proposal-v4"}
+{"dst": "client:valuemax", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:ca42ca4dd779"}
+{"dst": "kpi:57437d955828", "props": {"evidence": "_BnK_ Precious Metals Trading - Proposal - v4"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-precious-metals-trading-proposal-v4"}
+{"dst": "client:valuemax", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:57437d955828"}
+{"dst": "kpi:12fc1abb5c06", "props": {"evidence": "_BnK_ Precious Metals Trading - Proposal - v4"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-precious-metals-trading-proposal-v4"}
+{"dst": "client:valuemax", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:12fc1abb5c06"}
+{"dst": "kpi:3a718c8ef542", "props": {"evidence": "_BnK_ Precious Metals Trading - Proposal - v4"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-precious-metals-trading-proposal-v4"}
+{"dst": "client:valuemax", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:3a718c8ef542"}
+{"dst": "kpi:a28a621722d9", "props": {"evidence": "_BnK_ Precious Metals Trading - Proposal - v4"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-precious-metals-trading-proposal-v4"}
+{"dst": "client:valuemax", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:a28a621722d9"}
+{"dst": "kpi:7b7b1fd25bd4", "props": {"evidence": "_BnK_ PT Constrans Asia -Solution Proposal_Pilot"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-pt-constrans-asia-solution-proposal-pilot"}
+{"dst": "client:ptconstransasia", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:7b7b1fd25bd4"}
+{"dst": "kpi:a0e9641f63e7", "props": {"evidence": "_BnK_ PT Constrans Asia -Solution Proposal_Pilot"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-pt-constrans-asia-solution-proposal-pilot"}
+{"dst": "client:ptconstransasia", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:a0e9641f63e7"}
+{"dst": "kpi:9387698e2ee2", "props": {"evidence": "_BnK_ PT Constrans Asia -Solution Proposal_Pilot"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-pt-constrans-asia-solution-proposal-pilot"}
+{"dst": "client:ptconstransasia", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:9387698e2ee2"}
+{"dst": "kpi:f77888829b24", "props": {"evidence": "_BnK_ PT Constrans Asia -Solution Proposal_Pilot"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-pt-constrans-asia-solution-proposal-pilot"}
+{"dst": "client:ptconstransasia", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:f77888829b24"}
+{"dst": "kpi:693170d0e7dd", "props": {"evidence": "_BnK_ PT Constrans Asia -Solution Proposal_Pilot"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-pt-constrans-asia-solution-proposal-pilot"}
+{"dst": "client:ptconstransasia", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:693170d0e7dd"}
+{"dst": "kpi:51b7b8d2e33e", "props": {"evidence": "_BnK_ PT Constrans Asia -Solution Proposal_Pilot"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-pt-constrans-asia-solution-proposal-pilot"}
+{"dst": "client:ptconstransasia", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:51b7b8d2e33e"}
+{"dst": "kpi:03270f420783", "props": {"evidence": "_BnK_ PT Constrans Asia -Solution Proposal_Pilot"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-pt-constrans-asia-solution-proposal-pilot"}
+{"dst": "client:ptconstransasia", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:03270f420783"}
+{"dst": "kpi:c5432cb2c8b9", "props": {"evidence": "_BnK_ PT Constrans Asia -Solution Proposal_Pilot"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-pt-constrans-asia-solution-proposal-pilot"}
+{"dst": "client:ptconstransasia", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:c5432cb2c8b9"}
+{"dst": "kpi:2f84c42e7c87", "props": {"evidence": "_BnK_ PT Constrans Asia -Solution Proposal_Pilot"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-pt-constrans-asia-solution-proposal-pilot"}
+{"dst": "client:ptconstransasia", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2f84c42e7c87"}
+{"dst": "kpi:463bd4bfc05e", "props": {"evidence": "_BnK_ PT Constrans Asia -Solution Proposal_Pilot"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-pt-constrans-asia-solution-proposal-pilot"}
+{"dst": "client:ptconstransasia", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:463bd4bfc05e"}
+{"dst": "kpi:407551296e5a", "props": {"evidence": "_BnK_ Surbana Tech - HDX ODC Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-surbana-tech-hdx-odc-proposal"}
+{"dst": "client:vietnamrealestateclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:407551296e5a"}
+{"dst": "kpi:b3fe8db0a62c", "props": {"evidence": "_BnK_ Surbana Tech - HDX ODC Proposal_PDF"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-surbana-tech-hdx-odc-proposal-pdf"}
+{"dst": "client:surbanatech", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b3fe8db0a62c"}
+{"dst": "kpi:87cdbc5bf34a", "props": {"evidence": "_BnK_ Surbana Tech - HDX ODC Proposal_PDF"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-surbana-tech-hdx-odc-proposal-pdf"}
+{"dst": "client:surbanatech", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:87cdbc5bf34a"}
+{"dst": "kpi:3525ca65e99a", "props": {"evidence": "_BnK_ Surbana Tech - HDX ODC Proposal_PDF"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-surbana-tech-hdx-odc-proposal-pdf"}
+{"dst": "client:surbanatech", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:3525ca65e99a"}
+{"dst": "kpi:0b124048ea61", "props": {"evidence": "_BnK_ Surbana Tech - HDX ODC Proposal_PDF"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-surbana-tech-hdx-odc-proposal-pdf"}
+{"dst": "client:surbanatech", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:0b124048ea61"}
+{"dst": "kpi:5131a576cdd0", "props": {"evidence": "_BnK_ Surbana Tech - HDX ODC Proposal_PDF"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-surbana-tech-hdx-odc-proposal-pdf"}
+{"dst": "client:surbanatech", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:5131a576cdd0"}
+{"dst": "kpi:1ae7d52e9830", "props": {"evidence": "_BnK_ Surbana Tech - HDX ODC Proposal_PDF"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-surbana-tech-hdx-odc-proposal-pdf"}
+{"dst": "client:unspecifiedrealestateclientinvietnam", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:1ae7d52e9830"}
+{"dst": "kpi:90707b0217f9", "props": {"evidence": "_BnK_ Surbana Tech - HDX ODC Proposal_PDF"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-surbana-tech-hdx-odc-proposal-pdf"}
+{"dst": "client:unspecifiedclientintheapplicationtrackingsystemcasestudy", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:90707b0217f9"}
+{"dst": "kpi:ca71591fc297", "props": {"evidence": "_BnK_ Surbana Tech - HDX ODC Proposal_PDF"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-surbana-tech-hdx-odc-proposal-pdf"}
+{"dst": "client:unspecifiedtelecomclientinthesimsellerappcasestudy", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:ca71591fc297"}
+{"dst": "kpi:3777acd9048b", "props": {"evidence": "_BnK_ Template - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-template-proposal"}
+{"dst": "client:unspecifiedsmartagriculturecasestudyclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:3777acd9048b"}
+{"dst": "kpi:dbc9c087cceb", "props": {"evidence": "_BnK_ Template - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-template-proposal"}
+{"dst": "client:unspecifiedsmartagriculturecasestudyclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:dbc9c087cceb"}
+{"dst": "kpi:1f152b1f55d1", "props": {"evidence": "_BnK_ Template - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-template-proposal"}
+{"dst": "client:unspecifiedsmartagriculturecasestudyclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:1f152b1f55d1"}
+{"dst": "kpi:01ce561a88a3", "props": {"evidence": "_BnK_ Template - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-template-proposal"}
+{"dst": "client:unspecifiedsmartagriculturecasestudyclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:01ce561a88a3"}
+{"dst": "kpi:9fd337116897", "props": {"evidence": "_BnK_ TrailWatch Revamp - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-trailwatch-revamp-proposal"}
+{"dst": "client:trailwatch", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:9fd337116897"}
+{"dst": "kpi:512059ed7e7d", "props": {"evidence": "_BnK_ TrailWatch Revamp - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-trailwatch-revamp-proposal"}
+{"dst": "kpi:60c26241ba85", "props": {"evidence": "_BnK_ ValueMax - Success Auto Modernization Proposal_Updated"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-valuemax-success-auto-modernization-proposal-updated"}
+{"dst": "client:valuemax", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:60c26241ba85"}
+{"dst": "kpi:1273619715ee", "props": {"evidence": "_BnK_ ValueMax - Success Auto Modernization Proposal_Updated"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-valuemax-success-auto-modernization-proposal-updated"}
+{"dst": "client:valuemax", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:1273619715ee"}
+{"dst": "kpi:05a4c3b1537f", "props": {"evidence": "_BnK_ ValueMax - Success Auto Modernization Proposal_Updated"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-valuemax-success-auto-modernization-proposal-updated"}
+{"dst": "client:valuemax", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:05a4c3b1537f"}
+{"dst": "kpi:0a565cf89728", "props": {"evidence": "_BnK_ ValueMax - Success Auto Modernization Proposal_Updated"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-valuemax-success-auto-modernization-proposal-updated"}
+{"dst": "client:valuemax", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:0a565cf89728"}
+{"dst": "kpi:f5f830273bd4", "props": {"evidence": "_BnK_ ValueMax - Success Auto Modernization Proposal_Updated"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-valuemax-success-auto-modernization-proposal-updated"}
+{"dst": "client:valuemax", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:f5f830273bd4"}
+{"dst": "kpi:b558b38b1b25", "props": {"evidence": "_BnK_ ValueMax - Success Auto Modernization Proposal_Updated"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-valuemax-success-auto-modernization-proposal-updated"}
+{"dst": "client:valuemax", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b558b38b1b25"}
+{"dst": "kpi:a3683c7f449e", "props": {"evidence": "_BnK_ ValueMax - Success Auto Modernization Proposal_Updated"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-valuemax-success-auto-modernization-proposal-updated"}
+{"dst": "client:valuemax", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:a3683c7f449e"}
+{"dst": "kpi:b66e586f0bc6", "props": {"evidence": "_BnK_ ValueMax - Success Auto Modernization Proposal_Updated"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-valuemax-success-auto-modernization-proposal-updated"}
+{"dst": "client:valuemax", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b66e586f0bc6"}
+{"dst": "kpi:b535dcd512d2", "props": {"evidence": "_BnK_ ValueMax - Success Auto Modernization Proposal_Updated"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-valuemax-success-auto-modernization-proposal-updated"}
+{"dst": "client:valuemax", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b535dcd512d2"}
+{"dst": "kpi:0cedb6b2c104", "props": {"evidence": "_BnK_ ValueMax - Success Auto Modernization Proposal_Updated"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-valuemax-success-auto-modernization-proposal-updated"}
+{"dst": "client:valuemax", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:0cedb6b2c104"}
+{"dst": "kpi:19c030a0474e", "props": {"evidence": "_BnK_ Zoustec Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-zoustec-application-proposal"}
+{"dst": "client:zoustec", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:19c030a0474e"}
+{"dst": "kpi:c477aa98051e", "props": {"evidence": "_BnK_ Zoustec Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-zoustec-application-proposal"}
+{"dst": "client:zoustec", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:c477aa98051e"}
+{"dst": "kpi:89ab3ac17631", "props": {"evidence": "_BnK_ Zoustec Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-zoustec-application-proposal"}
+{"dst": "client:zoustec", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:89ab3ac17631"}
+{"dst": "kpi:e70433d9fd67", "props": {"evidence": "_BnK_ Zoustec Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-zoustec-application-proposal"}
+{"dst": "client:zoustec", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e70433d9fd67"}
+{"dst": "kpi:bd9d3d3e8501", "props": {"evidence": "_BnK_ Zoustec Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-zoustec-application-proposal"}
+{"dst": "client:zoustec", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:bd9d3d3e8501"}
+{"dst": "kpi:6db63b6b6099", "props": {"evidence": "_BnK_ Zoustec Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-zoustec-application-proposal"}
+{"dst": "client:zoustec", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:6db63b6b6099"}
+{"dst": "kpi:9a2c1d2e3cbe", "props": {"evidence": "_BnK_ Zoustec Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-zoustec-application-proposal"}
+{"dst": "client:zoustec", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:9a2c1d2e3cbe"}
+{"dst": "kpi:2871a3032d5d", "props": {"evidence": "_BnK_ Zoustec Application - Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-zoustec-application-proposal"}
+{"dst": "client:zoustec", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2871a3032d5d"}
+{"dst": "kpi:603a835c0163", "props": {"evidence": "_Bnk_CAG_HIVE_Highlevel Solution _v1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cag-hive-highlevel-solution-v1-1"}
+{"dst": "client:cag", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:603a835c0163"}
+{"dst": "kpi:1946ac6dfd4c", "props": {"evidence": "_EN_ BnK-IKM 2"}, "rel": "CLAIMS_KPI", "src": "opp:en-bnk-ikm-2"}
+{"dst": "client:unnamedcasestudy1clientincommercialretailtransactionanalysis", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:1946ac6dfd4c"}
+{"dst": "kpi:bca6458f3e83", "props": {"evidence": "_EN_ BnK-IKM 2"}, "rel": "CLAIMS_KPI", "src": "opp:en-bnk-ikm-2"}
+{"dst": "client:unnamedcasestudy2clientingovernmentpublicadministration", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:bca6458f3e83"}
+{"dst": "kpi:b6ef6290f483", "props": {"evidence": "_EN_ BnK-IKM 2"}, "rel": "CLAIMS_KPI", "src": "opp:en-bnk-ikm-2"}
+{"dst": "client:unnamedcasestudy2clientingovernmentpublicadministration", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b6ef6290f483"}
+{"dst": "kpi:50d37043d62d", "props": {"evidence": "_EN_ BnK-IKM 2"}, "rel": "CLAIMS_KPI", "src": "opp:en-bnk-ikm-2"}
+{"dst": "client:unnamedcasestudy3clientinservicesretailorutilities", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:50d37043d62d"}
+{"dst": "kpi:fca64e657078", "props": {"evidence": "_EN_ BnK-IKM 2"}, "rel": "CLAIMS_KPI", "src": "opp:en-bnk-ikm-2"}
+{"dst": "client:unnamedcasestudy3clientinservicesretailorutilities", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:fca64e657078"}
+{"dst": "kpi:0888ea941172", "props": {"evidence": "_EN_ BnK-IKM 2"}, "rel": "CLAIMS_KPI", "src": "opp:en-bnk-ikm-2"}
+{"dst": "client:unnamedcasestudy3clientinservicesretailorutilities", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:0888ea941172"}
+{"dst": "kpi:29b9c912ecd6", "props": {"evidence": "_EN_ BnK-IKM 2"}, "rel": "CLAIMS_KPI", "src": "opp:en-bnk-ikm-2"}
+{"dst": "client:genericbnkikmproductoutcomenospecificclientidentified", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:29b9c912ecd6"}
+{"dst": "kpi:78fef8fe5889", "props": {"evidence": "_EN_ BnK-IKM 2"}, "rel": "CLAIMS_KPI", "src": "opp:en-bnk-ikm-2"}
+{"dst": "client:genericbnkikmproductoutcomenospecificclientidentified", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:78fef8fe5889"}
+{"dst": "kpi:3cb4b54bddba", "props": {"evidence": "_EN_ BnK-IKM 2"}, "rel": "CLAIMS_KPI", "src": "opp:en-bnk-ikm-2"}
+{"dst": "client:genericbnkikmproductoutcomenospecificclientidentified", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:3cb4b54bddba"}
+{"dst": "kpi:20c79829aa07", "props": {"evidence": "_EN_ BnK-IKM 2"}, "rel": "CLAIMS_KPI", "src": "opp:en-bnk-ikm-2"}
+{"dst": "client:genericbnkikmproductoutcomenospecificclientidentified", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:20c79829aa07"}
+{"dst": "kpi:ad04fe3f8e19", "props": {"evidence": "_JNP_ - E-invoice System Modernize - Proposal - V3_0"}, "rel": "CLAIMS_KPI", "src": "opp:jnp-e-invoice-system-modernize-proposal-v3-0"}
+{"dst": "client:jpconsultingpteltd", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:ad04fe3f8e19"}
+{"dst": "kpi:b1be6bacf858", "props": {"evidence": "_JNP_ - E-invoice System Modernize - Proposal - V3_0"}, "rel": "CLAIMS_KPI", "src": "opp:jnp-e-invoice-system-modernize-proposal-v3-0"}
+{"dst": "client:jpconsultingpteltd", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b1be6bacf858"}
+{"dst": "kpi:0a44c31417b9", "props": {"evidence": "_JNP_ - E-invoice System Modernize - Proposal - V3_0"}, "rel": "CLAIMS_KPI", "src": "opp:jnp-e-invoice-system-modernize-proposal-v3-0"}
+{"dst": "client:jpconsultingpteltd", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:0a44c31417b9"}
+{"dst": "kpi:96b8ddac1f5a", "props": {"evidence": "_JNP_ - E-invoice System Modernize - Proposal - V3_0"}, "rel": "CLAIMS_KPI", "src": "opp:jnp-e-invoice-system-modernize-proposal-v3-0"}
+{"dst": "client:jpconsultingpteltd", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:96b8ddac1f5a"}
+{"dst": "kpi:af2d2dfa3515", "props": {"evidence": "_JNP_ - E-invoice System Modernize - Proposal - V3_0"}, "rel": "CLAIMS_KPI", "src": "opp:jnp-e-invoice-system-modernize-proposal-v3-0"}
+{"dst": "client:jpconsultingpteltd", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:af2d2dfa3515"}
+{"dst": "kpi:7a81234083a8", "props": {"evidence": "_JNP_ - E-invoice System Modernize - Proposal - V3_0"}, "rel": "CLAIMS_KPI", "src": "opp:jnp-e-invoice-system-modernize-proposal-v3-0"}
+{"dst": "client:jpconsultingpteltd", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:7a81234083a8"}
+{"dst": "kpi:b3db3237faf1", "props": {"evidence": "_Oi_ - Commission Calculation System - Proposal -V2_0"}, "rel": "CLAIMS_KPI", "src": "opp:oi-commission-calculation-system-proposal-v2-0"}
+{"dst": "client:ottointernational", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b3db3237faf1"}
+{"dst": "kpi:a7038be8645f", "props": {"evidence": "_Oi_ - Commission Calculation System - Proposal -V2_0"}, "rel": "CLAIMS_KPI", "src": "opp:oi-commission-calculation-system-proposal-v2-0"}
+{"dst": "client:ottointernational", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:a7038be8645f"}
+{"dst": "kpi:e517babf5688", "props": {"evidence": "_Oi_ - Commission Calculation System - Proposal -V2_0"}, "rel": "CLAIMS_KPI", "src": "opp:oi-commission-calculation-system-proposal-v2-0"}
+{"dst": "client:ottointernational", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e517babf5688"}
+{"dst": "kpi:04bce11475aa", "props": {"evidence": "_Oi_ - Commission Calculation System - Proposal -V2_0"}, "rel": "CLAIMS_KPI", "src": "opp:oi-commission-calculation-system-proposal-v2-0"}
+{"dst": "client:ottointernational", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:04bce11475aa"}
+{"dst": "kpi:810e436b94bf", "props": {"evidence": "_Oi_ - Commission Calculation System - Proposal -V2_0"}, "rel": "CLAIMS_KPI", "src": "opp:oi-commission-calculation-system-proposal-v2-0"}
+{"dst": "client:ottointernational", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:810e436b94bf"}
+{"dst": "kpi:680999e505cb", "props": {"evidence": "_Oi_ - Commission Calculation System - Proposal -V2_0"}, "rel": "CLAIMS_KPI", "src": "opp:oi-commission-calculation-system-proposal-v2-0"}
+{"dst": "client:ottointernational", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:680999e505cb"}
+{"dst": "kpi:e1af9d161e03", "props": {"evidence": "_Oi_ - Commission Calculation System - Proposal -V2_0"}, "rel": "CLAIMS_KPI", "src": "opp:oi-commission-calculation-system-proposal-v2-0"}
+{"dst": "client:ottointernational", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e1af9d161e03"}
+{"dst": "kpi:0f5940b22971", "props": {"evidence": "_Oi_ - Commission Calculation System - Proposal -V2_0"}, "rel": "CLAIMS_KPI", "src": "opp:oi-commission-calculation-system-proposal-v2-0"}
+{"dst": "client:ottointernational", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:0f5940b22971"}
+{"dst": "kpi:8ea903799518", "props": {"evidence": "_Oi_ - eInvoice Interface System - Proposal -V1_1"}, "rel": "CLAIMS_KPI", "src": "opp:oi-einvoice-interface-system-proposal-v1-1"}
+{"dst": "client:ottointernational", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:8ea903799518"}
+{"dst": "kpi:2bcc59f52880", "props": {"evidence": "_Oi_ - eInvoice Interface System - Proposal -V1_1"}, "rel": "CLAIMS_KPI", "src": "opp:oi-einvoice-interface-system-proposal-v1-1"}
+{"dst": "client:ottointernational", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2bcc59f52880"}
+{"dst": "kpi:16e445570c11", "props": {"evidence": "_Oi_ - eInvoice Interface System - Proposal -V1_1"}, "rel": "CLAIMS_KPI", "src": "opp:oi-einvoice-interface-system-proposal-v1-1"}
+{"dst": "client:ottointernational", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:16e445570c11"}
+{"dst": "kpi:e686a88fabcd", "props": {"evidence": "_Oi_ - eInvoice Interface System - Proposal -V1_1"}, "rel": "CLAIMS_KPI", "src": "opp:oi-einvoice-interface-system-proposal-v1-1"}
+{"dst": "client:ottointernational", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e686a88fabcd"}
+{"dst": "kpi:77a002f11bda", "props": {"evidence": "_Oi_ - eInvoice Interface System - Proposal -V1_1"}, "rel": "CLAIMS_KPI", "src": "opp:oi-einvoice-interface-system-proposal-v1-1"}
+{"dst": "client:ottointernational", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:77a002f11bda"}
+{"dst": "kpi:38cbda47e934", "props": {"evidence": "_Project Proposal_ Aila_AI-Powered Legal Assistant_ _v0_4_"}, "rel": "CLAIMS_KPI", "src": "opp:project-proposal-aila-ai-powered-legal-assistant-v0-4"}
+{"dst": "client:ailacorporation", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:38cbda47e934"}
+{"dst": "kpi:ddb07f1a06f6", "props": {"evidence": "_Project Proposal_ Aila_AI-Powered Legal Assistant_ _v0_4_"}, "rel": "CLAIMS_KPI", "src": "opp:project-proposal-aila-ai-powered-legal-assistant-v0-4"}
+{"dst": "client:ailacorporation", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:ddb07f1a06f6"}
+{"dst": "kpi:cb95df0ce140", "props": {"evidence": "_Project Proposal_ Aila_AI-Powered Legal Assistant_ _v0_4_"}, "rel": "CLAIMS_KPI", "src": "opp:project-proposal-aila-ai-powered-legal-assistant-v0-4"}
+{"dst": "client:ailacorporation", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:cb95df0ce140"}
+{"dst": "kpi:02a6e9b55de5", "props": {"evidence": "_Project Proposal_ Aila_AI-Powered Legal Assistant_ _v0_4_"}, "rel": "CLAIMS_KPI", "src": "opp:project-proposal-aila-ai-powered-legal-assistant-v0-4"}
+{"dst": "client:ailacorporation", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:02a6e9b55de5"}
+{"dst": "kpi:e5f4f99ceaf9", "props": {"evidence": "_Project Proposal_ Aila_AI-Powered Legal Assistant_ _v0_4_"}, "rel": "CLAIMS_KPI", "src": "opp:project-proposal-aila-ai-powered-legal-assistant-v0-4"}
+{"dst": "client:ailacorporation", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e5f4f99ceaf9"}
+{"dst": "kpi:834d3febc0e8", "props": {"evidence": "_Project Proposal_ Aila_AI-Powered Legal Assistant_ _v0_4_"}, "rel": "CLAIMS_KPI", "src": "opp:project-proposal-aila-ai-powered-legal-assistant-v0-4"}
+{"dst": "client:ailacorporation", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:834d3febc0e8"}
+{"dst": "kpi:0154a8366d0f", "props": {"evidence": "_Project Proposal_ Aila_AI-Powered Legal Assistant_ _v0_4_"}, "rel": "CLAIMS_KPI", "src": "opp:project-proposal-aila-ai-powered-legal-assistant-v0-4"}
+{"dst": "client:ailacorporation", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:0154a8366d0f"}
+{"dst": "kpi:ee87c04f2bf8", "props": {"evidence": "_Project Proposal_ Aila_AI-Powered Legal Assistant_ _v0_4_"}, "rel": "CLAIMS_KPI", "src": "opp:project-proposal-aila-ai-powered-legal-assistant-v0-4"}
+{"dst": "client:ailacorporation", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:ee87c04f2bf8"}
+{"dst": "kpi:749b42d1b13a", "props": {"evidence": "_Project Proposal_ Aila_AI-Powered Legal Assistant_ _v0_4_"}, "rel": "CLAIMS_KPI", "src": "opp:project-proposal-aila-ai-powered-legal-assistant-v0-4"}
+{"dst": "client:ailacorporation", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:749b42d1b13a"}
+{"dst": "kpi:240ede4ca135", "props": {"evidence": "AI Data Analytics MVP Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:ai-data-analytics-mvp-proposal"}
+{"dst": "client:beaconbusinesssystems", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:240ede4ca135"}
+{"dst": "kpi:e7b1b40e5ffe", "props": {"evidence": "AI Data Analytics MVP Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:ai-data-analytics-mvp-proposal"}
+{"dst": "client:beaconbusinesssystems", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e7b1b40e5ffe"}
+{"dst": "kpi:57fb4e6a497c", "props": {"evidence": "AI Data Analytics MVP Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:ai-data-analytics-mvp-proposal"}
+{"dst": "client:beaconbusinesssystems", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:57fb4e6a497c"}
+{"dst": "kpi:b3de19da96af", "props": {"evidence": "AI Data Analytics MVP Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:ai-data-analytics-mvp-proposal"}
+{"dst": "client:beaconbusinesssystems", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b3de19da96af"}
+{"dst": "kpi:4d365efe7e73", "props": {"evidence": "AI Data Analytics MVP Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:ai-data-analytics-mvp-proposal"}
+{"dst": "client:beaconbusinesssystems", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:4d365efe7e73"}
+{"dst": "kpi:a8e997d5e117", "props": {"evidence": "AI Data Analytics MVP Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:ai-data-analytics-mvp-proposal"}
+{"dst": "client:beaconbusinesssystems", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:a8e997d5e117"}
+{"dst": "kpi:f390ebebcb92", "props": {"evidence": "BnK - CMC RPA Proposal_Full"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cmc-rpa-proposal-full"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:f390ebebcb92"}
+{"dst": "kpi:1a7eb94f7419", "props": {"evidence": "BnK - CMC RPA Proposal_Full"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cmc-rpa-proposal-full"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:1a7eb94f7419"}
+{"dst": "kpi:7af9bc7fa1c7", "props": {"evidence": "BnK - CMC RPA Proposal_Full"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cmc-rpa-proposal-full"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:7af9bc7fa1c7"}
+{"dst": "kpi:dd674ff272cc", "props": {"evidence": "BnK - CMC RPA Proposal_Full"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cmc-rpa-proposal-full"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:dd674ff272cc"}
+{"dst": "kpi:5c1fb5adeab4", "props": {"evidence": "BnK - CMC RPA Proposal_Full"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cmc-rpa-proposal-full"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:5c1fb5adeab4"}
+{"dst": "kpi:13823b74a23e", "props": {"evidence": "BnK - CMC RPA Proposal_Full"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cmc-rpa-proposal-full"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:13823b74a23e"}
+{"dst": "kpi:e2d664e488a7", "props": {"evidence": "BnK - CMC RPA Proposal_Full"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cmc-rpa-proposal-full"}
+{"dst": "client:bidv", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e2d664e488a7"}
+{"dst": "kpi:4e0df10ba3c6", "props": {"evidence": "BnK - CMC RPA Proposal_Full"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cmc-rpa-proposal-full"}
+{"dst": "client:bidv", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:4e0df10ba3c6"}
+{"dst": "kpi:d71108cbfbd5", "props": {"evidence": "BnK - CMC RPA Proposal_Full"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cmc-rpa-proposal-full"}
+{"dst": "client:bidv", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:d71108cbfbd5"}
+{"dst": "kpi:be1315ac1941", "props": {"evidence": "BnK - CMC RPA Proposal_Full"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cmc-rpa-proposal-full"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:be1315ac1941"}
+{"dst": "kpi:034a99f1058e", "props": {"evidence": "BnK - CMC RPA Proposal_Full"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cmc-rpa-proposal-full"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:034a99f1058e"}
+{"dst": "kpi:9a1679f3a53f", "props": {"evidence": "BnK - CMC RPA Proposal_Full"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cmc-rpa-proposal-full"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:9a1679f3a53f"}
+{"dst": "kpi:2424b9398228", "props": {"evidence": "BnK - CMC RPA Proposal_Full"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cmc-rpa-proposal-full"}
+{"dst": "client:sacombank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2424b9398228"}
+{"dst": "kpi:580f99336f88", "props": {"evidence": "BnK - CMC RPA Proposal_Full"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cmc-rpa-proposal-full"}
+{"dst": "client:sacombank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:580f99336f88"}
+{"dst": "kpi:4d9cd2a114f0", "props": {"evidence": "BnK - CMC RPA Proposal_Full"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cmc-rpa-proposal-full"}
+{"dst": "client:sacombank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:4d9cd2a114f0"}
+{"dst": "kpi:abdf637c6442", "props": {"evidence": "BnK - Shiseido RPA Proposal v 1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-shiseido-rpa-proposal-v-1-1"}
+{"dst": "client:khachhangconsumerkhongneutentrongcasestudycfoofficefinanceautomationkhongphaishiseidosingapore", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:abdf637c6442"}
+{"dst": "kpi:1798edddb6aa", "props": {"evidence": "BnK - Shiseido RPA Proposal v 1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-shiseido-rpa-proposal-v-1-1"}
+{"dst": "client:khachhangconsumerkhongneutentrongcasestudycfoofficefinanceautomationkhongphaishiseidosingapore", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:1798edddb6aa"}
+{"dst": "kpi:185ee3638435", "props": {"evidence": "BnK - Shiseido RPA Proposal v 1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-shiseido-rpa-proposal-v-1-1"}
+{"dst": "client:khachhangconsumerkhongneutentrongcasestudycfoofficefinanceautomationkhongphaishiseidosingapore", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:185ee3638435"}
+{"dst": "kpi:e8cbc7b1f2c8", "props": {"evidence": "BnK - Shiseido RPA Proposal v 1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-shiseido-rpa-proposal-v-1-1"}
+{"dst": "client:khachhangconsumerkhongneutentrongcasestudycfoofficefinanceautomationkhongphaishiseidosingapore", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e8cbc7b1f2c8"}
+{"dst": "kpi:ab496cea7518", "props": {"evidence": "BnK - Shiseido RPA Proposal v 1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-shiseido-rpa-proposal-v-1-1"}
+{"dst": "client:khachhangconsumerkhongneutentrongcasestudysupplychainrpaai", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:ab496cea7518"}
+{"dst": "kpi:d9a7d1a5eebb", "props": {"evidence": "BnK - Shiseido RPA Proposal v 1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-shiseido-rpa-proposal-v-1-1"}
+{"dst": "client:khachhangconsumerkhongneutentrongcasestudysupplychainrpaai", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:d9a7d1a5eebb"}
+{"dst": "kpi:9bd8122ba1d7", "props": {"evidence": "BnK - Shiseido RPA Proposal v 1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-shiseido-rpa-proposal-v-1-1"}
+{"dst": "client:khachhangconsumerkhongneutentrongcasestudysupplychainrpaai", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:9bd8122ba1d7"}
+{"dst": "kpi:696cf9dd8330", "props": {"evidence": "BnK - Shiseido RPA Proposal v 1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-shiseido-rpa-proposal-v-1-1"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:696cf9dd8330"}
+{"dst": "kpi:2b61e7406dc4", "props": {"evidence": "BnK - Shiseido RPA Proposal v 1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-shiseido-rpa-proposal-v-1-1"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2b61e7406dc4"}
+{"dst": "kpi:8b41a078e327", "props": {"evidence": "BnK - Shiseido RPA Proposal v 1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-shiseido-rpa-proposal-v-1-1"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:8b41a078e327"}
+{"dst": "kpi:11853f4079a8", "props": {"evidence": "BnK - Shiseido RPA Proposal v 1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-shiseido-rpa-proposal-v-1-1"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:11853f4079a8"}
+{"dst": "kpi:e1bb3eeb3107", "props": {"evidence": "BnK - Shiseido RPA Proposal v 1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-shiseido-rpa-proposal-v-1-1"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e1bb3eeb3107"}
+{"dst": "kpi:10dff6f76f42", "props": {"evidence": "BnK - Shiseido RPA Proposal v 1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-shiseido-rpa-proposal-v-1-1"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:10dff6f76f42"}
+{"dst": "kpi:a3ae9d611fcc", "props": {"evidence": "BnK - Shiseido RPA Proposal v 1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-shiseido-rpa-proposal-v-1-1"}
+{"dst": "client:sacombank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:a3ae9d611fcc"}
+{"dst": "kpi:e8b521b0e056", "props": {"evidence": "BnK - Shiseido RPA Proposal v 1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-shiseido-rpa-proposal-v-1-1"}
+{"dst": "client:sacombank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e8b521b0e056"}
+{"dst": "kpi:7cb69f1c6885", "props": {"evidence": "BnK - Shiseido RPA Proposal v 1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-shiseido-rpa-proposal-v-1-1"}
+{"dst": "client:sacombank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:7cb69f1c6885"}
+{"dst": "kpi:00463ff5ebfd", "props": {"evidence": "BnK - Shiseido RPA Proposal v 1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-shiseido-rpa-proposal-v-1-1"}
+{"dst": "client:bidv", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:00463ff5ebfd"}
+{"dst": "kpi:4ebdf9786f5c", "props": {"evidence": "BnK - Shiseido RPA Proposal v 1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-shiseido-rpa-proposal-v-1-1"}
+{"dst": "client:bidv", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:4ebdf9786f5c"}
+{"dst": "kpi:754d4e37674c", "props": {"evidence": "BnK - Shiseido RPA Proposal v 1_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-shiseido-rpa-proposal-v-1-1"}
+{"dst": "client:bidv", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:754d4e37674c"}
+{"dst": "client:nospecificclientbnkidpproductclaim", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:4dc4c9c391eb"}
+{"dst": "client:nospecificclientbnkidpproductclaim", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:89e28eab300a"}
+{"dst": "client:nospecificclientbnkidpproductclaim", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:00e21ba72bc3"}
+{"dst": "client:nospecificclientbnkidpproductclaim", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:3408f476fd7a"}
+{"dst": "client:nospecificclientbnkidpproductclaim", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:0c4d8386c074"}
+{"dst": "client:bnkaimediumv2bnkidp", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:858e065e03f4"}
+{"dst": "kpi:129d187512e0", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:hafele", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:129d187512e0"}
+{"dst": "kpi:34a51ef009cb", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:hafele", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:34a51ef009cb"}
+{"dst": "kpi:796b72a90c84", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:hafele", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:796b72a90c84"}
+{"dst": "kpi:4693e24d73e0", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:hafele", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:4693e24d73e0"}
+{"dst": "kpi:b25cd2044a6f", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:multinationalbankvietnambranch", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b25cd2044a6f"}
+{"dst": "kpi:8d3238a800b5", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:multinationalbankvietnambranch", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:8d3238a800b5"}
+{"dst": "kpi:409c5bfe1a77", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:unnamedclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:409c5bfe1a77"}
+{"dst": "kpi:2a8c44156184", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:unnamedclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2a8c44156184"}
+{"dst": "kpi:f70cf6c84268", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:unnamedclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:f70cf6c84268"}
+{"dst": "kpi:d28eedf4a887", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:tpbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:d28eedf4a887"}
+{"dst": "kpi:700955671ff6", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:tpbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:700955671ff6"}
+{"dst": "kpi:8f28b40d8d9b", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:eximbankhsbchdbankandbidv", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:8f28b40d8d9b"}
+{"dst": "kpi:c461ff0440e2", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:eximbankhsbchdbankandbidv", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:c461ff0440e2"}
+{"dst": "kpi:fab8a7df90b1", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:unspecifiedclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:fab8a7df90b1"}
+{"dst": "kpi:72b7fb0a728f", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:unspecifiedclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:72b7fb0a728f"}
+{"dst": "kpi:5ba072bda865", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:unspecifiedclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:5ba072bda865"}
+{"dst": "kpi:99e89eecd487", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:unspecifiedclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:99e89eecd487"}
+{"dst": "kpi:b02191b888ad", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:unspecifiedclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b02191b888ad"}
+{"dst": "kpi:06b0a4e341b7", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:unnameddigitalbankingclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:06b0a4e341b7"}
+{"dst": "kpi:881a12174c58", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:nospecificclientgenerickpiframework", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:881a12174c58"}
+{"dst": "kpi:4b691f6cde75", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:nospecificclientgenerickpiframework", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:4b691f6cde75"}
+{"dst": "kpi:ec6df7e91679", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:nospecificclientgenerickpiframework", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:ec6df7e91679"}
+{"dst": "kpi:cdb40557ce99", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:nospecificclientgenerickpiframework", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:cdb40557ce99"}
+{"dst": "kpi:5de69b62a86d", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:5de69b62a86d"}
+{"dst": "kpi:83b6cba4af98", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:83b6cba4af98"}
+{"dst": "kpi:1b3783125142", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:1b3783125142"}
+{"dst": "kpi:bd4c351df10f", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:bd4c351df10f"}
+{"dst": "kpi:63a001a724d0", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:63a001a724d0"}
+{"dst": "kpi:0818e90d4b53", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:0818e90d4b53"}
+{"dst": "kpi:af8c1e0375bf", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:sacombank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:af8c1e0375bf"}
+{"dst": "kpi:01efd299c524", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:sacombank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:01efd299c524"}
+{"dst": "kpi:8f059ca12568", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:bidv", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:8f059ca12568"}
+{"dst": "kpi:1781d897b2c9", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:bidv", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:1781d897b2c9"}
+{"dst": "kpi:0ff053c5eeb2", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:bidv", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:0ff053c5eeb2"}
+{"dst": "kpi:d2ab1b19d0da", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:hafele", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:d2ab1b19d0da"}
+{"dst": "kpi:5c0928cc515d", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:hafele", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:5c0928cc515d"}
+{"dst": "kpi:996b29fb6588", "props": {"evidence": "BnK Intelligent Automation - Copy"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-copy"}
+{"dst": "client:hafele", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:996b29fb6588"}
+{"dst": "kpi:94c6844b1ca1", "props": {"evidence": "BnK Intelligent Automation- RPA_IDP Prudential"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-rpa-idp-prudential"}
+{"dst": "client:tpbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:94c6844b1ca1"}
+{"dst": "kpi:1ece3cbea981", "props": {"evidence": "BnK Intelligent Automation- RPA_IDP Prudential"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-rpa-idp-prudential"}
+{"dst": "client:tpbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:1ece3cbea981"}
+{"dst": "kpi:4c1d57db0d71", "props": {"evidence": "BnK Intelligent Automation- RPA_IDP Prudential"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-rpa-idp-prudential"}
+{"dst": "client:tpbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:4c1d57db0d71"}
+{"dst": "kpi:cb0ba21066f8", "props": {"evidence": "BnK Intelligent Automation- RPA_IDP Prudential"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-rpa-idp-prudential"}
+{"dst": "client:tpbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:cb0ba21066f8"}
+{"dst": "kpi:28287170a513", "props": {"evidence": "BnK Intelligent Automation- RPA_IDP Prudential"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-rpa-idp-prudential"}
+{"dst": "client:fastautomationcasestudyspecificclientnotexplicitlyidentifiedwithreferencestoeximbankhsbchdbankandbidv", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:28287170a513"}
+{"dst": "kpi:d1a39ea79e7d", "props": {"evidence": "BnK Intelligent Automation- RPA_IDP Prudential"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-rpa-idp-prudential"}
+{"dst": "client:fastautomationcasestudyspecificclientnotexplicitlyidentifiedwithreferencestoeximbankhsbchdbankandbidv", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:d1a39ea79e7d"}
+{"dst": "kpi:2f100fd45556", "props": {"evidence": "BnK Intelligent Automation- RPA_IDP Prudential"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-rpa-idp-prudential"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2f100fd45556"}
+{"dst": "kpi:e38e5872503b", "props": {"evidence": "BnK Intelligent Automation- RPA_IDP Prudential"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-rpa-idp-prudential"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e38e5872503b"}
+{"dst": "kpi:dd89e4a52fd3", "props": {"evidence": "BnK Intelligent Automation- RPA_IDP Prudential"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-rpa-idp-prudential"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:dd89e4a52fd3"}
+{"dst": "kpi:63eacfec1234", "props": {"evidence": "BnK Intelligent Automation- RPA_IDP Prudential"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-rpa-idp-prudential"}
+{"dst": "client:paicasestudyclientclientnotnamed", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:63eacfec1234"}
+{"dst": "kpi:6408a5fad4ec", "props": {"evidence": "BnK Intelligent Automation- RPA_IDP Prudential"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-rpa-idp-prudential"}
+{"dst": "client:paicasestudyclientclientnotnamed", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:6408a5fad4ec"}
+{"dst": "kpi:1c6fcc739216", "props": {"evidence": "BnK Intelligent Automation- RPA_IDP Prudential"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-rpa-idp-prudential"}
+{"dst": "client:paicasestudyclientclientnotnamed", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:1c6fcc739216"}
+{"dst": "kpi:cedff15c6180", "props": {"evidence": "BnK Intelligent Automation- RPA_IDP Prudential"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-rpa-idp-prudential"}
+{"dst": "client:paicasestudyclientclientnotnamed", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:cedff15c6180"}
+{"dst": "kpi:6f0a92fce3eb", "props": {"evidence": "BnK Intelligent Automation- RPA_IDP Prudential"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-rpa-idp-prudential"}
+{"dst": "client:mbageaslife", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:6f0a92fce3eb"}
+{"dst": "kpi:b7f1097412d2", "props": {"evidence": "BnK Intelligent Automation- RPA_IDP Prudential"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-intelligent-automation-rpa-idp-prudential"}
+{"dst": "client:mbageaslife", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b7f1097412d2"}
+{"dst": "kpi:e0d87d1cbf70", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e0d87d1cbf70"}
+{"dst": "kpi:77af817b3d95", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:77af817b3d95"}
+{"dst": "kpi:321f123465f4", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:321f123465f4"}
+{"dst": "kpi:eceb6a65ddb6", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:eceb6a65ddb6"}
+{"dst": "kpi:837b35cbd6f4", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:837b35cbd6f4"}
+{"dst": "kpi:5129e84ca019", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:5129e84ca019"}
+{"dst": "kpi:e08542f710e3", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e08542f710e3"}
+{"dst": "kpi:d26272c30adf", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:d26272c30adf"}
+{"dst": "kpi:fa932bc00e4e", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:fa932bc00e4e"}
+{"dst": "kpi:5129e84ca019", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:5129e84ca019"}
+{"dst": "kpi:e08542f710e3", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e08542f710e3"}
+{"dst": "kpi:d1878b3bce1a", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:d1878b3bce1a"}
+{"dst": "kpi:9e9f0eeef859", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:bidv", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:9e9f0eeef859"}
+{"dst": "kpi:4356f78690d2", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:bidv", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:4356f78690d2"}
+{"dst": "kpi:e8278be769f7", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:bidv", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e8278be769f7"}
+{"dst": "kpi:de2023d491f7", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:sacombank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:de2023d491f7"}
+{"dst": "kpi:f40c8140a170", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:sacombank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:f40c8140a170"}
+{"dst": "kpi:8ab0674565d4", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:sacombank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:8ab0674565d4"}
+{"dst": "kpi:edb9e764d8ee", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:hoya", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:edb9e764d8ee"}
+{"dst": "kpi:aae6d2c168e2", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:hoya", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:aae6d2c168e2"}
+{"dst": "kpi:67bb2e21fd55", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:hoya", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:67bb2e21fd55"}
+{"dst": "kpi:5f1bf35400ff", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:hoya", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:5f1bf35400ff"}
+{"dst": "kpi:efd93cc33b59", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:hafele", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:efd93cc33b59"}
+{"dst": "kpi:5f2f0cedf2eb", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:hafele", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:5f2f0cedf2eb"}
+{"dst": "kpi:46bdf3b6c253", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:hafele", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:46bdf3b6c253"}
+{"dst": "kpi:438ddf6fddf1", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:hafele", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:438ddf6fddf1"}
+{"dst": "kpi:7214a99ad1df", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:7214a99ad1df"}
+{"dst": "kpi:97cb779238af", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:97cb779238af"}
+{"dst": "kpi:28b6d919eb3d", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:28b6d919eb3d"}
+{"dst": "kpi:1935bdae88e5", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:mbageaslife", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:1935bdae88e5"}
+{"dst": "kpi:d83faf449fc0", "props": {"evidence": "BnK RPA - Case study_EN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-en"}
+{"dst": "client:mbageaslife", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:d83faf449fc0"}
+{"dst": "kpi:f9a28cbd286e", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:f9a28cbd286e"}
+{"dst": "kpi:16e0f3e25028", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:16e0f3e25028"}
+{"dst": "kpi:47f7391f05a5", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:47f7391f05a5"}
+{"dst": "kpi:e96cd5864d8d", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:eximbanktradefinance", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e96cd5864d8d"}
+{"dst": "kpi:42513532691e", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:eximbanktradefinance", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:42513532691e"}
+{"dst": "kpi:f8256b4f0564", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:eximbanktradefinance", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:f8256b4f0564"}
+{"dst": "kpi:493457884178", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:bidv", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:493457884178"}
+{"dst": "kpi:7809dc0b2992", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:bidv", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:7809dc0b2992"}
+{"dst": "kpi:977f94835ff7", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:bidv", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:977f94835ff7"}
+{"dst": "kpi:7b4e78d148f0", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:eximbankpayroll", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:7b4e78d148f0"}
+{"dst": "kpi:e37c1f7bc780", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:eximbankpayroll", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e37c1f7bc780"}
+{"dst": "kpi:aa5ea417238c", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:eximbankpayroll", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:aa5ea417238c"}
+{"dst": "kpi:31b41a959665", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:eximbankpayroll", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:31b41a959665"}
+{"dst": "kpi:44b422df9d20", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:sacombank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:44b422df9d20"}
+{"dst": "kpi:3e26cef69dd0", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:sacombank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:3e26cef69dd0"}
+{"dst": "kpi:263c77d17f5a", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:sacombank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:263c77d17f5a"}
+{"dst": "kpi:53044d2b1717", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:hafele", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:53044d2b1717"}
+{"dst": "kpi:49fbc6207f5b", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:hafele", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:49fbc6207f5b"}
+{"dst": "kpi:a27e723984ce", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:hafele", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:a27e723984ce"}
+{"dst": "kpi:bdc8310a227e", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:eximbankautomationtesting", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:bdc8310a227e"}
+{"dst": "kpi:8ecfcb156b74", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:eximbankautomationtesting", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:8ecfcb156b74"}
+{"dst": "kpi:b31b62c25546", "props": {"evidence": "BnK RPA - Case study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-rpa-case-study-vn"}
+{"dst": "client:eximbankautomationtesting", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b31b62c25546"}
+{"dst": "kpi:873127d25262", "props": {"evidence": "BnK Solution - DAT Solar App Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-solution-dat-solar-app-proposal"}
+{"dst": "client:exro", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:873127d25262"}
+{"dst": "kpi:9c1074817824", "props": {"evidence": "BnK Solution - DAT Solar App Proposal - VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-solution-dat-solar-app-proposal-vn"}
+{"dst": "client:datgroupdatsolar", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:9c1074817824"}
+{"dst": "kpi:0478cafba4b1", "props": {"evidence": "BnK Solution - DAT Solar App Proposal - VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-solution-dat-solar-app-proposal-vn"}
+{"dst": "client:exro", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:0478cafba4b1"}
+{"dst": "kpi:099848acb733", "props": {"evidence": "BnK Solution - GGF VAT Stream 2 Proposal_20230912 1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-solution-ggf-vat-stream-2-proposal-20230912-1"}
+{"dst": "client:greatgiantfoods", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:099848acb733"}
+{"dst": "kpi:c53423a0478a", "props": {"evidence": "BnK Solution - GGF VAT Stream 2 Proposal_20230912 1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-solution-ggf-vat-stream-2-proposal-20230912-1"}
+{"dst": "client:greatgiantfoods", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:c53423a0478a"}
+{"dst": "kpi:987885ba261a", "props": {"evidence": "BnK Solution - GGF VAT Stream 2 Proposal_20230912 1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-solution-ggf-vat-stream-2-proposal-20230912-1"}
+{"dst": "client:greatgiantfoods", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:987885ba261a"}
+{"dst": "kpi:fc577a8a8281", "props": {"evidence": "BnK Solution - GGF VAT Stream 2 Proposal_20230912 1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-solution-ggf-vat-stream-2-proposal-20230912-1"}
+{"dst": "client:greatgiantfoods", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:fc577a8a8281"}
+{"dst": "kpi:c416009cef23", "props": {"evidence": "BnK Solution - GGF VAT Stream 2 Proposal_20230912 1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-solution-ggf-vat-stream-2-proposal-20230912-1"}
+{"dst": "client:greatgiantfoods", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:c416009cef23"}
+{"dst": "kpi:7daf5fc933b1", "props": {"evidence": "BnK Solution - GGF VAT Stream 2 Proposal_20230912 1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-solution-ggf-vat-stream-2-proposal-20230912-1"}
+{"dst": "client:greatgiantfoods", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:7daf5fc933b1"}
+{"dst": "kpi:29b006f38d8d", "props": {"evidence": "BnK Solution - GGF VAT Stream 2 Proposal_20230912 1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-solution-ggf-vat-stream-2-proposal-20230912-1"}
+{"dst": "client:greatgiantfoods", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:29b006f38d8d"}
+{"dst": "client:unspecifiedoutsystemssolutionclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:c9d535adc3f6"}
+{"dst": "client:unspecifiedaiocrsolutionclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e5923abd2b2b"}
+{"dst": "client:unspecifiedaiaudiosolutionclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:daf682f7c131"}
+{"dst": "client:unspecifiedagriculturalaicasestudyclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:125d1cdec92c"}
+{"dst": "kpi:da9190581a1d", "props": {"evidence": "BnK Solution - Store Push Order Automation_ML"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-solution-store-push-order-automation-ml"}
+{"dst": "client:ggf", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:da9190581a1d"}
+{"dst": "kpi:b855a1b01f58", "props": {"evidence": "BnK Solution - Store Push Order Automation_ML"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-solution-store-push-order-automation-ml"}
+{"dst": "client:ggf", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b855a1b01f58"}
+{"dst": "kpi:9c8baf54c262", "props": {"evidence": "BnK Solution - Store Push Order Automation_ML"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-solution-store-push-order-automation-ml"}
+{"dst": "client:ggf", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:9c8baf54c262"}
+{"dst": "kpi:4304b059cb46", "props": {"evidence": "BnK Solution - Store Push Order Automation_ML"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-solution-store-push-order-automation-ml"}
+{"dst": "client:ggf", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:4304b059cb46"}
+{"dst": "kpi:4b993b3794d4", "props": {"evidence": "BNK X Seoul semi - AI driven sentiment system"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-x-seoul-semi-ai-driven-sentiment-system"}
+{"dst": "client:seoulsemi", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:4b993b3794d4"}
+{"dst": "kpi:089b1a3d9462", "props": {"evidence": "BNK X Seoul semi - AI driven sentiment system"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-x-seoul-semi-ai-driven-sentiment-system"}
+{"dst": "client:seoulsemi", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:089b1a3d9462"}
+{"dst": "kpi:2623276a4954", "props": {"evidence": "BNK X Seoul semi - AI driven sentiment system"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-x-seoul-semi-ai-driven-sentiment-system"}
+{"dst": "client:seoulsemi", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2623276a4954"}
+{"dst": "kpi:f2ed20df6d91", "props": {"evidence": "BNK X Seoul semi - AI driven sentiment system"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-x-seoul-semi-ai-driven-sentiment-system"}
+{"dst": "client:seoulsemi", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:f2ed20df6d91"}
+{"dst": "kpi:55e75a4a567f", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:55e75a4a567f"}
+{"dst": "kpi:3d4d4239f7f9", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:3d4d4239f7f9"}
+{"dst": "kpi:93c9116c05c7", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:93c9116c05c7"}
+{"dst": "kpi:b399d32f5eae", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b399d32f5eae"}
+{"dst": "kpi:591efed273ab", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:591efed273ab"}
+{"dst": "kpi:d3449240e687", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:d3449240e687"}
+{"dst": "kpi:60d33aa1d90e", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:60d33aa1d90e"}
+{"dst": "kpi:98a1e961c9ad", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:98a1e961c9ad"}
+{"dst": "kpi:b73e958ea77c", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b73e958ea77c"}
+{"dst": "kpi:c7fee5f629fc", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:c7fee5f629fc"}
+{"dst": "kpi:93cc77d1b26c", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:93cc77d1b26c"}
+{"dst": "kpi:95b99b66d5e7", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:95b99b66d5e7"}
+{"dst": "kpi:598fff72e586", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:598fff72e586"}
+{"dst": "kpi:25cea70cf888", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:25cea70cf888"}
+{"dst": "kpi:5af32818392d", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:5af32818392d"}
+{"dst": "kpi:7800c7255fe7", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:7800c7255fe7"}
+{"dst": "kpi:46eebc7fc175", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:46eebc7fc175"}
+{"dst": "kpi:19c754bc3e00", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:19c754bc3e00"}
+{"dst": "kpi:5d3a72175993", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:5d3a72175993"}
+{"dst": "kpi:dd47c1f53180", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:dd47c1f53180"}
+{"dst": "kpi:85b5ba7c1f60", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:85b5ba7c1f60"}
+{"dst": "kpi:52b663912db8", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:52b663912db8"}
+{"dst": "kpi:6cda61d72b3f", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:6cda61d72b3f"}
+{"dst": "kpi:f3ec7f072595", "props": {"evidence": "BnK-ITL-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:f3ec7f072595"}
+{"dst": "kpi:145e02e3c9c7", "props": {"evidence": "BnK-ITL-Proposal without IDP"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal-without-idp"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:145e02e3c9c7"}
+{"dst": "kpi:5ee584a42fbb", "props": {"evidence": "BnK-ITL-Proposal without IDP"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal-without-idp"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:5ee584a42fbb"}
+{"dst": "kpi:cce8c180c8d2", "props": {"evidence": "BnK-ITL-Proposal without IDP"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal-without-idp"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:cce8c180c8d2"}
+{"dst": "kpi:817481346a3d", "props": {"evidence": "BnK-ITL-Proposal without IDP"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal-without-idp"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:817481346a3d"}
+{"dst": "kpi:ec70b63164bf", "props": {"evidence": "BnK-ITL-Proposal without IDP"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal-without-idp"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:ec70b63164bf"}
+{"dst": "kpi:2fb124c30441", "props": {"evidence": "BnK-ITL-Proposal without IDP"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal-without-idp"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2fb124c30441"}
+{"dst": "kpi:5241b623d558", "props": {"evidence": "BnK-ITL-Proposal without IDP"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal-without-idp"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:5241b623d558"}
+{"dst": "kpi:46b9dfbea745", "props": {"evidence": "BnK-ITL-Proposal without IDP"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal-without-idp"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:46b9dfbea745"}
+{"dst": "kpi:a3353aa0b3d1", "props": {"evidence": "BnK-ITL-Proposal without IDP"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal-without-idp"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:a3353aa0b3d1"}
+{"dst": "kpi:ff9ace97e8c5", "props": {"evidence": "BnK-ITL-Proposal without IDP"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-itl-proposal-without-idp"}
+{"dst": "client:itllogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:ff9ace97e8c5"}
+{"dst": "kpi:a6611bcab81b", "props": {"evidence": "BnK-Modena _ AI Solution"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-modena-ai-solution"}
+{"dst": "client:paicasestudyclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:a6611bcab81b"}
+{"dst": "kpi:5c446ef1f0a0", "props": {"evidence": "BnK-Modena _ AI Solution"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-modena-ai-solution"}
+{"dst": "client:paicasestudyclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:5c446ef1f0a0"}
+{"dst": "kpi:191218a8b37e", "props": {"evidence": "BnK-Modena _ AI Solution"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-modena-ai-solution"}
+{"dst": "client:paicasestudyclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:191218a8b37e"}
+{"dst": "kpi:3046265ed11e", "props": {"evidence": "BnK-Modena _ AI Solution"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-modena-ai-solution"}
+{"dst": "client:paicasestudyclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:3046265ed11e"}
+{"dst": "kpi:49ebaa5858b2", "props": {"evidence": "BnK-Modena _ AI Solution"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-modena-ai-solution"}
+{"dst": "client:paicasestudyclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:49ebaa5858b2"}
+{"dst": "kpi:a44f973bbf42", "props": {"evidence": "BnK-Modena _ AI Solution"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-modena-ai-solution"}
+{"dst": "client:modena", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:a44f973bbf42"}
+{"dst": "kpi:2c54b953d93f", "props": {"evidence": "BnK-SME-Automate-Test-And-EOD-Automation-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-sme-automate-test-and-eod-automation-proposal"}
+{"dst": "client:cimbbankphilippines", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2c54b953d93f"}
+{"dst": "kpi:fd78016b4c7c", "props": {"evidence": "BnK-SME-Automate-Test-And-EOD-Automation-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-sme-automate-test-and-eod-automation-proposal"}
+{"dst": "client:cimbbankphilippines", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:fd78016b4c7c"}
+{"dst": "kpi:1dfa1f443f13", "props": {"evidence": "BnK-SME-Automate-Test-And-EOD-Automation-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-sme-automate-test-and-eod-automation-proposal"}
+{"dst": "client:cimbbankphilippines", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:1dfa1f443f13"}
+{"dst": "kpi:2febe0d72a9f", "props": {"evidence": "BnK-SME-Automate-Test-And-EOD-Automation-Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-sme-automate-test-and-eod-automation-proposal"}
+{"dst": "client:cimbbankphilippines", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2febe0d72a9f"}
+{"dst": "kpi:b0dcce86bfea", "props": {"evidence": "BnK_CMA Solution Proposal_EN_v0_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cma-solution-proposal-en-v0-1"}
+{"dst": "client:cma", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b0dcce86bfea"}
+{"dst": "kpi:e4455fb9870b", "props": {"evidence": "BnK_CMA Solution Proposal_EN_v0_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cma-solution-proposal-en-v0-1"}
+{"dst": "client:cma", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e4455fb9870b"}
+{"dst": "kpi:4be77545b63a", "props": {"evidence": "BnK_CMA Solution Proposal_EN_v0_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cma-solution-proposal-en-v0-1"}
+{"dst": "client:cma", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:4be77545b63a"}
+{"dst": "kpi:4325543886e5", "props": {"evidence": "BnK_CMA Solution Proposal_EN_v0_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cma-solution-proposal-en-v0-1"}
+{"dst": "client:cma", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:4325543886e5"}
+{"dst": "kpi:40fdf409844a", "props": {"evidence": "BnK_CMA Solution Proposal_EN_v0_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cma-solution-proposal-en-v0-1"}
+{"dst": "client:cma", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:40fdf409844a"}
+{"dst": "kpi:45d0062da229", "props": {"evidence": "BnK_CMA Solution Proposal_EN_v0_1"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-cma-solution-proposal-en-v0-1"}
+{"dst": "client:cma", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:45d0062da229"}
+{"dst": "kpi:a5450df64b44", "props": {"evidence": "BnK_Dispatch Management System and Matching Platform"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-dispatch-management-system-and-matching-platform"}
+{"dst": "client:khachhangttrongcasestudythamchieu", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:a5450df64b44"}
+{"dst": "kpi:2b289259c228", "props": {"evidence": "BnK_DU proposal_v2"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-du-proposal-v2"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2b289259c228"}
+{"dst": "kpi:538b1abed4fe", "props": {"evidence": "BnK_DU proposal_v2"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-du-proposal-v2"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:538b1abed4fe"}
+{"dst": "kpi:1e44c15cd24e", "props": {"evidence": "BnK_DU proposal_v2"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-du-proposal-v2"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:1e44c15cd24e"}
+{"dst": "kpi:4a17c5c9f731", "props": {"evidence": "BnK_DU proposal_v2"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-du-proposal-v2"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:4a17c5c9f731"}
+{"dst": "kpi:b4de3d373b07", "props": {"evidence": "BnK_DU proposal_v2"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-du-proposal-v2"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b4de3d373b07"}
+{"dst": "kpi:76311122655e", "props": {"evidence": "BnK_DU proposal_v2"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-du-proposal-v2"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:76311122655e"}
+{"dst": "kpi:731c696d67ab", "props": {"evidence": "BnK_DU proposal_v2"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-du-proposal-v2"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:731c696d67ab"}
+{"dst": "kpi:39c2de2767d8", "props": {"evidence": "BnK_DU proposal_v2"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-du-proposal-v2"}
+{"dst": "client:eximbank", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:39c2de2767d8"}
+{"dst": "kpi:3d7602456830", "props": {"evidence": "BnK_EIB_Automation_Test_Painpoint"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-eib-automation-test-painpoint"}
+{"dst": "client:eib", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:3d7602456830"}
+{"dst": "kpi:aeb2ccc94fa6", "props": {"evidence": "BnK_EIB_Automation_Test_Painpoint"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-eib-automation-test-painpoint"}
+{"dst": "client:nguoidungkatalonnoichungkhongganvoieib", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:aeb2ccc94fa6"}
+{"dst": "kpi:2029e7268ed7", "props": {"evidence": "BnK_PA_Case_study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-pa-case-study-vn"}
+{"dst": "client:cmctelecom", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2029e7268ed7"}
+{"dst": "kpi:e9504d59d325", "props": {"evidence": "BnK_PA_Case_study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-pa-case-study-vn"}
+{"dst": "client:cmctelecom", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e9504d59d325"}
+{"dst": "kpi:8383485ea2db", "props": {"evidence": "BnK_PA_Case_study_VN"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-pa-case-study-vn"}
+{"dst": "client:cmctelecom", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:8383485ea2db"}
+{"dst": "kpi:2d1113bc8369", "props": {"evidence": "BnK_Warehouse Operation Automation Solution Proposal_EN_v1_2"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-warehouse-operation-automation-solution-proposal-en-v1-2"}
+{"dst": "client:aiglogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2d1113bc8369"}
+{"dst": "kpi:0ed98538d944", "props": {"evidence": "BnK_Warehouse Operation Automation Solution Proposal_EN_v1_2"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-warehouse-operation-automation-solution-proposal-en-v1-2"}
+{"dst": "client:aiglogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:0ed98538d944"}
+{"dst": "kpi:505bc9234ed2", "props": {"evidence": "BnK_Warehouse Operation Automation Solution Proposal_EN_v1_2"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-warehouse-operation-automation-solution-proposal-en-v1-2"}
+{"dst": "client:aiglogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:505bc9234ed2"}
+{"dst": "kpi:d92e1b40b694", "props": {"evidence": "BnK_Warehouse Operation Automation Solution Proposal_EN_v1_2"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-warehouse-operation-automation-solution-proposal-en-v1-2"}
+{"dst": "client:aiglogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:d92e1b40b694"}
+{"dst": "kpi:192ee1669d07", "props": {"evidence": "BnK_Warehouse Operation Automation Solution Proposal_EN_v1_2"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-warehouse-operation-automation-solution-proposal-en-v1-2"}
+{"dst": "client:aiglogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:192ee1669d07"}
+{"dst": "kpi:8015aaffa722", "props": {"evidence": "BnK_Warehouse Operation Automation Solution Proposal_EN_v1_2"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-warehouse-operation-automation-solution-proposal-en-v1-2"}
+{"dst": "client:aiglogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:8015aaffa722"}
+{"dst": "kpi:0eebbddf4fe3", "props": {"evidence": "BnK_Warehouse Operation Automation Solution Proposal_EN_v1_2"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-warehouse-operation-automation-solution-proposal-en-v1-2"}
+{"dst": "client:aiglogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:0eebbddf4fe3"}
+{"dst": "kpi:bfe0f70205ce", "props": {"evidence": "BnK_Warehouse Operation Automation Solution Proposal_EN_v1_2"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-warehouse-operation-automation-solution-proposal-en-v1-2"}
+{"dst": "client:aiglogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:bfe0f70205ce"}
+{"dst": "kpi:7c76baea84f6", "props": {"evidence": "BnK_Warehouse Operation Automation Solution Proposal_EN_v1_2"}, "rel": "CLAIMS_KPI", "src": "opp:bnk-warehouse-operation-automation-solution-proposal-en-v1-2"}
+{"dst": "client:aiglogistics", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:7c76baea84f6"}
+{"dst": "kpi:19f283ec63c5", "props": {"evidence": "CIMB - BnK Automation Test"}, "rel": "CLAIMS_KPI", "src": "opp:cimb-bnk-automation-test"}
+{"dst": "client:cimb", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:19f283ec63c5"}
+{"dst": "kpi:b5de4c1689cf", "props": {"evidence": "CIMB - BnK Automation Test"}, "rel": "CLAIMS_KPI", "src": "opp:cimb-bnk-automation-test"}
+{"dst": "client:cimb", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b5de4c1689cf"}
+{"dst": "kpi:4ea2b9d065ef", "props": {"evidence": "CIMB - BnK Automation Test"}, "rel": "CLAIMS_KPI", "src": "opp:cimb-bnk-automation-test"}
+{"dst": "client:cimb", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:4ea2b9d065ef"}
+{"dst": "kpi:2925cac9ccf6", "props": {"evidence": "CIMB - BnK Automation Test"}, "rel": "CLAIMS_KPI", "src": "opp:cimb-bnk-automation-test"}
+{"dst": "client:cimb", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2925cac9ccf6"}
+{"dst": "kpi:dce5487a0169", "props": {"evidence": "CIMB - BnK Automation Test"}, "rel": "CLAIMS_KPI", "src": "opp:cimb-bnk-automation-test"}
+{"dst": "client:uipath", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:dce5487a0169"}
+{"dst": "kpi:43487cc262e6", "props": {"evidence": "CIMB - BnK Automation Test"}, "rel": "CLAIMS_KPI", "src": "opp:cimb-bnk-automation-test"}
+{"dst": "client:uipath", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:43487cc262e6"}
+{"dst": "kpi:6ff6e4b24dd7", "props": {"evidence": "CIMB - BnK Automation Test"}, "rel": "CLAIMS_KPI", "src": "opp:cimb-bnk-automation-test"}
+{"dst": "client:uipath", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:6ff6e4b24dd7"}
+{"dst": "kpi:68074981bd3b", "props": {"evidence": "CIMB - BnK Automation Test"}, "rel": "CLAIMS_KPI", "src": "opp:cimb-bnk-automation-test"}
+{"dst": "client:uipath", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:68074981bd3b"}
+{"dst": "kpi:21c6a7d1e421", "props": {"evidence": "CIMB - BnK Automation Test"}, "rel": "CLAIMS_KPI", "src": "opp:cimb-bnk-automation-test"}
+{"dst": "client:uipath", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:21c6a7d1e421"}
+{"dst": "kpi:cdb5eebb7e24", "props": {"evidence": "CIMB_Proposal_April_2026 1"}, "rel": "CLAIMS_KPI", "src": "opp:cimb-proposal-april-2026-1"}
+{"dst": "client:cimb", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:cdb5eebb7e24"}
+{"dst": "kpi:b366133659c0", "props": {"evidence": "CIMB_Proposal_April_2026 1"}, "rel": "CLAIMS_KPI", "src": "opp:cimb-proposal-april-2026-1"}
+{"dst": "client:cimb", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:b366133659c0"}
+{"dst": "kpi:539612466d52", "props": {"evidence": "CIMB_Proposal_April_2026 1"}, "rel": "CLAIMS_KPI", "src": "opp:cimb-proposal-april-2026-1"}
+{"dst": "client:cimb", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:539612466d52"}
+{"dst": "kpi:3ec5e748fffc", "props": {"evidence": "CIMB_Proposal_April_2026_1"}, "rel": "CLAIMS_KPI", "src": "opp:cimb-proposal-april-2026-1"}
+{"dst": "client:cimb", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:3ec5e748fffc"}
+{"dst": "kpi:31fc4fe9fd06", "props": {"evidence": "CIMB_Proposal_April_2026_1"}, "rel": "CLAIMS_KPI", "src": "opp:cimb-proposal-april-2026-1"}
+{"dst": "client:cimb", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:31fc4fe9fd06"}
+{"dst": "kpi:d6a3ae886217", "props": {"evidence": "CIMB_Proposal_April_2026_1"}, "rel": "CLAIMS_KPI", "src": "opp:cimb-proposal-april-2026-1"}
+{"dst": "client:cimb", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:d6a3ae886217"}
+{"dst": "kpi:49fee201097d", "props": {"evidence": "CIMB_Proposal_April_2026_1"}, "rel": "CLAIMS_KPI", "src": "opp:cimb-proposal-april-2026-1"}
+{"dst": "client:cimb", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:49fee201097d"}
+{"dst": "kpi:50452c6cc657", "props": {"evidence": "CIMB_Proposal_April_2026_1"}, "rel": "CLAIMS_KPI", "src": "opp:cimb-proposal-april-2026-1"}
+{"dst": "client:cimb", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:50452c6cc657"}
+{"dst": "kpi:16af270afc4b", "props": {"evidence": "CIMB_Proposal_April_2026_1"}, "rel": "CLAIMS_KPI", "src": "opp:cimb-proposal-april-2026-1"}
+{"dst": "client:cimb", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:16af270afc4b"}
+{"dst": "kpi:56b66a459155", "props": {"evidence": "Ciputra Life - IDP Solution Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:ciputra-life-idp-solution-proposal"}
+{"dst": "client:ciputralife", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:56b66a459155"}
+{"dst": "kpi:e304a7d1d70c", "props": {"evidence": "Ciputra Life - IDP Solution Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:ciputra-life-idp-solution-proposal"}
+{"dst": "client:ciputralife", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:e304a7d1d70c"}
+{"dst": "kpi:8058ebbbef66", "props": {"evidence": "Ciputra Life - IDP Solution Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:ciputra-life-idp-solution-proposal"}
+{"dst": "client:ciputralife", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:8058ebbbef66"}
+{"dst": "kpi:0fa358babfa3", "props": {"evidence": "Ciputra Life - IDP Solution Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:ciputra-life-idp-solution-proposal"}
+{"dst": "client:ciputralife", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:0fa358babfa3"}
+{"dst": "kpi:a8e31e232801", "props": {"evidence": "Ciputra Life - IDP Solution Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:ciputra-life-idp-solution-proposal"}
+{"dst": "client:ciputralife", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:a8e31e232801"}
+{"dst": "kpi:ec69bd205742", "props": {"evidence": "Ciputra Life - IDP Solution Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:ciputra-life-idp-solution-proposal"}
+{"dst": "client:ciputralife", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:ec69bd205742"}
+{"dst": "kpi:ae6040b529ef", "props": {"evidence": "Ciputra Life - IDP Solution Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:ciputra-life-idp-solution-proposal"}
+{"dst": "client:bnksolutionmohinhbnkaimediumv2", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:ae6040b529ef"}
+{"dst": "kpi:ad53dc3f74d2", "props": {"evidence": "Ciputra Life - IDP Solution Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:ciputra-life-idp-solution-proposal"}
+{"dst": "client:ciputralife", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:ad53dc3f74d2"}
+{"dst": "kpi:093ce51eed96", "props": {"evidence": "Ciputra Life - IDP Solution Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:ciputra-life-idp-solution-proposal"}
+{"dst": "client:ciputralife", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:093ce51eed96"}
+{"dst": "kpi:70d7f29efc2d", "props": {"evidence": "Data_science_Predict_Case_Study"}, "rel": "CLAIMS_KPI", "src": "opp:data-science-predict-case-study"}
+{"dst": "client:giantagriculturalplant", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:70d7f29efc2d"}
+{"dst": "kpi:80ba8fcc3c1a", "props": {"evidence": "Data_science_Predict_Case_Study"}, "rel": "CLAIMS_KPI", "src": "opp:data-science-predict-case-study"}
+{"dst": "client:giantagriculturalplant", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:80ba8fcc3c1a"}
+{"dst": "kpi:2b3a1d5dc5d6", "props": {"evidence": "Data_science_Predict_Case_Study"}, "rel": "CLAIMS_KPI", "src": "opp:data-science-predict-case-study"}
+{"dst": "client:giantagriculturalplant", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:2b3a1d5dc5d6"}
+{"dst": "kpi:25fcc258cf28", "props": {"evidence": "Data_science_Predict_Case_Study"}, "rel": "CLAIMS_KPI", "src": "opp:data-science-predict-case-study"}
+{"dst": "client:giantagriculturalplant", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:25fcc258cf28"}
+{"dst": "kpi:9e6d8a4f9d83", "props": {"evidence": "GGF-B_K - Yield Prediction_V2"}, "rel": "CLAIMS_KPI", "src": "opp:ggf-b-k-yield-prediction-v2"}
+{"dst": "client:ggf", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:9e6d8a4f9d83"}
+{"dst": "kpi:40a35ae903dc", "props": {"evidence": "Makalot x BnK - AI Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:makalot-x-bnk-ai-proposal"}
+{"dst": "client:makalot", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:40a35ae903dc"}
+{"dst": "kpi:735198c17840", "props": {"evidence": "Makalot x BnK - AI Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:makalot-x-bnk-ai-proposal"}
+{"dst": "client:makalot", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:735198c17840"}
+{"dst": "kpi:d3839d71f2d5", "props": {"evidence": "Makalot x BnK - AI Proposal_PDF"}, "rel": "CLAIMS_KPI", "src": "opp:makalot-x-bnk-ai-proposal-pdf"}
+{"dst": "client:makalot", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:d3839d71f2d5"}
+{"dst": "kpi:52d52240da22", "props": {"evidence": "Monday Integration Proposal_FN"}, "rel": "CLAIMS_KPI", "src": "opp:monday-integration-proposal-fn"}
+{"dst": "client:unnamedproposalclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:52d52240da22"}
+{"dst": "kpi:1d803a0d32a0", "props": {"evidence": "Monday Integration Proposal_FN"}, "rel": "CLAIMS_KPI", "src": "opp:monday-integration-proposal-fn"}
+{"dst": "client:unnamedproposalclient", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:1d803a0d32a0"}
+{"dst": "kpi:34936f1f9cd2", "props": {"evidence": "Odoo_CaseStudy_Template"}, "rel": "CLAIMS_KPI", "src": "opp:odoo-casestudy-template"}
+{"dst": "client:khongcokhachhangcutheaylananglucdichvuaicuabnk", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:34936f1f9cd2"}
+{"dst": "kpi:296ce22996eb", "props": {"evidence": "Odoo_CaseStudy_Template"}, "rel": "CLAIMS_KPI", "src": "opp:odoo-casestudy-template"}
+{"dst": "client:khongcokhachhangcutheaylacamketdichvuamschungcuabnk", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:296ce22996eb"}
+{"dst": "client:chinaconstruction", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:8607abe77a6c"}
+{"dst": "client:chinaconstruction", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:90e5e26f648a"}
+{"dst": "client:chinaconstruction", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:fce4b037141f"}
+{"dst": "client:chinaconstruction", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:559cdf8ad666"}
+{"dst": "client:chinaconstruction", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:aa7710fd2d65"}
+{"dst": "kpi:3e3bc0e6b993", "props": {"evidence": "Protenlindo Proposal_Update-2 2"}, "rel": "CLAIMS_KPI", "src": "opp:protenlindo-proposal-update-2-2"}
+{"dst": "client:protelindo", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:3e3bc0e6b993"}
+{"dst": "kpi:6b8e702316e6", "props": {"evidence": "Protenlindo Proposal_Update-2 2"}, "rel": "CLAIMS_KPI", "src": "opp:protenlindo-proposal-update-2-2"}
+{"dst": "client:protelindo", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:6b8e702316e6"}
+{"dst": "kpi:0255aeb577ab", "props": {"evidence": "Protenlindo Proposal_Update-2 2"}, "rel": "CLAIMS_KPI", "src": "opp:protenlindo-proposal-update-2-2"}
+{"dst": "client:protelindo", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:0255aeb577ab"}
+{"dst": "kpi:d6f74ce6e772", "props": {"evidence": "Protenlindo Proposal_Update-2_2"}, "rel": "CLAIMS_KPI", "src": "opp:protenlindo-proposal-update-2-2"}
+{"dst": "client:protelindo", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:d6f74ce6e772"}
+{"dst": "kpi:ba3b772346cd", "props": {"evidence": "Protenlindo Proposal_Update-2_2"}, "rel": "CLAIMS_KPI", "src": "opp:protenlindo-proposal-update-2-2"}
+{"dst": "client:protelindo", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:ba3b772346cd"}
+{"dst": "kpi:18d4bd3ba011", "props": {"evidence": "Protenlindo Proposal_Update-2_2"}, "rel": "CLAIMS_KPI", "src": "opp:protenlindo-proposal-update-2-2"}
+{"dst": "client:protelindo", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:18d4bd3ba011"}
+{"dst": "kpi:50c29303d957", "props": {"evidence": "Protenlindo Proposal_Update-2_2"}, "rel": "CLAIMS_KPI", "src": "opp:protenlindo-proposal-update-2-2"}
+{"dst": "client:protelindo", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:50c29303d957"}
+{"dst": "kpi:501373a71ab3", "props": {"evidence": "TFSVN - IDP Solution Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:tfsvn-idp-solution-proposal"}
+{"dst": "client:tfsvn", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:501373a71ab3"}
+{"dst": "kpi:de1e7231c13a", "props": {"evidence": "TFSVN - IDP Solution Proposal"}, "rel": "CLAIMS_KPI", "src": "opp:tfsvn-idp-solution-proposal"}
+{"dst": "client:motcongtybaohiem", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:de1e7231c13a"}
+{"dst": "kpi:5136f2c7290f", "props": {"evidence": "VAT3_4_GGF"}, "rel": "CLAIMS_KPI", "src": "opp:vat3-4-ggf"}
+{"dst": "client:ggf", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:5136f2c7290f"}
+{"dst": "kpi:a3bf09da822b", "props": {"evidence": "VAT3_4_GGF"}, "rel": "CLAIMS_KPI", "src": "opp:vat3-4-ggf"}
+{"dst": "client:ggf", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:a3bf09da822b"}
+{"dst": "kpi:90c53eea5293", "props": {"evidence": "VAT3_4_GGF"}, "rel": "CLAIMS_KPI", "src": "opp:vat3-4-ggf"}
+{"dst": "client:ggf", "props": {}, "rel": "ATTRIBUTED_TO", "src": "kpi:90c53eea5293"}
