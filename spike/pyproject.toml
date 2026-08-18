@@ -1,0 +1,18 @@
+[project]
+name = "langgraph-platform-spike"
+version = "0.0.1"
+description = "Throwaway spike: validate SSE in a custom http.app route, multipart upload, and graphviz+Playwright inside a LangGraph Platform Cloud container (2 vCPU / 2GB RAM). Not part of the real diagram-code-agent app — see plans/*cicd*.md Phase 0."
+requires-python = ">=3.11"
+dependencies = [
+    "langgraph>=1.2.0",
+    "fastapi>=0.115.0",
+    "python-multipart>=0.0.9",
+    "playwright>=1.45",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+package = false

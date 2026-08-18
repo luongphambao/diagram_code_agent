@@ -1,0 +1,15 @@
+{
+  "$schema": "https://langgra.ph/schema.json",
+  "python_version": "3.11",
+  "dependencies": ["."],
+  "graphs": {
+    "spike": "./graph.py:graph"
+  },
+  "http": {
+    "app": "./app.py:app"
+  },
+  "dockerfile_lines": [
+    "RUN apt-get update && apt-get install -y --no-install-recommends graphviz && rm -rf /var/lib/apt/lists/*",
+    "RUN python -m playwright install --with-deps chromium"
+  ]
+}
