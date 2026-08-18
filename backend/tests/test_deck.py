@@ -19,7 +19,7 @@ from csm import (
     SolutionModel,
     WorkItem,
 )
-from deck import (
+from domain.deck.deck import (
     DeckPlan,
     SlideSpec,
     build_deck_plan,

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from wbs_effort import critical_path, rollup
+from domain.wbs.wbs_effort import critical_path, rollup
 from evals._core import soft_match
 
 

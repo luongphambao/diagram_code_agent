@@ -248,8 +248,8 @@ def _b_master_plan(model, wbs, nar, meta, lib):
     "3. Delivery Plan" sheet (wbs_excel._module_schedule + wbs_effort.delivery_grid), so the
     deck's timeline slide and the client-facing Excel never drift apart.
     """
-    from wbs_effort import delivery_grid
-    from wbs_excel import _module_schedule
+    from domain.wbs.wbs_effort import delivery_grid
+    from domain.wbs.wbs_excel import _module_schedule
 
     t = _wbs_totals(wbs)
     weeks = int(t["weeks"] or (wbs.get("timeline") or {}).get("weeks") or 16)
@@ -295,7 +295,7 @@ def _b_team(model, wbs, nar, meta, lib):
 
 
 def _b_capex(model, wbs, nar, meta, lib):
-    from wbs_effort import DEFAULT_RATE_CARD_USD_PER_MONTH, rate_per_manday
+    from domain.wbs.wbs_effort import DEFAULT_RATE_CARD_USD_PER_MONTH, rate_per_manday
 
     totals = wbs.get("effort_totals") or {}
     rate = meta.get("rate_card") or totals.get("rate_card_usd_per_month") \

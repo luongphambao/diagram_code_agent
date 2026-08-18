@@ -392,7 +392,7 @@ def build_solution_model(
     # `visualizes` / `claims` trace links, so a slide can never claim a component that
     # is not in the CSM. No-op until `deck_plan.json` exists; a new/changed plan bumps
     # the revision below.
-    from deck import load_deck_plan, project_into_csm as project_deck
+    from domain.deck.deck import load_deck_plan, project_into_csm as project_deck
     project_deck(model, load_deck_plan(workspace))
 
     # Fold the active compliance pack (if one was selected via apply_compliance_pack)

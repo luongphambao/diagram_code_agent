@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from csm import Assumption, Constraint, Decision, Requirement, Risk, SolutionModel
-from quality_dashboard import (
+from domain.reporting.quality_dashboard import (
     QualitySnapshot,
     build_quality_snapshot,
     format_snapshot,

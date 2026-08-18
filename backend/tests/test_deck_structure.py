@@ -4,7 +4,7 @@ import pytest
 
 from csm import SolutionModel
 from csm_adapter import from_artifacts
-from deck import DeckPlan, SlideSpec, build_deck_plan, score_deck_structure
+from domain.deck.deck import DeckPlan, SlideSpec, build_deck_plan, score_deck_structure
 
 
 def _minimal_model() -> SolutionModel:

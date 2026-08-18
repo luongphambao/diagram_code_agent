@@ -4,7 +4,7 @@ One positive (rule fires) + one negative (mechanism present → rule silent) per
 Uses evaluate_solution() directly — pure function, no I/O.
 """
 
-from solution_validator import evaluate_solution, is_blocking
+from domain.validation.solution_validator import evaluate_solution, is_blocking
 
 
 # --- minimal helpers ---------------------------------------------------------

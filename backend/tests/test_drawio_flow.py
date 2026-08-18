@@ -14,8 +14,8 @@ from pathlib import Path
 
 import pytest
 
-import drawio_catalog as dc
-import validate_drawio as vd
+import domain.diagram.drawio_catalog as dc
+import domain.validation.validate_drawio as vd
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 

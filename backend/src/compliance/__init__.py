@@ -200,7 +200,7 @@ def compliance_findings(model: SolutionModel) -> list:
     * No implementation AND no evidence → high / human_decision (missing control).
     * Implemented but no evidence       → medium / request_evidence (unproven control).
     """
-    from solution_validator import SolutionFinding
+    from domain.validation.solution_validator import SolutionFinding
 
     findings: list = []
     for c in model.controls:

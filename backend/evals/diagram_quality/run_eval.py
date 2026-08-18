@@ -18,7 +18,7 @@ _BACKEND = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_BACKEND / "src"))
 sys.path.insert(0, str(_BACKEND))
 
-from validate_drawio import findings_from_validation, validate_file  # noqa: E402
+from domain.validation.validate_drawio import findings_from_validation, validate_file  # noqa: E402
 from evals._core import (  # noqa: E402
     compare_to_baseline,
     load_cases,

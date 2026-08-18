@@ -2,14 +2,14 @@
 
 import json
 
-from solution_validator import (
+from domain.validation.solution_validator import (
     evaluate_solution,
     validate_solution,
     format_validation,
     coverage_ratio,
     is_blocking,
 )
-from traceability import build_trace_links, write_trace_links
+from domain.reporting.traceability import build_trace_links, write_trace_links
 
 
 # --- representative broken workspace ----------------------------------------

@@ -37,9 +37,9 @@ _WIN_RESERVED = {
 def safe_filename(name: str | None) -> str:
     """Return a sanitised filename stripped of all directory components.
 
-    * Takes only the final path component (``Path(name).name`` / POSIX
-      ``PurePosixPath(name).name``) to neutralise both Windows and POSIX
-      separators regardless of the server OS.
+    * Takes only the final path component, normalising backslashes to
+      forward slashes first so this works the same for POSIX and Windows
+      style input regardless of the server OS.
     * Strips null bytes, control characters and shell-special characters.
     * Replaces runs of whitespace/dots/dashes that would produce a confusing
       or invisible filename.
@@ -52,16 +52,15 @@ def safe_filename(name: str | None) -> str:
     if not name:
         return "upload"
 
-    # Strip path separators from both POSIX and Windows paths.
-    # Take the last non-empty component from each parser and pick the shorter,
-    # since an attacker might submit something like "foo/../../bar\\evil".
-    posix_name = PurePosixPath(name).name  # strips "/" separators
-    win_name = Path(name).name             # strips both "/" and "\" separators
-    # prefer the result that is shorter (more aggressively stripped)
-    stem = posix_name if len(posix_name) <= len(win_name) else win_name
-    # PurePosixPath("../foo").name == "foo" but Path("../foo").name == "foo" too;
-    # a second pass handles any remaining ".." that slipped through:
-    stem = stem.replace("..", "").replace("/", "").replace("\\", "")
+    # Strip path separators from both POSIX and Windows paths, regardless of
+    # the server OS: a backslash is not a separator to PurePosixPath, and on
+    # Linux (our deployment target) Path() behaves like PurePosixPath too --
+    # so relying on pathlib alone lets a Windows-style untrusted name like
+    # r"C:\Windows\System32\cmd.exe" pass through mostly intact. Normalise
+    # backslashes to forward slashes first, then take the final component.
+    stem = PurePosixPath(name.replace("\\", "/")).name
+    # A second pass handles any remaining ".." that slipped through.
+    stem = stem.replace("..", "")
 
     # Remove dangerous characters.
     stem = _DANGEROUS.sub("_", stem)

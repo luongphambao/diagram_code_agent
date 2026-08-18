@@ -921,7 +921,7 @@ def propose_wbs(
         et["total_mandays"], tl.get("months", 0)))
     summary = lines[1]
     try:
-        from reporting import record_report_step
+        from domain.reporting.reporting import record_report_step
         record_report_step(current_workspace(), "propose_wbs", summary=summary, data=et)
     except Exception:
         pass
@@ -973,8 +973,8 @@ def export_wbs_excel(
     # drops settled ones, mirroring analysis_tools._solution_gate_note (docx §4.3, §7.1).
     try:
         from csm_adapter import build_solution_model
-        from solution_validator import format_validation, validate_solution
-        from traceability import write_trace_links
+        from domain.validation.solution_validator import format_validation, validate_solution
+        from domain.reporting.traceability import write_trace_links
         model = build_solution_model(current_workspace())   # the WBS is now in scope — refresh the CSM
         write_trace_links(current_workspace())
         findings, _ = validate_solution(current_workspace(), block=False)

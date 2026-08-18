@@ -50,3 +50,28 @@ path = "src"
 [tool.hatch.build.targets.wheel]
 include = ["src/**/*.py", "src/**/*.json", "src/**/*.xlsx", "src/**/*.png", "src/**/*.md"]
 sources = {"src" = ""}
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "ruff>=0.8",
+    "langgraph-cli[inmem]>=0.4.10",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "evaluator: LangSmith offline evals (needs LANGSMITH_API_KEY + OPENAI_API_KEY)",
+    "integration: needs a real provider API key",
+]
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+# Deliberately narrow for now: syntax errors + undefined names only. The 48
+# src files here have never been linted — widen this incrementally (see
+# plans/*cicd*.md Phase 1) rather than enabling the full default rule set at
+# once, which would fail CI on pre-existing, unrelated findings.
+select = ["E9", "F63", "F7", "F82"]

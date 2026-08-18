@@ -1,0 +1,77 @@
+name: ci
+
+# Regression gate (docx §4.5): lint + unit tests + the deterministic eval
+# suites run on every push/PR that touches backend/. No API key needed for
+# any of these three jobs — the intake/architecture/wbs/deck/diagram_quality/
+# compliance/reality_sync suites score the adapter/validator/WBS math against
+# committed baselines. The diagram suite (LLM/vision) and evals/e2e (live
+# Composio side effects) are intentionally excluded here; run them locally
+# or from a separate, opt-in workflow.
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/ci.yml"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            backend/.venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('backend/uv.lock') }}
+      - run: uv sync --frozen
+      - run: uv run ruff check src evals tests
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            backend/.venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('backend/uv.lock') }}
+      - run: uv sync --frozen
+      - run: uv run python -m pytest tests/ -q
+
+  eval-gate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            backend/.venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('backend/uv.lock') }}
+      - run: uv sync --frozen
+      - run: uv run python -m evals.run_all --gate

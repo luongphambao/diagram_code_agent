@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from adr_export import render_adr_pack, write_adr_pack
+from domain.reporting.adr_export import render_adr_pack, write_adr_pack
 from comments import (
     append_comment,
     comments_for,

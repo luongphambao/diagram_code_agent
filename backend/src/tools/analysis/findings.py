@@ -266,7 +266,7 @@ def export_to_delivery(system: str, dry_run: bool = True) -> str:
         return f"Could not build solution model: {exc}"
     if not model.work_items:
         return "No WBS work items to export — run the WBS pipeline first."
-    from delivery_export import sync_work_items
+    from domain.reporting.delivery_export import sync_work_items
     res = sync_work_items(model, sys_l, dry_run=dry_run, workspace=current_workspace())  # type: ignore[arg-type]
     _bump_tool_summary("export_to_delivery")
     c = res["counts"]
@@ -297,7 +297,7 @@ def reality_sync(source_path: str) -> str:
         source_path: Path to the repo/infra folder to ingest.
     """
     from pathlib import Path as _Path
-    from reality_sync import format_drift, run_reality_sync
+    from domain.reporting.reality_sync import format_drift, run_reality_sync
 
     src = _Path(source_path)
     if not src.exists():
@@ -319,7 +319,7 @@ def export_adr_pack() -> str:
     auditable Architecture Decision Record set. Call near finalization.
     """
     try:
-        from adr_export import write_adr_pack
+        from domain.reporting.adr_export import write_adr_pack
         path, n = write_adr_pack(current_workspace())
     except Exception as exc:  # noqa: BLE001
         return f"ADR export failed: {exc}"
